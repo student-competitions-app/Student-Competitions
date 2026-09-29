@@ -30,11 +30,13 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _Email delivery:_ the auth flow sends email through a small email-sender interface and never knows how the message is delivered. The backend is selected by the `EMAIL_BACKEND` environment variable:
    - `console` (local default): prints the full email, including the code, to the server console. No mail provider account or keys are needed for local development.
    - `memory` (tests): keeps sent messages in an in-memory outbox, so tests read the code from it and run the real flow end to end.
-   - a provider's HTTP API (production, e.g. Resend / Postmark / Brevo), not SMTP, since free hosting tiers may block outbound SMTP. The sending domain is verified with SPF/DKIM records.
+   - a provider's HTTP API (Resend), not SMTP, since free hosting tiers may block outbound SMTP. The sending domain is verified with SPF/DKIM records.
 
    On Render, the application refuses to start with the `console` backend, following the same pattern as `DATABASE_URL`. There are no login bypasses (magic codes, dev-only login URLs). Only the console backend may output the message body. Tests of role-protected pages in later milestones use a fixture that creates a session directly and skip the email step.
-   _Security:_ codes are stored hashed, single-use, and expire after about 10 minutes. Attempts per code and code requests per email are rate-limited. The response does not reveal whether an email is registered. The session cookie is `HttpOnly`, `SameSite=Lax`, and `Secure` in production.
-   _Test:_ a user can log in, a protected page is accessible only to logged-in users.
+   _Site administrators:_ there is no sign-up. Only active users already in the database can log in, and an unknown email receives no code. SRE manages administrators through the `ADMIN_EMAILS` environment variable: a comma-separated list, declared in `render.yaml` with `sync: false`. On startup, after migrations, the application reconciles the users table with this list. Every listed email (trimmed and lowercased) gets an active administrator user. Administrators missing from the list are deactivated and their sessions deleted. The step is idempotent and logs only counts. On Render, the application refuses to start if `ADMIN_EMAILS` is empty or contains a malformed email. The UI cannot grant or revoke administrator rights. This milestone has no role-based checks; milestone 5 adds them on top of this flow.
+   _Security:_ codes are stored hashed, single-use, and expire after about 20 minutes. Attempts per code and code requests per email are rate-limited. The response does not reveal whether an email is registered. The session cookie is `HttpOnly`, `SameSite=Lax`, and `Secure` in production.
+   _Test:_ a user can log in, a protected page is accessible only to logged-in users. Running the reconcile twice changes nothing. An email removed from `ADMIN_EMAILS` can no longer log in and loses its sessions.
+   
    As a mail service provider will be used resend.com
 
 5. **Roles and authorization.** Three roles (student / teacher / administrator); the list of administrators is set via configuration at deploy time. Route protection by role.

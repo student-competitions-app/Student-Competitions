@@ -14,14 +14,16 @@ Module: `app/services/email.py`. The login flow sends email **only** through
 ```python
 @dataclass(frozen=True)
 class EmailMessage:
-    to: str        # normalised recipient address
+    to: str  # normalised recipient address
     subject: str
-    text: str      # plain-text body
+    text: str  # plain-text body
+
 
 class EmailSender(Protocol):
-    def send(self, message: EmailMessage) -> None: ...   # raises EmailDeliveryError
+    def send(self, message: EmailMessage) -> None: ...  # raises EmailDeliveryError
 
-class EmailDeliveryError(RuntimeError): ...   # message: status code or exception type only
+
+class EmailDeliveryError(RuntimeError): ...  # message: status code or exception type only
 ```
 
 ## Backends

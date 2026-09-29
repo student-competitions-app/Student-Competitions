@@ -10,6 +10,11 @@ PostgreSQL comes from `TEST_POSTGRES_URL`, a server whose role may `CREATE DATAB
 the PostgreSQL cases are skipped locally; under `CI=true` the session refuses to start.
 
 See specs/003-database-questions/research.md#d12.
+
+Sign-in (milestone 4): every test runs with `EMAIL_BACKEND=memory`, so no email leaves the
+process and the code can be read from the `outbox`. `client` is anonymous; `admin_client` is
+signed in as `ADMIN_EMAIL` through a session created directly in the database, the suite's only
+sign-in shortcut (specs/004-email-otp-auth/research.md#d15).
 """
 
 import itertools
@@ -31,11 +36,20 @@ from sqlmodel import Session
 from app.core.config import resolve_database_url
 from app.core.db import create_db_engine
 from app.core.migrations import alembic_config
+from app.core.security import SESSION_COOKIE_NAME, sign_cookie_value
 from app.main import app
+from app.services.email import EmailMessage, MemoryEmailSender
+from app.services.sessions import create_session
+from app.services.users import get_active_user_by_email
 
 ENGINES = ["sqlite", "postgresql"]
 
 POSTGRES_SKIP_REASON = "set TEST_POSTGRES_URL to run the PostgreSQL cases (see README)"
+
+ADMIN_EMAIL = "admin@example.com"
+"""The one administrator every application fixture is started with (`ADMIN_EMAILS`)."""
+
+AUTH_VARIABLES = ("SECRET_KEY", "ADMIN_EMAILS", "RESEND_API_KEY", "EMAIL_FROM")
 
 RUN_TOKEN = secrets.token_hex(4)
 """In every PostgreSQL database name, so parallel or repeated runs against one server never
@@ -55,10 +69,14 @@ def pytest_sessionstart(session: pytest.Session) -> None:
 
 
 @pytest.fixture(autouse=True)
-def _isolate_from_real_databases(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No test inherits a developer's `DATABASE_URL` or a `RENDER` flag from the shell."""
+def _isolate_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test inherits a developer's `DATABASE_URL`, `RENDER` flag or sign-in settings from the
+    shell, and no test can send a real email: the backend is always `memory`."""
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("RENDER", raising=False)
+    for name in AUTH_VARIABLES:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("EMAIL_BACKEND", "memory")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -183,11 +201,56 @@ def client(monkeypatch: pytest.MonkeyPatch, database_url: str) -> Iterator[TestC
     """Drive the real ASGI application in-process — no live server, no bound port.
 
     The database is given the way production gives it, through `DATABASE_URL`, so `lifespan`
-    resolves, guards and counts the start exactly as it does on Render.
+    resolves, guards and counts the start exactly as it does on Render. `ADMIN_EMAIL` is the one
+    administrator, reconciled at start. The client itself is anonymous.
     """
     monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.setenv("ADMIN_EMAILS", ADMIN_EMAIL)
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def outbox(client: TestClient) -> list[EmailMessage]:
+    """Every email the running application has sent, oldest first."""
+    sender = app.state.email_sender
+    assert isinstance(sender, MemoryEmailSender)
+    return sender.outbox
+
+
+def sign_in_directly(test_client: TestClient, email: str) -> str:
+    """Give `test_client` a session for the active user `email` without the email step, and
+    return the plain session token.
+
+    **Test-only.** It calls `create_session` directly on the application's database and sets the
+    signed cookie by hand. No route or setting of the running application offers anything like
+    it: there is no login bypass (FR-034, FR-046). Requires the application to be started (the
+    `client` fixture).
+    """
+    with Session(app.state.engine) as db_session:
+        user = get_active_user_by_email(db_session, email)
+        assert user is not None, "no active user with that address"
+        token = create_session(db_session, user)
+    test_client.cookies.set(
+        SESSION_COOKIE_NAME, sign_cookie_value(app.state.settings.secret_key, token)
+    )
+    return token
+
+
+@pytest.fixture
+def admin_client(client: TestClient) -> Iterator[TestClient]:
+    """A second client for the same running application, signed in as `ADMIN_EMAIL`.
+
+    It shares the application `client` started (one start, one boot, one outbox) but has its own
+    cookie jar, so `client` stays anonymous. The session is created directly in the database by
+    `sign_in_directly`: the only sign-in shortcut, and it exists only in `tests/`.
+    """
+    # Not entered as a context manager: that would run `lifespan` a second time (a second boot,
+    # a fresh outbox). Requests still go through the application `client` started.
+    signed_in = TestClient(app)
+    sign_in_directly(signed_in, ADMIN_EMAIL)
+    yield signed_in
+    signed_in.close()
 
 
 # ---------------------------------------------------------------------------------------------

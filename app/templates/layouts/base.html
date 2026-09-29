@@ -9,8 +9,14 @@
     <link rel="stylesheet" href="/static/css/app.css">
   </head>
   <body>
-    <header class="container">
+    <header class="container site-header">
       <strong>{{ app_name }}</strong>
+      {% if current_user %}
+      <div class="site-session">
+        <span class="site-session-email">{{ current_user.email }}</span>
+        <form method="post" action="/logout"><button type="submit" class="secondary outline">Log out</button></form>
+      </div>
+      {% endif %}
     </header>
     <main class="container">
       {% block content %}{% endblock %}

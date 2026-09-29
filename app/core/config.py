@@ -3,7 +3,7 @@
 Single source of truth for the name, tagline and description that appear on the page, in the
 browser tab and in the test assertions — those are literals.
 
-This module is the only place that reads the environment, for two things:
+This module is the only place that reads the environment, for three things:
 
 - `COMMIT_SHA` answers "which commit is live" (FR-025), resolved once at import time. See
   specs/002-public-deploy-cicd/data-model.md#1-configuration-read-from-the-environment.
@@ -11,14 +11,26 @@ This module is the only place that reads the environment, for two things:
   `migrations/env.py`, so the two always target the same database. It is a function rather than a
   constant because it creates the local data directory and may refuse to run. See
   specs/003-database-questions/contracts/configuration.md.
+- `resolve_auth_settings` reads and validates the sign-in settings (email backend, secret key,
+  administrator list, Resend key and sender), refusing an unsafe production setup. See
+  specs/004-email-otp-auth/contracts/configuration.md.
+
+No error, warning or `repr` produced here ever contains a setting's value: in production those
+values are secrets, and these messages reach the deploy log.
 """
 
+import logging
 import os
 from collections.abc import Mapping
+from dataclasses import dataclass
+from email.utils import parseaddr
 from pathlib import Path
+from typing import Literal, cast
 
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError
+
+from app.core.security import MIN_SECRET_KEY_LENGTH, is_valid_email, normalize_email
 
 APP_NAME = "Student Competitions"
 
@@ -116,3 +128,128 @@ def _normalise(raw: str) -> str:
     if scheme in {"postgres", "postgresql"}:
         return POSTGRESQL_DRIVER + raw[len(scheme) :]
     return raw
+
+
+# ---------------------------------------------------------------------------------------------
+# Authentication settings (milestone 4)
+# ---------------------------------------------------------------------------------------------
+
+EmailBackend = Literal["console", "memory", "resend"]
+
+EMAIL_BACKENDS: tuple[EmailBackend, ...] = ("console", "memory", "resend")
+
+DEV_SECRET_KEY = "insecure-development-only-secret-key-never-use-in-production"
+"""The key used locally when `SECRET_KEY` is unset. A constant, so local sessions survive
+`--reload` and container restarts (the CI image job relies on that). It can never reach
+production: on Render `SECRET_KEY` is required."""
+
+# Uvicorn's general-purpose logger, the one that is configured to print under uvicorn.
+_logger = logging.getLogger("uvicorn.error")
+
+
+class AuthConfigError(RuntimeError):
+    """The sign-in settings are unusable, so the application must not start.
+
+    The message lists every problem by setting name, never by value (FR-041, SC-008).
+    """
+
+
+@dataclass(frozen=True)
+class AuthSettings:
+    """The validated sign-in settings, stored on `app.state.settings`."""
+
+    production: bool
+    """`RENDER` is set: the refusal rules apply, the cookie is `Secure`, and `X-Forwarded-For`
+    is trusted for the per-client limit."""
+    email_backend: EmailBackend
+    secret_key: str
+    admin_emails: tuple[str, ...]
+    """Normalised, de-duplicated and sorted."""
+    resend_api_key: str | None
+    email_from: str | None
+
+    def __repr__(self) -> str:
+        # Masks every value that is a secret in production, so an accidental log line or
+        # traceback cannot print one.
+        return (
+            f"AuthSettings(production={self.production}, "
+            f"email_backend={self.email_backend!r}, secret_key='***', "
+            f"admin_emails=<{len(self.admin_emails)} addresses>, "
+            f"resend_api_key={'***' if self.resend_api_key else None}, "
+            f"email_from={'***' if self.email_from else None})"
+        )
+
+    __str__ = __repr__
+
+
+def resolve_auth_settings(environ: Mapping[str, str] = os.environ) -> AuthSettings:
+    """Read and validate the sign-in settings, or raise one `AuthConfigError` listing them all.
+
+    Rules C1–C8 and warnings W1–W3 of specs/004-email-otp-auth/contracts/configuration.md, in
+    that order. Empty strings count as unset. On Render every setting is required and the email
+    must really be sent; locally every setting is optional, but a value that is present and
+    invalid is still refused, so a typo fails fast instead of silently falling back.
+    """
+
+    def read(name: str) -> str | None:
+        return environ.get(name) or None
+
+    production = bool(read("RENDER"))
+    backend_raw = read("EMAIL_BACKEND")
+    secret_key = read("SECRET_KEY")
+    resend_api_key = read("RESEND_API_KEY")
+    email_from = read("EMAIL_FROM")
+    admin_entries = [entry for entry in (read("ADMIN_EMAILS") or "").split(",") if entry.strip()]
+
+    errors: list[str] = []
+    if backend_raw is not None and backend_raw not in EMAIL_BACKENDS:
+        errors.append("EMAIL_BACKEND must be one of console, memory, resend.")
+    if production and backend_raw in (None, "console", "memory"):
+        errors.append("EMAIL_BACKEND must be 'resend' when running on Render.")
+    if production and secret_key is None:
+        errors.append("SECRET_KEY is required when running on Render.")
+    if secret_key is not None and len(secret_key) < MIN_SECRET_KEY_LENGTH:
+        errors.append(f"SECRET_KEY must be at least {MIN_SECRET_KEY_LENGTH} characters long.")
+    if production and not admin_entries:
+        errors.append("ADMIN_EMAILS must list at least one address when running on Render.")
+    admin_emails: set[str] = set()
+    for position, entry in enumerate(admin_entries, start=1):
+        address = normalize_email(entry)
+        if is_valid_email(address):
+            admin_emails.add(address)
+        else:
+            errors.append(f"ADMIN_EMAILS entry {position} is not a valid email address.")
+    needs_resend = production or backend_raw == "resend"
+    if needs_resend and resend_api_key is None:
+        errors.append("RESEND_API_KEY is required for the resend email backend.")
+    if needs_resend and (email_from is None or not is_valid_email(parseaddr(email_from)[1])):
+        errors.append(
+            "EMAIL_FROM is required for the resend email backend and must be a valid sender "
+            "address."
+        )
+    if errors:
+        raise AuthConfigError(
+            "Invalid authentication configuration:\n" + "\n".join(f"- {e}" for e in errors)
+        )
+
+    if not production:
+        if secret_key is None:
+            _logger.warning(
+                "SECRET_KEY is not set; using an insecure development key. "
+                "Never do this in production."
+            )
+        if backend_raw is None:
+            _logger.warning(
+                "EMAIL_BACKEND is not set; login emails will be printed to this console."
+            )
+        if not admin_emails:
+            _logger.warning("ADMIN_EMAILS is empty; nobody will be able to sign in.")
+
+    return AuthSettings(
+        production=production,
+        email_backend=cast(EmailBackend, backend_raw or "console"),
+        secret_key=secret_key or DEV_SECRET_KEY,
+        admin_emails=tuple(sorted(admin_emails)),
+        resend_api_key=resend_api_key,
+        email_from=email_from,
+    )

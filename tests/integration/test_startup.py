@@ -1,8 +1,9 @@
 """Application startup: the effective readiness gate.
 
-The application refuses to start without a usable database at head, so an instance that answers
-at all has one. See specs/003-database-questions/contracts/http-routes.md#application-startup-
-the-effective-readiness-gate.
+The application refuses to start without a usable database at head, or on Render without safe
+sign-in settings, so an instance that answers at all has both. See
+specs/003-database-questions/contracts/http-routes.md#application-startup-the-effective-readiness-
+gate and specs/004-email-otp-auth/contracts/configuration.md.
 """
 
 import pytest
@@ -74,3 +75,58 @@ def test_a_refused_start_on_render_is_not_counted(
     with pytest.raises(config.DatabaseConfigError), TestClient(app):
         pass
     assert _boots(database_url) == 0
+
+
+# ---------------------------------------------------------------------------------------------
+# Sign-in settings (milestone 4)
+# ---------------------------------------------------------------------------------------------
+
+AUTH_SETTINGS = ("EMAIL_BACKEND", "SECRET_KEY", "ADMIN_EMAILS", "RESEND_API_KEY", "EMAIL_FROM")
+
+
+def test_refuses_to_start_on_render_without_auth_settings(
+    monkeypatch: pytest.MonkeyPatch, database_url: str
+) -> None:
+    """US6-4, FR-041: every missing setting named at once, and the database never touched."""
+    monkeypatch.setenv("RENDER", "true")
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.delenv("EMAIL_BACKEND")
+    with pytest.raises(config.AuthConfigError) as caught, TestClient(app):
+        pass
+    for name in AUTH_SETTINGS:
+        assert name in str(caught.value)
+    assert _boots(database_url) == 0
+
+
+def test_refuses_the_console_backend_on_render_without_echoing_values(
+    monkeypatch: pytest.MonkeyPatch, database_url: str
+) -> None:
+    for name, value in {
+        "RENDER": "true",
+        "DATABASE_URL": database_url,
+        "EMAIL_BACKEND": "console",
+        "SECRET_KEY": "ci-dummy-not-a-secret-0123456789abcdef",
+        "ADMIN_EMAILS": "ci-admin@example.com",
+        "RESEND_API_KEY": "ci-dummy-key",
+        "EMAIL_FROM": "ci@example.com",
+    }.items():
+        monkeypatch.setenv(name, value)
+    with pytest.raises(config.AuthConfigError) as caught, TestClient(app):
+        pass
+    message = str(caught.value)
+    assert "EMAIL_BACKEND" in message
+    for value in ("ci-dummy-not-a-secret", "ci-dummy-key", "ci-admin@example.com"):
+        assert value not in message
+    assert _boots(database_url) == 0
+
+
+def test_starts_locally_with_no_auth_settings(
+    monkeypatch: pytest.MonkeyPatch, database_url: str
+) -> None:
+    """US6-1, FR-042: every sign-in setting is optional locally."""
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.delenv("EMAIL_BACKEND")
+    with TestClient(app) as client:
+        assert client.get("/healthz").status_code == 200
+        assert app.state.settings.email_backend == "console"
+    assert _boots(database_url) == 1

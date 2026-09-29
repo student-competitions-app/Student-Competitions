@@ -2,7 +2,7 @@
 
 A web application for running online knowledge competitions among students. Teachers manage students, a question bank and competitions; students answer questions in writing; answers are scored by an LLM..
 
-> **Status:** milestone 3 in progress — the application has a database: sample questions are stored by a migration and listed on the home page, alongside a status line showing the engine, the schema revision and how many times the application has started. Locally it uses a SQLite file; in production, PostgreSQL on Neon. Implementation is driven by [GitHub Spec Kit](https://github.com/github/spec-kit).
+> **Status:** milestone 4 in progress — the application has a front door: administrators sign in with a 6-digit code sent by email, and every page is private unless explicitly public. Behind it is milestone 3's home page: sample questions stored by a migration, and a status line showing the engine, the schema revision and how many times the application has started. Locally it uses a SQLite file and prints login emails to the console; in production, PostgreSQL on Neon and email through Resend. Implementation is driven by [GitHub Spec Kit](https://github.com/github/spec-kit).
 
 **Public address:** <https://brainring.org.ua> — served from Render, HTTPS only (`www.brainring.org.ua` redirects there; the Render address <https://student-competitions.onrender.com> still works as a fallback). `GET /healthz` there reports the commit currently live.
 
@@ -39,6 +39,30 @@ INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
 
 Open <http://127.0.0.1:8000>. If port 8000 is already taken, pass `--port 8001`.
 
+### Signing in locally
+
+Every page is private, so you sign in first. Start the application with your address as an administrator:
+
+```bash
+ADMIN_EMAILS=you@example.com uv run uvicorn app.main:app --reload
+```
+
+Open <http://127.0.0.1:8000>, which sends you to the login page, and enter that address. Nothing is sent: with no `EMAIL_BACKEND` set, the email is printed to the terminal running uvicorn:
+
+```text
+======== EMAIL (console backend: not sent) ========
+To: you@example.com
+Subject: Your Student Competitions sign-in code
+
+Your Student Competitions sign-in code is: 042917
+...
+======== END EMAIL ========
+```
+
+Type the code into the second step and you land on the home page, with your address and **Log out** in the header. Sessions last 14 days and survive `--reload`, because the local signing key is a fixed development constant. The startup log warns about each sign-in setting left at its local default; that is expected locally and refused on Render ([settings](#environment-variables)).
+
+Only addresses in `ADMIN_EMAILS` can sign in: the list is applied on every start, so removing an address and restarting ends that person's sessions. Any other address gets the same "we have sent a code" page, and nothing is sent.
+
 ### Test
 
 ```bash
@@ -54,6 +78,18 @@ docker rm -f sc-pg                   # when done
 ```
 
 The suite creates and drops its own uniquely named databases on that server, and never touches `data/` or whatever `DATABASE_URL` points to. In CI (`CI=true`) a missing `TEST_POSTGRES_URL` fails the run at start, so the PostgreSQL half can never be skipped silently.
+
+No test sends an email: the suite always runs with `EMAIL_BACKEND=memory`. For page tests, [`tests/conftest.py`](tests/conftest.py) provides:
+
+- `client`: the running application, **anonymous**, started with one administrator, `admin@example.com`;
+- `admin_client`: the same application, **signed in** as that administrator through a session created directly in the database. This is the only sign-in shortcut, and it exists only in `tests/`;
+- `outbox`: every email the application has sent, for tests that walk through the real login and read the code.
+
+### Adding a page
+
+Every route is **private by default**: an application-wide dependency in [`app/core/auth.py`](app/core/auth.py) sends an anonymous visitor of any route to `/login?next=…`. A new page needs no extra code to be protected. Test it with `admin_client` (allowed) and `client` (redirected).
+
+Making a route public is a deliberate, one-line change to `PUBLIC_ROUTES` in the same file. Today the list is `GET`/`POST /login`, `POST /login/code`, `POST /logout` and `GET /healthz`. The route-table sweep in [`tests/integration/test_routes.py`](tests/integration/test_routes.py) walks every route and fails the build if one outside the list answers an anonymous request, or if the list names a route that does not exist.
 
 ### Adding a migration
 
@@ -94,6 +130,8 @@ Open <http://localhost:8000>. `APP_COMMIT` is optional — it stamps the commit 
 
 The container migrates its database before the application starts. With no `DATABASE_URL` it uses a throw-away SQLite file inside the container; to use a PostgreSQL database instead, pass `-e DATABASE_URL=postgresql://…`.
 
+To sign in to the container, give it an administrator with `-e ADMIN_EMAILS=you@example.com`, and read the code from its output (`docker logs <container>` if it runs detached). The CI `image` job signs in exactly this way.
+
 The port is configuration, not code. To listen somewhere else, with no rebuild:
 
 ```bash
@@ -121,7 +159,7 @@ Every page also carries the same release identity in its footer — `v<version>`
 
 ### Environment variables
 
-The complete configuration surface. Locally every one is optional — the application starts on the defaults below with nothing supplied. On Render, `DATABASE_URL` is required.
+The complete configuration surface. Locally every one is optional — the application starts on the defaults below with nothing supplied. On Render, `DATABASE_URL` and the five sign-in settings are required, and the application refuses to start without them. The refusal names every missing or invalid setting and never shows a value.
 
 | Variable | Read by | Default | Purpose |
 |---|---|---|---|
@@ -131,10 +169,15 @@ The complete configuration surface. Locally every one is optional — the applic
 | `RENDER_GIT_COMMIT` | `app/core/config.py` | *(unset off-Render)* | Set automatically by Render for every deploy; what makes `/healthz` truthful in production. |
 | `PYTHONUNBUFFERED` | Python | `1` (set in the image) | Logs reach the platform's stream immediately instead of sitting in a buffer. |
 | `DATABASE_URL` | `app/core/config.py` and `migrations/env.py` | `sqlite:///<repository>/data/student_competitions.sqlite3`, **only when not on Render** | Where the database is. `sqlite:///…` or `postgresql://…` (also `postgres://`; normalised to the psycopg driver). **A secret in production**: Neon's connection string, set only in Render's dashboard and never committed, pasted or logged. |
-| `RENDER` | `app/core/config.py` | *(unset)* | Set to `true` by Render. Turns a missing `DATABASE_URL` into a refusal to start instead of a silent fallback to SQLite. Do not set it locally. |
+| `RENDER` | `app/core/config.py` | *(unset)* | Set to `true` by Render. Turns a missing `DATABASE_URL` into a refusal to start instead of a silent fallback to SQLite, applies the production rules for the settings below, marks the session cookie `Secure`, and makes the per-client rate limit read `X-Forwarded-For`. Do not set it locally. |
+| `EMAIL_BACKEND` | `app/core/config.py` | `console` (with a warning) | How login emails are delivered: `console` prints them to the application's output, `memory` keeps them in memory (tests only), `resend` sends them through Resend. **Must be `resend` on Render**; declared with that value in `render.yaml`. Not a secret. |
+| `SECRET_KEY` | `app/core/config.py` | a fixed, insecure development key (with a warning) | Signs session cookies and keys the stored code and rate-limit hashes. At least 32 characters, everywhere. **A secret; required on Render.** Generate one with `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`. Changing it signs everyone out. |
+| `ADMIN_EMAILS` | `app/core/config.py` | empty (with a warning: nobody can sign in) | Comma-separated administrator addresses, e.g. `a@example.com, b@example.com`. Trimmed, lowercased and de-duplicated; a malformed entry is refused by position, never echoed. Applied on every start: listed addresses become active administrators, and anyone removed is deactivated and loses their sessions. **A secret; required and non-empty on Render.** |
+| `RESEND_API_KEY` | `app/core/config.py` | *(unset)* | Resend API key, sending-only and restricted to the domain. **A secret; required for `resend` and on Render.** |
+| `EMAIL_FROM` | `app/core/config.py` | *(unset)* | The sender, `addr@domain` or `Display Name <addr@domain>`, on the verified domain (`Student Competitions <login@brainring.org.ua>`). **Required for `resend` and on Render**; kept in Render's environment like the secrets. |
 | `TEST_POSTGRES_URL` | `tests/conftest.py` only | *(unset: PostgreSQL tests skipped)* | **Tests only** — never read by the application. A PostgreSQL server where the tests may create databases. Not a secret (a disposable, password-less server). |
 
-`DATABASE_URL` in production is the **only** secret the application reads. It lives in Render's service environment and nowhere else: not in this repository, not in the image and not in GitHub. Everything else in this table is not secret.
+The application reads five secrets in production: `DATABASE_URL`, `SECRET_KEY`, `ADMIN_EMAILS`, `RESEND_API_KEY` and `EMAIL_FROM`. They live in Render's service environment and nowhere else: not in this repository, not in the image and not in GitHub. `render.yaml` declares them by name only (`sync: false`). The application never logs a login code, a session token, a key or an address; only the local `console` backend prints an email.
 
 ## Deployment
 
@@ -150,7 +193,15 @@ Merge to `main`. That is the whole procedure — no commands, no dashboard.
 
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) then runs the same checks a pull request runs, calls Render's deploy hook pinned to the merged commit, and polls the public `/healthz` until it reports that commit. The workflow only reports success once the public address is actually serving the merged commit; the GitHub **Environments → production** view records which commit went live and when.
 
-Each release runs `alembic upgrade head` before the new version serves: the container's entrypoint migrates, then starts the application. A failed migration stops the container before it opens its port, so Render keeps the previous release serving. After the release, the deploy job checks the home page's status line with [`scripts/database_status.sh`](scripts/database_status.sh): it must show this commit's schema revision and a boot count higher than before the release, which proves the data survived the redeploy.
+Each release runs `alembic upgrade head` before the new version serves: the container's entrypoint migrates, then starts the application. A failed migration, or missing sign-in settings, stops the container before it opens its port, so Render keeps the previous release serving. After the release, the deploy job runs [`scripts/verify_private.sh`](scripts/verify_private.sh): the home page must send an anonymous visitor to `/login?next=%2F`, and the login page must serve its form. That proves the site is private.
+
+The home page's status line (schema revision and boot count) now requires signing in, so the release no longer reads it. "Data survives a restart" is checked on every pull request instead, by the `image` job, which signs in to the real container and restarts it. To watch the boot count rise across a production redeploy, sign in and compare the status line before and after.
+
+### Production email
+
+Login emails are sent through [Resend](https://resend.com)'s HTTP API from the verified domain `brainring.org.ua`. DKIM, SPF and DMARC are published at NIC.UA. The one-time bootstrap (verify the domain, create a sending-only key, enter the four sign-in secrets in Render) is described in [`specs/004-email-otp-auth/quickstart.md`](specs/004-email-otp-auth/quickstart.md#one-time-bootstrap-production-do-this-before-merging-to-main). It must be done **before** the first release that needs it; otherwise that release refuses to start, by design, and the previous one keeps serving.
+
+To change who can sign in, edit `ADMIN_EMAILS` in Render → service → Environment and save; the restart applies the list. To rotate `SECRET_KEY` or `RESEND_API_KEY`, replace the value there the same way. A new `SECRET_KEY` signs everyone out.
 
 ### Production database
 
@@ -179,7 +230,7 @@ A failed release leaves the previous version serving: Render switches traffic on
 
 | Workflow | Runs on | Does |
 |---|---|---|
-| [`checks.yml`](.github/workflows/checks.yml) | called by the two below | `quality` (tests on SQLite and on a PostgreSQL service, `ruff check`, `ruff format --check`) and `image` (builds the Dockerfile, checks it refuses to start on Render without a database, and smoke-tests the container against PostgreSQL across a restart) |
+| [`checks.yml`](.github/workflows/checks.yml) | called by the two below | `quality` (tests on SQLite and on a PostgreSQL service, `ruff check`, `ruff format --check`) and `image` (builds the Dockerfile; checks it refuses to start on Render without a database, without sign-in settings, or with the console email backend; then signs in to the container with the code from its console output and smoke-tests it against PostgreSQL across a restart and a logout) |
 | [`ci.yml`](.github/workflows/ci.yml) | every pull request against `main` | Calls `checks.yml`. Branch protection requires both jobs, so a failing check blocks the merge. |
 | [`deploy.yml`](.github/workflows/deploy.yml) | every push to `main` | Calls `checks.yml`, then deploys and verifies the release. |
 
@@ -225,34 +276,37 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 ├── uv.lock                  # Committed lockfile
 ├── .python-version          # 3.13
 ├── app/                     # FastAPI application
-│   ├── main.py              # App construction: startup (database guard, boot count), routers, error handler
-│   ├── core/                # Settings, security, sessions, DB engine
-│   │   ├── config.py        # App constants, COMMIT_SHA, resolve_database_url
+│   ├── main.py              # App construction: startup (settings, database guard, admin reconcile, boot count), access dependency, routers, error handlers
+│   ├── core/                # Settings, security, access control, DB engine
+│   │   ├── config.py        # App constants, COMMIT_SHA, resolve_database_url, resolve_auth_settings
+│   │   ├── security.py      # Pure helpers: email rules, codes, tokens, cookie signing, safe return paths
+│   │   ├── auth.py          # PUBLIC_ROUTES, the access dependency, CurrentUser, the session cookie
 │   │   ├── db.py            # Engine, per-request session, UTC timestamp column type
 │   │   ├── migrations.py    # Expected (head) and current schema revision; startup guard
-│   │   └── templates.py     # Shared Jinja2Templates instance
-│   ├── models/              # SQLModel tables: Question, BootCounter
-│   ├── schemas/             # Validation and view schemas: QuestionCreate/Update/Public
+│   │   └── templates.py     # Shared Jinja2Templates instance (+ `current_user` for every page)
+│   ├── models/              # SQLModel tables: Question, BootCounter, User, UserSession, LoginCode, RateLimitHit
+│   ├── schemas/             # Validation and view schemas: questions, login form input
 │   ├── routers/             # Route handlers grouped by area/role
 │   │   ├── pages.py         # GET / → home page with the question list and status line
+│   │   ├── auth.py          # GET/POST /login, POST /login/code, POST /logout
 │   │   └── health.py        # GET /healthz → status, version, commit
-│   ├── services/            # Business logic: questions (CRUD), database_status (boot count)
+│   ├── services/            # Business logic: questions, database_status, users, sessions, login, rate_limits, email
 │   ├── templates/           # Jinja2: layouts/, partials/ (HTMX fragments), pages/
-│   │   ├── layouts/base.html
-│   │   └── pages/           # home.html, error.html
+│   │   ├── layouts/base.html  # Header with the signed-in address and Log out
+│   │   └── pages/           # home.html, login.html, login_code.html, error.html
 │   └── static/              # css/ (vendored pico.min.css + app.css), js/, img/
 ├── migrations/              # Alembic migrations
 │   ├── env.py               # Uses resolve_database_url; one locked transaction on PostgreSQL
-│   └── versions/            # Revisions: tables + boot counter, then the sample questions
+│   └── versions/            # Revisions: tables + boot counter, the sample questions, the sign-in tables
 ├── data/                    # Local SQLite database (git-ignored, created by the first migration)
 ├── tests/                   # unit/, integration/, e2e/ (Playwright)
-│   ├── conftest.py          # Both-engine database fixtures (template + clone), `client`
-│   ├── unit/                # test_config.py, test_database_config.py, test_question_schemas.py
-│   └── integration/         # home, health, routes, startup, migrations, boot counter, question service
+│   ├── conftest.py          # Both-engine database fixtures (template + clone), `client`, `admin_client`, `outbox`
+│   ├── unit/                # config, database and auth settings, security helpers, safe return paths, email, schemas
+│   └── integration/         # login flow and privacy, sessions, admin reconcile, auth services, home, health, routes, startup, migrations, boot counter, question service
 └── scripts/                 # Developer & ops helper scripts
     ├── render_deploy.sh            # Trigger a Render deploy of one commit
     ├── wait_for_release.sh         # Poll /healthz until that commit is serving
-    ├── database_status.sh          # Read the public boot count; verify revision and boot count after a release
+    ├── verify_private.sh           # After a release: / redirects anonymous visitors to /login, which serves its form
     └── setup_branch_protection.sh  # Apply the main branch protection rule
 ```
 

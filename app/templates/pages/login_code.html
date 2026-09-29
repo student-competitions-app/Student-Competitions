@@ -1,0 +1,29 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Enter your code — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <h1>Enter your code</h1>
+  {% if message %}
+  <p class="auth-message" role="alert">{{ message }}</p>
+  {% else %}
+  <p role="status">If this address belongs to an account, we have sent a code to it. The code is valid for 20 minutes.</p>
+  {% endif %}
+  <form method="post" action="/login/code">
+    <input type="hidden" name="email" value="{{ email }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="code">Sign-in code</label>
+    <input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" required>
+    <button type="submit">Sign in</button>
+  </form>
+  <div class="auth-alternatives">
+    <form method="post" action="/login">
+      <input type="hidden" name="email" value="{{ email }}">
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="secondary">Send a new code</button>
+    </form>
+    <p><a href="/login?next={{ next | urlencode }}">Use a different email</a></p>
+  </div>
+</section>
+{% endblock %}

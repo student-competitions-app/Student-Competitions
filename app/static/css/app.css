@@ -56,3 +56,53 @@
 .db-status code {
   font-size: 0.875em;
 }
+
+/* The header: the application name, and once signed in the address and the logout button
+   (FR-032). Wraps on a phone rather than scrolling sideways; a long address breaks anywhere. */
+.site-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
+  padding-block: 1rem;
+}
+
+.site-session {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  min-width: 0;
+}
+
+.site-session-email {
+  color: var(--pico-muted-color);
+  overflow-wrap: anywhere;
+}
+
+.site-session form,
+.site-session button {
+  margin: 0;
+}
+
+.site-session button {
+  padding: 0.25rem 0.75rem;
+  width: auto;
+}
+
+/* The sign-in pages: a narrow column, and the messages visible without alarming. */
+.auth {
+  margin-inline: auto;
+  max-width: 28rem;
+  padding-block: 2rem;
+}
+
+.auth-message {
+  border-left: 0.25rem solid var(--pico-del-color);
+  padding: 0.75rem 1rem;
+}
+
+.auth-alternatives {
+  margin-top: 1.5rem;
+}

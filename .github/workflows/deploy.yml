@@ -1,7 +1,8 @@
 # The release: a merge to `main` re-runs the same checks, deploys that exact commit, and proves
-# the public address is serving it, with its data, before reporting success.
-# Contract: specs/002-public-deploy-cicd/contracts/pipeline.md#deployyml--the-release and
-# specs/003-database-questions/contracts/pipeline.md#deployyml-the-release
+# the public address is serving it, privately, before reporting success.
+# Contract: specs/002-public-deploy-cicd/contracts/pipeline.md#deployyml--the-release,
+# specs/003-database-questions/contracts/pipeline.md#deployyml-the-release and
+# specs/004-email-otp-auth/contracts/pipeline.md#deployyml--deploy
 #
 # `pull_request_target` appears nowhere in this repository and must not be introduced: it would
 # run with write permissions and access to the deploy hook secret on a fork's pull request.
@@ -39,36 +40,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Only to read the expected schema revision from migrations/ below.
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: Install dependencies
-        run: uv sync --locked
-
-      # `alembic heads` reads only the script directory and never connects to a database, so no
-      # database credential enters GitHub.
-      - name: Expected revision
-        id: head
-        run: |
-          set -euo pipefail
-          heads=$(uv run alembic heads)
-          if [ "$(printf '%s\n' "$heads" | grep -c .)" -ne 1 ]; then
-            echo "::error::Expected exactly one Alembic head, found: $heads"
-            exit 1
-          fi
-          revision=$(printf '%s' "$heads" | awk '{print $1}')
-          echo "Expected schema revision: $revision"
-          echo "revision=$revision" >> "$GITHUB_OUTPUT"
-
-      # Best effort: empty if the live release predates the status line or does not answer, and
-      # the comparison after the release is then skipped.
-      - name: Previous boot count
-        id: before
-        run: echo "boots=$(./scripts/database_status.sh boot-count "${{ vars.PUBLIC_BASE_URL }}")" >> "$GITHUB_OUTPUT"
-
       - name: Trigger the Render deploy
         env:
           # An environment secret, not a repository secret: unreachable from checks.yml, from
@@ -79,8 +50,10 @@ jobs:
       - name: Verify the public address is serving this commit
         run: ./scripts/wait_for_release.sh "${{ vars.PUBLIC_BASE_URL }}" "${{ github.sha }}"
 
-      # The data survived the release: the public page shows this commit's schema revision, the
-      # questions rather than the unavailable notice, and a boot count higher than before (SC-002,
-      # asserted on every release).
-      - name: Verify data
-        run: ./scripts/database_status.sh verify "${{ vars.PUBLIC_BASE_URL }}" "${{ steps.head.outputs.revision }}" "${{ steps.before.outputs.boots }}"
+      # The release is private by default: the home page sends an anonymous visitor to the login
+      # page, which serves its form. Reads public responses only, so no credential enters GitHub.
+      # The data check ("boot count rose, schema at head") moved to the `image` job, which signs
+      # in for real on every pull request, because the page carrying it now requires signing in
+      # (specs/004-email-otp-auth/contracts/pipeline.md#deployyml--deploy).
+      - name: Verify access control
+        run: ./scripts/verify_private.sh "${{ vars.PUBLIC_BASE_URL }}"

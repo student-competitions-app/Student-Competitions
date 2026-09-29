@@ -9,8 +9,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
+import app.core.auth as auth
 import app.routers.pages as pages
 from app.core.config import APP_VERSION
+from app.core.security import SESSION_COOKIE_NAME
+from tests.conftest import ADMIN_EMAIL, sign_in_directly
 
 
 def test_healthz_returns_ok(client: TestClient) -> None:
@@ -45,7 +48,7 @@ def test_healthz_commit_is_a_non_empty_string(client: TestClient) -> None:
 
 
 def test_healthz_stays_ok_while_the_database_is_failing(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, admin_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Liveness never depends on the database, so a blip cannot make Render restart a healthy
     process in a loop (FR-029)."""
@@ -55,7 +58,7 @@ def test_healthz_stays_ok_while_the_database_is_failing(
 
     monkeypatch.setattr(pages, "list_questions", failing)
 
-    home = client.get("/")
+    home = admin_client.get("/")
     assert home.status_code == 200
     assert "Question data is temporarily unavailable" in home.text
 
@@ -63,3 +66,26 @@ def test_healthz_stays_ok_while_the_database_is_failing(
     assert health.status_code == 200
     assert health.json()["status"] == "ok"
     assert set(health.json()) == {"status", "version", "commit"}
+
+
+@pytest.mark.parametrize("cookie", ["signed", "garbage"])
+def test_healthz_with_a_cookie_does_no_session_lookup(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, cookie: str
+) -> None:
+    """The health check stays free of I/O even when a browser sends its session cookie: the
+    access dependency returns before reading it (milestone 2 contract, research D4)."""
+
+    def failing(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("/healthz must not look up a session")
+
+    if cookie == "signed":
+        token = sign_in_directly(client, ADMIN_EMAIL)
+        assert token
+    else:
+        client.cookies.set(SESSION_COOKIE_NAME, "garbage")
+    monkeypatch.setattr(auth, "get_session_user", failing)
+    monkeypatch.setattr(auth, "Session", failing)
+
+    response = client.get("/healthz")
+    assert response.status_code == 200
+    assert set(response.json()) == {"status", "version", "commit"}

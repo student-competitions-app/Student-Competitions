@@ -99,13 +99,69 @@ jobs:
           fi
           echo "Refused as expected (exit $exit_code): $(printf '%s' "$output" | grep 'DATABASE_URL is required')"
 
+      # On Render the application must also refuse to start without its sign-in settings, and
+      # the error must name every one of them (FR-041). The database is reachable here, so the
+      # refusal comes from the settings check, not from the database one.
+      - name: Refuse to start on Render without auth settings
+        run: |
+          set -euo pipefail
+          exit_code=0
+          output=$(docker run --rm --network host -e RENDER=true \
+            -e DATABASE_URL=postgresql://postgres@127.0.0.1:5432/postgres \
+            student-competitions:ci 2>&1) || exit_code=$?
+          if [ "$exit_code" -eq 0 ]; then
+            echo "::error::The container started with RENDER=true and no auth settings (expected a non-zero exit). Output: ${output:0:1000}"
+            exit 1
+          fi
+          for name in EMAIL_BACKEND SECRET_KEY ADMIN_EMAILS RESEND_API_KEY EMAIL_FROM; do
+            if ! printf '%s' "$output" | grep -q "$name"; then
+              echo "::error::The refusal (exit $exit_code) does not name $name. Output: ${output:0:1000}"
+              exit 1
+            fi
+          done
+          echo "Refused as expected (exit $exit_code), naming all five settings."
+
+      # A complete set of settings with the console backend is still refused on Render, and the
+      # error does not echo any value. The values are deliberately fake and labelled as such: this
+      # workflow still references no secret (FR-028).
+      - name: Refuse the console backend on Render
+        run: |
+          set -euo pipefail
+          exit_code=0
+          output=$(docker run --rm --network host -e RENDER=true \
+            -e DATABASE_URL=postgresql://postgres@127.0.0.1:5432/postgres \
+            -e EMAIL_BACKEND=console \
+            -e SECRET_KEY=ci-dummy-not-a-secret-0123456789abcdef \
+            -e ADMIN_EMAILS=ci-admin@example.com \
+            -e RESEND_API_KEY=ci-dummy-key \
+            -e EMAIL_FROM=ci@example.com \
+            student-competitions:ci 2>&1) || exit_code=$?
+          if [ "$exit_code" -eq 0 ]; then
+            echo "::error::The container started on Render with the console backend (expected a non-zero exit). Output: ${output:0:1000}"
+            exit 1
+          fi
+          if ! printf '%s' "$output" | grep -q 'EMAIL_BACKEND'; then
+            echo "::error::The refusal (exit $exit_code) does not name EMAIL_BACKEND. Output: ${output:0:1000}"
+            exit 1
+          fi
+          for value in ci-dummy-not-a-secret ci-dummy-key; do
+            if printf '%s' "$output" | grep -q "$value"; then
+              echo "::error::The refusal output echoes a configured value."
+              exit 1
+            fi
+          done
+          echo "Refused as expected (exit $exit_code), naming EMAIL_BACKEND and echoing no value."
+
       # `--network host` so the container reaches the service on 127.0.0.1. The plain
       # `postgresql://` form is the one Neon hands out, so the URL normalisation runs in the real
-      # image.
+      # image. One administrator, so the job can sign in below. No EMAIL_BACKEND and no SECRET_KEY:
+      # the local defaults are the console backend, which prints the code to `docker logs`, and a
+      # fixed development key, which stays the same across the restart below.
       - name: Start the container
         run: |
           docker run -d --name smoke --network host \
             -e DATABASE_URL=postgresql://postgres@127.0.0.1:5432/postgres \
+            -e ADMIN_EMAILS=ci-admin@example.com \
             student-competitions:ci
 
       # The image has no curl, so the container cannot report readiness to the runner itself.
@@ -153,14 +209,23 @@ jobs:
 
           echo "GET $url → $status, $body"
 
-      # Checked twice: once as started, and once after a restart against the same database,
-      # which must show the next boot number and the six sample questions exactly once — nothing
-      # lost, nothing re-seeded. That is the persistence proof, run on every pull request (US2,
-      # FR-020, FR-027).
-      - name: Smoke test GET /, restart, and again
+      # The home page is private, so the job signs in through the real flow: it requests a code,
+      # reads it from the console backend's output in `docker logs` (as a developer would), and
+      # submits it. The page is then checked twice: once as started, and once after a restart
+      # against the same database with the same cookie jar, without signing in again. That must
+      # show the next boot number and the six sample questions exactly once (nothing lost,
+      # nothing re-seeded) and prove the server-side session survived the restart. Finally,
+      # logging out must end the session (specs/004-email-otp-auth/contracts/pipeline.md#checksyml--image).
+      # The logs contain the code by design here: it is the console backend in a throw-away
+      # container.
+      - name: Sign in, smoke test GET /, restart, and again
         run: |
           set -euo pipefail
-          url="http://127.0.0.1:8000/"
+          base="http://127.0.0.1:8000"
+          url="$base/"
+          admin="ci-admin@example.com"
+          jar=/tmp/cookies.txt
+          : >/tmp/home.html
 
           fail() {
             echo "::error::$1 Body: $(grep -m1 'class="db-status"' /tmp/home.html || head -c 500 /tmp/home.html)"
@@ -168,12 +233,46 @@ jobs:
             exit 1
           }
 
+          # An anonymous visitor is sent to the login page.
+          result=$(curl -s -o /tmp/home.html -w '%{http_code} %{redirect_url}' --max-time 10 "$url" || true)
+          case "$result" in
+            "303 "*"/login?next=%2F") echo "Anonymous GET $url → $result" ;;
+            *) fail "Anonymous GET $url returned '$result' (expected 303 to /login?next=%2F)." ;;
+          esac
+
+          # Step 1: request a code.
+          status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 -c "$jar" \
+            --data-urlencode "email=$admin" "$base/login" || true)
+          [ "$status" = "200" ] || fail "POST $base/login returned $status (expected 200)."
+
+          # The code is emailed by a background task after the response: poll the console output.
+          code=""
+          for attempt in $(seq 1 20); do
+            code=$(docker logs smoke 2>&1 |
+              grep -oE 'Your Student Competitions sign-in code is: [0-9]{6}' |
+              tail -n 1 | grep -oE '[0-9]{6}$' || true)
+            [ -n "$code" ] && break
+            sleep 0.5
+          done
+          [ -n "$code" ] || fail "No sign-in code appeared in the container's console output within 10s."
+
+          # Step 2: submit it.
+          status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 -b "$jar" -c "$jar" \
+            --data-urlencode "email=$admin" --data-urlencode "code=$code" "$base/login/code" || true)
+          [ "$status" = "303" ] || fail "POST $base/login/code returned $status (expected 303)."
+          grep -q 'sc_session' "$jar" || fail "POST $base/login/code set no sc_session cookie."
+          echo "Signed in as $admin."
+
           check_home() {
             local expected_boots="$1"
-            status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 "$url" || true)
+            status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 -b "$jar" "$url" || true)
             [ "$status" = "200" ] || fail "GET $url returned $status (expected 200)."
             grep -q 'Student Competitions' /tmp/home.html ||
               fail "GET $url did not contain the application name."
+            grep -q "$admin" /tmp/home.html ||
+              fail "GET $url does not show the signed-in address in the header."
+            grep -q 'action="/logout"' /tmp/home.html ||
+              fail "GET $url has no logout form."
             grep -q 'What is the boiling point of water at sea level' /tmp/home.html ||
               fail "GET $url did not contain the first sample question."
             ! grep -q 'temporarily unavailable' /tmp/home.html ||
@@ -186,21 +285,31 @@ jobs:
             items=$(sed -n '/<ol class="question-list">/,/<\/ol>/p' /tmp/home.html | grep -c '<li>' || true)
             [ "$items" = "6" ] ||
               fail "GET $url lists $items questions (expected the 6 samples exactly once)."
-            echo "GET $url → $status: PostgreSQL, boot #$found, $items sample questions."
+            echo "GET $url → $status: signed in, PostgreSQL, boot #$found, $items sample questions."
           }
 
           wait_for_container() {
             for attempt in $(seq 1 30); do
-              curl -fsS --max-time 5 http://127.0.0.1:8000/healthz >/dev/null 2>&1 && return 0
+              curl -fsS --max-time 5 "$base/healthz" >/dev/null 2>&1 && return 0
               sleep 2
             done
-            fail "The restarted container did not answer http://127.0.0.1:8000/healthz within 60s."
+            fail "The restarted container did not answer $base/healthz within 60s."
           }
 
           check_home 1
           docker restart smoke
           wait_for_container
           check_home 2
+
+          # Logging out ends the server-side session: the same jar is anonymous again.
+          status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 -b "$jar" -c "$jar" \
+            --data '' "$base/logout" || true)
+          [ "$status" = "303" ] || fail "POST $base/logout returned $status (expected 303)."
+          result=$(curl -s -o /tmp/home.html -w '%{http_code} %{redirect_url}' --max-time 10 -b "$jar" "$url" || true)
+          case "$result" in
+            "303 "*"/login?next=%2F") echo "After logout GET $url → $result" ;;
+            *) fail "After logout GET $url returned '$result' (expected 303 to the login page)." ;;
+          esac
 
       - name: Stop the container
         if: always()

@@ -203,6 +203,8 @@ Login emails are sent through [Resend](https://resend.com)'s HTTP API from the v
 
 To change who can sign in, edit `ADMIN_EMAILS` in Render → service → Environment and save; the restart applies the list. To rotate `SECRET_KEY` or `RESEND_API_KEY`, replace the value there the same way. A new `SECRET_KEY` signs everyone out.
 
+**Known issue: Outlook puts the codes in Junk.** Gmail delivers them to the inbox. Outlook/Hotmail addresses currently receive them in the Junk folder, although SPF, DKIM and DMARC all pass there too: Microsoft's filter rates the new sending domain on reputation (spam confidence level 5), not on authentication. Someone signing in with an Outlook address should check Junk and mark the message *Not junk*. This must be solved before teachers and students sign in; see the result recorded under T072 in [`specs/004-email-otp-auth/tasks.md`](specs/004-email-otp-auth/tasks.md).
+
 ### Production database
 
 PostgreSQL 17 on Neon's free plan (project `student-competitions`, AWS Europe Central 1 / Frankfurt), next to the Render service. Render reads its **direct** (non-pooled) connection string from the `DATABASE_URL` environment variable, declared in `render.yaml` without a value and entered once in the dashboard. The one-time bootstrap is described in [`specs/003-database-questions/quickstart.md`](specs/003-database-questions/quickstart.md#one-time-bootstrap-production-database).

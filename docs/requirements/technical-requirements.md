@@ -38,7 +38,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _UI (minimal):_ a two-step login page (email, then code) using plain forms that redirect after submit, with no HTMX. The header shows the signed-in email and a **Log out** button that submits a POST form. The home page content is unchanged.
    _Sessions:_ stored server-side in a `sessions` table. The cookie carries a random token signed with `SECRET_KEY`, and the database stores only the token's hash. Every request checks that the session is unexpired and the user is still active. Sessions expire after 14 days, and expired sessions and codes are cleaned up.
    _Security:_ codes are hashed with HMAC keyed by `SECRET_KEY`, single-use, and expire after about 20 minutes. Attempts per code and code requests per email are rate-limited, with counters stored in the database. Between the two steps, the email travels in a hidden form field. Known and unknown emails get the same response, and the email is sent in a background task so response timing does not reveal which emails are registered. The session cookie is `HttpOnly`, `SameSite=Lax` (sufficient against CSRF for this milestone), and `Secure` in production.
-   _Configuration:_ `SECRET_KEY`, `ADMIN_EMAILS`, `RESEND_API_KEY` and `EMAIL_FROM` are declared in `render.yaml` with `sync: false`. On Render, the application refuses to start if any of them is missing. Startup order: migration check, then admin reconcile, then boot count. The `users` table has a `role` column (only `admin` for now) so milestone 5 needs no reshaping migration.
+   _Configuration:_ `SECRET_KEY`, `ADMIN_EMAILS`, `RESEND_API_KEY` and `EMAIL_FROM` are declared in `render.yaml` with `sync: false`. On Render, the application refuses to start if any of them is missing. Startup order: migration check, then admin reconcile, then boot count. The `users` table has a `role` column (only `admin` for now); milestone 5 may change how roles are stored.
    _Rollout:_ the Resend domain's DNS records at NIC.UA and the Render secrets are in place before merging to `main`.
    _Test:_ a user can log in end to end, reading the code from the `memory` outbox. A route-table test asserts that every route outside the allowlist rejects anonymous requests. Existing page tests use a fixture that creates a session directly. Unknown and known emails get the same response. Running the reconcile twice changes nothing. An email removed from `ADMIN_EMAILS` can no longer log in and loses its sessions.
 
@@ -50,7 +50,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - The home page is open to all roles. Its content is unchanged, plus links to only the pages the current role can open.
    - One placeholder page per role (administrator, teacher, student), each open only to that role.
    - One placeholder page for staff, open to administrators and teachers but not to students.
-   - Every page shows the current role in the header, next to the application name in the top left corner.
+   - Every page shown after a role is chosen displays the current role in the header, next to the application name in the top left corner.
 
    _Out of scope:_ managing users, educational institutions or profiles in the application, and any real functionality for a role beyond its placeholder page.
    _Test:_

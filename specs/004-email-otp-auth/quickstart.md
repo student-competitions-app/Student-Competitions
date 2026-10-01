@@ -148,7 +148,7 @@ See [pipeline.md](./contracts/pipeline.md#checksyml--image).
 After merging, open the `Deploy` run.
 
 **Expected**: *Verify the public address is serving this commit* and *Verify access control* are
-green. `curl -sI https://brainring.org.ua/` shows `303` and `location: /login?next=%2F`.
+green. `curl -s -o /dev/null -D - https://brainring.org.ua/` (a GET; `curl -I` sends HEAD, which FastAPI answers with `405`) shows `303` and `location: /login?next=%2F`.
 `/healthz` answers without a cookie.
 
 ### V5: An administrator signs in on production with a real inbox (US1; FR-009, FR-012, FR-032, FR-038; SC-001) *(manual, required once)*
@@ -224,7 +224,7 @@ PR checks the same property automatically in the `image` job (V3).
 - [ ] V3: `image` job green (real sign-in, restart keeps the session, refusals)
 - [ ] V4: deploy job's *Verify access control* green; production `/` → 303
 - [ ] V5: real sign-in on production; cookie flags confirmed
-- [ ] V6: removed administrator loses access within one restart; re-adding restores it
+- [X] V6: removed administrator loses access within one restart; re-adding restores it
 - [ ] V7: ≥ 95% inbox placement within 1 minute across two providers; DKIM/SPF/DMARC pass
 - [ ] V8: boot count witnessed rising across a redeploy while signed in
 - [ ] V9: per-email limit confirmed; per-client spoofing result recorded

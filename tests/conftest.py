@@ -12,16 +12,20 @@ the PostgreSQL cases are skipped locally; under `CI=true` the session refuses to
 See specs/003-database-questions/research.md#d12.
 
 Sign-in (milestone 4): every test runs with `EMAIL_BACKEND=memory`, so no email leaves the
-process and the code can be read from the `outbox`. `client` is anonymous; `admin_client` is
-signed in as `ADMIN_EMAIL` through a session created directly in the database, the suite's only
-sign-in shortcut (specs/004-email-otp-auth/research.md#d15).
+process and the code can be read from the `outbox`. `client` is anonymous.
+
+Roles (milestone 5): every application fixture starts with the same cast of five people, covering
+each role and both multi-role combinations the stories use (research D12). `client_as(email,
+current_role=AUTO)` returns a client signed in as one of them, and `admin_client` is
+`client_as(ADMIN_EMAIL)`. Both go through `sign_in_directly`, which creates the session directly in
+the database: the suite's only sign-in shortcut, and it exists only in `tests/` (FR-041).
 """
 
 import itertools
 import os
 import secrets
 import shutil
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -38,18 +42,39 @@ from app.core.db import create_db_engine
 from app.core.migrations import alembic_config
 from app.core.security import SESSION_COOKIE_NAME, sign_cookie_value
 from app.main import app
+from app.models import Role
 from app.services.email import EmailMessage, MemoryEmailSender
-from app.services.sessions import create_session
+from app.services.sessions import create_session, start_session
 from app.services.users import get_active_user_by_email
 
 ENGINES = ["sqlite", "postgresql"]
 
 POSTGRES_SKIP_REASON = "set TEST_POSTGRES_URL to run the PostgreSQL cases (see README)"
 
+# The cast every application fixture is started with (research D12).
 ADMIN_EMAIL = "admin@example.com"
-"""The one administrator every application fixture is started with (`ADMIN_EMAILS`)."""
+"""Administrator only."""
+TEACHER_EMAIL = "teacher@example.com"
+"""Teacher only."""
+STUDENT_EMAIL = "student@example.com"
+"""Student only."""
+ADMIN_STUDENT_EMAIL = "admin.student@example.com"
+"""Administrator and student."""
+TEACHER_STUDENT_EMAIL = "teacher.student@example.com"
+"""Teacher and student."""
 
-AUTH_VARIABLES = ("SECRET_KEY", "ADMIN_EMAILS", "RESEND_API_KEY", "EMAIL_FROM")
+CAST_ADMIN_EMAILS = f"{ADMIN_EMAIL},{ADMIN_STUDENT_EMAIL}"
+CAST_TEACHER_EMAILS = f"{TEACHER_EMAIL},{TEACHER_STUDENT_EMAIL}"
+CAST_STUDENT_EMAILS = f"{STUDENT_EMAIL},{ADMIN_STUDENT_EMAIL},{TEACHER_STUDENT_EMAIL}"
+
+AUTH_VARIABLES = (
+    "SECRET_KEY",
+    "ADMIN_EMAILS",
+    "TEACHER_EMAILS",
+    "STUDENT_EMAILS",
+    "RESEND_API_KEY",
+    "EMAIL_FROM",
+)
 
 RUN_TOKEN = secrets.token_hex(4)
 """In every PostgreSQL database name, so parallel or repeated runs against one server never
@@ -201,11 +226,13 @@ def client(monkeypatch: pytest.MonkeyPatch, database_url: str) -> Iterator[TestC
     """Drive the real ASGI application in-process — no live server, no bound port.
 
     The database is given the way production gives it, through `DATABASE_URL`, so `lifespan`
-    resolves, guards and counts the start exactly as it does on Render. `ADMIN_EMAIL` is the one
-    administrator, reconciled at start. The client itself is anonymous.
+    resolves, guards and counts the start exactly as it does on Render. The cast is reconciled at
+    start from the three role lists. The client itself is anonymous.
     """
     monkeypatch.setenv("DATABASE_URL", database_url)
-    monkeypatch.setenv("ADMIN_EMAILS", ADMIN_EMAIL)
+    monkeypatch.setenv("ADMIN_EMAILS", CAST_ADMIN_EMAILS)
+    monkeypatch.setenv("TEACHER_EMAILS", CAST_TEACHER_EMAILS)
+    monkeypatch.setenv("STUDENT_EMAILS", CAST_STUDENT_EMAILS)
     with TestClient(app) as test_client:
         yield test_client
 
@@ -218,39 +245,69 @@ def outbox(client: TestClient) -> list[EmailMessage]:
     return sender.outbox
 
 
-def sign_in_directly(test_client: TestClient, email: str) -> str:
+AUTO = object()
+"""`sign_in_directly`'s default current role: whatever a real sign-in would start with."""
+
+
+def sign_in_directly(
+    test_client: TestClient, email: str, current_role: Role | None | object = AUTO
+) -> str:
     """Give `test_client` a session for the active user `email` without the email step, and
     return the plain session token.
 
-    **Test-only.** It calls `create_session` directly on the application's database and sets the
-    signed cookie by hand. No route or setting of the running application offers anything like
-    it: there is no login bypass (FR-034, FR-046). Requires the application to be started (the
+    `AUTO` starts the session as the code check does (`start_session`): a single-role person in
+    their role, a multi-role person with none. An explicit `Role`, or `None`, overrides that.
+
+    **Test-only.** It calls the session service directly on the application's database and sets
+    the signed cookie by hand. No route or setting of the running application offers anything
+    like it: there is no login bypass (FR-041). Requires the application to be started (the
     `client` fixture).
     """
     with Session(app.state.engine) as db_session:
         user = get_active_user_by_email(db_session, email)
         assert user is not None, "no active user with that address"
-        token = create_session(db_session, user)
+        if current_role is AUTO:
+            token, _ = start_session(db_session, user)
+        else:
+            assert current_role is None or isinstance(current_role, Role)
+            token = create_session(db_session, user, current_role)
     test_client.cookies.set(
         SESSION_COOKIE_NAME, sign_cookie_value(app.state.settings.secret_key, token)
     )
     return token
 
 
-@pytest.fixture
-def admin_client(client: TestClient) -> Iterator[TestClient]:
-    """A second client for the same running application, signed in as `ADMIN_EMAIL`.
+ClientAs = Callable[..., TestClient]
+"""`client_as(email, current_role=AUTO) -> TestClient`."""
 
-    It shares the application `client` started (one start, one boot, one outbox) but has its own
-    cookie jar, so `client` stays anonymous. The session is created directly in the database by
-    `sign_in_directly`: the only sign-in shortcut, and it exists only in `tests/`.
+
+@pytest.fixture
+def client_as(client: TestClient) -> Iterator[ClientAs]:
+    """A factory of further clients for the same running application, each signed in as
+    `email` with `current_role` (see `sign_in_directly`).
+
+    They share the application `client` started (one start, one boot, one outbox) but each has
+    its own cookie jar, like a separate browser, so `client` stays anonymous.
     """
-    # Not entered as a context manager: that would run `lifespan` a second time (a second boot,
-    # a fresh outbox). Requests still go through the application `client` started.
-    signed_in = TestClient(app)
-    sign_in_directly(signed_in, ADMIN_EMAIL)
-    yield signed_in
-    signed_in.close()
+    opened: list[TestClient] = []
+
+    def make(email: str, current_role: Role | None | object = AUTO) -> TestClient:
+        # Not entered as a context manager: that would run `lifespan` a second time (a second
+        # boot, a fresh outbox). Requests still go through the application `client` started.
+        signed_in = TestClient(app)
+        opened.append(signed_in)
+        sign_in_directly(signed_in, email, current_role)
+        return signed_in
+
+    yield make
+    for signed_in in opened:
+        signed_in.close()
+
+
+@pytest.fixture
+def admin_client(client_as: ClientAs) -> TestClient:
+    """A client signed in as `ADMIN_EMAIL`, the single-role administrator."""
+    return client_as(ADMIN_EMAIL)
 
 
 # ---------------------------------------------------------------------------------------------

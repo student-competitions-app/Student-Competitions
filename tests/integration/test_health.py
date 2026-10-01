@@ -83,7 +83,7 @@ def test_healthz_with_a_cookie_does_no_session_lookup(
         assert token
     else:
         client.cookies.set(SESSION_COOKIE_NAME, "garbage")
-    monkeypatch.setattr(auth, "get_session_user", failing)
+    monkeypatch.setattr(auth, "get_session_identity", failing)
     monkeypatch.setattr(auth, "Session", failing)
 
     response = client.get("/healthz")

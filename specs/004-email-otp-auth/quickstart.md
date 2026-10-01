@@ -148,7 +148,7 @@ See [pipeline.md](./contracts/pipeline.md#checksyml--image).
 After merging, open the `Deploy` run.
 
 **Expected**: *Verify the public address is serving this commit* and *Verify access control* are
-green. `curl -sI https://brainring.org.ua/` shows `303` and `location: /login?next=%2F`.
+green. `curl -s -o /dev/null -D - https://brainring.org.ua/` (a GET; `curl -I` sends HEAD, which FastAPI answers with `405`) shows `303` and `location: /login?next=%2F`.
 `/healthz` answers without a cookie.
 
 ### V5: An administrator signs in on production with a real inbox (US1; FR-009, FR-012, FR-032, FR-038; SC-001) *(manual, required once)*
@@ -217,19 +217,19 @@ PR checks the same property automatically in the `image` job (V3).
 
 ## Milestone acceptance checklist
 
-- [ ] B1–B3 done before the merge; the Resend domain is *Verified*; the four secrets exist only in
+- [X] B1–B3 done before the merge; the Resend domain is *Verified*; the four secrets exist only in
       Render
-- [ ] V1: clean checkout → local sign-in via the console email in under 15 minutes
-- [ ] V2: full suite green on both engines
-- [ ] V3: `image` job green (real sign-in, restart keeps the session, refusals)
-- [ ] V4: deploy job's *Verify access control* green; production `/` → 303
-- [ ] V5: real sign-in on production; cookie flags confirmed
-- [ ] V6: removed administrator loses access within one restart; re-adding restores it
-- [ ] V7: ≥ 95% inbox placement within 1 minute across two providers; DKIM/SPF/DMARC pass
-- [ ] V8: boot count witnessed rising across a redeploy while signed in
-- [ ] V9: per-email limit confirmed; per-client spoofing result recorded
-- [ ] V10: no code, token, secret or body in the diff, the logs or the image
-- [ ] README updated: every new setting (purpose, values, local default, production requirement),
+- [X] V1: clean checkout → local sign-in via the console email in under 15 minutes
+- [X] V2: full suite green on both engines
+- [X] V3: `image` job green (real sign-in, restart keeps the session, refusals)
+- [X] V4: deploy job's *Verify access control* green; production `/` → 303
+- [X] V5: real sign-in on production; cookie flags confirmed
+- [X] V6: removed administrator loses access within one restart; re-adding restores it
+- [X] V7: ≥ 95% inbox placement within 1 minute across two providers; DKIM/SPF/DMARC pass
+- [X] V8: boot count witnessed rising across a redeploy while signed in
+- [X] V9: per-email limit confirmed; per-client spoofing result recorded
+- [X] V10: no code, token, secret or body in the diff, the logs or the image
+- [X] README updated: every new setting (purpose, values, local default, production requirement),
       local sign-in via the console, and the private-by-default rule for new pages
 
 ## Reference

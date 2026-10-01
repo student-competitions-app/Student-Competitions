@@ -2,10 +2,12 @@
 # Contract: specs/002-public-deploy-cicd/contracts/render-service.md — rationale: research D1–D3.
 #
 # `region` is immutable after creation: changing it means a new service and a new public address.
-# Five secrets are declared below by key only (`sync: false`): the production database URL
-# (milestone 3 FR-032) and the four sign-in secrets (milestone 4:
-# specs/004-email-otp-auth/contracts/configuration.md). Their values are entered once in the
-# Render dashboard and are never committed. Without any of them the service refuses to start.
+# Seven secrets are declared below by key only (`sync: false`): the production database URL
+# (milestone 3 FR-032), the four sign-in secrets (milestone 4:
+# specs/004-email-otp-auth/contracts/configuration.md) and the teacher and student lists
+# (milestone 5: specs/005-roles-authorization/contracts/configuration.md). Their values are
+# entered once in the Render dashboard and are never committed. Without any of the first five the
+# service refuses to start; the two lists may be left empty.
 # The database itself is on Neon, not Render, so there is no `databases:` block here
 # (specs/003-database-questions/research.md#d1).
 services:
@@ -54,6 +56,13 @@ services:
       # Comma-separated administrator addresses, reconciled on every start: removing one here
       # ends that person's access at the restart this change triggers.
       - key: ADMIN_EMAILS
+        sync: false
+      # Temporary until milestone 7: comma-separated teacher and student addresses, reconciled on
+      # every start like ADMIN_EMAILS. May be left empty. Removing an address logs that person
+      # out everywhere at the restart this change triggers.
+      - key: TEACHER_EMAILS
+        sync: false
+      - key: STUDENT_EMAILS
         sync: false
       # A sending-only Resend key restricted to the verified domain.
       - key: RESEND_API_KEY

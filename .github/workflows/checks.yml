@@ -216,6 +216,9 @@ jobs:
       # show the next boot number and the six sample questions exactly once (nothing lost,
       # nothing re-seeded) and prove the server-side session survived the restart. Finally,
       # logging out must end the session (specs/004-email-otp-auth/contracts/pipeline.md#checksyml--image).
+      # The single-role administrator must also see "· Administrator" and only their area links,
+      # open /admin and be refused /student, and a cross-site logout must be refused without ending
+      # the session (specs/005-roles-authorization/contracts/pipeline.md#checksyml--image).
       # The logs contain the code by design here: it is the console backend in a throw-away
       # container.
       - name: Sign in, smoke test GET /, restart, and again
@@ -285,7 +288,22 @@ jobs:
             items=$(sed -n '/<ol class="question-list">/,/<\/ol>/p' /tmp/home.html | grep -c '<li>' || true)
             [ "$items" = "6" ] ||
               fail "GET $url lists $items questions (expected the 6 samples exactly once)."
+            grep -q 'class="site-role">· Administrator' /tmp/home.html ||
+              fail "GET $url does not show '· Administrator' in the header."
+            grep -q 'href="/admin"' /tmp/home.html && grep -q 'href="/staff"' /tmp/home.html ||
+              fail "GET $url does not link the Administrator and Staff areas."
+            ! grep -q -e 'href="/student"' -e 'href="/teacher"' /tmp/home.html ||
+              fail "GET $url links an area the administrator role may not open."
             echo "GET $url → $status: signed in, PostgreSQL, boot #$found, $items sample questions."
+          }
+
+          # GET <path> with the session; fail unless it answers <status> and contains <text>.
+          check_page() {
+            local path="$1" expected="$2" text="$3"
+            status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 -b "$jar" "$base$path" || true)
+            [ "$status" = "$expected" ] || fail "GET $base$path returned $status (expected $expected)."
+            grep -q "$text" /tmp/home.html || fail "GET $base$path does not contain '$text'."
+            echo "GET $base$path → $status, '$text'"
           }
 
           wait_for_container() {
@@ -297,6 +315,14 @@ jobs:
           }
 
           check_home 1
+          check_page /admin 200 'Administrator area'
+          check_page /student 403 'Access denied'
+
+          # A logout posted from another site is refused, and the session survives it.
+          status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 -b "$jar" \
+            -H 'Origin: https://evil.example' --data '' "$base/logout" || true)
+          [ "$status" = "403" ] || fail "Cross-site POST $base/logout returned $status (expected 403)."
+          check_page / 200 'class="site-role"'
           docker restart smoke
           wait_for_container
           check_home 2

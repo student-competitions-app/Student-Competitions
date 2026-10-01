@@ -1,0 +1,21 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Choose a role — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <h1>Choose a role</h1>
+  {% if message %}
+  <p class="auth-message" role="alert">{{ message }}</p>
+  {% endif %}
+  <p>You have more than one role. Choose the one to use now. You can switch at any time from the header.</p>
+  <form method="post" action="/role" class="role-choice">
+    {% if next %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% endif %}
+    {% for role in roles %}
+    <button type="submit" name="role" value="{{ role.value }}">{{ role.label }}</button>
+    {% endfor %}
+  </form>
+</section>
+{% endblock %}

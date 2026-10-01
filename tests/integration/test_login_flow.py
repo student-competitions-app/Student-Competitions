@@ -18,9 +18,10 @@ from sqlmodel import Session, select
 import app.routers.auth as auth_router
 from app.core.db import utc_now
 from app.core.security import SESSION_COOKIE_NAME
+from app.main import app
 from app.models import LoginCode, UserSession
 from app.services.email import EmailMessage
-from tests.conftest import ADMIN_EMAIL
+from tests.conftest import ADMIN_EMAIL, STUDENT_EMAIL, TEACHER_EMAIL
 
 SENT_NOTICE = (
     "If this address belongs to an account, we have sent a code to it. "
@@ -320,3 +321,51 @@ def test_a_garbage_cookie_is_simply_anonymous(client: TestClient) -> None:
     response = client.get("/", follow_redirects=False)
     assert response.status_code == 303
     assert response.headers["location"] == "/login?next=%2F"
+
+
+# ---------------------------------------------------------------------------------------------
+# Roles (milestone 5)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_a_single_role_person_signs_in_exactly_as_before(
+    client: TestClient, outbox: list[EmailMessage], session: Session
+) -> None:
+    """SC-003, US1-1, FR-012: no role-choice step; the session starts in the one role held."""
+    start = client.get("/teacher", follow_redirects=False)
+    assert start.headers["location"] == "/login?next=%2Fteacher"
+    assert request_code(client, email=TEACHER_EMAIL, next_path="/teacher").status_code == 200
+    response = submit_code(client, code_from(outbox[-1]), email=TEACHER_EMAIL, next_path="/teacher")
+    assert response.status_code == 303
+    assert response.headers["location"] == "/teacher"
+    [row] = session.exec(select(UserSession)).all()
+    assert row.current_role == "teacher"
+    landed = client.get("/teacher")
+    assert landed.status_code == 200
+    assert '<span class="site-role">· Teacher</span>' in landed.text
+
+
+def test_a_person_on_no_list_gets_no_code(
+    monkeypatch: pytest.MonkeyPatch, database_url: str
+) -> None:
+    """FR-010, US2-5: removed from every list, a person is answered like anyone else, is sent
+    nothing, and a code they already had stops working."""
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.setenv("STUDENT_EMAILS", STUDENT_EMAIL)
+    with TestClient(app) as before:
+        request_code(before, email=STUDENT_EMAIL)
+        old_code = code_from(app.state.email_sender.outbox[-1])
+
+    monkeypatch.setenv("STUDENT_EMAILS", "")
+    monkeypatch.setenv("ADMIN_EMAILS", ADMIN_EMAIL)
+    with TestClient(app) as after:
+        removed = request_code(after, email=STUDENT_EMAIL)
+        unknown = request_code(after, email="nobody@example.com")
+        assert removed.status_code == unknown.status_code == 200
+        assert removed.text.replace(STUDENT_EMAIL, "X") == unknown.text.replace(
+            "nobody@example.com", "X"
+        )
+        assert app.state.email_sender.outbox == []
+        response = submit_code(after, old_code, email=STUDENT_EMAIL)
+        assert response.status_code == 400
+        assert INVALID_CODE in response.text

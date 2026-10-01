@@ -40,7 +40,14 @@ def test_local_paths_are_kept(value: str) -> None:
         "/login?next=/x",
         "/login/code",
         "/logout",
+        "/role",
+        "/role?next=%2Fadmin",
     ],
 )
 def test_anything_else_becomes_the_home_page(value: str | None) -> None:
     assert safe_next_path(value) == "/"
+
+
+def test_only_the_exact_role_path_is_refused() -> None:
+    """`AUTH_PATHS` matches whole paths, as for `/login`: `/role/` is another page."""
+    assert safe_next_path("/role/") == "/role/"

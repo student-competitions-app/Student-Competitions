@@ -10,19 +10,22 @@ import subprocess
 import sys
 import time
 from collections.abc import Iterator
+from datetime import timedelta
 from typing import Any
 
 import pytest
+import sqlalchemy as sa
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import Engine, inspect, text
+from sqlalchemy import Connection, Engine, inspect, text
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, select
 
 import app.models  # noqa: F401 — every table on SQLModel.metadata, for the drift check
 from app.core.config import PROJECT_ROOT
-from app.core.db import create_db_engine
+from app.core.db import create_db_engine, utc_now
 from app.core.migrations import (
     MIGRATION_LOCK_KEY,
     alembic_config,
@@ -198,3 +201,155 @@ def test_concurrent_upgrades_apply_once(
         versions = connection.execute(text("SELECT version_num FROM alembic_version")).all()
     assert [row[0] for row in versions] == [head_revision()]
     assert stored_questions(migration_engine) == samples_as_pairs(sample_questions)
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 5: roles move to `user_roles` without losing an administrator
+# ---------------------------------------------------------------------------------------------
+#
+# Lightweight table constructs, never the ORM models: the models describe head, and these tests
+# write rows at older revisions too. See
+# specs/005-roles-authorization/data-model.md#7-schema-revision-introduced-by-this-milestone.
+
+AUTH_REVISION = "a35580dee830"
+
+users_t = sa.table(
+    "users",
+    sa.column("id", sa.Integer()),
+    sa.column("email", sa.String()),
+    sa.column("role", sa.String()),
+    sa.column("is_active", sa.Boolean()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("updated_at", sa.DateTime(timezone=True)),
+)
+user_roles_t = sa.table(
+    "user_roles",
+    sa.column("user_id", sa.Integer()),
+    sa.column("role", sa.String()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+)
+sessions_t = sa.table(
+    "sessions",
+    sa.column("id", sa.Integer()),
+    sa.column("user_id", sa.Integer()),
+    sa.column("token_hash", sa.String()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("expires_at", sa.DateTime(timezone=True)),
+)
+login_codes_t = sa.table(
+    "login_codes",
+    sa.column("user_id", sa.Integer()),
+    sa.column("code_hash", sa.String()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("expires_at", sa.DateTime(timezone=True)),
+    sa.column("attempts", sa.Integer()),
+)
+
+
+def add_user(connection: Connection, email: str, role: str | None, active: bool) -> int:
+    now = utc_now()
+    return connection.execute(
+        users_t.insert()
+        .values(email=email, role=role, is_active=active, created_at=now, updated_at=now)
+        .returning(users_t.c.id)
+    ).scalar_one()
+
+
+def add_session(connection: Connection, user_id: int, token_hash: str) -> None:
+    now = utc_now()
+    connection.execute(
+        sessions_t.insert().values(
+            user_id=user_id,
+            token_hash=token_hash,
+            created_at=now,
+            expires_at=now + timedelta(days=14),
+        )
+    )
+
+
+def add_role(connection: Connection, user_id: int, role: str) -> None:
+    connection.execute(
+        user_roles_t.insert().values(user_id=user_id, role=role, created_at=utc_now())
+    )
+
+
+def test_upgrade_keeps_the_active_administrators(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Every active milestone 4 administrator holds the administrator role at head; an inactive
+    one holds none; existing sessions survive with no role chosen yet (SC-010)."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", AUTH_REVISION)
+    with migration_engine.begin() as connection:
+        active = add_user(connection, "active@example.com", "admin", True)
+        inactive = add_user(connection, "inactive@example.com", "admin", False)
+        add_session(connection, active, "a" * 64)
+
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+
+    with migration_engine.begin() as connection:
+        roles = connection.execute(sa.select(user_roles_t.c.user_id, user_roles_t.c.role)).all()
+        assert [tuple(row) for row in roles] == [(active, "admin")]
+        assert inactive != active
+        current = connection.execute(
+            sa.select(sa.column("user_id"), sa.column("current_role")).select_from(
+                sa.table("sessions")
+            )
+        ).all()
+        assert [tuple(row) for row in current] == [(active, None)]
+        add_user(connection, "new@example.com", None, True)  # `users.role` is now nullable
+
+
+def test_downgrade_deactivates_everyone_who_is_not_an_administrator(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Milestone 4 treats every active user as an administrator, so the way back must not leave
+    a teacher or a student active."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        admin = add_user(connection, "admin@example.com", None, True)
+        add_role(connection, admin, "admin")
+        add_session(connection, admin, "a" * 64)
+        both = add_user(connection, "admin.student@example.com", None, True)
+        add_role(connection, both, "admin")
+        add_role(connection, both, "student")
+        teacher = add_user(connection, "teacher@example.com", None, True)
+        add_role(connection, teacher, "teacher")
+        add_session(connection, teacher, "t" * 64)
+        now = utc_now()
+        connection.execute(
+            login_codes_t.insert().values(
+                user_id=teacher,
+                code_hash="c" * 64,
+                created_at=now,
+                expires_at=now + timedelta(minutes=20),
+                attempts=0,
+            )
+        )
+        former = add_user(connection, "former@example.com", None, False)
+
+    run_alembic(monkeypatch, empty_database_url, "downgrade", AUTH_REVISION)
+
+    with migration_engine.begin() as connection:
+        found = {
+            row.id: (row.role, row.is_active)
+            for row in connection.execute(
+                sa.select(users_t.c.id, users_t.c.role, users_t.c.is_active)
+            )
+        }
+        assert found == {
+            admin: ("admin", True),
+            both: ("admin", True),
+            teacher: ("teacher", False),
+            former: ("admin", False),
+        }
+        session_owners = connection.execute(sa.select(sessions_t.c.user_id)).scalars().all()
+        assert session_owners == [admin]
+        assert connection.execute(sa.select(login_codes_t.c.user_id)).scalars().all() == []
+        tables = set(inspect(connection).get_table_names())
+        assert "user_roles" not in tables
+        assert "current_role" not in {
+            c["name"] for c in inspect(connection).get_columns("sessions")
+        }
+
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        add_user(connection, "nobody@example.com", None, False)

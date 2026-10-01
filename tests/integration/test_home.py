@@ -26,7 +26,7 @@ from app.core.templates import SHORT_COMMIT_LENGTH
 from app.models import Question
 from app.schemas.question import QuestionCreate
 from app.services.questions import create_question
-from tests.conftest import ADMIN_EMAIL
+from tests.conftest import ADMIN_EMAIL, STUDENT_EMAIL, TEACHER_EMAIL, ClientAs
 
 VIEWPORT_META = '<meta name="viewport" content="width=device-width, initial-scale=1">'
 
@@ -53,6 +53,22 @@ def test_home_header_shows_the_signed_in_email_and_a_logout_form(
     assert header is not None, "the page has no <header>"
     assert ADMIN_EMAIL in header.group(0)
     assert '<form method="post" action="/logout">' in header.group(0)
+    assert "Log out" in header.group(0)
+
+
+@pytest.mark.parametrize(
+    ("email", "label"),
+    [(ADMIN_EMAIL, "Administrator"), (TEACHER_EMAIL, "Teacher"), (STUDENT_EMAIL, "Student")],
+)
+def test_home_header_shows_the_current_role(client_as: ClientAs, email: str, label: str) -> None:
+    """FR-031, US1-5: "Student Competitions · <Role>", still with the address and Log out."""
+    header = re.search(r"<header.*?</header>", client_as(email).get("/").text, re.DOTALL)
+    assert header is not None, "the page has no <header>"
+    title = re.search(r'<span class="site-title">(.*?)</span>\s*</span>', header.group(0))
+    assert title is not None, "the header has no title"
+    assert f"<strong>{APP_NAME}</strong>" in title.group(1)
+    assert f'<span class="site-role">· {label}' in title.group(1)
+    assert email in header.group(0)
     assert "Log out" in header.group(0)
 
 

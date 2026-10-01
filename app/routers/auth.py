@@ -12,6 +12,7 @@ handler logs an address, a code, a token or a cookie.
 """
 
 import logging
+from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -31,7 +32,7 @@ from app.core.templates import templates
 from app.schemas.auth import CodeSubmission, EmailSubmission
 from app.services.login import deliver_login_code, verify_code
 from app.services.rate_limits import allow_code_request
-from app.services.sessions import create_session, delete_session
+from app.services.sessions import delete_session, start_session
 
 router = APIRouter()
 
@@ -150,6 +151,10 @@ def submit_code(
 ) -> Response:
     """Step 2 submitted: a correct code starts a session and returns to the page asked for.
 
+    A person with one role starts in it and lands on that page directly; a person with several
+    starts with none and is sent to the role choice first, which carries the page on
+    (specs/005-roles-authorization FR-012, FR-013).
+
     Every failure (wrong, expired, used or exhausted code, unknown or inactive address, a lost
     double-submit race) gets the same message, so it reveals nothing (FR-013).
     """
@@ -168,7 +173,7 @@ def submit_code(
     settings = _settings(request)
     try:
         user = verify_code(session, settings.secret_key, submission.email, submission.code)
-        token = create_session(session, user) if user is not None else None
+        started = start_session(session, user) if user is not None else None
     except SQLAlchemyError as exc:
         logger.error("Sign-in unavailable: %s", type(exc).__name__)
         return _page(
@@ -179,7 +184,7 @@ def submit_code(
             message=UNAVAILABLE,
             status_code=503,
         )
-    if token is None:
+    if started is None:
         return _page(
             request,
             STEP_TWO,
@@ -188,7 +193,12 @@ def submit_code(
             message=INVALID_CODE,
             status_code=400,
         )
-    response = RedirectResponse(next_path, status_code=303)
+    token, current_role = started
+    if current_role is None:
+        location = f"/role?next={quote(next_path, safe='')}"
+    else:
+        location = next_path
+    response = RedirectResponse(location, status_code=303)
     set_session_cookie(response, settings, token)
     return response
 

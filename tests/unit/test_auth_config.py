@@ -1,6 +1,7 @@
 """Authentication settings: what is required where, and that no value is ever echoed.
 
-See specs/004-email-otp-auth/contracts/configuration.md. Every case passes an explicit `environ`
+See specs/004-email-otp-auth/contracts/configuration.md and, for the teacher and student lists,
+specs/005-roles-authorization/contracts/configuration.md. Every case passes an explicit `environ`
 dict to `resolve_auth_settings`, never `os.environ`, so nothing depends on the shell running the
 suite.
 """
@@ -37,7 +38,8 @@ C7 = "RESEND_API_KEY is required for the resend email backend."
 C8 = "EMAIL_FROM is required for the resend email backend and must be a valid sender address."
 W1 = "SECRET_KEY is not set; using an insecure development key. Never do this in production."
 W2 = "EMAIL_BACKEND is not set; login emails will be printed to this console."
-W3 = "ADMIN_EMAILS is empty; nobody will be able to sign in."
+W3 = "ADMIN_EMAILS is empty; nobody will be able to sign in as an administrator."
+W4 = "No role lists are set; nobody will be able to sign in."
 
 
 def error_lines(environ: dict[str, str]) -> list[str]:
@@ -95,6 +97,22 @@ def test_empty_strings_count_as_unset() -> None:
 def test_admin_emails_are_trimmed_lowercased_deduplicated_and_sorted() -> None:
     settings = resolve_auth_settings({"ADMIN_EMAILS": " B@x.org, a@x.org ,A@X.ORG,"})
     assert settings.admin_emails == ("a@x.org", "b@x.org")
+
+
+@pytest.mark.parametrize("name", ["TEACHER_EMAILS", "STUDENT_EMAILS"])
+def test_the_new_lists_are_parsed_like_admin_emails(name: str) -> None:
+    settings = resolve_auth_settings({name: " B@example.org, a@example.org ,A@EXAMPLE.ORG,"})
+    field = name.lower()
+    assert getattr(settings, field) == ("a@example.org", "b@example.org")
+
+
+@pytest.mark.parametrize("value", [None, "", " , ,"])
+def test_the_new_lists_may_be_unset_or_empty(value: str | None) -> None:
+    """FR-037: nobody holds that role, and the start is allowed."""
+    environ = {} if value is None else {"TEACHER_EMAILS": value, "STUDENT_EMAILS": value}
+    settings = resolve_auth_settings(environ)
+    assert settings.teacher_emails == ()
+    assert settings.student_emails == ()
 
 
 @pytest.mark.parametrize("backend", ["console", "memory"])
@@ -212,14 +230,64 @@ def test_every_violation_is_reported_together_in_rule_order() -> None:
 
 
 # ---------------------------------------------------------------------------------------------
-# Warnings W1–W3
+# Rules C9–C10: the teacher and student lists (milestone 5)
 # ---------------------------------------------------------------------------------------------
 
 
-def test_w1_to_w3_warn_locally_when_unset(caplog: pytest.LogCaptureFixture) -> None:
+@pytest.mark.parametrize("name", ["TEACHER_EMAILS", "STUDENT_EMAILS"])
+@pytest.mark.parametrize("render", [False, True])
+def test_c9_c10_malformed_entries_are_reported_by_position(name: str, render: bool) -> None:
+    base = dict(RENDER_OK) if render else {}
+    assert error_lines({**base, name: "ok@example.org,bad,also@@bad"}) == [
+        f"{name} entry 2 is not a valid email address.",
+        f"{name} entry 3 is not a valid email address.",
+    ]
+
+
+def test_the_new_lists_are_optional_on_render() -> None:
+    """FR-036: a valid Render configuration without them starts."""
+    settings = resolve_auth_settings(RENDER_OK)
+    assert settings.teacher_emails == ()
+    assert settings.student_emails == ()
+    with_lists = {**RENDER_OK, "TEACHER_EMAILS": "t@example.org", "STUDENT_EMAILS": ""}
+    assert resolve_auth_settings(with_lists).teacher_emails == ("t@example.org",)
+
+
+def test_every_list_is_reported_in_one_error_in_rule_order() -> None:
+    environ = {
+        "EMAIL_BACKEND": "nope",
+        "ADMIN_EMAILS": "bad",
+        "TEACHER_EMAILS": "bad",
+        "STUDENT_EMAILS": "ok@example.org,bad",
+    }
+    assert error_lines(environ) == [
+        C1,
+        "ADMIN_EMAILS entry 1 is not a valid email address.",
+        "TEACHER_EMAILS entry 1 is not a valid email address.",
+        "STUDENT_EMAILS entry 2 is not a valid email address.",
+    ]
+
+
+# ---------------------------------------------------------------------------------------------
+# Warnings W1–W4
+# ---------------------------------------------------------------------------------------------
+
+
+def test_w1_w2_w4_warn_locally_when_unset(caplog: pytest.LogCaptureFixture) -> None:
+    """With no list at all, W4 replaces W3."""
     with caplog.at_level(logging.WARNING, logger=WARNING_LOGGER):
         resolve_auth_settings({})
-    assert warnings(caplog) == [W1, W2, W3]
+    assert warnings(caplog) == [W1, W2, W4]
+
+
+@pytest.mark.parametrize("name", ["TEACHER_EMAILS", "STUDENT_EMAILS"])
+def test_w3_warns_when_only_the_administrators_are_missing(
+    name: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    environ = {"SECRET_KEY": GOOD_KEY, "EMAIL_BACKEND": "memory", name: "a@example.org"}
+    with caplog.at_level(logging.WARNING, logger=WARNING_LOGGER):
+        resolve_auth_settings(environ)
+    assert warnings(caplog) == [W3]
 
 
 def test_no_warning_when_everything_is_set_locally(caplog: pytest.LogCaptureFixture) -> None:
@@ -248,6 +316,7 @@ PLANTED_KEY = "re_planted_key"
 def assert_nothing_planted(text: str) -> None:
     for planted in ("plantedsecret", PLANTED_KEY, "planted@@bad", "planted-from"):
         assert planted not in text
+    assert "planted" not in text, "no planted value of any list may appear"
 
 
 @pytest.mark.parametrize("render", [False, True])
@@ -259,6 +328,8 @@ def test_no_value_appears_in_an_error_or_a_log(
         "SECRET_KEY": PLANTED_SHORT_SECRET,
         "RESEND_API_KEY": PLANTED_KEY,
         "ADMIN_EMAILS": "planted@@bad",
+        "TEACHER_EMAILS": "teacher-planted@@bad",
+        "STUDENT_EMAILS": "student-planted@@bad",
         "EMAIL_FROM": "planted-from",
     }
     if render:
@@ -271,11 +342,21 @@ def test_no_value_appears_in_an_error_or_a_log(
 
 
 def test_repr_masks_the_secrets(caplog: pytest.LogCaptureFixture) -> None:
-    environ = {**RENDER_OK, "SECRET_KEY": PLANTED_LONG_SECRET, "RESEND_API_KEY": PLANTED_KEY}
+    environ = {
+        **RENDER_OK,
+        "SECRET_KEY": PLANTED_LONG_SECRET,
+        "RESEND_API_KEY": PLANTED_KEY,
+        "TEACHER_EMAILS": "teacher-planted@example.org,other@example.org",
+        "STUDENT_EMAILS": "student-planted@example.org",
+    }
     with caplog.at_level(logging.DEBUG):
         settings = resolve_auth_settings(environ)
     assert isinstance(settings, AuthSettings)
     assert_nothing_planted(repr(settings))
     assert_nothing_planted(str(settings))
+    assert "@" not in repr(settings)
+    for counted in ("admin_emails=<1 addresses>", "teacher_emails=<2 addresses>"):
+        assert counted in repr(settings)
+    assert "student_emails=<1 addresses>" in repr(settings)
     for record in caplog.records:
         assert_nothing_planted(record.getMessage())

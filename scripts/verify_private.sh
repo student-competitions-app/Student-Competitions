@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Prove the public address is private by default: the home page sends an anonymous visitor to
-# the login page, the login page serves its form, and the health check still answers.
+# the login page, the login page serves its form, the health check still answers, and a role page
+# (/admin) sends an anonymous visitor to the login page too.
 #
 # Run by the release after the new commit is confirmed live. It reads only public responses, so
 # it needs no credential and prints none. Redirects are observed, never followed (no `-L`).
-# Contract: specs/004-email-otp-auth/contracts/pipeline.md#scriptsverify_privatesh
+# Contract: specs/004-email-otp-auth/contracts/pipeline.md#scriptsverify_privatesh and
+# specs/005-roles-authorization/contracts/pipeline.md#scriptsverify_privatesh-changed
 #
 # Usage:  ./scripts/verify_private.sh <base-url>
 set -euo pipefail
@@ -56,21 +58,30 @@ report() {
   body:     $(head -c 500 "$body")"
 }
 
-check_home_redirects() {
-  local url="${BASE_URL}/" status
+# GET <path> anonymously; succeed only on a 303 whose Location ends in /login?next=<encoded path>.
+check_redirects_to_login() {
+  local path="$1" encoded="$2" url="${BASE_URL}$1" status
   status=$(fetch "$url")
   if [ "$status" != "303" ]; then
     report "$url" "$status" "expected 303 to the login page"
     return 1
   fi
   case "$(location)" in
-    */login\?next=%2F) ;;
+    */login\?next="$encoded") ;;
     *)
-      report "$url" "$status" "expected Location ending in /login?next=%2F"
+      report "$url" "$status" "expected Location ending in /login?next=${encoded}"
       return 1
       ;;
   esac
   echo "GET ${url} → 303, Location: $(location)"
+}
+
+check_home_redirects() {
+  check_redirects_to_login / %2F
+}
+
+check_admin_redirects() {
+  check_redirects_to_login /admin %2Fadmin
 }
 
 check_login_form() {
@@ -99,7 +110,7 @@ check_health() {
 
 started_at=$(date +%s)
 while true; do
-  if check_home_redirects && check_login_form && check_health; then
+  if check_home_redirects && check_login_form && check_health && check_admin_redirects; then
     echo "Access control verified: the site is private by default."
     exit 0
   fi

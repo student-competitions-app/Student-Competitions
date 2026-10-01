@@ -222,13 +222,13 @@ PR checks the same property automatically in the `image` job (V3).
 - [ ] V1: clean checkout → local sign-in via the console email in under 15 minutes
 - [ ] V2: full suite green on both engines
 - [ ] V3: `image` job green (real sign-in, restart keeps the session, refusals)
-- [ ] V4: deploy job's *Verify access control* green; production `/` → 303
+- [X] V4: deploy job's *Verify access control* green; production `/` → 303
 - [ ] V5: real sign-in on production; cookie flags confirmed
 - [X] V6: removed administrator loses access within one restart; re-adding restores it
 - [ ] V7: ≥ 95% inbox placement within 1 minute across two providers; DKIM/SPF/DMARC pass
-- [ ] V8: boot count witnessed rising across a redeploy while signed in
+- [X] V8: boot count witnessed rising across a redeploy while signed in
 - [X] V9: per-email limit confirmed; per-client spoofing result recorded
-- [ ] V10: no code, token, secret or body in the diff, the logs or the image
+- [X] V10: no code, token, secret or body in the diff, the logs or the image
 - [ ] README updated: every new setting (purpose, values, local default, production requirement),
       local sign-in via the console, and the private-by-default rule for new pages
 

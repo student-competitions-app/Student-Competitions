@@ -147,14 +147,14 @@ choice and switch, and `Access denied:` lines.
 
 ## Milestone acceptance checklist
 
-- [ ] V3 green in CI on both engines; `ruff check` and `ruff format --check` clean
-- [ ] V4 green in the `image` job
-- [ ] V5 green in the release
+- [x] V3 green in CI on both engines; `ruff check` and `ruff format --check` clean
+- [x] V4 green in the `image` job
+- [x] V5 green in the release
 - [x] V1 and V2 done locally
-- [ ] V6, V7, V8 and V9 done on production, with results noted in the PR
-- [ ] README documents `TEACHER_EMAILS` and `STUDENT_EMAILS` (purpose, format, local default,
+- [x] V6, V7, V8 and V9 done on production, with results noted in the PR
+- [x] README documents `TEACHER_EMAILS` and `STUDENT_EMAILS` (purpose, format, local default,
       production rule, temporary until milestone 7) and local sign-in as each role (FR-039)
-- [ ] `render.yaml` declares both keys with `sync: false` (FR-034)
+- [x] `render.yaml` declares both keys with `sync: false` (FR-034)
 
 ## Reference
 

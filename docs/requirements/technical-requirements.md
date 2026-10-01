@@ -42,19 +42,23 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _Rollout:_ the Resend domain's DNS records at NIC.UA and the Render secrets are in place before merging to `main`.
    _Test:_ a user can log in end to end, reading the code from the `memory` outbox. A route-table test asserts that every route outside the allowlist rejects anonymous requests. Existing page tests use a fixture that creates a session directly. Unknown and known emails get the same response. Running the reconcile twice changes nothing. An email removed from `ADMIN_EMAILS` can no longer log in and loses its sessions.
 
-5. **Roles and authorization.** Three roles (student / teacher / administrator); the list of administrators is set via configuration at deploy time. Route protection by role.
-   _Test:_ access to pages depends on the role.
+5. **Roles and authorization.** Three roles: student, teacher and administrator. Each page is open only to the roles allowed to see it. The aim is the complete role flow, kept simple: the role pages are placeholders with no features behind them.
+   _Who has which role:_ the lists of administrators, teachers and students are all set via configuration at deploy time, the same way administrators are set today. One person can be on several lists and so have several roles. A person on no list cannot log in. Removing a person from a list takes effect at once: they are logged out everywhere. The teacher and student lists are temporary; milestone 7 replaces them with managing teachers and students in the application.
+   _Choosing a role:_ a person with one role gets it right after login. A person with several roles chooses one after login, and then lands on the page they originally asked for. Until a role is chosen, no other page opens. A person with several roles can switch role at any time from the header without logging out.
+   _Access:_ what a person can open depends on the role they are currently using, not on all the roles they have. For example, someone who is both an administrator and a student cannot open administrator pages while using the student role. Opening a page the current role is not allowed to see shows an "access denied" page. Every new page must state which roles can open it.
+   _Pages:_
+   - The home page is open to all roles. Its content is unchanged, plus links to only the pages the current role can open.
+   - One placeholder page per role (administrator, teacher, student), each open only to that role.
+   - One placeholder page for staff, open to administrators and teachers but not to students.
+   - Every page shows the current role in the header, next to the application name in the top left corner.
 
-   The aim of this milestone is to implement the all roles flow and to keep it simple. 
-
-   Requirements for the milestone:
-      - One user can have more than one role. If more than one role assined the user should select the role after succesfull login.
-      - At this milestone lists of teachers and students will be set via environment variables the same way currently administrators set.
-      - All pages should contain role name in the top left corner
-      - The root page is accessible by all roles
-      - For each role there is a separate dummy page to check the access.
-      - There is a page accessible for admins and teachers and not accessible for students
-      - On the root page there are links for child pages for each role. Each role see only links to pages for this role.
+   _Out of scope:_ managing users, educational institutions or profiles in the application, and any real functionality for a role beyond its placeholder page.
+   _Test:_
+   - Each role can open exactly the pages it is allowed to and sees "access denied" on the others.
+   - The home page shows each role only its own links.
+   - A person with several roles is asked to choose one after login, and a person with one role is not.
+   - Someone who is both an administrator and a student, using the student role, cannot open the administrator page.
+   - A person removed from a list is logged out, and a person removed from every list can no longer log in.
 
 6. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
    _Test:_ question CRUD works and is visible only to teachers.

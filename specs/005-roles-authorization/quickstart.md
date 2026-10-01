@@ -150,7 +150,7 @@ choice and switch, and `Access denied:` lines.
 - [ ] V3 green in CI on both engines; `ruff check` and `ruff format --check` clean
 - [ ] V4 green in the `image` job
 - [ ] V5 green in the release
-- [ ] V1 and V2 done locally
+- [x] V1 and V2 done locally
 - [ ] V6, V7, V8 and V9 done on production, with results noted in the PR
 - [ ] README documents `TEACHER_EMAILS` and `STUDENT_EMAILS` (purpose, format, local default,
       production rule, temporary until milestone 7) and local sign-in as each role (FR-039)

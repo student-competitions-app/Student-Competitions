@@ -103,29 +103,40 @@ def delete_session(session: Session, token: str) -> None:  # unchanged
 ## `app/core/auth.py`
 
 ```python
-PUBLIC_ROUTES: frozenset[tuple[str, str]]          # unchanged, five entries
+PUBLIC_ROUTES: frozenset[tuple[str, str]]  # unchanged, five entries
 ROLE_CHOICE_ROUTES: frozenset[tuple[str, str]] = frozenset({("GET", "/role"), ("POST", "/role")})
+
 
 def allow_roles(*roles: Role) -> Callable[[F], F]:
     """Mark an endpoint with the non-empty set of roles that may open it. Raises ValueError when
     called with no roles. Returns the function unchanged, so it may sit above or below the route
     decorator."""
 
+
 def declared_roles(endpoint: Callable[..., Any]) -> frozenset[Role] | None:
     """The marker, or None. Used by resolve_access and by the route sweep."""
+
 
 def resolve_access(request: Request) -> None:
     """The decision order of contracts/http-routes.md#access-rule-applies-to-every-route."""
 
-class LoginRequired(Exception): ...          # unchanged
-class RoleChoiceRequired(Exception):         # 303 to `location` (/role?next=…)
-    location: str
-class AccessDenied(Exception):               # 403 access denied page
-    current_role: Role
-class CrossSiteRequest(Exception): ...       # 403 refused page
 
-CurrentUser = Annotated[User | None, Depends(get_current_user)]          # unchanged
-CurrentRole = Annotated[Role | None, Depends(get_current_role)]          # new
+class LoginRequired(Exception): ...  # unchanged
+
+
+class RoleChoiceRequired(Exception):  # 303 to `location` (/role?next=…)
+    location: str
+
+
+class AccessDenied(Exception):  # 403 access denied page
+    current_role: Role
+
+
+class CrossSiteRequest(Exception): ...  # 403 refused page
+
+
+CurrentUser = Annotated[User | None, Depends(get_current_user)]  # unchanged
+CurrentRole = Annotated[Role | None, Depends(get_current_role)]  # new
 ```
 
 `app.main` registers one exception handler per exception. `RoleChoiceRequired` → 303. Both 403
@@ -134,9 +145,11 @@ exceptions → `pages/error.html`.
 ## `app/core/security.py`
 
 ```python
-AUTH_PATHS = frozenset({"/login", "/login/code", "/logout", "/role"})   # + "/role"
+AUTH_PATHS = frozenset({"/login", "/login/code", "/logout", "/role"})  # + "/role"
 
-def safe_next_path(value: str | None) -> str: ...      # unchanged rules; now also refuses /role
+
+def safe_next_path(value: str | None) -> str: ...  # unchanged rules; now also refuses /role
+
 
 def is_cross_site(method: str, headers: Mapping[str, str]) -> bool:
     """True when an unsafe-method request must be refused (research D7). Header names are
@@ -168,11 +181,13 @@ class Area:
     title: str
     roles: frozenset[Role]
 
+
 ADMIN_AREA = Area("/admin", "Administrator area", frozenset({Role.ADMIN}))
 TEACHER_AREA = Area("/teacher", "Teacher area", frozenset({Role.TEACHER}))
 STUDENT_AREA = Area("/student", "Student area", frozenset({Role.STUDENT}))
 STAFF_AREA = Area("/staff", "Staff area", frozenset({Role.ADMIN, Role.TEACHER}))
 AREAS = (ADMIN_AREA, TEACHER_AREA, STUDENT_AREA, STAFF_AREA)
+
 
 def areas_for(role: Role) -> list[Area]:
     """The areas `role` may open, in AREAS order; used by the home page."""
@@ -190,13 +205,18 @@ that read `request.state`, call `set_current_role`, and render or redirect.
 ```python
 AUTO = object()
 
+
 def sign_in_directly(test_client, email: str, current_role: Role | None | object = AUTO) -> str:
     """Create a session for the active user `email` directly in the database and set the signed
     cookie. AUTO = start_session's rule; a Role or None overrides it. Test-only (FR-041)."""
 
-@pytest.fixture
-def client_as(client) -> Callable[..., TestClient]: ...   # factory: client_as(email, current_role=AUTO)
 
 @pytest.fixture
-def admin_client(client_as) -> TestClient: ...            # unchanged meaning
+def client_as(
+    client,
+) -> Callable[..., TestClient]: ...  # factory: client_as(email, current_role=AUTO)
+
+
+@pytest.fixture
+def admin_client(client_as) -> TestClient: ...  # unchanged meaning
 ```

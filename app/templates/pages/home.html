@@ -8,6 +8,14 @@
   <p class="tagline">{{ app_tagline }}</p>
   <p>{{ app_description }}</p>
 </section>
+<section id="areas" aria-labelledby="areas-heading">
+  <h2 id="areas-heading">Your areas</h2>
+  <ul>
+    {% for area in areas %}
+    <li><a href="{{ area.path }}">{{ area.title }}</a></li>
+    {% endfor %}
+  </ul>
+</section>
 {% if data_available %}
 <section id="questions" aria-labelledby="questions-heading">
   <h2 id="questions-heading">Sample questions</h2>

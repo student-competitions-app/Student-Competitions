@@ -12,9 +12,10 @@ The release identity is registered as a Jinja global rather than passed by each 
 footer in the shared layout is rendered by every page, including the error page, and a value
 every template needs belongs to the environment rather than to each handler's context.
 
-The signed-in user reaches every template the same way, through a context processor that reads
-`request.state.user` (set by `app.core.auth.resolve_access`), so the layout header can show the
-address and the logout form without each handler passing them (FR-032).
+The signed-in user, their roles and the role they are currently using reach every template the
+same way, through a context processor that reads `request.state` (set by
+`app.core.auth.resolve_access`), so the layout header can show the address, the current role, the
+role switch and the logout form without each handler passing them (FR-031, FR-018).
 """
 
 from pathlib import Path
@@ -33,9 +34,15 @@ footer's `title` attribute and in `/healthz`."""
 
 
 def _current_user(request: Request) -> dict[str, Any]:
-    """`current_user` for every template: the signed-in user, or `None`. Pages that no route
-    matched (a 404) never ran the resolver, so the attribute may be missing."""
-    return {"current_user": getattr(request.state, "user", None)}
+    """`current_user`, `current_role` and `user_roles` for every template: the signed-in user
+    or `None`, the current `Role` or `None`, and the roles held or `()`. Pages that no route
+    matched (a 404) never ran the resolver, so the attributes may be missing."""
+    state = request.state
+    return {
+        "current_user": getattr(state, "user", None),
+        "current_role": getattr(state, "current_role", None),
+        "user_roles": getattr(state, "roles", ()),
+    }
 
 
 templates = Jinja2Templates(directory=TEMPLATES_DIR, context_processors=[_current_user])

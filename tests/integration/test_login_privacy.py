@@ -19,7 +19,7 @@ from sqlmodel import Session, select
 from app.core.db import utc_now
 from app.core.security import SESSION_COOKIE_NAME
 from app.main import app
-from app.models import LoginCode, RateLimitHit, Role, User, UserSession
+from app.models import LoginCode, RateLimitHit, User, UserSession
 from app.services.email import EmailDeliveryError, EmailMessage
 from tests.conftest import ADMIN_EMAIL
 from tests.integration.test_login_flow import (
@@ -45,7 +45,7 @@ def clear_rate_limits(session: Session) -> None:
 
 @pytest.fixture
 def inactive_user(session: Session) -> None:
-    session.add(User(email=INACTIVE, role=Role.ADMIN, is_active=False))
+    session.add(User(email=INACTIVE, is_active=False))
     session.commit()
 
 

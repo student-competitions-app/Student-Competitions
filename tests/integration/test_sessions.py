@@ -1,11 +1,14 @@
-"""Sessions end when they should: at logout, after 14 days, and when the user is deactivated.
+"""Sessions end when they should: at logout, after 14 days, when the user is deactivated, and
+when their current role is no longer held.
 
-See specs/004-email-otp-auth/contracts/http-routes.md#session-cookie and the spec's user story 4.
+See specs/004-email-otp-auth/contracts/http-routes.md#session-cookie, the spec's user story 4,
+and, for the current role, specs/005-roles-authorization/contracts/auth-services.md (rows G1–G6).
 Every test runs once per database engine.
 """
 
 from datetime import timedelta
 
+import pytest
 from fastapi.responses import Response
 from fastapi.testclient import TestClient
 from sqlalchemy import func, update
@@ -16,15 +19,16 @@ from app.core.config import AuthSettings
 from app.core.db import utc_now
 from app.core.security import (
     SESSION_COOKIE_NAME,
+    hash_token,
     new_session_token,
     sign_cookie_value,
 )
 from app.main import app
-from app.models import User, UserSession
+from app.models import Role, User, UserRole, UserSession
 from app.services.email import EmailMessage
-from app.services.sessions import create_session
+from app.services.sessions import create_session, get_session_identity
 from app.services.users import get_active_user_by_email
-from tests.conftest import ADMIN_EMAIL, sign_in_directly
+from tests.conftest import ADMIN_EMAIL, ADMIN_STUDENT_EMAIL, ClientAs, sign_in_directly
 from tests.integration.test_login_flow import sign_in
 
 
@@ -43,7 +47,7 @@ def use_session_created_at(client: TestClient, created_at_offset: timedelta) -> 
     with Session(app.state.engine) as db_session:
         user = get_active_user_by_email(db_session, ADMIN_EMAIL)
         assert user is not None
-        token = create_session(db_session, user, now=utc_now() + created_at_offset)
+        token = create_session(db_session, user, Role.ADMIN, now=utc_now() + created_at_offset)
     client.cookies.set(SESSION_COOKIE_NAME, sign_cookie_value(app.state.settings.secret_key, token))
 
 
@@ -166,3 +170,122 @@ def test_the_cookie_is_secure_in_production() -> None:
     response = Response()
     set_session_cookie(response, settings, "token")
     assert "secure" in cookie_attributes(response.headers["set-cookie"])
+
+
+# ---------------------------------------------------------------------------------------------
+# The current role (milestone 5): rows G1–G6
+# ---------------------------------------------------------------------------------------------
+
+
+def make_user(session: Session, email: str, *roles: Role) -> User:
+    user = User(email=email, is_active=True)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    assert user.id is not None
+    for role in roles:
+        session.add(UserRole(user_id=user.id, role=role, created_at=utc_now()))
+    session.commit()
+    return user
+
+
+def stored_session(session: Session, token: str) -> UserSession | None:
+    session.expire_all()
+    statement = select(UserSession).where(UserSession.token_hash == hash_token(token))
+    return session.exec(statement).first()
+
+
+def store_current_role(session: Session, token: str, value: str | None) -> None:
+    """Write any value, even one no code path writes, straight into the session row."""
+    session.execute(
+        update(UserSession)
+        .where(UserSession.token_hash == hash_token(token))  # type: ignore[arg-type]
+        .values(current_role=value)
+    )
+    session.commit()
+
+
+def test_g1_an_unknown_or_expired_token_is_nobody(session: Session) -> None:
+    user = make_user(session, "a@example.org", Role.ADMIN)
+    assert get_session_identity(session, new_session_token()) is None
+    expired = create_session(session, user, Role.ADMIN, now=utc_now() - timedelta(days=15))
+    assert get_session_identity(session, expired) is None
+
+
+def test_g2_a_user_with_no_roles_is_nobody(session: Session) -> None:
+    user = make_user(session, "a@example.org")
+    assert get_session_identity(session, create_session(session, user, None)) is None
+
+
+def test_g3_no_role_and_one_held_stores_it(session: Session) -> None:
+    """The upgrade of a session from before milestone 5 (SC-010)."""
+    user = make_user(session, "t@example.org", Role.TEACHER)
+    token = create_session(session, user, None)
+    identity = get_session_identity(session, token)
+    assert identity is not None
+    assert identity.user.email == "t@example.org"
+    assert identity.roles == (Role.TEACHER,)
+    assert identity.current_role == Role.TEACHER
+    row = stored_session(session, token)
+    assert row is not None and row.current_role == "teacher"
+
+
+def test_g4_no_role_and_several_held_stays_unchosen(session: Session) -> None:
+    user = make_user(session, "m@example.org", Role.STUDENT, Role.ADMIN)
+    token = create_session(session, user, None)
+    identity = get_session_identity(session, token)
+    assert identity is not None
+    assert identity.roles == (Role.ADMIN, Role.STUDENT)
+    assert identity.current_role is None
+    row = stored_session(session, token)
+    assert row is not None and row.current_role is None
+
+
+def test_g5_a_held_current_role_is_kept(session: Session) -> None:
+    user = make_user(session, "m@example.org", Role.ADMIN, Role.STUDENT)
+    token = create_session(session, user, Role.STUDENT)
+    identity = get_session_identity(session, token)
+    assert identity is not None
+    assert identity.current_role == Role.STUDENT
+
+
+@pytest.mark.parametrize("value", ["student", "superuser"])
+def test_g6_a_current_role_not_held_ends_the_session(session: Session, value: str) -> None:
+    """FR-017: a role no longer held, or one that does not exist."""
+    user = make_user(session, "a@example.org", Role.ADMIN)
+    token = create_session(session, user, Role.ADMIN)
+    store_current_role(session, token, value)
+    assert get_session_identity(session, token) is None
+    assert stored_session(session, token) is None
+
+
+def test_a_pre_milestone_session_keeps_working(client: TestClient, session: Session) -> None:
+    """SC-010, spec edge case: an administrator signed in before the release is not signed out,
+    and their session now records the administrator role."""
+    token = sign_in_directly(client, ADMIN_EMAIL, None)
+    assert client.get("/", follow_redirects=False).status_code == 200
+    row = stored_session(session, token)
+    assert row is not None and row.current_role == "admin"
+
+
+def test_a_current_role_no_longer_held_signs_out(client_as: ClientAs, session: Session) -> None:
+    """FR-017: the request is anonymous and the session row is gone."""
+    signed_in = client_as(ADMIN_EMAIL)
+    token = signed_in.cookies[SESSION_COOKIE_NAME].split(".")[0]
+    store_current_role(session, token, "student")
+    response = signed_in.get("/", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login?next=%2F"
+    assert stored_session(session, token) is None
+
+
+def test_a_pre_milestone_session_with_several_roles_goes_to_the_role_choice(
+    client: TestClient, session: Session
+) -> None:
+    """Spec edge case: the session is kept, with no role, until one is chosen."""
+    token = sign_in_directly(client, ADMIN_STUDENT_EMAIL, None)
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/role?next=%2F"
+    row = stored_session(session, token)
+    assert row is not None and row.current_role is None

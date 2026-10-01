@@ -4,6 +4,9 @@ Pure functions with no I/O and no configuration of their own: every key is passe
 unit-testable without an application or a database, and this module never imports
 `app.core.config` (which imports it). Nothing here logs anything.
 
+`is_cross_site` is the application-wide forgery rule for unsafe requests (milestone 5, research
+D7). Like everything here it only looks at what it is given.
+
 Every keyed value uses HMAC-SHA256 over a message that starts with a fixed purpose label
 (`login-code`, `session`, `rate-limit`) and a NUL, so a value computed for one purpose can never
 be replayed as another, although one `SECRET_KEY` keys them all. See
@@ -14,6 +17,7 @@ import base64
 import hashlib
 import hmac
 import secrets
+from collections.abc import Mapping
 from datetime import timedelta
 from urllib.parse import urlsplit
 
@@ -31,8 +35,9 @@ EMAIL_LOCAL_PART_MAX_LENGTH = 64
 
 NEXT_PATH_MAX_LENGTH = 2048
 
-AUTH_PATHS = frozenset({"/login", "/login/code", "/logout"})
-"""Never a return target: sending a freshly signed-in user back to them would loop."""
+AUTH_PATHS = frozenset({"/login", "/login/code", "/logout", "/role"})
+"""Never a return target: sending a freshly signed-in user, or one who just chose a role, back to
+them would loop (milestone 5 FR-015)."""
 
 
 def normalize_email(raw: str) -> str:
@@ -122,8 +127,8 @@ def safe_next_path(value: str | None) -> str:
     """`value` if it is a safe local return path, otherwise `/` (research D12).
 
     Refuses absolute and protocol-relative URLs, backslashes (browsers read them as `/`),
-    whitespace and control characters, anything over 2,048 characters, and the sign-in pages
-    themselves.
+    whitespace and control characters, anything over 2,048 characters, and the sign-in and
+    role-choice pages themselves.
     """
     if not value or len(value) > NEXT_PATH_MAX_LENGTH:
         return "/"
@@ -135,6 +140,45 @@ def safe_next_path(value: str | None) -> str:
     if parts.scheme or parts.netloc or parts.path in AUTH_PATHS:
         return "/"
     return value
+
+
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+"""Methods that change nothing, so a cross-site one is harmless and never refused."""
+
+SAME_SITE_FETCHES = frozenset({"same-origin", "none"})
+"""`Sec-Fetch-Site` values of a request this site's own pages made (`none`: typed or bookmarked)."""
+
+
+def is_cross_site(method: str, headers: Mapping[str, str]) -> bool:
+    """`True` when an unsafe-method request must be refused as a cross-site forgery.
+
+    The design Go 1.25 ships as `net/http.CrossOriginProtection` (research D7):
+
+    1. `GET`, `HEAD` and `OPTIONS` are never cross-site.
+    2. If the browser sent `Sec-Fetch-Site`, only `same-origin` and `none` are allowed;
+       `same-site`, `cross-site` and anything else are refused, whatever `Origin` says.
+    3. Otherwise, if it sent `Origin`, it must name this host (and port): the `Host` header.
+       `Origin: null` is refused.
+    4. Otherwise (neither header: a non-browser client or a very old browser) the request is
+       allowed. Every current browser sends `Sec-Fetch-Site`, `SameSite=Lax` still keeps the
+       session cookie off cross-site posts, and refusing would break `curl`-based checks; the plan
+       records this fallback in its Complexity Tracking.
+
+    Header names are matched case-insensitively, for a Starlette `Headers` or a plain mapping.
+    """
+    if method.upper() in SAFE_METHODS:
+        return False
+    lowered = {name.lower(): value for name, value in headers.items()}
+    fetch_site = lowered.get("sec-fetch-site")
+    if fetch_site is not None:
+        return fetch_site.strip().lower() not in SAME_SITE_FETCHES
+    origin = lowered.get("origin")
+    if origin is None:
+        return False
+    host = lowered.get("host", "").strip().lower()
+    if not host or origin.strip().lower() == "null":
+        return True
+    return urlsplit(origin.strip()).netloc.lower() != host
 
 
 def client_address(request: Request, trust_forwarded: bool) -> str:

@@ -68,6 +68,12 @@
   padding-block: 1rem;
 }
 
+/* The current role reads as part of the title line: "Student Competitions · Teacher" (FR-031). */
+.site-role {
+  color: var(--pico-muted-color);
+  font-weight: normal;
+}
+
 .site-session {
   align-items: center;
   display: flex;
@@ -89,6 +95,19 @@
 .site-session button {
   padding: 0.25rem 0.75rem;
   width: auto;
+}
+
+/* The role switch for people with several roles: one inline button per other role, beside the
+   address, wrapping on a phone like the rest of the header (FR-018). */
+.role-switch {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+
+.role-switch-label {
+  color: var(--pico-muted-color);
 }
 
 /* The sign-in pages: a narrow column, and the messages visible without alarming. */

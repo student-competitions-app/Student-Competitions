@@ -12,8 +12,9 @@ This module is the only place that reads the environment, for three things:
   constant because it creates the local data directory and may refuse to run. See
   specs/003-database-questions/contracts/configuration.md.
 - `resolve_auth_settings` reads and validates the sign-in settings (email backend, secret key,
-  administrator list, Resend key and sender), refusing an unsafe production setup. See
-  specs/004-email-otp-auth/contracts/configuration.md.
+  the three role lists, Resend key and sender), refusing an unsafe production setup. See
+  specs/004-email-otp-auth/contracts/configuration.md and
+  specs/005-roles-authorization/contracts/configuration.md.
 
 No error, warning or `repr` produced here ever contains a setting's value: in production those
 values are secrets, and these messages reach the deploy log.
@@ -164,9 +165,13 @@ class AuthSettings:
     email_backend: EmailBackend
     secret_key: str
     admin_emails: tuple[str, ...]
-    """Normalised, de-duplicated and sorted."""
+    """Normalised, de-duplicated and sorted, like the two lists below."""
     resend_api_key: str | None
     email_from: str | None
+    teacher_emails: tuple[str, ...] = ()
+    """Temporary until milestone 7, which manages teachers in the application."""
+    student_emails: tuple[str, ...] = ()
+    """Temporary until milestone 7, as above."""
 
     def __repr__(self) -> str:
         # Masks every value that is a secret in production, so an accidental log line or
@@ -175,6 +180,8 @@ class AuthSettings:
             f"AuthSettings(production={self.production}, "
             f"email_backend={self.email_backend!r}, secret_key='***', "
             f"admin_emails=<{len(self.admin_emails)} addresses>, "
+            f"teacher_emails=<{len(self.teacher_emails)} addresses>, "
+            f"student_emails=<{len(self.student_emails)} addresses>, "
             f"resend_api_key={'***' if self.resend_api_key else None}, "
             f"email_from={'***' if self.email_from else None})"
         )
@@ -182,13 +189,37 @@ class AuthSettings:
     __str__ = __repr__
 
 
+def _entries(raw: str | None) -> list[str]:
+    """The non-empty entries of a comma-separated list, as written."""
+    return [entry for entry in (raw or "").split(",") if entry.strip()]
+
+
+def _parse_email_list(name: str, raw: str | None, errors: list[str]) -> tuple[str, ...]:
+    """One comma-separated address list, the same way for all three role lists.
+
+    Entries are trimmed and lowercased, empty entries are ignored, duplicates collapse, and the
+    result is sorted. Each malformed entry adds one error naming the list and its 1-based position
+    among the non-empty entries, never the value (FR-035).
+    """
+    addresses: set[str] = set()
+    for position, entry in enumerate(_entries(raw), start=1):
+        address = normalize_email(entry)
+        if is_valid_email(address):
+            addresses.add(address)
+        else:
+            errors.append(f"{name} entry {position} is not a valid email address.")
+    return tuple(sorted(addresses))
+
+
 def resolve_auth_settings(environ: Mapping[str, str] = os.environ) -> AuthSettings:
     """Read and validate the sign-in settings, or raise one `AuthConfigError` listing them all.
 
-    Rules C1–C8 and warnings W1–W3 of specs/004-email-otp-auth/contracts/configuration.md, in
-    that order. Empty strings count as unset. On Render every setting is required and the email
-    must really be sent; locally every setting is optional, but a value that is present and
-    invalid is still refused, so a typo fails fast instead of silently falling back.
+    Rules C1–C10 and warnings W1–W4 of specs/004-email-otp-auth/contracts/configuration.md and
+    specs/005-roles-authorization/contracts/configuration.md, in that order. Empty strings count
+    as unset. On Render every setting is required and the email must really be sent, except
+    `TEACHER_EMAILS` and `STUDENT_EMAILS`, which are optional everywhere; locally every setting is
+    optional, but a value that is present and invalid is still refused, so a typo fails fast
+    instead of silently falling back.
     """
 
     def read(name: str) -> str | None:
@@ -199,7 +230,7 @@ def resolve_auth_settings(environ: Mapping[str, str] = os.environ) -> AuthSettin
     secret_key = read("SECRET_KEY")
     resend_api_key = read("RESEND_API_KEY")
     email_from = read("EMAIL_FROM")
-    admin_entries = [entry for entry in (read("ADMIN_EMAILS") or "").split(",") if entry.strip()]
+    admin_raw = read("ADMIN_EMAILS")
 
     errors: list[str] = []
     if backend_raw is not None and backend_raw not in EMAIL_BACKENDS:
@@ -210,15 +241,9 @@ def resolve_auth_settings(environ: Mapping[str, str] = os.environ) -> AuthSettin
         errors.append("SECRET_KEY is required when running on Render.")
     if secret_key is not None and len(secret_key) < MIN_SECRET_KEY_LENGTH:
         errors.append(f"SECRET_KEY must be at least {MIN_SECRET_KEY_LENGTH} characters long.")
-    if production and not admin_entries:
+    if production and not _entries(admin_raw):
         errors.append("ADMIN_EMAILS must list at least one address when running on Render.")
-    admin_emails: set[str] = set()
-    for position, entry in enumerate(admin_entries, start=1):
-        address = normalize_email(entry)
-        if is_valid_email(address):
-            admin_emails.add(address)
-        else:
-            errors.append(f"ADMIN_EMAILS entry {position} is not a valid email address.")
+    admin_emails = _parse_email_list("ADMIN_EMAILS", admin_raw, errors)
     needs_resend = production or backend_raw == "resend"
     if needs_resend and resend_api_key is None:
         errors.append("RESEND_API_KEY is required for the resend email backend.")
@@ -227,6 +252,8 @@ def resolve_auth_settings(environ: Mapping[str, str] = os.environ) -> AuthSettin
             "EMAIL_FROM is required for the resend email backend and must be a valid sender "
             "address."
         )
+    teacher_emails = _parse_email_list("TEACHER_EMAILS", read("TEACHER_EMAILS"), errors)
+    student_emails = _parse_email_list("STUDENT_EMAILS", read("STUDENT_EMAILS"), errors)
     if errors:
         raise AuthConfigError(
             "Invalid authentication configuration:\n" + "\n".join(f"- {e}" for e in errors)
@@ -242,14 +269,20 @@ def resolve_auth_settings(environ: Mapping[str, str] = os.environ) -> AuthSettin
             _logger.warning(
                 "EMAIL_BACKEND is not set; login emails will be printed to this console."
             )
-        if not admin_emails:
-            _logger.warning("ADMIN_EMAILS is empty; nobody will be able to sign in.")
+        if not (admin_emails or teacher_emails or student_emails):
+            _logger.warning("No role lists are set; nobody will be able to sign in.")
+        elif not admin_emails:
+            _logger.warning(
+                "ADMIN_EMAILS is empty; nobody will be able to sign in as an administrator."
+            )
 
     return AuthSettings(
         production=production,
         email_backend=cast(EmailBackend, backend_raw or "console"),
         secret_key=secret_key or DEV_SECRET_KEY,
-        admin_emails=tuple(sorted(admin_emails)),
+        admin_emails=admin_emails,
         resend_api_key=resend_api_key,
         email_from=email_from,
+        teacher_emails=teacher_emails,
+        student_emails=student_emails,
     )

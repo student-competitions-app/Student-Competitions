@@ -1,8 +1,9 @@
-"""The `users` table: who can sign in, and as what.
+"""The `users` table: who can sign in. Their roles live in `user_roles`.
 
-See specs/004-email-otp-auth/data-model.md#1-user--table-users-appmodelsuserpy. Rows are filled
-only by `reconcile_admins` from the `ADMIN_EMAILS` setting, never by a route, and are never
-hard-deleted: a user who loses access is deactivated, so later records can still refer to them.
+See specs/005-roles-authorization/data-model.md#2-user--table-users-changed. Rows are filled only
+by `reconcile_users` from the three role lists (`ADMIN_EMAILS`, `TEACHER_EMAILS`,
+`STUDENT_EMAILS`), never by a route, and are never hard-deleted: a person who loses every role is
+deactivated, so later records can still refer to them. Invariant: active ⇔ at least one role.
 """
 
 from datetime import datetime
@@ -16,10 +17,25 @@ from app.core.security import EMAIL_MAX_LENGTH
 
 
 class Role(StrEnum):
-    """Only administrators exist in this milestone. Milestone 5 adds teachers and students; the
-    column has no CHECK constraint, so that needs no migration."""
+    """The three roles (FR-001). The stored value is what `user_roles.role` and
+    `sessions.current_role` hold; `admin` is milestone 4's value, so existing data needs no
+    translation. The definition order is the fixed order used wherever roles are listed: the role
+    choice, the header switch and `SessionIdentity.roles`."""
 
     ADMIN = "admin"
+    TEACHER = "teacher"
+    STUDENT = "student"
+
+    @property
+    def label(self) -> str:
+        """The name shown to people: `Administrator`, `Teacher`, `Student`."""
+        return _LABELS[self]
+
+
+_LABELS = {Role.ADMIN: "Administrator", Role.TEACHER: "Teacher", Role.STUDENT: "Student"}
+
+ALL_ROLES = frozenset(Role)
+"""Every role, for pages open to everyone signed in, such as `/`."""
 
 
 class User(SQLModel, table=True):
@@ -27,11 +43,17 @@ class User(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     email: str = Field(sa_column=Column(String(EMAIL_MAX_LENGTH), nullable=False, unique=True))
-    """Always stored normalised: trimmed and lowercased (FR-001)."""
-    role: str = Field(sa_column=Column(String(20), nullable=False))
-    """A `Role` value."""
+    """Always stored normalised: trimmed and lowercased (FR-002)."""
+    legacy_role: str | None = Field(
+        default=None, sa_column=Column("role", String(20), nullable=True)
+    )
+    """Unused from milestone 5 on: never read, never written, `NULL` on new rows. Kept only so the
+    previous release keeps working during a deploy overlap; dropped by milestone 6's first
+    migration (research D2)."""
     is_active: bool = Field(nullable=False)
-    """Only an active user can obtain a code or keep a session (FR-002, FR-022)."""
+    """Only an active user can obtain a code or keep a session (FR-010). Active ⇔ holds at least
+    one role."""
     created_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
     updated_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
-    """Changed only when a field actually changes, so a no-op reconciliation writes nothing."""
+    """Changed only when the active flag or the role set actually changes, so a no-op
+    reconciliation writes nothing (SC-007)."""

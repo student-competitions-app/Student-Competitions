@@ -1,31 +1,45 @@
 """The sign-in services against a real database: the behaviour matrix, row by row.
 
-See specs/004-email-otp-auth/contracts/auth-services.md#behaviour-matrix. Every test runs once
-per database engine. Time moves through the services' `now` parameter, never by patching.
+See specs/004-email-otp-auth/contracts/auth-services.md#behaviour-matrix and, for roles,
+specs/005-roles-authorization/contracts/auth-services.md. Every test runs once per database
+engine. Time moves through the services' `now` parameter, never by patching.
 """
 
 import re
 from datetime import timedelta
 
+import pytest
 from sqlalchemy import Engine, func
 from sqlmodel import Session, select
 
 from app.core.db import utc_now
 from app.core.security import hash_code, hash_token
-from app.models import LoginCode, RateLimitHit, Role, User, UserSession
+from app.models import LoginCode, RateLimitHit, Role, User, UserRole, UserSession
 from app.services.login import CODE_TTL, issue_code, purge_expired, verify_code
 from app.services.rate_limits import BUCKET_CODE_CLIENT, BUCKET_CODE_EMAIL, allow_code_request
-from app.services.sessions import create_session, get_session_user
-from app.services.users import reconcile_admins
+from app.services.sessions import (
+    create_session,
+    get_session_identity,
+    set_current_role,
+    start_session,
+)
+from app.services.users import get_roles, reconcile_users
 
 KEY = "k" * 32
 
 
-def make_user(session: Session, email: str, active: bool = True) -> User:
-    user = User(email=email, role=Role.ADMIN, is_active=active)
+def make_user(
+    session: Session, email: str, active: bool = True, roles: tuple[Role, ...] = (Role.ADMIN,)
+) -> User:
+    """A user holding `roles` (none when inactive, as reconciliation keeps it)."""
+    user = User(email=email, is_active=active)
     session.add(user)
     session.commit()
     session.refresh(user)
+    assert user.id is not None
+    for role in roles if active else ():
+        session.add(UserRole(user_id=user.id, role=role, created_at=utc_now()))
+    session.commit()
     return user
 
 
@@ -101,7 +115,7 @@ def test_no_code_at_all_is_refused(session: Session) -> None:
 def test_l5_a_deactivated_user_cannot_use_an_issued_code(session: Session) -> None:
     user = make_user(session, "a@x.org")
     code = issue_code(session, KEY, user)
-    reconcile_admins(session, [])
+    reconcile_users(session, {})
     assert codes(session) == []
     assert verify_code(session, KEY, "a@x.org", code) is None
 
@@ -110,8 +124,8 @@ def test_p1_purge_removes_only_what_is_over(session: Session) -> None:
     now = utc_now()
     live_user = make_user(session, "a@x.org")
     other = make_user(session, "b@x.org")
-    expired_session = create_session(session, live_user, now=now - timedelta(days=15))
-    live_session = create_session(session, live_user, now=now)
+    expired_session = create_session(session, live_user, Role.ADMIN, now=now - timedelta(days=15))
+    live_session = create_session(session, live_user, Role.ADMIN, now=now)
     issue_code(session, KEY, live_user, now=now - timedelta(hours=1))  # expired
     used = issue_code(session, KEY, other, now=now)
     assert verify_code(session, KEY, "b@x.org", used, now=now) is not None  # now used
@@ -136,18 +150,18 @@ def test_p1_purge_removes_only_what_is_over(session: Session) -> None:
 
 def test_p2_an_expired_session_is_refused_before_it_is_purged(session: Session) -> None:
     user = make_user(session, "a@x.org")
-    token = create_session(session, user, now=utc_now() - timedelta(days=14, seconds=1))
-    assert get_session_user(session, token) is None
+    token = create_session(session, user, Role.ADMIN, now=utc_now() - timedelta(days=14, seconds=1))
+    assert get_session_identity(session, token) is None
 
 
 def test_x1_a_session_of_an_inactive_user_is_refused(session: Session) -> None:
     user = make_user(session, "a@x.org")
-    token = create_session(session, user)
-    assert get_session_user(session, token) is not None
+    token = create_session(session, user, Role.ADMIN)
+    assert get_session_identity(session, token) is not None
     user.is_active = False
     session.add(user)
     session.commit()
-    assert get_session_user(session, token) is None
+    assert get_session_identity(session, token) is None
 
 
 def test_l3_five_wrong_codes_kill_the_code(session: Session) -> None:
@@ -198,3 +212,52 @@ def hits(session: Session, bucket: str) -> int:
     session.expire_all()
     statement = select(func.count()).select_from(RateLimitHit).where(RateLimitHit.bucket == bucket)
     return session.exec(statement).one()
+
+
+# ---------------------------------------------------------------------------------------------
+# Roles and the current role (milestone 5)
+# ---------------------------------------------------------------------------------------------
+
+
+def stored_role(session: Session, token: str) -> str | None:
+    session.expire_all()
+    row = session.exec(select(UserSession).where(UserSession.token_hash == hash_token(token)))
+    return row.one().current_role
+
+
+def test_a_single_role_starts_in_that_role(session: Session) -> None:
+    """FR-012."""
+    user = make_user(session, "t@example.org", roles=(Role.TEACHER,))
+    token, current = start_session(session, user)
+    assert current == Role.TEACHER
+    assert stored_role(session, token) == "teacher"
+
+
+@pytest.mark.parametrize(
+    "roles", [(Role.TEACHER, Role.STUDENT), (Role.ADMIN, Role.TEACHER, Role.STUDENT)]
+)
+def test_several_roles_start_with_none_chosen(session: Session, roles: tuple[Role, ...]) -> None:
+    """FR-013."""
+    user = make_user(session, "m@example.org", roles=roles)
+    token, current = start_session(session, user)
+    assert current is None
+    assert stored_role(session, token) is None
+
+
+def test_get_roles_uses_the_fixed_order(session: Session) -> None:
+    user = make_user(session, "m@example.org", roles=(Role.STUDENT, Role.ADMIN, Role.TEACHER))
+    assert user.id is not None
+    assert get_roles(session, user.id) == (Role.ADMIN, Role.TEACHER, Role.STUDENT)
+    nobody = make_user(session, "n@example.org", roles=())
+    assert nobody.id is not None
+    assert get_roles(session, nobody.id) == ()
+
+
+def test_set_current_role_changes_only_that_session(session: Session) -> None:
+    """FR-011: each browser has its own current role."""
+    user = make_user(session, "m@example.org", roles=(Role.ADMIN, Role.STUDENT))
+    laptop = create_session(session, user, Role.ADMIN)
+    phone = create_session(session, user, Role.ADMIN)
+    set_current_role(session, laptop, Role.STUDENT)
+    assert stored_role(session, laptop) == "student"
+    assert stored_role(session, phone) == "admin"

@@ -1,8 +1,10 @@
-"""The whole route table: private by default, and the only writes are signing in and out.
+"""The whole route table: private by default, every page declares its roles, and the only writes
+are signing in and out and choosing a role.
 
 Checked over every route rather than per route, so a route added later fails here whatever its
-path if it is public by accident or accepts a write it should not (FR-028, FR-047, SC-003). See
-specs/004-email-otp-auth/contracts/http-routes.md#access-rule-applies-to-every-route.
+path if it is public by accident, declares no roles, admits the wrong roles, or accepts a write it
+should not (milestone 4 FR-028, FR-047; milestone 5 FR-022, FR-024, FR-040, SC-002). See
+specs/005-roles-authorization/contracts/http-routes.md#access-rule-applies-to-every-route.
 
 `app.routes` holds each included router as a wrapper with no path or methods of its own, so
 `iter_routes` descends into it and prefixes its routes, as FastAPI does when it matches a request.
@@ -13,12 +15,15 @@ from collections.abc import Iterator
 from urllib.parse import quote
 
 import pytest
-from fastapi.routing import _IncludedRouter
+from fastapi import FastAPI
+from fastapi.routing import APIRouter, _IncludedRouter
 from fastapi.testclient import TestClient
 from starlette.routing import BaseRoute, Mount
 
-from app.core.auth import PUBLIC_ROUTES
+from app.core.auth import PUBLIC_ROUTES, ROLE_CHOICE_ROUTES, allow_roles, declared_roles
 from app.main import app
+from app.models import Role
+from tests.conftest import ADMIN_EMAIL, STUDENT_EMAIL, TEACHER_EMAIL, ClientAs
 
 READ_ONLY_METHODS = {"GET", "HEAD"}
 
@@ -51,9 +56,19 @@ def test_the_route_table_is_not_empty() -> None:
     assert ("GET", "/") in endpoints()
 
 
-def test_the_write_routes_are_exactly_login_and_logout() -> None:
+def test_the_write_routes_are_exactly_signing_in_and_out_and_choosing_a_role() -> None:
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
-    assert writes == {("POST", "/login"), ("POST", "/login/code"), ("POST", "/logout")}
+    assert writes == {
+        ("POST", "/login"),
+        ("POST", "/login/code"),
+        ("POST", "/logout"),
+        ("POST", "/role"),
+    }
+
+
+def test_the_role_choice_routes_are_exact_and_exist() -> None:
+    assert ROLE_CHOICE_ROUTES == {("GET", "/role"), ("POST", "/role")}
+    assert ROLE_CHOICE_ROUTES <= endpoints()
 
 
 def test_the_allowlist_is_exact() -> None:
@@ -104,3 +119,107 @@ def test_the_api_docs_are_not_served(client: TestClient, path: str) -> None:
 def test_the_static_files_are_the_only_mount() -> None:
     mounts = [route.path for route in app.routes if isinstance(route, Mount)]
     assert mounts == ["/static"]
+
+
+# ---------------------------------------------------------------------------------------------
+# Every page declares its roles; denied by default (milestone 5, user story 5)
+# ---------------------------------------------------------------------------------------------
+
+SINGLE_ROLE = {Role.ADMIN: ADMIN_EMAIL, Role.TEACHER: TEACHER_EMAIL, Role.STUDENT: STUDENT_EMAIL}
+
+PROBE_PATH = "/__undeclared_probe"
+
+
+def undeclared_routes(application: FastAPI) -> list[str]:
+    """`"<METHOD> <path>"` for every route that is neither public, nor the role choice, nor
+    declared with a non-empty `@allow_roles`."""
+    offenders = []
+    for path, methods, route in iter_routes(application.routes):
+        for method in sorted(methods):
+            key = ("GET" if method == "HEAD" else method, path)
+            if key in PUBLIC_ROUTES or key in ROLE_CHOICE_ROUTES:
+                continue
+            if not declared_roles(getattr(route, "endpoint", None)):
+                offenders.append(f"{method} {path}")
+    return offenders
+
+
+def test_every_route_is_public_role_choice_or_declared() -> None:
+    """US5-1, US5-3, SC-002: the build fails naming each route that declares nobody."""
+    offenders = undeclared_routes(app)
+    assert offenders == [], "routes without @allow_roles(...): " + ", ".join(offenders)
+
+
+@pytest.fixture
+def undeclared_probe() -> Iterator[str]:
+    """A route that forgot its declaration, added to the running application for one test. Added
+    with `app.add_api_route`, it gets the application-wide access dependency like any route."""
+    app.add_api_route(PROBE_PATH, lambda: {"secret": "probe"}, methods=["GET"])
+    added = app.router.routes[-1]
+    try:
+        yield PROBE_PATH
+    finally:
+        app.router.routes.remove(added)
+
+
+def test_the_sweep_names_an_undeclared_route(undeclared_probe: str) -> None:
+    """US5-3."""
+    assert undeclared_routes(app) == [f"GET {undeclared_probe}"]
+
+
+@pytest.mark.parametrize("role", list(SINGLE_ROLE))
+def test_an_undeclared_route_is_denied_to_everyone(
+    client_as: ClientAs, undeclared_probe: str, role: Role
+) -> None:
+    """US5-4, FR-024: deny by default at runtime too."""
+    response = client_as(SINGLE_ROLE[role]).get(undeclared_probe)
+    assert response.status_code == 403
+    assert "probe" not in response.text.replace(undeclared_probe, "")
+
+
+def declared_get_routes() -> list[tuple[str, frozenset[Role]]]:
+    found = []
+    for path, methods, route in ALL_ROUTES:
+        roles = declared_roles(getattr(route, "endpoint", None))
+        if "GET" in methods and roles:
+            found.append((path, roles))
+    return found
+
+
+def test_there_are_declared_pages_to_sweep() -> None:
+    assert len(declared_get_routes()) >= 5
+
+
+@pytest.mark.parametrize(("path", "allowed"), declared_get_routes())
+def test_every_declared_page_admits_exactly_its_roles(
+    client_as: ClientAs, path: str, allowed: frozenset[Role]
+) -> None:
+    """US5-2: allowed and denied, for every role, on every declared page."""
+    for role, email in SINGLE_ROLE.items():
+        status = client_as(email).get(_concrete(path), follow_redirects=False).status_code
+        assert status == (200 if role in allowed else 403), f"{role.value} GET {path}: {status}"
+
+
+def test_a_declaration_needs_at_least_one_role() -> None:
+    with pytest.raises(ValueError):
+        allow_roles()
+
+
+def test_a_declaration_takes_only_roles() -> None:
+    with pytest.raises(TypeError):
+        allow_roles("admin")  # type: ignore[arg-type]
+
+
+def test_the_declaration_is_found_above_or_below_the_route_decorator() -> None:
+    router = APIRouter()
+
+    @allow_roles(Role.TEACHER)
+    @router.get("/above")
+    def above() -> None: ...
+
+    @router.get("/below")
+    @allow_roles(Role.STUDENT)
+    def below() -> None: ...
+
+    found = {route.path: declared_roles(route.endpoint) for route in router.routes}  # type: ignore[attr-defined]
+    assert found == {"/above": {Role.TEACHER}, "/below": {Role.STUDENT}}

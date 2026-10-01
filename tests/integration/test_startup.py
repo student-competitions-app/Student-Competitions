@@ -3,7 +3,8 @@
 The application refuses to start without a usable database at head, or on Render without safe
 sign-in settings, so an instance that answers at all has both. See
 specs/003-database-questions/contracts/http-routes.md#application-startup-the-effective-readiness-
-gate and specs/004-email-otp-auth/contracts/configuration.md.
+gate, specs/004-email-otp-auth/contracts/configuration.md and
+specs/005-roles-authorization/contracts/configuration.md.
 """
 
 import pytest
@@ -129,4 +130,22 @@ def test_starts_locally_with_no_auth_settings(
     with TestClient(app) as client:
         assert client.get("/healthz").status_code == 200
         assert app.state.settings.email_backend == "console"
+        assert app.state.settings.teacher_emails == ()
+        assert app.state.settings.student_emails == ()
     assert _boots(database_url) == 1
+
+
+@pytest.mark.parametrize("name", ["TEACHER_EMAILS", "STUDENT_EMAILS"])
+def test_a_malformed_role_list_refuses_the_start_locally(
+    monkeypatch: pytest.MonkeyPatch, database_url: str, name: str
+) -> None:
+    """FR-035: before any database access, naming the list and the position, never the value;
+    and the refused start is not counted."""
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.setenv(name, "ok@example.com,planted-not-an-address")
+    with pytest.raises(config.AuthConfigError) as caught, TestClient(app):
+        pass
+    message = str(caught.value)
+    assert f"{name} entry 2 is not a valid email address." in message
+    assert "planted" not in message
+    assert _boots(database_url) == 0

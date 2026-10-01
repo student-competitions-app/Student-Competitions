@@ -45,6 +45,17 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 5. **Roles and authorization.** Three roles (student / teacher / administrator); the list of administrators is set via configuration at deploy time. Route protection by role.
    _Test:_ access to pages depends on the role.
 
+   The aim of this milestone is to implement the all roles flow and to keep it simple. 
+
+   Requirements for the milestone:
+      - One user can have more than one role. If more than one role assined the user should select the role after succesfull login.
+      - At this milestone lists of teachers and students will be set via environment variables the same way currently administrators set.
+      - All pages should contain role name in the top left corner
+      - The root page is accessible by all roles
+      - For each role there is a separate dummy page to check the access.
+      - There is a page accessible for admins and teachers and not accessible for students
+      - On the root page there are links for child pages for each role. Each role see only links to pages for this role.
+
 6. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
    _Test:_ question CRUD works and is visible only to teachers.
 

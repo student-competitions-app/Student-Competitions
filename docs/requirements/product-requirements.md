@@ -55,6 +55,12 @@ A web application for running online competitions among students, testing their 
 - Adds educational institutions to a teacher's access list.
 - Is the only role that can edit the list of educational institutions.
 
+## Personal data
+
+- Email, first name and last name are personal data for every role. A student's educational institution, group code and year of study are personal data too.
+- Personal data is stored only after the person has agreed to it. An administrator or teacher who adds someone sends an invitation. The person's data is saved only when that person opens the invitation and accepts the consent text. Until then, nothing about them is kept.
+- Every person can see the personal data stored about them and can withdraw consent at any time. Withdrawing erases their personal data and ends their access.
+
 ## Competition
 
 ### How a competition works

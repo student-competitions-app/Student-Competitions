@@ -52,7 +52,7 @@ A web application for running online competitions among students, testing their 
 ### Administrator
 
 - Adds and deletes teachers in the application.
-- Adds educational institutions to a teacher's access list.
+- Links a teacher to one or more educational institutions, selecting them from the list of institutions.
 - Is the only role that can edit the list of educational institutions.
 
 ## Personal data

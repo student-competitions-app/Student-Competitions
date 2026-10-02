@@ -52,7 +52,7 @@ from app.core.db import create_db_engine
 from app.core.migrations import ensure_at_head
 from app.core.templates import templates
 from app.models import Role
-from app.routers import areas, auth, health, pages, roles
+from app.routers import admin, admin_subjects, areas, auth, health, pages, roles
 from app.services.database_status import record_boot
 from app.services.email import build_email_sender
 from app.services.login import purge_expired
@@ -152,6 +152,8 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(roles.router)
 app.include_router(areas.router)
+app.include_router(admin.router)
+app.include_router(admin_subjects.router)
 
 
 @app.exception_handler(LoginRequired)

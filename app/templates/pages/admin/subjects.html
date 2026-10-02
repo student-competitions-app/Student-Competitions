@@ -1,0 +1,46 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Subjects — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+<section>
+  <h1>Subjects</h1>
+  <p><a href="/admin/subjects/new" role="button">Create</a></p>
+  {% if subjects %}
+  <div class="overflow-auto">
+    <table class="subjects-table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in subjects %}
+        <tr>
+          <td class="subject-name">{{ s.name }}</td>
+          <td>{% if s.is_active %}Active{% else %}Inactive{% endif %}</td>
+          <td class="subjects-actions">
+            <a href="/admin/subjects/{{ s.id }}/rename">Rename</a>
+            {% if s.is_active %}
+            <form method="post" action="/admin/subjects/{{ s.id }}/deactivate">
+              <button type="submit" class="secondary outline">Deactivate</button>
+            </form>
+            {% else %}
+            <form method="post" action="/admin/subjects/{{ s.id }}/activate">
+              <button type="submit" class="secondary outline">Activate</button>
+            </form>
+            {% endif %}
+            <a href="/admin/subjects/{{ s.id }}/delete">Delete</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="subjects-empty">No subjects yet</p>
+  {% endif %}
+</section>
+{% endblock %}

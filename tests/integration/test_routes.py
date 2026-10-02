@@ -56,13 +56,19 @@ def test_the_route_table_is_not_empty() -> None:
     assert ("GET", "/") in endpoints()
 
 
-def test_the_write_routes_are_exactly_signing_in_and_out_and_choosing_a_role() -> None:
+def test_the_write_routes_are_exact() -> None:
+    """Signing in and out, choosing a role, and the administrator's subject actions."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
         ("POST", "/login/code"),
         ("POST", "/logout"),
         ("POST", "/role"),
+        ("POST", "/admin/subjects"),
+        ("POST", "/admin/subjects/{subject_id:int}/rename"),
+        ("POST", "/admin/subjects/{subject_id:int}/deactivate"),
+        ("POST", "/admin/subjects/{subject_id:int}/activate"),
+        ("POST", "/admin/subjects/{subject_id:int}/delete"),
     }
 
 
@@ -194,10 +200,18 @@ def test_there_are_declared_pages_to_sweep() -> None:
 def test_every_declared_page_admits_exactly_its_roles(
     client_as: ClientAs, path: str, allowed: frozenset[Role]
 ) -> None:
-    """US5-2: allowed and denied, for every role, on every declared page."""
+    """US5-2: allowed and denied, for every role, on every declared page.
+
+    An allowed role is "not denied" rather than "200" (specs/006-admin-area/research.md D9):
+    `/admin` answers with a 303 to its first tab, and `/admin/subjects/1/rename` with a 404 when
+    there is no subject 1. Both prove access was granted; each page's own status is pinned by its
+    own tests."""
     for role, email in SINGLE_ROLE.items():
         status = client_as(email).get(_concrete(path), follow_redirects=False).status_code
-        assert status == (200 if role in allowed else 403), f"{role.value} GET {path}: {status}"
+        if role in allowed:
+            assert status != 403, f"{role.value} GET {path}: {status}"
+        else:
+            assert status == 403, f"{role.value} GET {path}: {status}"
 
 
 def test_a_declaration_needs_at_least_one_role() -> None:

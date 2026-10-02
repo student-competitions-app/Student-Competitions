@@ -67,12 +67,15 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - The tabs exist only in the administrator area and are not shown to any other role.
 
    _Teachers tab:_ dummy page at this milestone
-   _Educational institutions tab:_ An empty list shows "No educational institutions yet".
+   _Educational institutions tab:_ dummy page at this milestone
   
    _Subjects tab:_ the list of subject areas in which competitions are held (for example mathematics, physics). It shows all subjects, sorted by name, and a **Create** button. 
    - **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Names are unique, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value. An empty list shows "No subjects yet".
    _Access:_ all three tabs and their forms: administrators. Every other role gets "access denied", as in milestone 5.
     - The tab contains the **Rename** and **Delete**,  **Deactivate** buttons. Deletion should check any usage of the subject and deline the operation to avoid broken references. The deactivated status restricts creation on any new questions for the subject and any new competitions (will be covered in future milestones)
+
+   Out of Scope: this milestone does not add any operations an UI ourside of dummy pages for teachers and Educational institutions tabs.
+   
 
 7. **User management with consent: teachers.** Administrators keep the list of educational institutions and invite teachers. No personal data about a person is stored until that person agrees to it. This milestone builds the invitation and consent flow, and milestone 8 reuses it for students. The teacher and student lists from milestone 5 are retired. Administrators stay in `ADMIN_EMAILS`.
    _Personal data and consent:_ a person's email, first name and last name are personal data. The application stores them only after the person agrees, on a page of this site, to a consent text. The text says what is stored, why, who can see it and how to withdraw consent. The form an inviter fills in is not saved anywhere. Its contents travel only inside the invitation link, and until the person accepts, nothing about them exists in the database.

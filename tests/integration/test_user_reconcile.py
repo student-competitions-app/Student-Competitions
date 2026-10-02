@@ -84,7 +84,6 @@ def test_s1_listed_addresses_become_active_people_with_their_roles(session: Sess
     found = all_users(session)
     assert set(found) == {A, T, S}
     assert all(user.is_active for user in found.values())
-    assert all(user.legacy_role is None for user in found.values())
     assert roles_of(session, A) == (ADMIN, STUDENT)
     assert roles_of(session, T) == (TEACHER,)
     assert roles_of(session, S) == (STUDENT,)
@@ -168,9 +167,9 @@ def test_s7_one_address_on_two_lists_is_one_person(session: Session) -> None:
 
 
 def test_s8_a_migrated_administrator_is_unchanged(session: Session) -> None:
-    """A milestone 4 administrator, as the migration leaves them: the old column and one row."""
+    """A milestone 4 administrator, as the migration leaves them: one `user_roles` row."""
     now = utc_now()
-    user = User(email=A, legacy_role="admin", is_active=True, created_at=now, updated_at=now)
+    user = User(email=A, is_active=True, created_at=now, updated_at=now)
     session.add(user)
     session.commit()
     assert user.id is not None

@@ -60,35 +60,19 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - Someone who is both an administrator and a student, using the student role, cannot open the administrator page.
    - A person removed from a list is logged out, and a person removed from every list can no longer log in.
 
-6. **Administrator area: teachers, educational institutions, subjects and settings.** The administrator page from milestone 5 stops being a placeholder and becomes a tabbed area with four tabs at the top: **Teachers**, **Educational institutions**, **Subjects** and **Settings**. The aim is the administrator's reference data: the lists that later milestones select from. No personal data is collected in this milestone.
+6. **Administrator area: teachers, educational institutions, subjects.** The administrator page from milestone 5 stops being a placeholder and becomes a tabbed area with three tabs at the top: **Teachers**, **Educational institutions**, **Subjects**.
    _Tabs:_
-   - The tabs are a row of links at the top of every administrator page, below the header. Each tab is its own page with its own address: `/admin/teachers`, `/admin/institutions`, `/admin/subjects` and `/admin/settings`. Clicking a tab is an ordinary link to that page, with no client-side tab switching, so every tab can be bookmarked, reloaded and opened directly.
+   - The tabs are a row of links at the top of every administrator page, below the header. Each tab is its own page with its own address: `/admin/teachers`, `/admin/institutions`, `/admin/subjects`. Clicking a tab is an ordinary link to that page, with no client-side tab switching, so every tab can be bookmarked, reloaded and opened directly.
    - The current tab is highlighted. `/admin` redirects to the **Teachers** tab.
    - The tabs exist only in the administrator area and are not shown to any other role.
 
-   _Teachers tab:_ a read-only list of the active users who hold the teacher role, showing their email, sorted by email. In this milestone the teachers still come from `TEACHER_EMAILS` (milestone 5), so the list has no names and no add, edit or remove actions. An empty list shows "No teachers yet". Milestone 7 switches the list to invited teachers and adds names, institutions, the invitation form and the edit and remove actions to this tab.
-   _Educational institutions tab:_
-   - A list of all institutions, sorted by name, and a **Create** button.
-   - **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Names are unique, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value.
-   - The form is a plain form that redirects after submit, as at sign-in, and the list then shows the new institution.
-   - An empty list shows "No educational institutions yet".
-
-   _Subjects tab:_ the list of subject areas in which competitions are held (for example mathematics, physics). It shows all subjects, sorted by name, and a **Create** button. Creating a subject works exactly like creating an institution: one name field, the same validation, unique ignoring case. An empty list shows "No subjects yet". Milestone 9 links each question to a subject and milestone 10 links each competition to a subject, which is why deleting a subject stays out of scope.
-   _Settings tab:_ a placeholder page with the title "Settings" and one sentence saying that site settings will appear here. It has no forms and stores nothing.
-   _Data:_ two new tables, `institutions` and `subjects`, each with an id, a unique name and the creation time, added by an Alembic migration. Uniqueness ignoring case is enforced by the database, not only by the form, so two simultaneous submissions cannot both succeed. Neither table holds personal data.
-   _Access:_ all four tabs and their forms: administrators. Every other role gets "access denied", as in milestone 5.
-   _Out of scope:_
-   - renaming and deleting institutions and subjects (renaming institutions comes in milestone 7)
-   - linking teachers to institutions, inviting teachers, and names for teachers (milestone 7)
-   - linking questions and competitions to subjects (milestones 9 and 10)
-   - any real site settings
-
-   _Test:_
-   - An administrator sees the four tabs, and each tab opens its own page both by click and by direct address. `/admin` lands on **Teachers**.
-   - No page shows the administrator tabs to another role, and every tab address and form submission gives a non-administrator "access denied".
-   - The **Teachers** tab lists exactly the active users holding the teacher role.
-   - An administrator creates an institution and a subject, and each appears in its list. A duplicate name in a different case, an empty name and a name that is too long are each refused with an error, and nothing is stored.
-   - The **Settings** tab shows its placeholder text.
+   _Teachers tab:_ dummy page at this milestone
+   _Educational institutions tab:_ An empty list shows "No educational institutions yet".
+  
+   _Subjects tab:_ the list of subject areas in which competitions are held (for example mathematics, physics). It shows all subjects, sorted by name, and a **Create** button. 
+   - **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Names are unique, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value. An empty list shows "No subjects yet".
+   _Access:_ all three tabs and their forms: administrators. Every other role gets "access denied", as in milestone 5.
+    - The tab contains the **Rename** and **Delete**,  **Deactivate** buttons. Deletion should check any usage of the subject and deline the operation to avoid broken references. The deactivated status restricts creation on any new questions for the subject and any new competitions (will be covered in future milestones)
 
 7. **User management with consent: teachers.** Administrators keep the list of educational institutions and invite teachers. No personal data about a person is stored until that person agrees to it. This milestone builds the invitation and consent flow, and milestone 8 reuses it for students. The teacher and student lists from milestone 5 are retired. Administrators stay in `ADMIN_EMAILS`.
    _Personal data and consent:_ a person's email, first name and last name are personal data. The application stores them only after the person agrees, on a page of this site, to a consent text. The text says what is stored, why, who can see it and how to withdraw consent. The form an inviter fills in is not saved anywhere. Its contents travel only inside the invitation link, and until the person accepts, nothing about them exists in the database.

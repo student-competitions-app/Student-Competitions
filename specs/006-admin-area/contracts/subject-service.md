@@ -15,8 +15,10 @@ every route that calls them (Principle IV). A later caller must put its own role
 SUBJECT_NAME_MAX_LENGTH = 200
 SUBJECT_NAME_KEY_MAX_LENGTH = 600
 
+
 class SubjectNameError(ValueError):
-    message: str            # ready to show in the form
+    message: str  # ready to show in the form
+
 
 def clean_subject_name(raw: str) -> str: ...
 def subject_name_key(name: str) -> str: ...
@@ -33,9 +35,19 @@ Every function takes an open `Session` first. The caller owns the session. Each 
 committed unit of work, and is rolled back on error.
 
 ```python
-class SubjectNotFound(LookupError):       subject_id: int
-class DuplicateSubjectName(ValueError):   existing_name: str; message: str
-class SubjectInUse(ValueError):           subject: Subject; uses: int
+class SubjectNotFound(LookupError):
+    subject_id: int
+
+
+class DuplicateSubjectName(ValueError):
+    existing_name: str
+    message: str
+
+
+class SubjectInUse(ValueError):
+    subject: Subject
+    uses: int
+
 
 def list_subjects(session) -> list[Subject]: ...
 def get_subject(session, subject_id: int) -> Subject: ...

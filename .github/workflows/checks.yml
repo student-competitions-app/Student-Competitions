@@ -315,7 +315,13 @@ jobs:
           }
 
           check_home 1
-          check_page /admin 200 'Administrator area'
+          # The area's own address opens its first tab (specs/006-admin-area FR-005).
+          result=$(curl -s -o /tmp/home.html -w '%{http_code} %{redirect_url}' --max-time 10 -b "$jar" "$base/admin" || true)
+          case "$result" in
+            "303 $base/admin/teachers") echo "GET $base/admin → $result" ;;
+            *) fail "GET $base/admin returned '$result' (expected 303 to $base/admin/teachers)." ;;
+          esac
+          check_page /admin/teachers 200 'aria-label="Administrator area"'
           check_page /student 403 'Access denied'
 
           # A logout posted from another site is refused, and the session survives it.

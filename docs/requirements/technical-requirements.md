@@ -95,7 +95,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
      - the consent text
      - the inviter, role and institution
      - an **I agree** button
-   - On that page the person may correct the spelling of their first and last name. The email, role, institution, group and year cannot be changed there.
+   - Nothing can be changed on that page: the data stored is exactly the data in the token. Under the button, the page says that if any detail is wrong, the person can either ask the inviter for a corrected invitation, or accept and ask the inviter to correct it afterwards. Letting the person edit their own name would let them take on someone else's name.
    - **I agree** submits a POST with the token in a hidden field, under the existing cross-site check. The server checks the token again. Then it checks that the inviter is still active, still holds the role that allows the invitation, and, for a student, is still linked to that institution.
    - What happens next depends on whether the email already belongs to a user:
      - No user has the email: an active user is created with the names, role and details.
@@ -157,7 +157,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _Test:_
    - End to end: an administrator invites a teacher, and the link is read from the `memory` outbox. The GET creates nothing. The POST creates the user with the role, institutions and a consent record. The teacher then signs in and invites a student, who accepts in the same way.
    - Before acceptance, no table contains the invited email or names.
-   - A tampered token, an expired token and a token with the wrong purpose label are each refused. In the POST, only the two name fields may differ from the token.
+   - A tampered token, an expired token and a token with the wrong purpose label are each refused. The POST stores only what the token holds: any extra or changed form field is ignored.
    - The invitation is refused if, before acceptance, the inviter is removed or the teacher is unlinked from the institution.
    - A person removed after an invitation was issued cannot be brought back by it. A newer invitation can bring them back.
    - An administrator invited as a teacher gains the teacher role and keeps the administrator role.

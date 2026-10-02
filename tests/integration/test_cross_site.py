@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 import app.core.auth as auth
 from app.core.security import SESSION_COOKIE_NAME, hash_token
 from app.models import Role, UserSession
+from app.services.subjects import create_subject, list_subjects
 from tests.conftest import ADMIN_EMAIL, ADMIN_STUDENT_EMAIL, ClientAs
 
 REFUSED = "This request was refused because it did not come from this site."
@@ -91,3 +92,27 @@ def test_a_cross_site_page_view_is_unaffected(client_as: ClientAs) -> None:
     """Arriving by a link from another site still works: `GET` changes nothing."""
     browser = client_as(ADMIN_EMAIL)
     assert browser.get("/", headers={"Sec-Fetch-Site": "cross-site"}).status_code == 200
+
+
+@pytest.mark.parametrize("forged", CROSS_SITE_HEADERS)
+def test_a_cross_site_subject_action_changes_nothing(
+    admin_client: TestClient, session: Session, forged: dict[str, str]
+) -> None:
+    """Milestone 6 FR-034: the administrator's subject actions are refused like any write."""
+    physics = create_subject(session, "Physics")
+
+    def rows() -> list[tuple[object, ...]]:
+        session.expire_all()
+        return [(s.id, s.name, s.is_active, s.updated_at) for s in list_subjects(session)]
+
+    before = rows()
+    for path, data in [
+        ("/admin/subjects", {"name": "Forged"}),
+        (f"/admin/subjects/{physics.id}/rename", {"name": "Forged"}),
+        (f"/admin/subjects/{physics.id}/deactivate", {}),
+        (f"/admin/subjects/{physics.id}/delete", {}),
+    ]:
+        response = admin_client.post(path, data=data, headers=forged, follow_redirects=False)
+        assert response.status_code == 403, path
+        assert "<h1>Request refused</h1>" in response.text
+        assert rows() == before, path

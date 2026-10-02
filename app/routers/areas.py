@@ -5,6 +5,10 @@ declared once, here: its address, its title and the roles that may open it. The 
 decorates the handler and builds the home page's links, so what a person is shown and what they
 may open cannot drift apart (FR-027). The tests check both against an independent copy of the
 spec's access table.
+
+`ADMIN_AREA` stays here, so the home page keeps its "Administrator area" link to `/admin`, but the
+address itself is served by `app.routers.admin`: since milestone 6 it opens the administrator
+area's tabs (specs/006-admin-area/research.md D6).
 """
 
 from dataclasses import dataclass
@@ -44,12 +48,6 @@ def _render(request: Request, area: Area) -> HTMLResponse:
     return templates.TemplateResponse(
         request, "pages/area.html", {"app_name": APP_NAME, "area": area}
     )
-
-
-@router.get(ADMIN_AREA.path, response_class=HTMLResponse)
-@allow_roles(*ADMIN_AREA.roles)
-def admin_area(request: Request) -> HTMLResponse:
-    return _render(request, ADMIN_AREA)
 
 
 @router.get(TEACHER_AREA.path, response_class=HTMLResponse)

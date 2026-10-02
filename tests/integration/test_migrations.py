@@ -34,7 +34,7 @@ from app.core.migrations import (
 )
 from app.models import BootCounter, Question
 
-APPLICATION_TABLES = {"questions", "boot_counter"}
+APPLICATION_TABLES = {"questions", "boot_counter", "subjects"}
 
 
 @pytest.fixture
@@ -92,6 +92,7 @@ def test_empty_to_head(
     assert application_tables(migration_engine) == APPLICATION_TABLES
     assert stored_questions(migration_engine) == samples_as_pairs(sample_questions)
     assert boots == 0
+    assert "role" not in {c["name"] for c in inspect(migration_engine).get_columns("users")}
 
 
 def test_head_to_head_changes_nothing(
@@ -212,6 +213,8 @@ def test_concurrent_upgrades_apply_once(
 # specs/005-roles-authorization/data-model.md#7-schema-revision-introduced-by-this-milestone.
 
 AUTH_REVISION = "a35580dee830"
+ROLES_REVISION = "50f17535d874"
+"""Milestone 5's head. These tests write `users.role`, which milestone 6 drops (research D8)."""
 
 users_t = sa.table(
     "users",
@@ -284,7 +287,7 @@ def test_upgrade_keeps_the_active_administrators(
         inactive = add_user(connection, "inactive@example.com", "admin", False)
         add_session(connection, active, "a" * 64)
 
-    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    run_alembic(monkeypatch, empty_database_url, "upgrade", ROLES_REVISION)
 
     with migration_engine.begin() as connection:
         roles = connection.execute(sa.select(user_roles_t.c.user_id, user_roles_t.c.role)).all()
@@ -304,7 +307,7 @@ def test_downgrade_deactivates_everyone_who_is_not_an_administrator(
 ) -> None:
     """Milestone 4 treats every active user as an administrator, so the way back must not leave
     a teacher or a student active."""
-    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    run_alembic(monkeypatch, empty_database_url, "upgrade", ROLES_REVISION)
     with migration_engine.begin() as connection:
         admin = add_user(connection, "admin@example.com", None, True)
         add_role(connection, admin, "admin")

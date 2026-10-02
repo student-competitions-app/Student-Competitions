@@ -125,3 +125,63 @@
 .auth-alternatives {
   margin-top: 1.5rem;
 }
+
+/* The administrator area's tab row (specs/006-admin-area FR-002–FR-004): plain links that wrap on
+   a phone rather than scrolling sideways, the current tab marked by a bold underline. */
+.admin-tabs {
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  margin-bottom: 1.5rem;
+}
+
+.admin-tabs ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-tabs li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-tabs a {
+  border-bottom: 0.2rem solid transparent;
+  color: var(--pico-muted-color);
+  display: inline-block;
+  padding-block: 0.5rem;
+  text-decoration: none;
+}
+
+.admin-tabs a[aria-current="page"] {
+  border-bottom-color: var(--pico-primary);
+  color: var(--pico-color);
+  font-weight: bold;
+}
+
+/* The subject list: names wrap rather than widen the page; the one-button forms sit inline with
+   the links in the actions column. */
+.subjects-table td {
+  overflow-wrap: anywhere;
+}
+
+.subjects-actions {
+  white-space: nowrap;
+}
+
+.subjects-actions form {
+  display: inline;
+  margin: 0;
+}
+
+.subjects-actions button {
+  margin: 0;
+  padding: 0.125rem 0.5rem;
+  width: auto;
+}
+
+.subjects-empty {
+  color: var(--pico-muted-color);
+}

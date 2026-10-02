@@ -1,0 +1,11 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Subject not found — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+<section>
+  <h1>Subject not found</h1>
+  <p>This subject does not exist. It may have been deleted.</p>
+  <p><a href="/admin/subjects">Back to the subjects</a></p>
+</section>
+{% endblock %}

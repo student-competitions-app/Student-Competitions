@@ -1,0 +1,12 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<nav class="admin-tabs" aria-label="Administrator area">
+  <ul>
+    {% for tab in admin_tabs %}
+    <li><a href="{{ tab.path }}"{% if tab.key == active_tab %} aria-current="page"{% endif %}>{{ tab.label }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>
+{% block admin_content %}{% endblock %}
+{% endblock %}

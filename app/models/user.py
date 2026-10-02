@@ -44,12 +44,6 @@ class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     email: str = Field(sa_column=Column(String(EMAIL_MAX_LENGTH), nullable=False, unique=True))
     """Always stored normalised: trimmed and lowercased (FR-002)."""
-    legacy_role: str | None = Field(
-        default=None, sa_column=Column("role", String(20), nullable=True)
-    )
-    """Unused from milestone 5 on: never read, never written, `NULL` on new rows. Kept only so the
-    previous release keeps working during a deploy overlap; dropped by milestone 6's first
-    migration (research D2)."""
     is_active: bool = Field(nullable=False)
     """Only an active user can obtain a code or keep a session (FR-010). Active ⇔ holds at least
     one role."""

@@ -63,7 +63,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 6. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
    _Test:_ question CRUD works and is visible only to teachers.
 
-7. **User management with consent: teachers.** Administrators keep the list of educational institutions and invite teachers. No personal data about a person is stored until that person agrees to it. This milestone builds the invitation and consent flow, and milestone 8 reuses it for students. The teacher list from milestone 5 is retired. Administrators stay in `ADMIN_EMAILS`, and students stay in `STUDENT_EMAILS` until milestone 8.
+7. **User management with consent: teachers.** Administrators keep the list of educational institutions and invite teachers. No personal data about a person is stored until that person agrees to it. This milestone builds the invitation and consent flow, and milestone 8 reuses it for students. The teacher and student lists from milestone 5 are retired. Administrators stay in `ADMIN_EMAILS`.
    _Personal data and consent:_ a person's email, first name and last name are personal data. The application stores them only after the person agrees, on a page of this site, to a consent text. The text says what is stored, why, who can see it and how to withdraw consent. The form an inviter fills in is not saved anywhere. Its contents travel only inside the invitation link, and until the person accepts, nothing about them exists in the database.
    _Built for reuse:_ the invitation, the acceptance, the consent record, the profile and the withdrawal are written once and do not depend on a particular role. Each role that can be invited supplies:
    - the fields of its invitation form and their validation
@@ -123,7 +123,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - An expired link shows "This invitation has expired; ask for a new one." Any other failure shows one neutral message without saying which check failed: a tampered or unreadable token, an inviter who no longer qualifies, or a refused acceptance.
    - The two invitation routes are added to the public allowlist. They act on the person named in the token, never on the signed-in session.
 
-   _Consent text:_ each invitable role has its own versioned template in the repository, because each role stores different data. Any change to its wording is a new version, and each existing record keeps the version that was accepted. A placeholder wording is fine for development. The final wording of the teacher text, supplied by the product owner, is required before this reaches `main`.
+   _Consent text:_ each invitable role has its own versioned template in the repository, because each role stores different data. Any change to its wording is a new version, and each existing record keeps the version that was accepted. Placeholder wording is fine until real users arrive. The product owner supplies the final wording before then.
    _Managing teachers:_
    - An administrator can:
      - see all teachers: name, email, institutions, date of consent
@@ -141,8 +141,8 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - keeps only the dates and versions in the consent records
    - logs the person out everywhere
 
-   A role that comes from deployment configuration is kept, and so is the address it is set for: administrator from `ADMIN_EMAILS` and, until milestone 8, student from `STUDENT_EMAILS`. A person who withdrew can be invited again like anyone new.
-   _Retiring the teacher list:_ `TEACHER_EMAILS` is removed from the configuration and from `render.yaml`. The startup reconcile manages only the administrator and student roles. It never grants or removes the teacher role, removes a listed role from addresses no longer listed, and deactivates a user only when no role is left. On rollout, the teacher roles granted by the old list are removed, because those people have no names and no consent record. They are logged out and must be invited.
+   An administrator from `ADMIN_EMAILS` keeps that role and that address, because that role comes from deployment configuration, not from consent. A person who withdrew can be invited again like anyone new.
+   _Retiring the role lists:_ `TEACHER_EMAILS` and `STUDENT_EMAILS` are removed from the configuration and from `render.yaml`. The startup reconcile manages only the administrator role. It removes that role from addresses no longer listed, and deactivates a user only when no role is left. The migration deletes the teacher and student roles granted by the old lists. Until milestone 8, nobody holds the student role.
    _Access:_ each new page states its roles, as milestone 5 requires:
    - institutions and teacher management: administrators
    - profile: every role
@@ -167,9 +167,9 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - An administrator invited as a teacher gains the teacher role and keeps the administrator role.
    - Withdrawing consent erases the personal data and logs the person out, and that person can no longer sign in. An administrator who withdraws keeps the administrator role and address.
    - Logs captured during all of the above contain no email, name or token.
-   - The reconcile no longer grants or removes the teacher role, and still manages the administrator and student roles.
+   - The reconcile manages only the administrator role.
 
-8. **User management with consent: students.** Teachers invite students. The student role is added to the invitation and consent flow from milestone 7 as one more invitable role, so the flow itself does not change. The student list from milestone 5 is retired. Administrators stay in `ADMIN_EMAILS`.
+8. **User management with consent: students.** Teachers invite students. The student role is added to the invitation and consent flow from milestone 7 as one more invitable role, so the flow itself does not change.
    _Personal data:_ besides the email and names, a student's educational institution, group code and year of study are personal data. They are stored only on acceptance, like the rest.
    _Inviting a student:_
    - A teacher fills in the email, first name, last name, group code and year of study, and selects one of their own institutions from a list. The server accepts only an institution the teacher is linked to.
@@ -177,14 +177,13 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - Sending, rate limits, the token, the email and the acceptance page work as in milestone 7. The token holds the institution id, the group code and the year of study.
 
    _Accepting:_ on top of the checks in milestone 7, the inviter must still be a teacher linked to the student's institution. The cases for an email that already belongs to a user apply unchanged. Example: a teacher invited as a student gains the student role and keeps the teacher role.
-   _Consent text:_ a student consent text, versioned like the teacher one. It also says that the institution, group code and year of study are stored, and that the teachers of that institution can see them. The final wording, supplied by the product owner, is required before this reaches `main`.
+   _Consent text:_ a student consent text, versioned like the teacher one. It also says that the institution, group code and year of study are stored, and that the teachers of that institution can see them. Placeholder wording is fine until real users arrive, as in milestone 7.
    _Managing students:_
    - A teacher can see the students of their own institutions: name, email, institution, group, year. They can edit a student's names, institution (selected among their own), group and year, and remove a student. Students of other institutions are neither listed nor reachable: opening one by address shows "access denied".
    - An administrator can see all students and remove any of them.
    - An email cannot be edited, and removing works as in milestone 7.
 
    _Profile and withdrawing consent:_ the profile also shows the student details. Withdrawing also removes the student role and deletes the student details. Corrections to a student's data go through a teacher of their institution.
-   _Retiring the student list:_ `STUDENT_EMAILS` is removed from the configuration and from `render.yaml`. The startup reconcile manages only the administrator role. It removes that role from addresses no longer listed, and deactivates a user only when no role is left. On rollout, the student roles granted by the old list are removed, because those people have no names and no consent record. They are logged out and must be invited.
    _Access:_ student management: teachers (own institutions only) and administrators.
    _Out of scope:_
    - bulk import of students
@@ -200,7 +199,6 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - Withdrawing consent as a student erases the student details too.
    - A teacher invited as a student holds both roles.
    - Logs captured during all of the above contain no email, name or token.
-   - The reconcile manages only the administrator role.
    - The milestone 7 tests pass unchanged.
 
 9. **Creating a competition (teacher).** A competition with a start time, duration, assignment to a group/students, a set of questions from the bank and reference answers.

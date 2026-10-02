@@ -73,3 +73,7 @@ A web application for running online competitions among students, testing their 
 ### Question
 
 A question in a competition is usually 1–3 lines of text and expects a text answer.
+
+## Production usage
+
+IMPORTANT!!! No real users will be involved untill all milestones are executed. So there are no reasons to add complexity to the system to smmothly go from one milestone to another without any end-users disruptions.

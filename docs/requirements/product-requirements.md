@@ -12,12 +12,14 @@ A web application for running online competitions among students, testing their 
 - Cannot edit their own profile.
 - Can view the list of competitions they have taken part in, with results:
   - title
+  - subject
   - date
   - start time
   - final score
   - place
 - Can view the list of upcoming competitions they are scheduled to take part in:
   - title
+  - subject
   - date and time
 
 ### Teacher
@@ -31,8 +33,9 @@ A web application for running online competitions among students, testing their 
    - educational institution
    - group code (text) within the educational institution
    - the student's year of study at the educational institution
-2. **Managing the question bank.** Edit the global list of questions used in competitions. Questions can be reused across different competitions. For each question, the teacher adds the correct answer as text.
+2. **Managing the question bank.** Edit the global list of questions used in competitions. Questions can be reused across different competitions. Each question belongs to one subject, selected from the list of subjects. For each question, the teacher adds the correct answer as text.
 3. **Running a competition.** The teacher selects:
+   - the subject of the competition; only questions of that subject can be added to it
    - the start time and duration of the competition (usually 1 hour)
    - the list of questions
    - the list of participants (usually up to 10 people)
@@ -54,6 +57,7 @@ A web application for running online competitions among students, testing their 
 - Adds and deletes teachers in the application.
 - Links a teacher to one or more educational institutions, selecting them from the list of institutions.
 - Is the only role that can edit the list of educational institutions.
+- Is the only role that can edit the list of subjects.
 
 ## Personal data
 
@@ -65,14 +69,18 @@ A web application for running online competitions among students, testing their 
 
 ### How a competition works
 
-- A teacher organizes a competition for a specific date and time with a specific duration (usually one hour).
+- A teacher organizes a competition in one subject for a specific date and time with a specific duration (usually one hour).
 - Students answer the given questions in writing (text).
 - Answers are evaluated using AI. The input for evaluation is the question text and the correct answer prepared in advance by the teacher. Each answer is assigned a score.
 - The winner is the student with the highest total score, calculated as the sum of scores across all questions in the competition.
 
 ### Question
 
-A question in a competition is usually 1–3 lines of text and expects a text answer.
+A question in a competition is usually 1–3 lines of text and expects a text answer. Every question belongs to one subject.
+
+### Subject
+
+A subject is a knowledge area, such as mathematics or physics, that competitions test. Administrators keep the list of subjects. Every question and every competition belongs to exactly one subject, and a competition contains only questions of its own subject.
 
 ## Production usage
 

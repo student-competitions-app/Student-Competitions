@@ -43,7 +43,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _Test:_ a user can log in end to end, reading the code from the `memory` outbox. A route-table test asserts that every route outside the allowlist rejects anonymous requests. Existing page tests use a fixture that creates a session directly. Unknown and known emails get the same response. Running the reconcile twice changes nothing. An email removed from `ADMIN_EMAILS` can no longer log in and loses its sessions.
 
 5. **Roles and authorization.** Three roles: student, teacher and administrator. Each page is open only to the roles allowed to see it. The aim is the complete role flow, kept simple: the role pages are placeholders with no features behind them.
-   _Who has which role:_ the lists of administrators, teachers and students are all set via configuration at deploy time, the same way administrators are set today. One person can be on several lists and so have several roles. A person on no list cannot log in. Removing a person from a list takes effect at once: they are logged out everywhere. The teacher and student lists are temporary; milestone 7 replaces them with managing teachers and students in the application.
+   _Who has which role:_ the lists of administrators, teachers and students are all set via configuration at deploy time, the same way administrators are set today. One person can be on several lists and so have several roles. A person on no list cannot log in. Removing a person from a list takes effect at once: they are logged out everywhere. The teacher and student lists are temporary; milestones 6 and 7 replace them with managing teachers and students in the application.
    _Choosing a role:_ a person with one role gets it right after login. A person with several roles chooses one after login, and then lands on the page they originally asked for. Until a role is chosen, no other page opens. A person with several roles can switch role at any time from the header without logging out.
    _Access:_ what a person can open depends on the role they are currently using, not on all the roles they have. For example, someone who is both an administrator and a student cannot open administrator pages while using the student role. Opening a page the current role is not allowed to see shows an "access denied" page. Every new page must state which roles can open it.
    _Pages:_
@@ -60,22 +60,157 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - Someone who is both an administrator and a student, using the student role, cannot open the administrator page.
    - A person removed from a list is logged out, and a person removed from every list can no longer log in.
 
-6. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
+6. **User management with consent: teachers.** Administrators keep the list of educational institutions and invite teachers. No personal data about a person is stored until that person agrees to it. This milestone builds the invitation and consent flow, and milestone 7 reuses it for students. The teacher and student lists from milestone 5 are retired. Administrators stay in `ADMIN_EMAILS`.
+   _Personal data and consent:_ a person's email, first name and last name are personal data. The application stores them only after the person agrees, on a page of this site, to a consent text. The text says what is stored, why, who can see it and how to withdraw consent. The form an inviter fills in is not saved anywhere. Its contents travel only inside the invitation link, and until the person accepts, nothing about them exists in the database.
+   _Built for reuse:_ the invitation, the acceptance, the consent record, the profile and the withdrawal are written once and do not depend on a particular role. Each role that can be invited supplies:
+   - the fields of its invitation form and their validation
+   - which role may invite it
+   - its extra checks at acceptance
+   - the details stored on acceptance and erased on withdrawal
+   - its consent text
+
+   This milestone defines the teacher role. Milestone 8 adds the student role the same way, without changing the flow.
+   _Educational institutions:_ administrators keep the list of institutions. They can add an institution and rename one. Names are unique, ignoring case. Each teacher is linked to one or more institutions. Only an administrator sets these links, when inviting the teacher and later from the teacher's page. On both forms the administrator selects the institutions from the list, at least one. There is no free-text entry, so an institution is added to the list before a teacher can be linked to it. The server accepts only institutions that exist.
+   _Inviting a teacher:_
+   - An administrator fills in the email, first name and last name, and selects one or more institutions.
+   - Submitting the form sends the invitation email and shows "Invitation sent to …". Nothing from the form is kept, and there is no list of pending invitations. To resend, the inviter fills in the form again. Every invitation sent is valid on its own until it expires.
+   - Validation: the email is checked as at sign-in. Names are 1–100 characters after trimming, with no control characters.
+   - Invitations are rate-limited per inviter and per invited address, using the existing rate-limit counters.
+
+   _The invitation link:_ the link carries one opaque token, and the token is the whole invitation. It holds:
+   - the role
+   - the person's details
+   - the institutions, by id, so renaming an institution before acceptance does not break the invitation
+   - the inviter's user id
+   - the time of issue
+   - a purpose label
+
+   The token is encrypted and authenticated (for example Fernet or AES-GCM) with a key derived from `SECRET_KEY` for invitations only. So the personal data cannot be read from the URL, wherever the URL ends up: server request logs, browser history, mail scanners. Any change to the token makes it invalid. A token is valid for 7 days from issue. Rotating `SECRET_KEY` invalidates every invitation not yet accepted, and inviters then send new ones.
+   _The invitation email:_ plain text, sent through the existing email sender. Its content:
+   - who sent the invitation
+   - the role and the institutions it is for
+   - that nothing is stored unless the person accepts
+   - the link, and when it expires
+
+   Click tracking stays off in Resend, because it would store the link. The application keeps no copy of the email: no BCC and no archive mailbox.
+   _Accepting:_
+   - Opening the link (GET) changes nothing. Mail security scanners open links automatically, so only the person's own button press may create anything. The page shows:
+     - the data that will be stored, with the current names of the institutions
+     - the consent text
+     - the inviter and the role
+     - an **I agree** button
+   - Nothing can be changed on that page: the data stored is exactly the data in the token. Under the button, the page says that if any detail is wrong, the person can either ask the inviter for a corrected invitation, or accept and ask the inviter to correct it afterwards. Letting the person edit their own name would let them take on someone else's name.
+   - **I agree** submits a POST with the token in a hidden field, under the existing cross-site check. The server checks the token again. Then it checks that the inviter is still active and still holds the role that allows the invitation (for a teacher, administrator), and runs the invited role's own checks.
+   - What happens next depends on whether the email already belongs to a user:
+     - No user has the email: an active user is created with the names, role and details.
+     - An active user without this role: the role and details are added, and their names stay unchanged. Example: an administrator invited as a teacher.
+     - An active user who already holds the role: nothing changes, and the page says so. A second press of the button ends here too.
+     - An inactive user deactivated *after* the invitation was issued: refused. A removal always wins over an older invitation.
+     - An inactive user deactivated *before* the invitation was issued: reactivated with the role and details from the invitation.
+   - Every acceptance that changes something stores a consent record:
+     - the user
+     - the role granted
+     - the consent text version
+     - when it was accepted
+     - the inviter
+     - when the invitation was issued
+
+     This record, not any email, is the proof of consent.
+   - After accepting, the person lands on the sign-in page with their email filled in and signs in with a code as usual. Accepting never signs anyone in.
+   - An expired link shows "This invitation has expired; ask for a new one." Any other failure shows one neutral message without saying which check failed: a tampered or unreadable token, an inviter who no longer qualifies, or a refused acceptance.
+   - The two invitation routes are added to the public allowlist. They act on the person named in the token, never on the signed-in session.
+
+   _Consent text:_ each invitable role has its own versioned template in the repository, because each role stores different data. Any change to its wording is a new version, and each existing record keeps the version that was accepted. Placeholder wording is fine until real users arrive. The product owner supplies the final wording before then.
+   _Managing teachers:_
+   - An administrator can:
+     - see all teachers: name, email, institutions, date of consent
+     - edit a teacher's names and institutions, selecting the institutions from the list, at least one
+     - remove a teacher
+   - An email cannot be edited. To change one, remove the person and invite the new address.
+   - Removing a person takes away that role and its details. A person left with no roles is deactivated. As in milestone 5, they are logged out everywhere. Users are never hard-deleted.
+
+   _Profile:_ every signed-in person can open their own profile. It shows the personal data stored about them, their roles, and their consent records with the text of each accepted version. The profile is read-only. Corrections go through an administrator.
+   _Withdrawing consent:_ a person holding a role granted by consent sees **Withdraw consent** on the profile, with a confirmation step. Withdrawing:
+   - removes the roles granted by consent (in this milestone, teacher)
+   - clears the names
+   - deletes the role's details (for a teacher, the institution links)
+   - replaces the email with an anonymous placeholder, so later records such as competition results can still refer to the user row without identifying anyone
+   - keeps only the dates and versions in the consent records
+   - logs the person out everywhere
+
+   An administrator from `ADMIN_EMAILS` keeps that role and that address, because that role comes from deployment configuration, not from consent. A person who withdrew can be invited again like anyone new.
+   _Retiring the role lists:_ `TEACHER_EMAILS` and `STUDENT_EMAILS` are removed from the configuration and from `render.yaml`. The startup reconcile manages only the administrator role. It removes that role from addresses no longer listed, and deactivates a user only when no role is left. The migration deletes the teacher and student roles granted by the old lists. Until milestone 7, nobody holds the student role.
+   _Access:_ each new page states its roles, as milestone 5 requires:
+   - institutions and teacher management: administrators
+   - profile: every role
+   - the invitation pages: public
+
+   _Privacy:_ no log line contains an email, a name or a decrypted token. The console email backend remains the only code path that prints a message body.
+   _Out of scope:_
+   - anything about students: inviting, managing, their details and consent text (milestone 7)
+   - deleting institutions
+   - a list of pending invitations, or cancelling one. Known limitation: an invitation sent by mistake stays valid for 7 days. If the person accepts, remove them.
+   - changing a person's email
+   - self sign-up
+
+   _Test:_
+   - End to end: an administrator adds two institutions and invites a teacher with both selected, and the link is read from the `memory` outbox. The GET creates nothing. The POST creates the user with the role, both institutions and a consent record. The teacher then signs in and sees their profile.
+   - The invitation and teacher edit forms offer only existing institutions. A submission with no institution or with an unknown institution id is refused.
+   - An institution renamed between invitation and acceptance is still linked, and the acceptance page shows its new name.
+   - Before acceptance, no table contains the invited email or names.
+   - A tampered token, an expired token and a token with the wrong purpose label are each refused. The POST stores only what the token holds: any extra or changed form field is ignored.
+   - The invitation is refused if the inviter loses the administrator role before acceptance.
+   - A person removed after an invitation was issued cannot be brought back by it. A newer invitation can bring them back.
+   - An administrator invited as a teacher gains the teacher role and keeps the administrator role.
+   - Withdrawing consent erases the personal data and logs the person out, and that person can no longer sign in. An administrator who withdraws keeps the administrator role and address.
+   - Logs captured during all of the above contain no email, name or token.
+   - The reconcile manages only the administrator role.
+
+7. **User management with consent: students.** Teachers invite students. The student role is added to the invitation and consent flow from milestone 6 as one more invitable role, so the flow itself does not change.
+   _Personal data:_ besides the email and names, a student's educational institution, group code and year of study are personal data. They are stored only on acceptance, like the rest.
+   _Inviting a student:_
+   - A teacher fills in the email, first name, last name, group code and year of study, and selects one of their own institutions from a list. The server accepts only an institution the teacher is linked to.
+   - Validation: the email and names as in milestone 6. The group code is 1–20 characters. The year of study is a whole number from 1 to 12.
+   - Sending, rate limits, the token, the email and the acceptance page work as in milestone 6. The token holds the institution id, the group code and the year of study.
+
+   _Accepting:_ on top of the checks in milestone 6, the inviter must still be a teacher linked to the student's institution. The cases for an email that already belongs to a user apply unchanged. Example: a teacher invited as a student gains the student role and keeps the teacher role.
+   _Consent text:_ a student consent text, versioned like the teacher one. It also says that the institution, group code and year of study are stored, and that the teachers of that institution can see them. Placeholder wording is fine until real users arrive, as in milestone 6.
+   _Managing students:_
+   - A teacher can see the students of their own institutions: name, email, institution, group, year. They can edit a student's names, institution (selected among their own), group and year, and remove a student. Students of other institutions are neither listed nor reachable: opening one by address shows "access denied".
+   - An administrator can see all students and remove any of them.
+   - An email cannot be edited, and removing works as in milestone 6.
+
+   _Profile and withdrawing consent:_ the profile also shows the student details. Withdrawing also removes the student role and deletes the student details. Corrections to a student's data go through a teacher of their institution.
+   _Access:_ student management: teachers (own institutions only) and administrators.
+   _Out of scope:_
+   - bulk import of students
+   - administrators inviting students
+   - parental consent for minors
+
+   _Test:_
+   - End to end: a teacher invites a student, and the link is read from the `memory` outbox. The GET creates nothing. The POST creates the user with the student role, the details and a consent record. The student then signs in.
+   - The invitation form offers only the teacher's own institutions. A submission with another institution is refused.
+   - The invitation is refused if, before acceptance, the inviter is removed or unlinked from the institution.
+   - Before acceptance, no table contains the invited email, names or details.
+   - A teacher sees and edits only the students of their own institutions, and gets "access denied" for the others. An administrator sees all students and can remove any of them.
+   - Withdrawing consent as a student erases the student details too.
+   - A teacher invited as a student holds both roles.
+   - Logs captured during all of the above contain no email, name or token.
+   - The milestone 6 tests pass unchanged.
+
+8. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
    _Test:_ question CRUD works and is visible only to teachers.
 
-7. **User management.** A teacher adds students (email, first name, last name, educational institution, year, group). An administrator manages teachers and students. Profiles for all roles.
-   _Test:_ users are created, profiles are edited.
-
-8. **Creating a competition (teacher).** A competition with a start time, duration, assignment to a group/students, a set of questions from the bank and reference answers.
+9. **Creating a competition (teacher).** A competition with a start time, duration, assignment to a group/students, a set of questions from the bank and reference answers.
    _Test:_ a competition is created and correctly linked to questions and participants.
 
-9. **Taking a competition (student).** List of assigned competitions, enforcement of the time window and duration, entering and submitting text answers.
-   _Test:_ answers are saved; the competition is not accessible outside its time window.
+10. **Taking a competition (student).** List of assigned competitions, enforcement of the time window and duration, entering and submitting text answers.
+    _Test:_ answers are saved; the competition is not accessible outside its time window.
 
-10. **Answer evaluation via LLM.** Each answer receives a score of 1–10 that takes level of detail into account; results are saved to the database.
+11. **Answer evaluation via LLM.** Each answer receives a score of 1–10 that takes level of detail into account; results are saved to the database.
     _Test:_ evaluation returns a structured result and it is persisted.
 
-11. **Best answer selection + results.** For each question, the best answer is selected from the group's answers; competition results are saved and displayed.
+12. **Best answer selection + results.** For each question, the best answer is selected from the group's answers; competition results are saved and displayed.
     _Test:_ the best answer is determined, the results page works.
 
-12. **Polish and hardening.** Results dashboards, E2E tests with Playwright, error handling, security. (Optional stretch goal: move part of the UI to React.)
+13. **Polish and hardening.** Results dashboards, E2E tests with Playwright, error handling, security. (Optional stretch goal: move part of the UI to React.)

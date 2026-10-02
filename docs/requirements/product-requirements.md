@@ -52,8 +52,14 @@ A web application for running online competitions among students, testing their 
 ### Administrator
 
 - Adds and deletes teachers in the application.
-- Adds educational institutions to a teacher's access list.
+- Links a teacher to one or more educational institutions, selecting them from the list of institutions.
 - Is the only role that can edit the list of educational institutions.
+
+## Personal data
+
+- Email, first name and last name are personal data for every role. A student's educational institution, group code and year of study are personal data too.
+- Personal data is stored only after the person has agreed to it. An administrator or teacher who adds someone sends an invitation. The person's data is saved only when that person opens the invitation and accepts the consent text. Until then, nothing about them is kept.
+- Every person can see the personal data stored about them and can withdraw consent at any time. Withdrawing erases their personal data and ends their access.
 
 ## Competition
 
@@ -67,3 +73,7 @@ A web application for running online competitions among students, testing their 
 ### Question
 
 A question in a competition is usually 1–3 lines of text and expects a text answer.
+
+## Production usage
+
+IMPORTANT!!! No real users will be involved untill all milestones are executed. So there are no reasons to add complexity to the system to smmothly go from one milestone to another without any end-users disruptions.

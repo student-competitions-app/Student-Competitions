@@ -1,0 +1,24 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Delete “{{ institution.name }}” — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+<section>
+  <h1>Delete “{{ institution.name }}”?</h1>
+  {% if in_use %}
+  <p>“{{ institution.name }}” is in use and cannot be deleted. You can deactivate it instead.</p>
+  {% if institution.is_active %}
+  <form method="post" action="/admin/institutions/{{ institution.id }}/deactivate">
+    <button type="submit">Deactivate</button>
+  </form>
+  {% endif %}
+  <p><a href="/admin/institutions">Back to the educational institutions</a></p>
+  {% else %}
+  <p>Deleting an educational institution cannot be undone.</p>
+  <form method="post" action="/admin/institutions/{{ institution.id }}/delete">
+    <button type="submit">Delete</button>
+    <a href="/admin/institutions">Cancel</a>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

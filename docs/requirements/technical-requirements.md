@@ -43,7 +43,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _Test:_ a user can log in end to end, reading the code from the `memory` outbox. A route-table test asserts that every route outside the allowlist rejects anonymous requests. Existing page tests use a fixture that creates a session directly. Unknown and known emails get the same response. Running the reconcile twice changes nothing. An email removed from `ADMIN_EMAILS` can no longer log in and loses its sessions.
 
 5. **Roles and authorization.** Three roles: student, teacher and administrator. Each page is open only to the roles allowed to see it. The aim is the complete role flow, kept simple: the role pages are placeholders with no features behind them.
-   _Who has which role:_ the lists of administrators, teachers and students are all set via configuration at deploy time, the same way administrators are set today. One person can be on several lists and so have several roles. A person on no list cannot log in. Removing a person from a list takes effect at once: they are logged out everywhere. The teacher and student lists are temporary; milestones 7 and 8 replace them with managing teachers and students in the application.
+   _Who has which role:_ the lists of administrators, teachers and students are all set via configuration at deploy time, the same way administrators are set today. One person can be on several lists and so have several roles. A person on no list cannot log in. Removing a person from a list takes effect at once: they are logged out everywhere. The teacher and student lists are temporary; milestones 8 and 9 replace them with managing teachers and students in the application.
    _Choosing a role:_ a person with one role gets it right after login. A person with several roles chooses one after login, and then lands on the page they originally asked for. Until a role is chosen, no other page opens. A person with several roles can switch role at any time from the header without logging out.
    _Access:_ what a person can open depends on the role they are currently using, not on all the roles they have. For example, someone who is both an administrator and a student cannot open administrator pages while using the student role. Opening a page the current role is not allowed to see shows an "access denied" page. Every new page must state which roles can open it.
    _Pages:_
@@ -67,7 +67,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - The tabs exist only in the administrator area and are not shown to any other role.
 
    _Teachers tab:_ dummy page at this milestone
-   _Educational institutions tab:_ dummy page at this milestone
+   _Educational institutions tab:_ dummy page at this milestone (milestone 7 fills it in)
   
    _Subjects tab:_ the list of subject areas in which competitions are held (for example mathematics, physics). It shows all subjects, sorted by name, and a **Create** button. 
    - **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Names are unique, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value. An empty list shows "No subjects yet".
@@ -77,7 +77,20 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    Out of Scope: this milestone does not add any operations an UI ourside of dummy pages for teachers and Educational institutions tabs.
    
 
-7. **User management with consent: teachers.** Administrators keep the list of educational institutions and invite teachers. No personal data about a person is stored until that person agrees to it. This milestone builds the invitation and consent flow, and milestone 8 reuses it for students. The teacher and student lists from milestone 5 are retired. Administrators stay in `ADMIN_EMAILS`.
+7. **Administrator area: educational institutions.** The **Educational institutions** tab from milestone 6 stops being a dummy page and becomes the list of educational institutions (for example universities, colleges, schools) that teachers and students are later linked to. It works the same way as the **Subjects** tab.
+   _Educational institutions tab:_ it shows all institutions, active and inactive, sorted by name, and a **Create** button. Each institution shows its name and whether it is active or inactive. An empty list shows "No educational institutions yet".
+   - **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Names are unique across active and inactive institutions, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value. A new institution is active.
+   - **Rename** uses the same form and the same validation, and works whatever the status. Everything that refers to an institution refers to it by id, so renaming never breaks a link.
+   - **Deactivate** marks an active institution as inactive. It stays in the list, marked as inactive, with an **Activate** button that makes it active again. Deactivating an inactive institution or activating an active one changes nothing and is not an error. An inactive institution is not offered or accepted for new links: inviting a teacher or a student, or adding an institution to a teacher or student when editing them (milestones 8 and 9). Existing links to it stay, and editing a teacher or student keeps them.
+   - **Delete** asks for confirmation. It is refused while anything refers to the institution, to avoid broken references, with a message saying the institution is in use and can be deactivated instead. At this milestone nothing refers to institutions yet. Milestone 8 adds teacher links and milestone 9 adds student details, and each extends this check.
+
+   _Access:_ the tab and its forms: administrators. Every other role gets "access denied", as in milestone 5.
+   _Out of scope:_
+   - linking teachers or students to institutions (milestones 8 and 9)
+   - any institution details besides the name
+   - the **Teachers** tab, which stays a dummy page until milestone 8
+
+8. **User management with consent: teachers.** Administrators invite teachers and link them to the educational institutions from milestone 7. No personal data about a person is stored until that person agrees to it. This milestone builds the invitation and consent flow, and milestone 9 reuses it for students. The teacher and student lists from milestone 5 are retired. Administrators stay in `ADMIN_EMAILS`.
    _Personal data and consent:_ a person's email, first name and last name are personal data. The application stores them only after the person agrees, on a page of this site, to a consent text. The text says what is stored, why, who can see it and how to withdraw consent. The form an inviter fills in is not saved anywhere. Its contents travel only inside the invitation link, and until the person accepts, nothing about them exists in the database.
    _Built for reuse:_ the invitation, the acceptance, the consent record, the profile and the withdrawal are written once and do not depend on a particular role. Each role that can be invited supplies:
    - the fields of its invitation form and their validation
@@ -86,8 +99,8 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - the details stored on acceptance and erased on withdrawal
    - its consent text
 
-   This milestone defines the teacher role. Milestone 8 adds the student role the same way, without changing the flow.
-   _Educational institutions:_ administrators keep the list of institutions created in milestone 6. This milestone adds renaming an institution on the **Educational institutions** tab. Names stay unique, ignoring case. Each teacher is linked to one or more institutions. Only an administrator sets these links, when inviting the teacher and later from the teacher's page. On both forms the administrator selects the institutions from the list, at least one. There is no free-text entry, so an institution is added to the list before a teacher can be linked to it. The server accepts only institutions that exist.
+   This milestone defines the teacher role. Milestone 9 adds the student role the same way, without changing the flow.
+   _Educational institutions:_ administrators keep the list of institutions on the **Educational institutions** tab from milestone 7. Each teacher is linked to one or more institutions. Only an administrator sets these links, when inviting the teacher and later from the teacher's page. On both forms the administrator selects the institutions from the list, at least one. There is no free-text entry, so an institution is added to the list before a teacher can be linked to it. The server accepts only institutions that exist. An inactive institution is neither offered nor accepted as a new link. A teacher's existing link to an institution that was deactivated later stays and is kept on the edit form. Deleting an institution linked to any teacher is refused, as milestone 7 requires.
    _Inviting a teacher:_
    - An administrator fills in the email, first name and last name, and selects one or more institutions.
    - Submitting the form sends the invitation email and shows "Invitation sent to …". Nothing from the form is kept, and there is no list of pending invitations. To resend, the inviter fills in the form again. Every invitation sent is valid on its own until it expires.
@@ -117,7 +130,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
      - the inviter and the role
      - an **I agree** button
    - Nothing can be changed on that page: the data stored is exactly the data in the token. Under the button, the page says that if any detail is wrong, the person can either ask the inviter for a corrected invitation, or accept and ask the inviter to correct it afterwards. Letting the person edit their own name would let them take on someone else's name.
-   - **I agree** submits a POST with the token in a hidden field, under the existing cross-site check. The server checks the token again. Then it checks that the inviter is still active and still holds the role that allows the invitation (for a teacher, administrator), and runs the invited role's own checks.
+   - **I agree** submits a POST with the token in a hidden field, under the existing cross-site check. The server checks the token again. Then it checks that the inviter is still active and still holds the role that allows the invitation (for a teacher, administrator), and runs the invited role's own checks. For a teacher, every institution in the token must still exist and be active.
    - What happens next depends on whether the email already belongs to a user:
      - No user has the email: an active user is created with the names, role and details.
      - An active user without this role: the role and details are added, and their names stay unchanged. Example: an administrator invited as a teacher.
@@ -156,24 +169,26 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - logs the person out everywhere
 
    An administrator from `ADMIN_EMAILS` keeps that role and that address, because that role comes from deployment configuration, not from consent. A person who withdrew can be invited again like anyone new.
-   _Retiring the role lists:_ `TEACHER_EMAILS` and `STUDENT_EMAILS` are removed from the configuration and from `render.yaml`. The startup reconcile manages only the administrator role. It removes that role from addresses no longer listed, and deactivates a user only when no role is left. The migration deletes the teacher and student roles granted by the old lists. Until milestone 8, nobody holds the student role.
+   _Retiring the role lists:_ `TEACHER_EMAILS` and `STUDENT_EMAILS` are removed from the configuration and from `render.yaml`. The startup reconcile manages only the administrator role. It removes that role from addresses no longer listed, and deactivates a user only when no role is left. The migration deletes the teacher and student roles granted by the old lists. Until milestone 9, nobody holds the student role.
    _Access:_ each new page states its roles, as milestone 5 requires:
-   - institutions and teacher management: administrators
+   - teacher management: administrators
    - profile: every role
    - the invitation pages: public
 
    _Privacy:_ no log line contains an email, a name or a decrypted token. The console email backend remains the only code path that prints a message body.
    _Out of scope:_
-   - anything about students: inviting, managing, their details and consent text (milestone 8)
-   - deleting institutions
+   - anything about students: inviting, managing, their details and consent text (milestone 9)
    - a list of pending invitations, or cancelling one. Known limitation: an invitation sent by mistake stays valid for 7 days. If the person accepts, remove them.
    - changing a person's email
    - self sign-up
 
    _Test:_
    - End to end: an administrator adds two institutions and invites a teacher with both selected, and the link is read from the `memory` outbox. The GET creates nothing. The POST creates the user with the role, both institutions and a consent record. The teacher then signs in and sees their profile.
-   - The invitation and teacher edit forms offer only existing institutions. A submission with no institution or with an unknown institution id is refused.
+   - The invitation and teacher edit forms offer only existing, active institutions. A submission with no institution, an unknown institution id, or a new link to an inactive institution is refused.
+   - A teacher linked to an institution that is then deactivated keeps the link, and saving the edit form keeps it too.
+   - An invitation is refused at acceptance if one of its institutions was deactivated or deleted after the invitation was issued.
    - An institution renamed between invitation and acceptance is still linked, and the acceptance page shows its new name.
+   - Deleting an institution linked to a teacher is refused. Once the teacher is removed or unlinked from it, deleting it succeeds.
    - Before acceptance, no table contains the invited email or names.
    - A tampered token, an expired token and a token with the wrong purpose label are each refused. The POST stores only what the token holds: any extra or changed form field is ignored.
    - The invitation is refused if the inviter loses the administrator role before acceptance.
@@ -183,19 +198,20 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - Logs captured during all of the above contain no email, name or token.
    - The reconcile manages only the administrator role.
 
-8. **User management with consent: students.** Teachers invite students. The student role is added to the invitation and consent flow from milestone 7 as one more invitable role, so the flow itself does not change.
+9. **User management with consent: students.** Teachers invite students. The student role is added to the invitation and consent flow from milestone 8 as one more invitable role, so the flow itself does not change.
    _Personal data:_ besides the email and names, a student's educational institution, group code and year of study are personal data. They are stored only on acceptance, like the rest.
    _Inviting a student:_
-   - A teacher fills in the email, first name, last name, group code and year of study, and selects one of their own institutions from a list. The server accepts only an institution the teacher is linked to.
-   - Validation: the email and names as in milestone 7. The group code is 1–20 characters. The year of study is a whole number from 1 to 12.
-   - Sending, rate limits, the token, the email and the acceptance page work as in milestone 7. The token holds the institution id, the group code and the year of study.
+   - A teacher fills in the email, first name, last name, group code and year of study, and selects one of their own active institutions from a list. The server accepts only an active institution the teacher is linked to.
+   - Validation: the email and names as in milestone 8. The group code is 1–20 characters. The year of study is a whole number from 1 to 12.
+   - Sending, rate limits, the token, the email and the acceptance page work as in milestone 8. The token holds the institution id, the group code and the year of study.
 
-   _Accepting:_ on top of the checks in milestone 7, the inviter must still be a teacher linked to the student's institution. The cases for an email that already belongs to a user apply unchanged. Example: a teacher invited as a student gains the student role and keeps the teacher role.
-   _Consent text:_ a student consent text, versioned like the teacher one. It also says that the institution, group code and year of study are stored, and that the teachers of that institution can see them. Placeholder wording is fine until real users arrive, as in milestone 7.
+   _Accepting:_ on top of the checks in milestone 8, the inviter must still be a teacher linked to the student's institution, and that institution must still be active. The cases for an email that already belongs to a user apply unchanged. Example: a teacher invited as a student gains the student role and keeps the teacher role.
+   _Educational institutions:_ a student is never newly placed in an inactive institution, by invitation or by edit. A student whose institution is deactivated later stays in it. Deleting an institution that any student belongs to is refused, as milestone 7 requires.
+   _Consent text:_ a student consent text, versioned like the teacher one. It also says that the institution, group code and year of study are stored, and that the teachers of that institution can see them. Placeholder wording is fine until real users arrive, as in milestone 8.
    _Managing students:_
-   - A teacher can see the students of their own institutions: name, email, institution, group, year. They can edit a student's names, institution (selected among their own), group and year, and remove a student. Students of other institutions are neither listed nor reachable: opening one by address shows "access denied".
+   - A teacher can see the students of their own institutions: name, email, institution, group, year. They can edit a student's names, institution (selected among their own active ones), group and year, and remove a student. Students of other institutions are neither listed nor reachable: opening one by address shows "access denied".
    - An administrator can see all students and remove any of them.
-   - An email cannot be edited, and removing works as in milestone 7.
+   - An email cannot be edited, and removing works as in milestone 8.
 
    _Profile and withdrawing consent:_ the profile also shows the student details. Withdrawing also removes the student role and deletes the student details. Corrections to a student's data go through a teacher of their institution.
    _Access:_ student management: teachers (own institutions only) and administrators.
@@ -206,30 +222,31 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 
    _Test:_
    - End to end: a teacher invites a student, and the link is read from the `memory` outbox. The GET creates nothing. The POST creates the user with the student role, the details and a consent record. The student then signs in.
-   - The invitation form offers only the teacher's own institutions. A submission with another institution is refused.
-   - The invitation is refused if, before acceptance, the inviter is removed or unlinked from the institution.
+   - The invitation form offers only the teacher's own active institutions. A submission with another institution or an inactive one is refused.
+   - The invitation is refused if, before acceptance, the inviter is removed or unlinked from the institution, or the institution is deactivated.
    - Before acceptance, no table contains the invited email, names or details.
    - A teacher sees and edits only the students of their own institutions, and gets "access denied" for the others. An administrator sees all students and can remove any of them.
    - Withdrawing consent as a student erases the student details too.
    - A teacher invited as a student holds both roles.
+   - Deleting an institution that a student belongs to is refused.
    - Logs captured during all of the above contain no email, name or token.
-   - The milestone 7 tests pass unchanged.
+   - The milestone 8 tests pass unchanged.
 
-9. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
-   _Subjects:_ every question belongs to exactly one subject. The teacher selects it from the list kept on the **Subjects** tab (milestone 6), with no free-text entry, and the server accepts only a subject that exists. Teachers can filter the question bank by subject. The sample questions seeded in milestone 3 have no subject, and the migration deletes them, since no real data exists yet.
-   _Test:_ question CRUD works and is visible only to teachers. A question without a subject or with an unknown subject is refused. Filtering by subject shows only that subject's questions.
+10. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
+    _Subjects:_ every question belongs to exactly one subject. The teacher selects it from the list kept on the **Subjects** tab (milestone 6), with no free-text entry, and the server accepts only a subject that exists. Teachers can filter the question bank by subject. The sample questions seeded in milestone 3 have no subject, and the migration deletes them, since no real data exists yet.
+    _Test:_ question CRUD works and is visible only to teachers. A question without a subject or with an unknown subject is refused. Filtering by subject shows only that subject's questions.
 
-10. **Creating a competition (teacher).** A competition with a subject, a start time, duration, assignment to a group/students, a set of questions from the bank and reference answers.
+11. **Creating a competition (teacher).** A competition with a subject, a start time, duration, assignment to a group/students, a set of questions from the bank and reference answers.
     _Subjects:_ the teacher selects the competition's subject first, from the list kept on the **Subjects** tab. The question picker then offers only questions of that subject, and the server refuses a competition that includes a question of another subject. Changing the subject of an upcoming competition is refused while it still holds questions of the old subject.
     _Test:_ a competition is created and correctly linked to its subject, questions and participants. A competition with a question from another subject is refused.
 
-11. **Taking a competition (student).** List of assigned competitions, enforcement of the time window and duration, entering and submitting text answers. The student's lists of upcoming and past competitions show each competition's subject.
+12. **Taking a competition (student).** List of assigned competitions, enforcement of the time window and duration, entering and submitting text answers. The student's lists of upcoming and past competitions show each competition's subject.
     _Test:_ answers are saved; the competition is not accessible outside its time window.
 
-12. **Answer evaluation via LLM.** Each answer receives a score of 1–10 that takes level of detail into account; results are saved to the database.
+13. **Answer evaluation via LLM.** Each answer receives a score of 1–10 that takes level of detail into account; results are saved to the database.
     _Test:_ evaluation returns a structured result and it is persisted.
 
-13. **Best answer selection + results.** For each question, the best answer is selected from the group's answers; competition results are saved and displayed.
+14. **Best answer selection + results.** For each question, the best answer is selected from the group's answers; competition results are saved and displayed.
     _Test:_ the best answer is determined, the results page works.
 
-14. **Polish and hardening.** Results dashboards, E2E tests with Playwright, error handling, security. (Optional stretch goal: move part of the UI to React.)
+15. **Polish and hardening.** Results dashboards, E2E tests with Playwright, error handling, security. (Optional stretch goal: move part of the UI to React.)

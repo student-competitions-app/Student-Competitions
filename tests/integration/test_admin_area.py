@@ -1,4 +1,4 @@
-"""The administrator area's shell: the `/admin` redirect, the tab row, and the placeholders.
+"""The administrator area's shell: the `/admin` redirect, the tab row, and the placeholder.
 
 See specs/006-admin-area/spec.md user story 3 and contracts/http-routes.md "Area shell" and "Admin
 layout". The expected tabs are a literal copy of the spec's, kept independent of
@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.services.institutions import create_institution
 from app.services.subjects import create_subject
 
 TABS = [
@@ -21,11 +22,8 @@ TABS = [
 
 PLACEHOLDERS = {
     "/admin/teachers": ("Teachers", "Teacher management will arrive in a later milestone."),
-    "/admin/institutions": (
-        "Educational institutions",
-        "Managing educational institutions will arrive in a later milestone.",
-    ),
 }
+"""Only Teachers is left: milestone 7 replaced the Educational institutions placeholder."""
 
 NAV_OPEN = '<nav class="admin-tabs" aria-label="Administrator area">'
 
@@ -130,4 +128,22 @@ def test_every_subject_page_marks_the_subjects_tab(
         body = admin_client.get(path).text
         assert NAV_OPEN in body, path
         assert current_tabs(body) == ["/admin/subjects"], path
+        assert body.count('aria-current="page"') == 1, path
+
+
+def test_every_institution_page_marks_the_institutions_tab(
+    admin_client: TestClient, session: Session
+) -> None:
+    """Milestone 7 FR-005: the institution pages keep their tab current."""
+    iid = create_institution(session, "Lviv Polytechnic").id
+    for path in [
+        "/admin/institutions",
+        "/admin/institutions/new",
+        f"/admin/institutions/{iid}/rename",
+        f"/admin/institutions/{iid}/delete",
+        "/admin/institutions/999/rename",
+    ]:
+        body = admin_client.get(path).text
+        assert NAV_OPEN in body, path
+        assert current_tabs(body) == ["/admin/institutions"], path
         assert body.count('aria-current="page"') == 1, path

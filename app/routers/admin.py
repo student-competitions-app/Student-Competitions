@@ -5,8 +5,8 @@ declared once, in `ADMIN_TABS`, and every administrator page renders them throug
 and `layouts/admin.html`, which marks the current tab. Tabs are ordinary links: no script.
 
 `GET /admin` keeps milestone 5's address (the home page links to it) and sends the browser on to
-the first tab. Teachers is a placeholder until milestone 8; the Educational institutions tab lives
-in `app.routers.admin_institutions` and the Subjects tab in `app.routers.admin_subjects`.
+the first tab. Teachers and Educational institutions are placeholders until milestone 7; the
+Subjects tab lives in `app.routers.admin_subjects`.
 """
 
 from dataclasses import dataclass
@@ -79,4 +79,15 @@ def _placeholder(request: Request, tab: str, heading: str, note: str) -> HTMLRes
 def admin_teachers(request: Request) -> HTMLResponse:
     return _placeholder(
         request, "teachers", "Teachers", "Teacher management will arrive in a later milestone."
+    )
+
+
+@router.get("/admin/institutions", response_class=HTMLResponse)
+@allow_roles(Role.ADMIN)
+def admin_institutions(request: Request) -> HTMLResponse:
+    return _placeholder(
+        request,
+        "institutions",
+        "Educational institutions",
+        "Managing educational institutions will arrive in a later milestone.",
     )

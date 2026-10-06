@@ -161,32 +161,27 @@
   font-weight: bold;
 }
 
-/* The subject and institution lists: names wrap rather than widen the page; the one-button forms
-   sit inline with the links in the actions column. */
-.subjects-table td,
-.institutions-table td {
+/* The subject list: names wrap rather than widen the page; the one-button forms sit inline with
+   the links in the actions column. */
+.subjects-table td {
   overflow-wrap: anywhere;
 }
 
-.subjects-actions,
-.institutions-actions {
+.subjects-actions {
   white-space: nowrap;
 }
 
-.subjects-actions form,
-.institutions-actions form {
+.subjects-actions form {
   display: inline;
   margin: 0;
 }
 
-.subjects-actions button,
-.institutions-actions button {
+.subjects-actions button {
   margin: 0;
   padding: 0.125rem 0.5rem;
   width: auto;
 }
 
-.subjects-empty,
-.institutions-empty {
+.subjects-empty {
   color: var(--pico-muted-color);
 }

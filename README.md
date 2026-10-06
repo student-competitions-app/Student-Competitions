@@ -79,11 +79,11 @@ Every page states which roles may open it, and access is judged by the role the 
 | `/student` Student area | ❌ | ❌ | ✅ |
 | `/staff` Staff area | ✅ | ✅ | ❌ |
 
-The teacher, student and staff areas are placeholders that later milestones fill. The administrator area has three tabs, each with its own address: **Teachers** is a placeholder, **Educational institutions** lets administrators create, rename, deactivate/activate and delete the educational institutions teachers and students will belong to, and **Subjects** does the same for subjects. Both lists follow the same name rules: names are unique ignoring case (in every alphabet), and an entry in use cannot be deleted, only deactivated. An institution and a subject may share a name. The home page links exactly the areas the current role may open. A page the current role may not open answers **403 Access denied**, naming the current role; the application never switches role for you.
+The teacher, student and staff areas are placeholders that later milestones fill. The administrator area has three tabs, each with its own address: **Teachers** and **Educational institutions** are placeholders, and **Subjects** lets administrators create, rename, deactivate/activate and delete subjects. Subject names are unique ignoring case (in every alphabet), and a subject in use cannot be deleted, only deactivated. The home page links exactly the areas the current role may open. A page the current role may not open answers **403 Access denied**, naming the current role; the application never switches role for you.
 
 - **Current role.** Each browser has its own. Someone with one role is always in it. Someone with several chooses one at `GET /role` right after the code, and every other page sends them there until they do.
 - **Switching.** The header's **Switch to** buttons post to `/role` and land on the home page. Switching in one browser leaves the others as they are.
-- **Cross-site requests.** Every request that is not `GET`, `HEAD` or `OPTIONS` is refused with 403 when the browser says it came from another site (`Sec-Fetch-Site`, or else an `Origin` that does not match `Host`), before any session is read. This covers signing in and out, choosing a role, the administrator's subject and institution actions, and every future write, with no per-form token. Requests that carry neither header, like `curl`'s, are allowed.
+- **Cross-site requests.** Every request that is not `GET`, `HEAD` or `OPTIONS` is refused with 403 when the browser says it came from another site (`Sec-Fetch-Site`, or else an `Origin` that does not match `Host`), before any session is read. This covers signing in and out, choosing a role, the administrator's subject actions, and every future write, with no per-form token. Requests that carry neither header, like `curl`'s, are allowed.
 
 ### Test
 
@@ -319,31 +319,30 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 │   │   ├── db.py            # Engine, per-request session, UTC timestamp column type
 │   │   ├── migrations.py    # Expected (head) and current schema revision; startup guard
 │   │   └── templates.py     # Shared Jinja2Templates instance (+ `current_user`, `current_role`, `user_roles` for every page)
-│   ├── models/              # SQLModel tables: Question, BootCounter, User, UserRole, UserSession, LoginCode, RateLimitHit, Subject, Institution
-│   ├── schemas/             # Validation and view schemas: questions, login form input, the name rules shared by subjects and institutions (names.py)
+│   ├── models/              # SQLModel tables: Question, BootCounter, User, UserRole, UserSession, LoginCode, RateLimitHit, Subject
+│   ├── schemas/             # Validation and view schemas: questions, login form input, subject name rules
 │   ├── routers/             # Route handlers grouped by area/role
 │   │   ├── pages.py         # GET / → home page with the question list and status line
 │   │   ├── auth.py          # GET/POST /login, POST /login/code, POST /logout
 │   │   ├── roles.py         # GET/POST /role → choose or switch the current role
 │   │   ├── areas.py         # /teacher, /student, /staff placeholders (AREAS, /admin included, drives the home links)
-│   │   ├── admin.py         # Administrator area shell: ADMIN_TABS, GET /admin → first tab, Teachers placeholder
-│   │   ├── admin_institutions.py  # /admin/institutions: list, create, rename, deactivate/activate, delete
+│   │   ├── admin.py         # Administrator area shell: ADMIN_TABS, GET /admin → first tab, Teachers and Educational institutions placeholders
 │   │   ├── admin_subjects.py  # /admin/subjects: list, create, rename, deactivate/activate, delete
 │   │   └── health.py        # GET /healthz → status, version, commit
-│   ├── services/            # Business logic: questions, subjects, institutions, database_status, users, sessions, login, rate_limits, email
+│   ├── services/            # Business logic: questions, subjects, database_status, users, sessions, login, rate_limits, email
 │   ├── templates/           # Jinja2: layouts/, partials/ (HTMX fragments), pages/
 │   │   ├── layouts/base.html  # Header with the current role, the signed-in address, the role switch and Log out
 │   │   ├── layouts/admin.html # The administrator area's tab row, current tab marked
-│   │   └── pages/           # home.html, login.html, login_code.html, role_choice.html, area.html, error.html; admin/ (placeholder; subjects and institutions: list, form, delete, not found)
+│   │   └── pages/           # home.html, login.html, login_code.html, role_choice.html, area.html, error.html; admin/ (placeholder, subjects, subject form, delete, not found)
 │   └── static/              # css/ (vendored pico.min.css + app.css), js/, img/
 ├── migrations/              # Alembic migrations
 │   ├── env.py               # Uses resolve_database_url; one locked transaction on PostgreSQL
-│   └── versions/            # Revisions: tables + boot counter, the sample questions, the sign-in tables, user roles, drop the unused users.role, subjects, institutions
+│   └── versions/            # Revisions: tables + boot counter, the sample questions, the sign-in tables, user roles, drop the unused users.role, subjects
 ├── data/                    # Local SQLite database (git-ignored, created by the first migration)
 ├── tests/                   # unit/, integration/, e2e/ (Playwright)
 │   ├── conftest.py          # Both-engine database fixtures (template + clone), the cast, `client`, `client_as`, `admin_client`, `outbox`
-│   ├── unit/                # config, database and auth settings, security helpers, safe return paths, the cross-site rule, email, schemas, subject name rules, the shared name rules
-│   └── integration/         # admin area, subjects and institutions, subject and institution services, access control, role choice and switch, cross-site, login flow and privacy, sessions, user reconcile, auth services, home, health, routes, startup, migrations, boot counter, question service
+│   ├── unit/                # config, database and auth settings, security helpers, safe return paths, the cross-site rule, email, schemas, subject name rules
+│   └── integration/         # admin area and subjects, subject service, access control, role choice and switch, cross-site, login flow and privacy, sessions, user reconcile, auth services, home, health, routes, startup, migrations, boot counter, question service
 └── scripts/                 # Developer & ops helper scripts
     ├── render_deploy.sh            # Trigger a Render deploy of one commit
     ├── wait_for_release.sh         # Poll /healthz until that commit is serving

@@ -13,7 +13,6 @@ from sqlmodel import Session, select
 import app.core.auth as auth
 from app.core.security import SESSION_COOKIE_NAME, hash_token
 from app.models import Role, UserSession
-from app.services.institutions import create_institution, list_institutions
 from app.services.subjects import create_subject, list_subjects
 from tests.conftest import ADMIN_EMAIL, ADMIN_STUDENT_EMAIL, ClientAs
 
@@ -112,30 +111,6 @@ def test_a_cross_site_subject_action_changes_nothing(
         (f"/admin/subjects/{physics.id}/rename", {"name": "Forged"}),
         (f"/admin/subjects/{physics.id}/deactivate", {}),
         (f"/admin/subjects/{physics.id}/delete", {}),
-    ]:
-        response = admin_client.post(path, data=data, headers=forged, follow_redirects=False)
-        assert response.status_code == 403, path
-        assert "<h1>Request refused</h1>" in response.text
-        assert rows() == before, path
-
-
-@pytest.mark.parametrize("forged", CROSS_SITE_HEADERS)
-def test_a_cross_site_institution_action_changes_nothing(
-    admin_client: TestClient, session: Session, forged: dict[str, str]
-) -> None:
-    """Milestone 7 FR-029: the administrator's institution actions are refused like any write."""
-    lviv = create_institution(session, "Lviv Polytechnic")
-
-    def rows() -> list[tuple[object, ...]]:
-        session.expire_all()
-        return [(i.id, i.name, i.is_active, i.updated_at) for i in list_institutions(session)]
-
-    before = rows()
-    for path, data in [
-        ("/admin/institutions", {"name": "Forged"}),
-        (f"/admin/institutions/{lviv.id}/rename", {"name": "Forged"}),
-        (f"/admin/institutions/{lviv.id}/deactivate", {}),
-        (f"/admin/institutions/{lviv.id}/delete", {}),
     ]:
         response = admin_client.post(path, data=data, headers=forged, follow_redirects=False)
         assert response.status_code == 403, path

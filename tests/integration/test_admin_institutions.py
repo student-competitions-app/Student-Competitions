@@ -228,8 +228,8 @@ def test_each_row_offers_its_actions(admin_client: TestClient, session: Session)
     set_institution_active(session, alpha, False)
     body = admin_client.get(LIST).text
     for iid in (lviv, alpha):
-        assert f'<a href="/admin/institutions/{iid}/rename">Rename</a>' in body
-        assert f'<a href="/admin/institutions/{iid}/delete">Delete</a>' in body
+        assert f'<a href="/admin/institutions/{iid}/rename" role="button" class="secondary outline">Rename</a>' in body
+        assert f'<a href="/admin/institutions/{iid}/delete" role="button" class="secondary outline">Delete</a>' in body
     assert f'<form method="post" action="/admin/institutions/{lviv}/deactivate">' in body
     assert f'<form method="post" action="/admin/institutions/{alpha}/activate">' in body
     assert f"/admin/institutions/{lviv}/activate" not in body

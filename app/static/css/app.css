@@ -161,8 +161,9 @@
   font-weight: bold;
 }
 
-/* The subject and institution lists: names wrap rather than widen the page; the one-button forms
-   sit inline with the links in the actions column. */
+/* The subject and institution lists: names wrap rather than widen the page; the actions column is
+   one row of matching small outline buttons (links and one-button forms alike) that wraps on a
+   phone. */
 .subjects-table td,
 .institutions-table td {
   overflow-wrap: anywhere;
@@ -170,19 +171,24 @@
 
 .subjects-actions,
 .institutions-actions {
-  white-space: nowrap;
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.5rem;
 }
 
 .subjects-actions form,
 .institutions-actions form {
-  display: inline;
   margin: 0;
 }
 
+.subjects-actions [role="button"],
 .subjects-actions button,
+.institutions-actions [role="button"],
 .institutions-actions button {
   margin: 0;
   padding: 0.125rem 0.5rem;
+  white-space: nowrap;
   width: auto;
 }
 

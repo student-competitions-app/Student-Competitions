@@ -207,8 +207,8 @@ def test_each_row_offers_its_actions(admin_client: TestClient, session: Session)
     set_subject_active(session, biology, False)
     body = admin_client.get("/admin/subjects").text
     for sid in (physics, biology):
-        assert f'<a href="/admin/subjects/{sid}/rename">Rename</a>' in body
-        assert f'<a href="/admin/subjects/{sid}/delete">Delete</a>' in body
+        assert f'<a href="/admin/subjects/{sid}/rename" role="button" class="secondary outline">Rename</a>' in body
+        assert f'<a href="/admin/subjects/{sid}/delete" role="button" class="secondary outline">Delete</a>' in body
     assert f'<form method="post" action="/admin/subjects/{physics}/deactivate">' in body
     assert f'<form method="post" action="/admin/subjects/{biology}/activate">' in body
     assert f"/admin/subjects/{physics}/activate" not in body

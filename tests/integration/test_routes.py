@@ -57,7 +57,8 @@ def test_the_route_table_is_not_empty() -> None:
 
 
 def test_the_write_routes_are_exact() -> None:
-    """Signing in and out, choosing a role, and the administrator's subject actions."""
+    """Signing in and out, choosing a role, and the administrator's subject and institution
+    actions."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -69,6 +70,11 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/admin/subjects/{subject_id:int}/deactivate"),
         ("POST", "/admin/subjects/{subject_id:int}/activate"),
         ("POST", "/admin/subjects/{subject_id:int}/delete"),
+        ("POST", "/admin/institutions"),
+        ("POST", "/admin/institutions/{institution_id:int}/rename"),
+        ("POST", "/admin/institutions/{institution_id:int}/deactivate"),
+        ("POST", "/admin/institutions/{institution_id:int}/activate"),
+        ("POST", "/admin/institutions/{institution_id:int}/delete"),
     }
 
 

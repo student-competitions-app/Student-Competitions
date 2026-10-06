@@ -16,6 +16,7 @@ from sqlmodel import Session
 
 from app.models import Role
 from app.services.email import EmailMessage
+from app.services.institutions import create_institution, list_institutions
 from app.services.subjects import create_subject, list_subjects
 from tests.conftest import (
     ADMIN_EMAIL,
@@ -151,8 +152,9 @@ def test_a_denial_is_logged_without_identity(
 # ---------------------------------------------------------------------------------------------
 #
 # See specs/006-admin-area/spec.md user story 4 and contracts/http-routes.md "Access". Every page
-# and every action of the area, for every role, with the subject rows compared before and after
-# each refusal.
+# and every action of the area, for every role, with the subject and institution rows compared
+# before and after each refusal. Milestone 7 (specs/007-institutions/spec.md user story 3) adds
+# the Educational institutions pages and actions.
 
 ADMIN_PAGES = [
     "/admin",
@@ -160,16 +162,24 @@ ADMIN_PAGES = [
     "/admin/institutions",
     "/admin/subjects",
     "/admin/subjects/new",
-    "/admin/subjects/{id}/rename",
-    "/admin/subjects/{id}/delete",
+    "/admin/subjects/{subject}/rename",
+    "/admin/subjects/{subject}/delete",
+    "/admin/institutions/new",
+    "/admin/institutions/{institution}/rename",
+    "/admin/institutions/{institution}/delete",
 ]
 
 ADMIN_ACTIONS = [
     ("/admin/subjects", {"name": "Hacked"}),
-    ("/admin/subjects/{id}/rename", {"name": "Hacked"}),
-    ("/admin/subjects/{id}/deactivate", {}),
-    ("/admin/subjects/{id}/activate", {}),
-    ("/admin/subjects/{id}/delete", {}),
+    ("/admin/subjects/{subject}/rename", {"name": "Hacked"}),
+    ("/admin/subjects/{subject}/deactivate", {}),
+    ("/admin/subjects/{subject}/activate", {}),
+    ("/admin/subjects/{subject}/delete", {}),
+    ("/admin/institutions", {"name": "Hacked"}),
+    ("/admin/institutions/{institution}/rename", {"name": "Hacked"}),
+    ("/admin/institutions/{institution}/deactivate", {}),
+    ("/admin/institutions/{institution}/activate", {}),
+    ("/admin/institutions/{institution}/delete", {}),
 ]
 
 OTHER_ROLES = [TEACHER, STUDENT]
@@ -183,19 +193,41 @@ def subject_id(session: Session) -> int:
     return subject.id
 
 
+@pytest.fixture
+def institution_id(session: Session) -> int:
+    """One active institution, for the pages and actions that need an id."""
+    institution = create_institution(session, "Lviv Polytechnic")
+    assert institution.id is not None
+    return institution.id
+
+
+@pytest.fixture
+def ids(subject_id: int, institution_id: int) -> dict[str, int]:
+    """What the `{subject}` and `{institution}` placeholders of the paths above stand for."""
+    return {"subject": subject_id, "institution": institution_id}
+
+
 def subject_rows(session: Session) -> list[tuple[object, ...]]:
     session.expire_all()
     return [(s.id, s.name, s.name_key, s.is_active, s.updated_at) for s in list_subjects(session)]
 
 
+def admin_rows(session: Session) -> list[tuple[object, ...]]:
+    """Every subject and institution row, to prove a refused request changed nothing."""
+    institutions = [
+        (i.id, i.name, i.name_key, i.is_active, i.updated_at) for i in list_institutions(session)
+    ]
+    return [*subject_rows(session), *institutions]
+
+
 @pytest.mark.parametrize("role", OTHER_ROLES)
 def test_other_roles_are_denied_every_admin_page(
-    client_as: ClientAs, subject_id: int, role: Role
+    client_as: ClientAs, ids: dict[str, int], role: Role
 ) -> None:
     """US4-1, FR-037."""
     browser = client_as(SINGLE_ROLE[role])
     for template in ADMIN_PAGES:
-        path = template.format(id=subject_id)
+        path = template.format(**ids)
         response = browser.get(path, follow_redirects=False)
         assert response.status_code == 403, path
         assert f"Your current role, {role.label}, cannot open this page." in response.text
@@ -203,16 +235,16 @@ def test_other_roles_are_denied_every_admin_page(
 
 @pytest.mark.parametrize("role", OTHER_ROLES)
 def test_other_roles_are_denied_every_admin_action(
-    client_as: ClientAs, session: Session, subject_id: int, role: Role
+    client_as: ClientAs, session: Session, ids: dict[str, int], role: Role
 ) -> None:
     """US4-2: refused, and nothing changes."""
     browser = client_as(SINGLE_ROLE[role])
-    before = subject_rows(session)
+    before = admin_rows(session)
     for template, data in ADMIN_ACTIONS:
-        path = template.format(id=subject_id)
+        path = template.format(**ids)
         response = browser.post(path, data=data, follow_redirects=False)
         assert response.status_code == 403, path
-        assert subject_rows(session) == before, path
+        assert admin_rows(session) == before, path
 
 
 def test_an_administrator_using_another_role_is_denied_until_they_switch(
@@ -225,27 +257,42 @@ def test_an_administrator_using_another_role_is_denied_until_they_switch(
     assert browser.get("/admin/subjects").status_code == 200
 
 
+def test_an_administrator_using_another_role_is_denied_the_institutions_tab_until_they_switch(
+    client_as: ClientAs,
+) -> None:
+    """Milestone 7 US3-3: access follows the current role, not the roles held.
+
+    The spec's example is an administrator using the teacher role. The test cast has no
+    administrator–teacher person, and the rule is the same for any other role, so this uses the
+    administrator–student one.
+    """
+    browser = client_as(ADMIN_STUDENT_EMAIL, STUDENT)
+    assert browser.get("/admin/institutions").status_code == 403
+    assert browser.post("/role", data={"role": "admin"}, follow_redirects=False).status_code == 303
+    assert browser.get("/admin/institutions").status_code == 200
+
+
 def test_anonymous_visitors_are_sent_to_sign_in_from_every_admin_page(
-    client: TestClient, subject_id: int
+    client: TestClient, ids: dict[str, int]
 ) -> None:
     """US4-4, FR-038."""
     for template in ADMIN_PAGES:
-        path = template.format(id=subject_id)
+        path = template.format(**ids)
         response = client.get(path, follow_redirects=False)
         assert response.status_code == 303, path
         assert response.headers["location"] == f"/login?next={quote(path, safe='')}"
 
 
 def test_anonymous_actions_change_nothing(
-    client: TestClient, session: Session, subject_id: int
+    client: TestClient, session: Session, ids: dict[str, int]
 ) -> None:
-    before = subject_rows(session)
+    before = admin_rows(session)
     for template, data in ADMIN_ACTIONS:
-        path = template.format(id=subject_id)
+        path = template.format(**ids)
         response = client.post(path, data=data, follow_redirects=False)
         assert response.status_code == 303, path
         assert response.headers["location"] == "/login"
-        assert subject_rows(session) == before, path
+        assert admin_rows(session) == before, path
 
 
 def test_signing_in_returns_to_the_subjects_tab(

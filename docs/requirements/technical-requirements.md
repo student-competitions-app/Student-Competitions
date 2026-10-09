@@ -77,27 +77,23 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    Out of Scope: this milestone does not add any operations an UI ourside of dummy pages for teachers and Educational institutions tabs.
    
 
-7. **Administrator area, Educational Institutions** The educational institutions from milestone 6 stops being a placeholder and becomes a page with 2 lists, 1st for regions, and 2nd educational institutions in the regeon.
-   _Regions list_
-   - Region list should contain regions and shows them on the left side of the page.
-   - When region list is clicked on it should show a list of educational institutions in that area.
+7. **Administrator area: educational institutions.** The **Educational institutions** tab from milestone 6 stops being a placeholder and becomes a page with two lists side by side: regions on the left, and the educational institutions of the selected region on the right.
+   _Layout:_
+   - Selecting a region is an ordinary link to `/admin/institutions?region=<id>`, with no client-side switching, so the selection can be bookmarked, reloaded and opened directly, like the tabs in milestone 6.
+   - The selected region is highlighted. With no region selected, the right side shows "Select a region".
+   - Both lists are sorted by name and show active and deactivated items. Deactivated items are marked as deactivated.
 
-   **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Names are unique, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value. An empty list shows "No regions yet".
+   _Regions:_ administrators create the regions themselves; there is no preset list.
+   - **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Region names are unique, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value. An empty list shows "No regions yet".
+   - **Rename** uses the same form and the same validation as **Create**.
+   - **Delete** is refused while the region holds any educational institution, active or deactivated.
+   - **Deactivate** blocks creating new educational institutions in the region, and its institutions can no longer be selected anywhere an institution is picked (milestones 8 and 9). **Activate** reverses it.
 
-   **Actions with regeons**
-   - There should be a **Delete**, **Rename**, and **Deactivate** buttons. Deletion should check for any use of the region and decline the operation if there are any active educational institutions in the region. The deactivated status restricts creation on any new regions.
-
-
-
-   _Educational Institutions list_
-   - There should be separate list for each region and each one of them should contain educational institutions in that redeon.
-   - When a region in regions list is clicked Educational Institutions list should show educational institutions in that regeon on the right side of the page.
-
-   **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Names are unique, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value. An empty list shows "No Educational Institutions yet".
-   
-   **Actions with regeons**
-   - There should be a **Delete**, **Rename**, and **Deactivate** buttons. Deletion should check for any use of the educational institution and decline the operation if there is any use of this educational institution. The deactivated status restricts creation on any new educational institutions for the region.
-
+   _Educational institutions:_
+   - **Create** adds an institution to the selected region. It is unavailable when no region is selected or the selected region is deactivated. It opens a form with one field, the name, validated as for regions. Names are unique within a region, ignoring case; the same name may exist in different regions. An empty list shows "No educational institutions yet".
+   - **Rename** uses the same form and the same validation as **Create**. An institution cannot be moved to another region.
+   - **Delete** is refused while anything uses the institution. Nothing does in this milestone, so deletion always succeeds; milestone 8 adds teacher links and milestone 9 adds students as uses.
+   - **Deactivate** means the institution can no longer be selected when inviting or editing teachers (milestone 8) or students (milestone 9). **Activate** reverses it.
 
 8. **User management with consent: teachers.** Administrators keep the list of educational institutions and invite teachers. No personal data about a person is stored until that person agrees to it. This milestone builds the invitation and consent flow, and milestone 9 reuses it for students. The teacher and student lists from milestone 5 are retired. Administrators stay in `ADMIN_EMAILS`.
    _Personal data and consent:_ a person's email, first name and last name are personal data. The application stores them only after the person agrees, on a page of this site, to a consent text. The text says what is stored, why, who can see it and how to withdraw consent. The form an inviter fills in is not saved anywhere. Its contents travel only inside the invitation link, and until the person accepts, nothing about them exists in the database.
@@ -109,7 +105,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - its consent text
 
    This milestone defines the teacher role. Milestone 9 adds the student role the same way, without changing the flow.
-   _Educational institutions:_ administrators keep the list of institutions created in milestone 6. This milestone adds renaming an institution on the **Educational institutions** tab. Names stay unique, ignoring case. Each teacher is linked to one or more institutions. Only an administrator sets these links, when inviting the teacher and later from the teacher's page. On both forms the administrator selects the institutions from the list, at least one. There is no free-text entry, so an institution is added to the list before a teacher can be linked to it. The server accepts only institutions that exist.
+   _Educational institutions:_ administrators keep the regions and institutions created in milestone 7. Institution names are unique only within a region, so every institution picker shows each one as "Name (Region)". Each teacher is linked to one or more institutions. Only an administrator sets these links, when inviting the teacher and later from the teacher's page. On both forms the administrator selects the institutions from the list, at least one. The list offers only active institutions in active regions. There is no free-text entry, so an institution is added to the list before a teacher can be linked to it. The server accepts only institutions that exist, are active and are in an active region. A teacher link is a use of the institution, so an institution linked to a teacher cannot be deleted.
    _Inviting a teacher:_
    - An administrator fills in the email, first name and last name, and selects one or more institutions.
    - Submitting the form sends the invitation email and shows "Invitation sent to …". Nothing from the form is kept, and there is no list of pending invitations. To resend, the inviter fills in the form again. Every invitation sent is valid on its own until it expires.
@@ -187,14 +183,14 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _Privacy:_ no log line contains an email, a name or a decrypted token. The console email backend remains the only code path that prints a message body.
    _Out of scope:_
    - anything about students: inviting, managing, their details and consent text (milestone 9)
-   - deleting institutions
    - a list of pending invitations, or cancelling one. Known limitation: an invitation sent by mistake stays valid for 7 days. If the person accepts, remove them.
    - changing a person's email
    - self sign-up
 
    _Test:_
    - End to end: an administrator adds two institutions and invites a teacher with both selected, and the link is read from the `memory` outbox. The GET creates nothing. The POST creates the user with the role, both institutions and a consent record. The teacher then signs in and sees their profile.
-   - The invitation and teacher edit forms offer only existing institutions. A submission with no institution or with an unknown institution id is refused.
+   - The invitation and teacher edit forms offer only active institutions in active regions. A submission with no institution, an unknown institution id, a deactivated institution or an institution in a deactivated region is refused.
+   - An institution linked to a teacher cannot be deleted.
    - An institution renamed between invitation and acceptance is still linked, and the acceptance page shows its new name.
    - Before acceptance, no table contains the invited email or names.
    - A tampered token, an expired token and a token with the wrong purpose label are each refused. The POST stores only what the token holds: any extra or changed form field is ignored.

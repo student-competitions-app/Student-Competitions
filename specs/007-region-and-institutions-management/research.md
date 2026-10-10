@@ -121,6 +121,14 @@ and refuses), or deletes first (and the create then finds no region).
 `with_for_update` is portable SQLAlchemy. On SQLite it renders nothing, and SQLite already
 serialises writers. The lock lasts only for one short transaction.
 
+**Amended during implementation**: the lock is `with_for_update={"key_share": True}`, which is
+PostgreSQL's `FOR NO KEY UPDATE`, not plain `FOR UPDATE`. It still conflicts with every concurrent
+deactivation or activation (`FOR NO KEY UPDATE`), rename (`name_key` is unique, so `FOR UPDATE`)
+and deletion of the region, so the guarantees above are unchanged. Plain `FOR UPDATE` also
+conflicts with the `FOR KEY SHARE` lock that the foreign key takes when another transaction
+inserts an institution into the same region. That made the concurrent-duplicate test wait on
+itself, and needlessly blocks such inserts.
+
 **Alternatives considered**: *rely on the check alone*: rejected, because the race is narrow but
 real, and the success criterion is absolute. *A `CHECK` or trigger*: rejected, because it is
 engine-specific.

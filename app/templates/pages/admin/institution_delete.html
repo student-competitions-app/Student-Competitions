@@ -1,0 +1,27 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Delete educational institution “{{ institution.name }}” — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+{% set region_path = "/admin/institutions/regions/" ~ region.id %}
+{% set path = region_path ~ "/institutions/" ~ institution.id %}
+<section>
+  <h1>Delete educational institution “{{ institution.name }}”?</h1>
+  <p>Region: {{ region.name }}</p>
+  {% if in_use %}
+  <p>“{{ institution.name }}” is in use and cannot be deleted. You can deactivate it instead.</p>
+  {% if institution.is_active %}
+  <form method="post" action="{{ path }}/deactivate">
+    <button type="submit">Deactivate</button>
+  </form>
+  {% endif %}
+  <p><a href="{{ region_path }}">Back to “{{ region.name }}”</a></p>
+  {% else %}
+  <p>Deleting an educational institution cannot be undone.</p>
+  <form method="post" action="{{ path }}/delete">
+    <button type="submit">Delete</button>
+    <a href="{{ region_path }}">Cancel</a>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

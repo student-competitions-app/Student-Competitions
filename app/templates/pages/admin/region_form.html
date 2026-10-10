@@ -1,0 +1,16 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}{{ heading }} — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+<section>
+  <h1>{{ heading }}</h1>
+  <form method="post" action="{{ action }}">
+    <label for="name">Name</label>
+    <input type="text" name="name" id="name" maxlength="200" required value="{{ value }}"{% if error %} aria-invalid="true" aria-describedby="name-error"{% endif %}>
+    {% if error %}<small id="name-error">{{ error }}</small>{% endif %}
+    <button type="submit">Save</button>
+    <a href="{{ cancel }}">Cancel</a>
+  </form>
+</section>
+{% endblock %}

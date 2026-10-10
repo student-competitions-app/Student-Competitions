@@ -34,7 +34,7 @@ from app.core.migrations import (
 )
 from app.models import BootCounter, Question
 
-APPLICATION_TABLES = {"questions", "boot_counter", "subjects"}
+APPLICATION_TABLES = {"questions", "boot_counter", "subjects", "regions", "institutions"}
 
 
 @pytest.fixture

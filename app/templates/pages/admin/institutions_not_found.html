@@ -1,0 +1,11 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}{{ heading }} — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+<section>
+  <h1>{{ heading }}</h1>
+  <p>{{ message }}</p>
+  <p><a href="/admin/institutions">Back to the educational institutions</a></p>
+</section>
+{% endblock %}

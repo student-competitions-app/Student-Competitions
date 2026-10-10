@@ -185,3 +185,73 @@
 .subjects-empty {
   color: var(--pico-muted-color);
 }
+
+/* The Educational institutions tab (specs/007-region-and-institutions-management FR-002, FR-006,
+   research D12): regions beside the institutions of the selected region from 768 px, stacked with
+   regions first below that. Names wrap rather than widen the page. */
+.institutions-layout {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .institutions-layout {
+    grid-template-columns: minmax(14rem, 1fr) 2fr;
+  }
+}
+
+.regions-list {
+  margin: 0;
+  padding: 0;
+}
+
+.regions-list li {
+  border-left: 0.2rem solid transparent;
+  list-style: none;
+  overflow-wrap: anywhere;
+  padding: 0.25rem 0.5rem;
+}
+
+/* The selected region: highlighted, and marked `aria-current="true"` for assistive technologies
+   (research D11). */
+.regions-list li.selected {
+  background: var(--pico-primary-background);
+  border-left-color: var(--pico-primary);
+}
+
+.regions-list li.selected > a,
+.regions-list a[aria-current="true"] {
+  color: var(--pico-primary-inverse);
+  font-weight: bold;
+}
+
+.status-deactivated,
+.list-empty {
+  color: var(--pico-muted-color);
+}
+
+.institutions-table td {
+  overflow-wrap: anywhere;
+}
+
+/* Rename, Deactivate/Activate and Delete: the one-button forms sit inline with the links, as in
+   the subject list. */
+.row-actions form {
+  display: inline;
+  margin: 0;
+}
+
+.row-actions button {
+  margin: 0;
+  padding: 0.125rem 0.5rem;
+  width: auto;
+}
+
+.institutions-table .row-actions {
+  white-space: nowrap;
+}
+
+.regions-list li.selected .row-actions a {
+  color: var(--pico-primary-inverse);
+}

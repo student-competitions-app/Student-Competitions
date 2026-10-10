@@ -1,0 +1,90 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Educational institutions — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+<h1>Educational institutions</h1>
+<div class="institutions-layout">
+  <section aria-labelledby="regions-heading">
+    <h2 id="regions-heading">Regions</h2>
+    <p><a href="/admin/institutions/regions/new" role="button">Create</a></p>
+    {% if regions %}
+    <ul class="regions-list">
+      {% for r in regions %}
+      {% set is_selected = selected and r.id == selected.id %}
+      <li{% if is_selected %} class="selected"{% endif %}>
+        <a href="/admin/institutions/regions/{{ r.id }}"{% if is_selected %} aria-current="true"{% endif %}>{{ r.name }}</a>
+        {% if not r.is_active %}<small class="status-deactivated">Deactivated</small>{% endif %}
+        <div class="row-actions">
+          <a href="/admin/institutions/regions/{{ r.id }}/rename">Rename</a>
+          {% if r.is_active %}
+          <form method="post" action="/admin/institutions/regions/{{ r.id }}/deactivate">
+            <button type="submit" class="secondary outline">Deactivate</button>
+          </form>
+          {% else %}
+          <form method="post" action="/admin/institutions/regions/{{ r.id }}/activate">
+            <button type="submit" class="secondary outline">Activate</button>
+          </form>
+          {% endif %}
+          <a href="/admin/institutions/regions/{{ r.id }}/delete">Delete</a>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="list-empty">No regions yet</p>
+    {% endif %}
+  </section>
+
+  <section aria-labelledby="institutions-heading">
+    {% if selected %}
+    <h2 id="institutions-heading">Educational institutions in “{{ selected.name }}”{% if not selected.is_active %} <small class="status-deactivated">Deactivated</small>{% endif %}</h2>
+    {% if selected.is_active %}
+    <p><a href="/admin/institutions/regions/{{ selected.id }}/institutions/new" role="button">Create</a></p>
+    {% else %}
+    <p class="list-empty">This region is deactivated. New educational institutions cannot be added to it.</p>
+    {% endif %}
+    {% if institutions %}
+    <div class="overflow-auto">
+      <table class="institutions-table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in institutions %}
+          {% set path = "/admin/institutions/regions/" ~ selected.id ~ "/institutions/" ~ i.id %}
+          <tr>
+            <td class="institution-name">{{ i.name }}</td>
+            <td>{% if i.is_active %}Active{% else %}Deactivated{% endif %}</td>
+            <td class="row-actions">
+              <a href="{{ path }}/rename">Rename</a>
+              {% if i.is_active %}
+              <form method="post" action="{{ path }}/deactivate">
+                <button type="submit" class="secondary outline">Deactivate</button>
+              </form>
+              {% else %}
+              <form method="post" action="{{ path }}/activate">
+                <button type="submit" class="secondary outline">Activate</button>
+              </form>
+              {% endif %}
+              <a href="{{ path }}/delete">Delete</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="list-empty">No educational institutions yet</p>
+    {% endif %}
+    {% else %}
+    <h2 id="institutions-heading">Educational institutions</h2>
+    <p class="list-empty">Select a region</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

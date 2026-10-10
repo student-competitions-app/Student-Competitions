@@ -27,6 +27,8 @@ from tests.conftest import ADMIN_EMAIL, STUDENT_EMAIL, TEACHER_EMAIL, ClientAs
 
 READ_ONLY_METHODS = {"GET", "HEAD"}
 
+INSTITUTION = "/admin/institutions/regions/{region_id:int}/institutions/{institution_id:int}"
+
 
 def iter_routes(
     routes: list[BaseRoute], prefix: str = ""
@@ -57,7 +59,8 @@ def test_the_route_table_is_not_empty() -> None:
 
 
 def test_the_write_routes_are_exact() -> None:
-    """Signing in and out, choosing a role, and the administrator's subject actions."""
+    """Signing in and out, choosing a role, and the administrator's subject, region and
+    institution actions."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -69,6 +72,16 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/admin/subjects/{subject_id:int}/deactivate"),
         ("POST", "/admin/subjects/{subject_id:int}/activate"),
         ("POST", "/admin/subjects/{subject_id:int}/delete"),
+        ("POST", "/admin/institutions/regions"),
+        ("POST", "/admin/institutions/regions/{region_id:int}/rename"),
+        ("POST", "/admin/institutions/regions/{region_id:int}/deactivate"),
+        ("POST", "/admin/institutions/regions/{region_id:int}/activate"),
+        ("POST", "/admin/institutions/regions/{region_id:int}/delete"),
+        ("POST", "/admin/institutions/regions/{region_id:int}/institutions"),
+        ("POST", f"{INSTITUTION}/rename"),
+        ("POST", f"{INSTITUTION}/deactivate"),
+        ("POST", f"{INSTITUTION}/activate"),
+        ("POST", f"{INSTITUTION}/delete"),
     }
 
 

@@ -11,6 +11,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.services.institutions import create_institution
+from app.services.regions import create_region, set_region_active
 from app.services.subjects import create_subject
 
 TABS = [
@@ -21,10 +23,6 @@ TABS = [
 
 PLACEHOLDERS = {
     "/admin/teachers": ("Teachers", "Teacher management will arrive in a later milestone."),
-    "/admin/institutions": (
-        "Educational institutions",
-        "Managing educational institutions will arrive in a later milestone.",
-    ),
 }
 
 NAV_OPEN = '<nav class="admin-tabs" aria-label="Administrator area">'
@@ -130,4 +128,55 @@ def test_every_subject_page_marks_the_subjects_tab(
         body = admin_client.get(path).text
         assert NAV_OPEN in body, path
         assert current_tabs(body) == ["/admin/subjects"], path
+        assert body.count('aria-current="page"') == 1, path
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 7: the Educational institutions tab
+# ---------------------------------------------------------------------------------------------
+
+INSTITUTION_PAGES = [
+    ("GET", "/admin/institutions"),
+    ("GET", "/admin/institutions/regions/new"),
+    ("GET", "/admin/institutions/regions/{region}"),
+    ("GET", "/admin/institutions/regions/{region}/rename"),
+    ("GET", "/admin/institutions/regions/{region}/delete"),
+    ("POST", "/admin/institutions/regions/{region}/delete"),  # refused: it holds an institution
+    ("GET", "/admin/institutions/regions/{region}/institutions/new"),
+    ("GET", "/admin/institutions/regions/{inactive}/institutions/new"),  # refused: deactivated
+    ("GET", "/admin/institutions/regions/{region}/institutions/{institution}/rename"),
+    ("GET", "/admin/institutions/regions/{region}/institutions/{institution}/delete"),
+    ("GET", "/admin/institutions/regions/999"),  # region not found
+    ("GET", "/admin/institutions/regions/{inactive}/institutions/{institution}/rename"),  # wrong
+]
+"""Every page of the tab, including its refusals and both not-found pages (`{inactive}` is a
+deactivated region that does not hold `{institution}`)."""
+
+
+def test_the_institutions_tab_is_no_longer_a_placeholder(admin_client: TestClient) -> None:
+    """Milestone 7 FR-001."""
+    response = admin_client.get("/admin/institutions")
+    assert response.status_code == 200
+    body = response.text
+    assert "Managing educational institutions will arrive in a later milestone." not in body
+    assert "No regions yet" in body
+    assert "Select a region" in body
+
+
+def test_every_institutions_page_marks_the_institutions_tab(
+    admin_client: TestClient, session: Session
+) -> None:
+    """Milestone 7 FR-005: every page of the tab, refusals and not-found pages included."""
+    region = create_region(session, "Kyiv")
+    institution = create_institution(session, region.id, "Academy")
+    inactive = create_region(session, "Odesa")
+    set_region_active(session, inactive.id, False)
+    ids = {"region": region.id, "institution": institution.id, "inactive": inactive.id}
+    for method, template in INSTITUTION_PAGES:
+        path = template.format(**ids)
+        response = admin_client.request(method, path, follow_redirects=False)
+        assert response.status_code in {200, 404, 409}, (method, path, response.status_code)
+        body = response.text
+        assert NAV_OPEN in body, path
+        assert current_tabs(body) == ["/admin/institutions"], path
         assert body.count('aria-current="page"') == 1, path

@@ -13,6 +13,8 @@ from sqlmodel import Session, select
 import app.core.auth as auth
 from app.core.security import SESSION_COOKIE_NAME, hash_token
 from app.models import Role, UserSession
+from app.services.institutions import create_institution, list_institutions
+from app.services.regions import create_region, list_regions
 from app.services.subjects import create_subject, list_subjects
 from tests.conftest import ADMIN_EMAIL, ADMIN_STUDENT_EMAIL, ClientAs
 
@@ -116,3 +118,22 @@ def test_a_cross_site_subject_action_changes_nothing(
         assert response.status_code == 403, path
         assert "<h1>Request refused</h1>" in response.text
         assert rows() == before, path
+
+
+@pytest.mark.parametrize("forged", CROSS_SITE_HEADERS)
+def test_a_cross_site_region_or_institution_change_is_refused(
+    admin_client: TestClient, session: Session, forged: dict[str, str]
+) -> None:
+    """Milestone 7 FR-042: region and institution actions are refused like any write."""
+    kyiv = create_region(session, "Kyiv")
+    academy = create_institution(session, kyiv.id, "Academy")
+    for path, data in [
+        ("/admin/institutions/regions", {"name": "Evil"}),
+        (f"/admin/institutions/regions/{kyiv.id}/institutions/{academy.id}/delete", {}),
+    ]:
+        response = admin_client.post(path, data=data, headers=forged, follow_redirects=False)
+        assert response.status_code == 403, path
+        assert REFUSED in response.text
+    session.expire_all()
+    assert [r.name for r in list_regions(session)] == ["Kyiv"]
+    assert [i.name for i in list_institutions(session, kyiv.id)] == ["Academy"]

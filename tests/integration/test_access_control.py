@@ -16,6 +16,8 @@ from sqlmodel import Session
 
 from app.models import Role
 from app.services.email import EmailMessage
+from app.services.institutions import create_institution, list_institutions
+from app.services.regions import create_region, list_regions
 from app.services.subjects import create_subject, list_subjects
 from tests.conftest import (
     ADMIN_EMAIL,
@@ -276,3 +278,141 @@ def test_no_admin_tabs_for_other_roles(client_as: ClientAs, role: Role) -> None:
     for marker in ADMIN_TAB_LINKS:
         assert marker not in denied.text, marker
     assert '<a href="/admin/subjects"' not in denied.text
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 7: only administrators manage regions and institutions (user story 5)
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/007-region-and-institutions-management/spec.md user story 5 and
+# contracts/http-routes.md "Access". Every page and every action of the Educational institutions
+# tab, for every role, with the region and institution rows compared before and after each
+# refusal. `{r}` is a region and `{i}` an institution in it.
+
+REGION = "/admin/institutions/regions/{r}"
+INSTITUTION = REGION + "/institutions/{i}"
+
+INSTITUTION_PAGES = [
+    "/admin/institutions",
+    "/admin/institutions/regions/new",
+    REGION,
+    REGION + "/rename",
+    REGION + "/delete",
+    REGION + "/institutions/new",
+    INSTITUTION + "/rename",
+    INSTITUTION + "/delete",
+]
+
+INSTITUTION_ACTIONS = [
+    ("/admin/institutions/regions", {"name": "Hacked"}),
+    (REGION + "/rename", {"name": "Hacked"}),
+    (REGION + "/deactivate", {}),
+    (REGION + "/activate", {}),
+    (REGION + "/delete", {}),
+    (REGION + "/institutions", {"name": "Hacked"}),
+    (INSTITUTION + "/rename", {"name": "Hacked"}),
+    (INSTITUTION + "/deactivate", {}),
+    (INSTITUTION + "/activate", {}),
+    (INSTITUTION + "/delete", {}),
+]
+
+
+@pytest.fixture
+def region_id(session: Session) -> int:
+    """One active region, "Kyiv", holding one institution."""
+    region = create_region(session, "Kyiv")
+    assert region.id is not None
+    return region.id
+
+
+@pytest.fixture
+def institution_id(session: Session, region_id: int) -> int:
+    institution = create_institution(session, region_id, "Kyiv Polytechnic Institute")
+    assert institution.id is not None
+    return institution.id
+
+
+def institution_rows(session: Session) -> list[list[tuple[object, ...]]]:
+    session.expire_all()
+    regions = list_regions(session)
+    return [
+        [(r.id, r.name, r.name_key, r.is_active, r.updated_at) for r in regions],
+        [
+            (i.id, i.region_id, i.name, i.name_key, i.is_active, i.updated_at)
+            for r in regions
+            for i in list_institutions(session, r.id)
+        ],
+    ]
+
+
+@pytest.mark.parametrize("role", OTHER_ROLES)
+def test_other_roles_are_denied_every_institutions_page(
+    client_as: ClientAs, region_id: int, institution_id: int, role: Role
+) -> None:
+    """US5-1, FR-045."""
+    browser = client_as(SINGLE_ROLE[role])
+    for template in INSTITUTION_PAGES:
+        path = template.format(r=region_id, i=institution_id)
+        response = browser.get(path, follow_redirects=False)
+        assert response.status_code == 403, path
+        assert f"Your current role, {role.label}, cannot open this page." in response.text
+
+
+@pytest.mark.parametrize("role", OTHER_ROLES)
+def test_other_roles_are_denied_every_institutions_action(
+    client_as: ClientAs, session: Session, region_id: int, institution_id: int, role: Role
+) -> None:
+    """US5-2: refused, and nothing changes."""
+    browser = client_as(SINGLE_ROLE[role])
+    before = institution_rows(session)
+    for template, data in INSTITUTION_ACTIONS:
+        path = template.format(r=region_id, i=institution_id)
+        response = browser.post(path, data=data, follow_redirects=False)
+        assert response.status_code == 403, path
+        assert institution_rows(session) == before, path
+
+
+def test_an_administrator_using_another_role_is_denied_the_institutions_tab(
+    client_as: ClientAs,
+) -> None:
+    """US5-3, FR-044: access follows the current role, not the roles held."""
+    browser = client_as(ADMIN_STUDENT_EMAIL, STUDENT)
+    assert browser.get("/admin/institutions").status_code == 403
+    assert browser.post("/role", data={"role": "admin"}, follow_redirects=False).status_code == 303
+    assert browser.get("/admin/institutions").status_code == 200
+
+
+def test_anonymous_visitors_are_sent_to_sign_in_from_every_institutions_page(
+    client: TestClient, region_id: int, institution_id: int
+) -> None:
+    """FR-046: the return address keeps the selected region."""
+    for template in INSTITUTION_PAGES:
+        path = template.format(r=region_id, i=institution_id)
+        response = client.get(path, follow_redirects=False)
+        assert response.status_code == 303, path
+        assert response.headers["location"] == f"/login?next={quote(path, safe='')}"
+
+
+def test_anonymous_institutions_actions_change_nothing(
+    client: TestClient, session: Session, region_id: int, institution_id: int
+) -> None:
+    before = institution_rows(session)
+    for template, data in INSTITUTION_ACTIONS:
+        path = template.format(r=region_id, i=institution_id)
+        response = client.post(path, data=data, follow_redirects=False)
+        assert response.status_code == 303, path
+        assert response.headers["location"] == "/login"
+        assert institution_rows(session) == before, path
+
+
+def test_signing_in_returns_to_the_selected_region(
+    client: TestClient, outbox: list[EmailMessage], region_id: int
+) -> None:
+    """US5-4, FR-046: through the real code flow, the same region is selected again."""
+    path = f"/admin/institutions/regions/{region_id}"
+    response = sign_in(client, outbox, next_path=path)
+    assert response.status_code == 303
+    assert response.headers["location"] == path
+    page = client.get(path)
+    assert page.status_code == 200
+    assert f'<a href="{path}" aria-current="true">Kyiv</a>' in page.text

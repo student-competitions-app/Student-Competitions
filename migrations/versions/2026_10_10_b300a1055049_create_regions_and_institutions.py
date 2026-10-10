@@ -1,8 +1,12 @@
 """create regions and institutions
 
 Revision ID: b300a1055049
-Revises: 2a84d288f9e6
+Revises: 4c689ca0b481
 Create Date: 2026-10-10 11:01:46.656712+00:00
+
+Replaces the region-less `institutions` table of 4c689ca0b481 (applied in production, then
+reverted in code) by dropping it first. That table cannot be carried over, since its rows have no
+region. Downgrading recreates it empty.
 
 Creates the `regions` and `institutions` tables
 (specs/007-region-and-institutions-management/data-model.md §7), in one revision because neither
@@ -26,13 +30,14 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "b300a1055049"
-down_revision: str | Sequence[str] | None = "2a84d288f9e6"
+down_revision: str | Sequence[str] | None = "4c689ca0b481"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
     """Upgrade schema."""
+    op.drop_table("institutions")
     op.create_table(
         "regions",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -67,3 +72,14 @@ def downgrade() -> None:
     """Downgrade schema."""
     op.drop_table("institutions")
     op.drop_table("regions")
+    op.create_table(
+        "institutions",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("name", sa.String(200), nullable=False),
+        sa.Column("name_key", sa.String(600), nullable=False),
+        sa.Column("is_active", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_institutions")),
+        sa.UniqueConstraint("name_key", name=op.f("uq_institutions_name_key")),
+    )

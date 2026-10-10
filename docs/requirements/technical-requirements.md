@@ -79,7 +79,6 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 
 7. **Administrator area: educational institutions.** The **Educational institutions** tab from milestone 6 stops being a placeholder and becomes a page with two lists side by side: regions on the left, and the educational institutions of the selected region on the right.
    _Layout:_
-   - Selecting a region is an ordinary link to `/admin/institutions?region=<id>`, with no client-side switching, so the selection can be bookmarked, reloaded and opened directly, like the tabs in milestone 6.
    - The selected region is highlighted. With no region selected, the right side shows "Select a region".
    - Both lists are sorted by name and show active and deactivated items. Deactivated items are marked as deactivated.
 
@@ -87,7 +86,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Region names are unique, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value. An empty list shows "No regions yet".
    - **Rename** uses the same form and the same validation as **Create**.
    - **Delete** is refused while the region holds any educational institution, active or deactivated.
-   - **Deactivate** blocks creating new educational institutions in the region, and its institutions can no longer be selected anywhere an institution is picked (milestones 8 and 9). **Activate** reverses it.
+   - **Deactivate** blocks creating new educational institutions in the region, and its institutions can no longer be selected anywhere an institution is picked (milestones 8 and 9). **Activate** reverses it. 
 
    _Educational institutions:_
    - **Create** adds an institution to the selected region. It is unavailable when no region is selected or the selected region is deactivated. It opens a form with one field, the name, validated as for regions. Names are unique within a region, ignoring case; the same name may exist in different regions. An empty list shows "No educational institutions yet".

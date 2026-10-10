@@ -461,7 +461,7 @@ institution changes after a refused request.
   Tests:
   - teacher and student get 403 with "Your current role, {label}, cannot open this page." on every page (US5-1, FR-045);
   - teacher and student get 403 on every action, and the rows are unchanged (US5-2);
-  - `client_as(ADMIN_STUDENT_EMAIL, STUDENT)` gets 403 on `/admin/institutions`, then 200 after `POST /role` `{"role": "admin"}` (US5-3, FR-044). The test cast in `tests/conftest.py` has no administrator + teacher person. `ADMIN_STUDENT_EMAIL` exercises the same rule (the current role counts, not every role held), and milestone 6 used it the same way. Do not change the cast;
+  - `client_as(ADMIN_STUDENT_EMAIL, STUDENT)` gets 403 on `/admin/institutions`, then 200 after `POST /role` `{"role": "admin"}` (US5-3, FR-044). This is the administrator + student person from the existing test cast in `tests/conftest.py`, as milestone 6 used it. Do not change the cast;
   - an anonymous visitor gets 303 to `/login?next=<quoted path>` on every page, and the actions go to `/login` with nothing changed;
   - the full sign-in round trip with `sign_in(client, outbox, next_path=f"/admin/institutions/regions/{region_id}")` (imported from `tests.integration.test_login_flow`, as the file already does) lands on that same address with the region selected (`aria-current="true"` on its link) (US5-4, FR-046).
 - [ ] T049 [P] [US5] In `tests/integration/test_cross_site.py`, add `test_a_cross_site_region_or_institution_change_is_refused`, parametrised over `CROSS_SITE_HEADERS`. As an administrator, `POST /admin/institutions/regions` `{"name": "Evil"}` and `POST I/delete` each answer 403 with `REFUSED`, no region is added, and the institution still exists (FR-042).

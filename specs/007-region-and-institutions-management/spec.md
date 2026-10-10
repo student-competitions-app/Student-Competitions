@@ -224,8 +224,8 @@ which must succeed), deactivate and reactivate one, and delete one after confirm
 
 ### User Story 5 - Only administrators manage regions and institutions (Priority: P3)
 
-A teacher, a student, and a person who is both an administrator and a teacher but is using the
-teacher role each try to open the Educational institutions tab and its forms by typing their
+A teacher, a student, and a person who is both an administrator and a student but is using the
+student role each try to open the Educational institutions tab and its forms by typing their
 addresses. Each one sees the "access denied" page from milestone 5. An anonymous visitor is sent to
 the sign-in page. None of them can change a region or an institution by sending a form directly.
 
@@ -242,7 +242,7 @@ region or institution changes after a refused request.
    institutions tab or any region or institution form, **Then** they see "access denied".
 2. **Given** a person using the teacher or student role, **When** they submit any region or
    institution action directly, **Then** they see "access denied" and nothing changes.
-3. **Given** a person who holds the administrator and teacher roles but is using the teacher role,
+3. **Given** a person who holds the administrator and student roles but is using the student role,
    **When** they open the Educational institutions tab, **Then** they see "access denied". **When**
    they switch to the administrator role, **Then** the page opens.
 4. **Given** an anonymous visitor, **When** they open the Educational institutions tab with a region

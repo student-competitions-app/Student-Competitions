@@ -105,9 +105,12 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 
    This milestone defines the teacher role. Milestone 9 adds the student role the same way, without changing the flow.
    _Educational institutions:_ administrators keep the regions and institutions created in milestone 7. Institution names are unique only within a region, so every institution picker shows each one as "Name (Region)". Each teacher is linked to one or more institutions. Only an administrator sets these links, when inviting the teacher and later from the teacher's page. On both forms the administrator selects the institutions from the list, at least one. The list offers only active institutions in active regions. There is no free-text entry, so an institution is added to the list before a teacher can be linked to it. The server accepts only institutions that exist, are active and are in an active region. A teacher link is a use of the institution, so an institution linked to a teacher cannot be deleted.
-   - Teachers have read or write access to educational instititutions. That means a teacher able/not able to add new students and stat new competitions. Read only access means the teacher is able to see the list of students and results of competitions that students participate.
+   - Each link has its own access level, **Read** or **Write**, so a teacher can have Write for one institution and Read for another. Write lets the teacher manage the institution's students: invite, edit and remove them (milestone 9). Read lets the teacher only see the institution's students and their competition results (milestones 9 and 14). A newly selected institution starts at Read.
+   - Separately, each teacher has one **Can create competitions** setting: a single checkbox that applies to all their institutions and does not depend on the access levels (milestone 11). It starts unchecked.
+   - The administrator sets the access levels and the checkbox on the same two forms as the links. The server accepts only Read or Write as a level. In this milestone they are only stored and shown; milestones 9, 11 and 14 enforce them.
+
    _Inviting a teacher:_
-   - An administrator fills in the email, first name and last name, and selects one or more institutions.
+   - An administrator fills in the email, first name and last name, selects one or more institutions with an access level for each, and sets **Can create competitions**.
    - Submitting the form sends the invitation email and shows "Invitation sent to …". Nothing from the form is kept, and there is no list of pending invitations. To resend, the inviter fills in the form again. Every invitation sent is valid on its own until it expires.
    - Validation: the email is checked as at sign-in. Names are 1–100 characters after trimming, with no control characters.
    - Invitations are rate-limited per inviter and per invited address, using the existing rate-limit counters.
@@ -115,7 +118,8 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _The invitation link:_ the link carries one opaque token, and the token is the whole invitation. It holds:
    - the role
    - the person's details
-   - the institutions, by id, so renaming an institution before acceptance does not break the invitation
+   - the institutions, by id, each with its access level, so renaming an institution before acceptance does not break the invitation
+   - the **Can create competitions** setting
    - the inviter's user id
    - the time of issue
    - a purpose label
@@ -123,14 +127,14 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    The token is encrypted and authenticated (for example Fernet or AES-GCM) with a key derived from `SECRET_KEY` for invitations only. So the personal data cannot be read from the URL, wherever the URL ends up: server request logs, browser history, mail scanners. Any change to the token makes it invalid. A token is valid for 7 days from issue. Rotating `SECRET_KEY` invalidates every invitation not yet accepted, and inviters then send new ones.
    _The invitation email:_ plain text, sent through the existing email sender. Its content:
    - who sent the invitation
-   - the role and the institutions it is for
+   - the role and the institutions it is for, with the access level for each, and whether it includes creating competitions
    - that nothing is stored unless the person accepts
    - the link, and when it expires
 
    Click tracking stays off in Resend, because it would store the link. The application keeps no copy of the email: no BCC and no archive mailbox.
    _Accepting:_
    - Opening the link (GET) changes nothing. Mail security scanners open links automatically, so only the person's own button press may create anything. The page shows:
-     - the data that will be stored, with the current names of the institutions
+     - the data that will be stored, with the current names of the institutions, their access levels and the **Can create competitions** setting
      - the consent text
      - the inviter and the role
      - an **I agree** button
@@ -158,17 +162,17 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _Consent text:_ each invitable role has its own versioned template in the repository, because each role stores different data. Any change to its wording is a new version, and each existing record keeps the version that was accepted. Placeholder wording is fine until real users arrive. The product owner supplies the final wording before then.
    _Managing teachers:_ on the **Teachers** tab from milestone 6, which now lists invited teachers instead of `TEACHER_EMAILS`.
    - An administrator can:
-     - see all teachers: name, email, institutions, date of consent
-     - edit a teacher's names and institutions, selecting the institutions from the list, at least one
+     - see all teachers: name, email, institutions with their access levels, **Can create competitions**, date of consent
+     - edit a teacher's names, institutions, access levels and **Can create competitions**, selecting the institutions from the list, at least one
      - remove a teacher
    - An email cannot be edited. To change one, remove the person and invite the new address.
    - Removing a person takes away that role and its details. A person left with no roles is deactivated. As in milestone 5, they are logged out everywhere. Users are never hard-deleted.
 
-   _Profile:_ every signed-in person can open their own profile. It shows the personal data stored about them, their roles, and their consent records with the text of each accepted version. The profile is read-only. Corrections go through an administrator.
+   _Profile:_ every signed-in person can open their own profile. It shows the personal data stored about them, their roles, for a teacher their institutions with access levels and **Can create competitions**, and their consent records with the text of each accepted version. The profile is read-only. Corrections go through an administrator.
    _Withdrawing consent:_ a person holding a role granted by consent sees **Withdraw consent** on the profile, with a confirmation step. Withdrawing:
    - removes the roles granted by consent (in this milestone, teacher)
    - clears the names
-   - deletes the role's details (for a teacher, the institution links)
+   - deletes the role's details (for a teacher, the institution links with their access levels and the **Can create competitions** setting)
    - replaces the email with an anonymous placeholder, so later records such as competition results can still refer to the user row without identifying anyone
    - keeps only the dates and versions in the consent records
    - logs the person out everywhere
@@ -188,8 +192,9 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - self sign-up
 
    _Test:_
-   - End to end: an administrator adds two institutions and invites a teacher with both selected, and the link is read from the `memory` outbox. The GET creates nothing. The POST creates the user with the role, both institutions and a consent record. The teacher then signs in and sees their profile.
-   - The invitation and teacher edit forms offer only active institutions in active regions. A submission with no institution, an unknown institution id, a deactivated institution or an institution in a deactivated region is refused.
+   - End to end: an administrator adds two institutions and invites a teacher with both selected, one with Write and one with Read, and **Can create competitions** checked. The link is read from the `memory` outbox. The GET creates nothing. The POST creates the user with the role, both institutions with their access levels, the setting and a consent record. The teacher then signs in and sees all of these on their profile.
+   - The invitation and teacher edit forms offer only active institutions in active regions. A submission with no institution, an unknown institution id, a deactivated institution, an institution in a deactivated region or an access level other than Read or Write is refused.
+   - From the teacher's page, an administrator changes one institution's access level and the **Can create competitions** setting; the other institution's level stays unchanged.
    - An institution linked to a teacher cannot be deleted.
    - An institution renamed between invitation and acceptance is still linked, and the acceptance page shows its new name.
    - Before acceptance, no table contains the invited email or names.
@@ -201,22 +206,24 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - Logs captured during all of the above contain no email, name or token.
    - The reconcile manages only the administrator role.
 
-9. **User management with consent: students.** Teachers invite students. The student role is added to the invitation and consent flow from milestone 8 as one more invitable role, so the flow itself does not change.
+9. **User management with consent: students.** Teachers invite students to the institutions where they have Write access (milestone 8). The student role is added to the invitation and consent flow from milestone 8 as one more invitable role, so the flow itself does not change.
    _Personal data:_ besides the email and names, a student's educational institution, group code and year of study are personal data. They are stored only on acceptance, like the rest.
    _Inviting a student:_
-   - A teacher fills in the email, first name, last name, group code and year of study, and selects one of their own institutions from a list. The server accepts only an institution the teacher is linked to.
+   - A teacher fills in the email, first name, last name, group code and year of study, and selects one of their own institutions from a list. The list offers only institutions where the teacher has Write access, and the server accepts only such an institution.
    - Validation: the email and names as in milestone 8. The group code is 1–20 characters. The year of study is a whole number from 1 to 12.
    - Sending, rate limits, the token, the email and the acceptance page work as in milestone 8. The token holds the institution id, the group code and the year of study.
 
-   _Accepting:_ on top of the checks in milestone 8, the inviter must still be a teacher linked to the student's institution. The cases for an email that already belongs to a user apply unchanged. Example: a teacher invited as a student gains the student role and keeps the teacher role.
+   _Accepting:_ on top of the checks in milestone 8, the inviter must still be a teacher with Write access to the student's institution. The cases for an email that already belongs to a user apply unchanged. Example: a teacher invited as a student gains the student role and keeps the teacher role.
    _Consent text:_ a student consent text, versioned like the teacher one. It also says that the institution, group code and year of study are stored, and that the teachers of that institution can see them. Placeholder wording is fine until real users arrive, as in milestone 8.
    _Managing students:_
-   - A teacher can see the students of their own institutions: name, email, institution, group, year. They can edit a student's names, institution (selected among their own), group and year, and remove a student. Students of other institutions are neither listed nor reachable: opening one by address shows "access denied".
+   - A teacher can see the students of all their own institutions, with Read or Write access: name, email, institution, group, year. Students of other institutions are neither listed nor reachable: opening one by address shows "access denied".
+   - For a student of an institution where the teacher has Write access, the teacher can edit the student's names, institution, group and year, and remove the student. A student can be moved only to another institution where the teacher has Write access.
+   - Where the teacher has only Read access, the students are shown without edit or remove actions, and the server answers such a request with "access denied".
    - An administrator can see all students and remove any of them.
    - An email cannot be edited, and removing works as in milestone 8.
 
-   _Profile and withdrawing consent:_ the profile also shows the student details. Withdrawing also removes the student role and deletes the student details. Corrections to a student's data go through a teacher of their institution.
-   _Access:_ student management: teachers (own institutions only) and administrators.
+   _Profile and withdrawing consent:_ the profile also shows the student details. Withdrawing also removes the student role and deletes the student details. Corrections to a student's data go through a teacher with Write access to their institution.
+   _Access:_ student management: teachers (seeing students: own institutions; inviting, editing and removing: institutions with Write access) and administrators.
    _Out of scope:_
    - bulk import of students
    - administrators inviting students
@@ -224,10 +231,10 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 
    _Test:_
    - End to end: a teacher invites a student, and the link is read from the `memory` outbox. The GET creates nothing. The POST creates the user with the student role, the details and a consent record. The student then signs in.
-   - The invitation form offers only the teacher's own institutions. A submission with another institution is refused.
-   - The invitation is refused if, before acceptance, the inviter is removed or unlinked from the institution.
+   - The invitation form offers only the teacher's institutions with Write access. A submission with a Read-access institution or another teacher's institution is refused.
+   - The invitation is refused if, before acceptance, the inviter is removed, unlinked from the institution, or lowered to Read access for it.
    - Before acceptance, no table contains the invited email, names or details.
-   - A teacher sees and edits only the students of their own institutions, and gets "access denied" for the others. An administrator sees all students and can remove any of them.
+   - A teacher sees and edits only the students of their own institutions, and gets "access denied" for the others. With Read access to an institution, a teacher sees its students but gets "access denied" when editing or removing them. A teacher cannot move a student to an institution where they have Read access. An administrator sees all students and can remove any of them.
    - Withdrawing consent as a student erases the student details too.
    - A teacher invited as a student holds both roles.
    - Logs captured during all of the above contain no email, name or token.
@@ -238,8 +245,9 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
     _Test:_ question CRUD works and is visible only to teachers. A question without a subject or with an unknown subject is refused. Filtering by subject shows only that subject's questions.
 
 11. **Creating a competition (teacher).** A competition with a subject, a start time, duration, assignment to a group/students, a set of questions from the bank and reference answers.
+    _Who can create:_ only a teacher with **Can create competitions** (milestone 8) can create or change competitions. A teacher without it sees no create action, and the server answers with "access denied". The setting covers all the teacher's institutions, so participants can be students of any of them, with Read or Write access. Students of other institutions cannot be assigned.
     _Subjects:_ the teacher selects the competition's subject first, from the list kept on the **Subjects** tab. The question picker then offers only questions of that subject, and the server refuses a competition that includes a question of another subject. Changing the subject of an upcoming competition is refused while it still holds questions of the old subject.
-    _Test:_ a competition is created and correctly linked to its subject, questions and participants. A competition with a question from another subject is refused.
+    _Test:_ a competition is created and correctly linked to its subject, questions and participants. A competition with a question from another subject is refused. A teacher without **Can create competitions** gets "access denied". A teacher with it can assign students of a Read-access institution, but not students of an institution they are not linked to.
 
 12. **Taking a competition (student).** List of assigned competitions, enforcement of the time window and duration, entering and submitting text answers. The student's lists of upcoming and past competitions show each competition's subject.
     _Test:_ answers are saved; the competition is not accessible outside its time window.
@@ -248,6 +256,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
     _Test:_ evaluation returns a structured result and it is persisted.
 
 14. **Best answer selection + results.** For each question, the best answer is selected from the group's answers; competition results are saved and displayed.
-    _Test:_ the best answer is determined, the results page works.
+    _Who sees results:_ a teacher sees the results of the students of their own institutions, with Read or Write access (milestone 8). Results of students from other institutions are not shown to them.
+    _Test:_ the best answer is determined, the results page works. A teacher with Read access sees the results of that institution's students and none from institutions they are not linked to.
 
 15. **Polish and hardening.** Results dashboards, E2E tests with Playwright, error handling, security. (Optional stretch goal: move part of the UI to React.)

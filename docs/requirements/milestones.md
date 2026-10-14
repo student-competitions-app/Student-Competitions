@@ -4,82 +4,65 @@ The milestone ladder for the product described in [product-requirements.md](prod
 
 The ladder follows a "walking skeleton" approach: first ship an empty skeleton to the internet, then grow it with vertical slices. Each step ends with a working, testable and meaningful result.
 
-1. **Hello World locally.** FastAPI serves a single HTML page via Jinja2.
-   _Test:_ the application starts, the page opens, there is a first pytest test for the endpoint.
+**Delivered milestones** are short summaries of what the product does after them. Their specification in [`specs/`](../../specs/) is the source of truth for details, and the summary is updated only if the product behaviour changes. **Upcoming milestones** hold the full scope, refined until every detail is clear, and are the input for `speckit-specify`.
 
-2. **Deploy Hello World to the internet + CI/CD.** Dockerfile, deployment to Render, public URL. GitHub Actions runs tests and linting on PRs, auto-deploy on push to `main`.
-   _Test:_ the page is accessible from outside, the pipeline is green.
+## Delivered
 
-3. **Database + first entity.** Connect the database (SQLite locally, Postgres in production) with Alembic migrations. Create the "Question" model with a CRUD layer covered by tests (no write endpoints, since there is no authentication yet). The public page shows a read-only list of seeded sample questions and a database status line (database type, migration revision, boot count).
-   _Test:_ CRUD tests pass on SQLite and Postgres in CI; in production, the sample questions are visible and the boot count increases across a redeploy.
+1. **Hello World locally.** _Spec:_ [001-hello-world-page](../../specs/001-hello-world-page/spec.md)
+   - The application runs on a developer's machine and serves one server-rendered home page with the application name and a short description of its purpose.
+   - The page is readable on desktop and phone-width screens. Unknown addresses show a friendly "not found" page.
+   - A developer can set up, run and test the application by following the README.
 
-4. **Email code authentication.** Email input form → code sent to email → code verification → session.
-   _Email delivery:_ the auth flow sends email through a small email-sender interface and never knows how the message is delivered. The backend is selected by the `EMAIL_BACKEND` environment variable:
-   - `console` (local default): prints the full email, including the code, to the server console. No mail provider account or keys are needed for local development.
-   - `memory` (tests): keeps sent messages in an in-memory outbox, so tests read the code from it and run the real flow end to end.
-   - `resend` (production): the Resend HTTP API, not SMTP, since free hosting tiers may block outbound SMTP. The sending domain is verified with SPF/DKIM records.
+2. **Deploy Hello World to the internet + CI/CD.** _Spec:_ [002-public-deploy-cicd](../../specs/002-public-deploy-cicd/spec.md)
+   - The home page from milestone 1, unchanged, is available to anyone at a public HTTPS address.
+   - Every pull request is checked automatically (tests, code style, formatting) and cannot be merged while a check fails.
+   - Every merge to `main` is published automatically with no manual steps. A failed publish leaves the previous version serving visitors.
+   - A public status address reports that the service is alive and which version is running.
 
-   On Render, the application refuses to start with the `console` backend, following the same pattern as `DATABASE_URL`. There are no login bypasses (magic codes, dev-only login URLs). Only the console backend may output the message body. Tests of role-protected pages in later milestones use a fixture that creates a session directly and skip the email step.
-   _Site administrators:_ there is no sign-up. Only active users already in the database can log in, and an unknown email receives no code. SRE manages administrators through the `ADMIN_EMAILS` environment variable: a comma-separated list, declared in `render.yaml` with `sync: false`. On startup, after migrations, the application reconciles the users table with this list. Every listed email (trimmed and lowercased) gets an active administrator user. Administrators missing from the list are deactivated and their sessions deleted. The step is idempotent and logs only counts. On Render, the application refuses to start if `ADMIN_EMAILS` is empty or contains a malformed email. The UI cannot grant or revoke administrator rights. This milestone has no role-based checks; milestone 5 adds them on top of this flow.
-   _Access:_ every page is protected by default, including the existing home page. Routes are public only if they are on an explicit allowlist: login, logout, `/healthz` and `/static`. An anonymous request to a protected page redirects (303) to `/login?next=…`, and `next` is accepted only as a relative path.
-   _UI (minimal):_ a two-step login page (email, then code) using plain forms that redirect after submit, with no HTMX. The header shows the signed-in email and a **Log out** button that submits a POST form. The home page content is unchanged.
-   _Sessions:_ stored server-side in a `sessions` table. The cookie carries a random token signed with `SECRET_KEY`, and the database stores only the token's hash. Every request checks that the session is unexpired and the user is still active. Sessions expire after 14 days, and expired sessions and codes are cleaned up.
-   _Security:_ codes are hashed with HMAC keyed by `SECRET_KEY`, single-use, and expire after about 20 minutes. Attempts per code and code requests per email are rate-limited, with counters stored in the database. Between the two steps, the email travels in a hidden form field. Known and unknown emails get the same response, and the email is sent in a background task so response timing does not reveal which emails are registered. The session cookie is `HttpOnly`, `SameSite=Lax` (sufficient against CSRF for this milestone), and `Secure` in production.
-   _Configuration:_ `SECRET_KEY`, `ADMIN_EMAILS`, `RESEND_API_KEY` and `EMAIL_FROM` are declared in `render.yaml` with `sync: false`. On Render, the application refuses to start if any of them is missing. Startup order: migration check, then admin reconcile, then boot count. The `users` table has a `role` column (only `admin` for now); milestone 5 may change how roles are stored.
-   _Rollout:_ the Resend domain's DNS records at NIC.UA and the Render secrets are in place before merging to `main`.
-   _Test:_ a user can log in end to end, reading the code from the `memory` outbox. A route-table test asserts that every route outside the allowlist rejects anonymous requests. Existing page tests use a fixture that creates a session directly. Unknown and known emails get the same response. Running the reconcile twice changes nothing. An email removed from `ADMIN_EMAILS` can no longer log in and loses its sessions.
+3. **Database + first entity.** _Spec:_ [003-database-questions](../../specs/003-database-questions/spec.md)
+   - The application keeps its data in a database that survives restarts and redeploys.
+   - The first product entity is the **question**: question text (up to 1,000 characters) and a reference answer (up to 5,000 characters), both required. Questions can be created, read, updated and deleted inside the application, but not yet through the website.
+   - The home page lists at least five sample questions, read-only. Reference answers are never shown publicly.
+   - The home page shows a database status line: the database kind, the schema version and a boot count that goes up with every application start, which proves that data persists.
+   - If the database is briefly unreachable, the home page still opens and shows "data temporarily unavailable".
 
-5. **Roles and authorization.** Three roles: student, teacher and administrator. Each page is open only to the roles allowed to see it. The aim is the complete role flow, kept simple: the role pages are placeholders with no features behind them.
-   _Who has which role:_ the lists of administrators, teachers and students are all set via configuration at deploy time, the same way administrators are set today. One person can be on several lists and so have several roles. A person on no list cannot log in. Removing a person from a list takes effect at once: they are logged out everywhere. The teacher and student lists are temporary; milestones 8 and 9 replace them with managing teachers and students in the application.
-   _Choosing a role:_ a person with one role gets it right after login. A person with several roles chooses one after login, and then lands on the page they originally asked for. Until a role is chosen, no other page opens. A person with several roles can switch role at any time from the header without logging out.
-   _Access:_ what a person can open depends on the role they are currently using, not on all the roles they have. For example, someone who is both an administrator and a student cannot open administrator pages while using the student role. Opening a page the current role is not allowed to see shows an "access denied" page. Every new page must state which roles can open it.
-   _Pages:_
-   - The home page is open to all roles. Its content is unchanged, plus links to only the pages the current role can open.
-   - One placeholder page per role (administrator, teacher, student), each open only to that role.
-   - One placeholder page for staff, open to administrators and teachers but not to students.
-   - Every page shown after a role is chosen displays the current role in the header, next to the application name in the top left corner.
+4. **Email code authentication.** _Spec:_ [004-email-otp-auth](../../specs/004-email-otp-auth/spec.md)
+   - People sign in with their email address and a one-time code sent to it. There are no passwords, no sign-in links and no sign-up: only active users already known to the application can sign in.
+   - In this milestone the only users are site administrators. Operations owns their list in the deployment configuration; the website can never grant or revoke administrator rights. An address removed from the list is deactivated and signed out everywhere. Users are never deleted.
+   - A code has 6 digits, is valid for 20 minutes and works once. A new code replaces the previous one. A code allows 5 wrong attempts, and code requests are limited to 5 per email address and 20 per client per hour.
+   - Sign-in behaves the same for registered and unregistered addresses, so it never reveals whether an address belongs to a user. Email addresses are not written to logs.
+   - Every page, including the home page, requires sign-in. Only the sign-in and sign-out steps, the status address and static files are public. An anonymous visitor is sent to sign in and then returned to the page they asked for.
+   - A session lasts 14 days from sign-in; activity does not extend it. The header shows the signed-in email and a **Log out** button.
+   - There is no way to bypass the emailed code.
 
-   _Out of scope:_ managing users, educational institutions or profiles in the application, and any real functionality for a role beyond its placeholder page.
-   _Test:_
-   - Each role can open exactly the pages it is allowed to and sees "access denied" on the others.
-   - The home page shows each role only its own links.
-   - A person with several roles is asked to choose one after login, and a person with one role is not.
-   - Someone who is both an administrator and a student, using the student role, cannot open the administrator page.
-   - A person removed from a list is logged out, and a person removed from every list can no longer log in.
+5. **Roles and authorization.** _Spec:_ [005-roles-authorization](../../specs/005-roles-authorization/spec.md)
+   - Three roles: administrator, teacher and student. Operations sets three lists of email addresses in the deployment configuration, one per role. One person can be on several lists and so hold several roles. A person on no list cannot sign in. The teacher and student lists are temporary; milestones 8 and 9 replace them with management in the application.
+   - Removing any role from a person signs them out everywhere; adding a role does not.
+   - A signed-in person always acts in one role. A person with one role gets it right after sign-in. A person with several roles chooses one (in the order administrator, teacher, student) and then lands on the page they originally asked for; until then no other page opens.
+   - A person with several roles can switch role from the header at any time without signing out, and lands on the home page.
+   - Access follows the current role only: someone who is both an administrator and a student cannot open administrator pages while using the student role. A page the current role may not open shows "access denied", naming the current role; the role is never switched automatically.
+   - Every page states which roles may open it, and access is denied by default.
+   - Pages: the home page for all roles, with links to only the pages the current role can open; placeholder **Administrator area**, **Teacher area** and **Student area** pages, each for its own role; a placeholder **Staff area** for administrators and teachers.
+   - The header shows "Student Competitions · <Role>" in the top left corner, and the email, the role switch (for several roles) and **Log out** on the right.
 
-6. **Administrator area: teachers, educational institutions, subjects.** The administrator page from milestone 5 stops being a placeholder and becomes a tabbed area with three tabs at the top: **Teachers**, **Educational institutions**, **Subjects**.
-   _Tabs:_
-   - The tabs are a row of links at the top of every administrator page, below the header. Each tab is its own page with its own address: `/admin/teachers`, `/admin/institutions`, `/admin/subjects`. Clicking a tab is an ordinary link to that page, with no client-side tab switching, so every tab can be bookmarked, reloaded and opened directly.
-   - The current tab is highlighted. `/admin` redirects to the **Teachers** tab.
-   - The tabs exist only in the administrator area and are not shown to any other role.
+6. **Administrator area and subjects.** _Spec:_ [006-admin-area](../../specs/006-admin-area/spec.md)
+   - The administrator page becomes an administrator area with three tabs: **Teachers**, **Educational institutions** and **Subjects**. Each tab is an ordinary link to its own page (`/admin/teachers`, `/admin/institutions`, `/admin/subjects`), so it can be bookmarked and reloaded. The current tab is highlighted, and `/admin` opens the **Teachers** tab. The area is open only to the administrator role.
+   - The **Teachers** and **Educational institutions** tabs are placeholders in this milestone.
+   - A **subject** is a knowledge area in which competitions are held, such as mathematics or physics. The **Subjects** tab lists all subjects, active and deactivated, sorted by name ignoring case, with deactivated ones marked. An empty list shows "No subjects yet". The list starts empty.
+   - **Create** and **Rename** use a form with one field, the name: trimmed, 1–200 characters, no control characters, and unique ignoring case, including deactivated subjects and non-Latin letters. An invalid or duplicate name shows the form again with the error and the entered value. A change of case alone is a valid rename.
+   - **Deactivate** keeps the subject but stops offering it for new questions (milestone 10) and new competitions (milestone 11). Questions and competitions that already use it stay valid. **Activate** reverses it.
+   - **Delete** asks for confirmation and is refused while anything uses the subject, suggesting deactivation instead.
 
-   _Teachers tab:_ dummy page at this milestone
-   _Educational institutions tab:_ dummy page at this milestone
-  
-   _Subjects tab:_ the list of subject areas in which competitions are held (for example mathematics, physics). It shows all subjects, sorted by name, and a **Create** button. 
-   - **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Names are unique, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value. An empty list shows "No subjects yet".
-   _Access:_ all three tabs and their forms: administrators. Every other role gets "access denied", as in milestone 5.
-    - The tab contains the **Rename** and **Delete**,  **Deactivate** buttons. Deletion should check any usage of the subject and deline the operation to avoid broken references. The deactivated status restricts creation on any new questions for the subject and any new competitions (will be covered in future milestones)
+7. **Administrator area: educational institutions.** _Spec:_ [007-region-and-institutions-management](../../specs/007-region-and-institutions-management/spec.md)
+   - The **Educational institutions** tab shows two lists side by side: regions on the left and the educational institutions of the selected region on the right. On narrow screens they stack, regions first.
+   - The selected region is highlighted and kept in the page address, so it survives reloads and bookmarks. With no region selected, the right side shows "Select a region". After an action, the affected region stays selected.
+   - Both lists show active and deactivated items, sorted by name ignoring case, with deactivated items marked. Empty lists show "No regions yet" and "No educational institutions yet". There is no preset list; both start empty.
+   - Names of regions and institutions follow the same rules as subject names. Region names are unique. Institution names are unique within their region ("already exists in this region"); the same name may exist in different regions.
+   - **Regions** offer **Create**, **Rename**, **Deactivate** / **Activate** and **Delete**. Delete asks for confirmation and is refused while the region holds any institution. A deactivated region accepts no new institutions, and none of its institutions can be selected anywhere; the institutions' own statuses do not change, and they stay fully manageable.
+   - **Educational institutions** offer the same actions. An institution is created in the selected region, which must be active, and can never move to another region. Delete asks for confirmation, naming the institution and its region, and is refused while anything uses the institution (teacher links from milestone 8, students from milestone 9), suggesting deactivation instead.
+   - An institution can be selected (when inviting or editing teachers in milestone 8 and students in milestone 9) only when it and its region are both active. Existing links to an institution that later becomes unavailable stay valid.
 
-   Out of Scope: this milestone does not add any operations an UI ourside of dummy pages for teachers and Educational institutions tabs.
-   
-
-7. **Administrator area: educational institutions.** The **Educational institutions** tab from milestone 6 stops being a placeholder and becomes a page with two lists side by side: regions on the left, and the educational institutions of the selected region on the right.
-   _Layout:_
-   - The selected region is highlighted. With no region selected, the right side shows "Select a region".
-   - Both lists are sorted by name and show active and deactivated items. Deactivated items are marked as deactivated.
-
-   _Regions:_ administrators create the regions themselves; there is no preset list.
-   - **Create** opens a form with one field, the name. The name is 1–200 characters after trimming, with no control characters. Region names are unique, ignoring case. A duplicate or invalid name shows the form again with the error and the entered value. An empty list shows "No regions yet".
-   - **Rename** uses the same form and the same validation as **Create**.
-   - **Delete** is refused while the region holds any educational institution, active or deactivated.
-   - **Deactivate** blocks creating new educational institutions in the region, and its institutions can no longer be selected anywhere an institution is picked (milestones 8 and 9). **Activate** reverses it. 
-
-   _Educational institutions:_
-   - **Create** adds an institution to the selected region. It is unavailable when no region is selected or the selected region is deactivated. It opens a form with one field, the name, validated as for regions. Names are unique within a region, ignoring case; the same name may exist in different regions. An empty list shows "No educational institutions yet".
-   - **Rename** uses the same form and the same validation as **Create**. An institution cannot be moved to another region.
-   - **Delete** is refused while anything uses the institution. Nothing does in this milestone, so deletion always succeeds; milestone 8 adds teacher links and milestone 9 adds students as uses.
-   - **Deactivate** means the institution can no longer be selected when inviting or editing teachers (milestone 8) or students (milestone 9). **Activate** reverses it.
+## Upcoming
 
 8. **User management with consent: teachers.** Administrators invite and manage teachers. No personal data about a person is stored until that person agrees to it. Milestone 9 reuses this flow for students. The teacher and student lists from milestone 5 are retired; administrators stay in `ADMIN_EMAILS`.
    _Personal data and consent:_ a person's email, first name and last name are personal data. They are stored only after the person agrees to a consent text on this site. Until then, the invitation exists only inside the emailed link. The only exception is a keyed one-way hash of an email address, which cannot be turned back into the address and is kept only for rate limits and to stop outdated invitations (see _Accepting_).

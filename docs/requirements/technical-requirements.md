@@ -113,6 +113,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - An administrator fills in the email, first name and last name, selects one or more institutions with an access level for each, and sets **Can create competitions**.
    - Submitting the form sends the invitation email and shows "Invitation sent to …". Nothing from the form is kept, and there is no list of pending invitations. To resend, the inviter fills in the form again. Every invitation sent is valid on its own until it expires.
    - Validation: the email is checked as at sign-in. Names are 1–100 characters after trimming, with no control characters.
+   - An administrator who also needs to work as a teacher invites their own address. They go through the same email, acceptance and consent as anyone else, and the consent record names them as their own inviter. To give up the teacher role, they withdraw consent like any other teacher.
    - Invitations are rate-limited per inviter and per invited address, using the existing rate-limit counters.
 
    _The invitation link:_ the link carries one opaque token, and the token is the whole invitation. It holds:
@@ -140,13 +141,12 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
      - an **I agree** button
    - Nothing can be changed on that page: the data stored is exactly the data in the token. Under the button, the page says that if any detail is wrong, the person can either ask the inviter for a corrected invitation, or accept and ask the inviter to correct it afterwards. Letting the person edit their own name would let them take on someone else's name.
    - **I agree** submits a POST with the token in a hidden field, under the existing cross-site check. The server checks the token again. Then it checks that the inviter is still active and still holds the role that allows the invitation (for a teacher, administrator), and runs the invited role's own checks.
-   - What happens next depends on whether the email already belongs to a user:
+   - The acceptance is refused if, after the invitation was issued, the person lost the invited role or withdrew consent. This holds whether the person is still active (for example an administrator who keeps the administrator role), was deactivated, or no longer has their email stored. A removal or a withdrawal always wins over an older invitation.
+   - Otherwise, what happens next depends on whether the email already belongs to a user:
      - No user has the email: an active user is created with the names, role and details.
-     - An active user without this role: the role and details are added, and their names stay unchanged. Example: an administrator invited as a teacher.
+     - An active user without this role: the role and details are added. Names already stored stay unchanged. A user with no names yet, such as an administrator from `ADMIN_EMAILS`, gets the names from the invitation. Example: an administrator invited as a teacher.
      - An active user who already holds the role: nothing changes, and the page says so. A second press of the button ends here too.
-     - An inactive user deactivated *after* the invitation was issued: refused. A removal always wins over an older invitation.
-     - An inactive user deactivated *before* the invitation was issued: reactivated with the role and details from the invitation.
-     - A person who withdrew consent *after* the invitation was issued: refused, even though their email no longer belongs to any user. Withdrawing always wins over an older invitation.
+     - An inactive user: reactivated with the role and details from the invitation.
    - Every acceptance that changes something stores a consent record:
      - the user
      - the role granted
@@ -211,12 +211,11 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - Before acceptance, no table contains the invited email or names.
    - A tampered token, an expired token and a token with the wrong purpose label are each refused. The POST stores only what the token holds: any extra or changed form field is ignored.
    - The invitation is refused if the inviter loses the administrator role before acceptance.
-   - A person removed after an invitation was issued cannot be brought back by it. A newer invitation can bring them back.
-   - An administrator invited as a teacher gains the teacher role and keeps the administrator role.
+   - An invitation issued before the teacher role was removed or consent was withdrawn cannot bring it back. This holds for a deactivated teacher, for a teacher whose data was deleted, and for an administrator who lost the teacher role but stayed active. A newer invitation can bring them back.
+   - An administrator invites their own address as a teacher. On acceptance they gain the teacher role, keep the administrator role, and get the names from the invitation. The consent record names them as their own inviter. After they withdraw consent, they keep the administrator role and address and no longer appear on the **Teachers** tab.
    - Withdrawing consent erases the personal data and logs the person out, and that person can no longer sign in. An administrator who withdraws keeps the administrator role and address.
    - Deleting data without signing in: a known address, an unknown address and an address whose data was already deleted get the same answer, and only the first receives an email. Opening the link changes nothing. Pressing the button erases the data as withdrawing does. A used link and an expired link are each refused.
    - A teacher removed by an administrator can delete their data through the sign-in page link.
-   - An invitation issued before a person withdrew consent cannot bring them back, including a person whom an administrator removed before they withdrew. A newer invitation can bring them back.
    - Logs captured during all of the above contain no email, name or token.
    - The reconcile manages only the administrator role.
 

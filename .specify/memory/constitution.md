@@ -5,7 +5,7 @@
 ### I. Walking Skeleton & Vertical Slices
 
 The product is built as a "walking skeleton" that grows by vertical slices, following the
-milestone ladder in `docs/requirements/technical-requirements.md`.
+milestone ladder in `docs/requirements/milestones.md`.
 
 - Milestones MUST be delivered in order; a milestone MUST NOT start until the previous one is
   merged, deployed and its acceptance test passes.
@@ -38,7 +38,7 @@ SPA complexity; SSR + HTMX keeps one language, one codebase and one deployment u
 ### III. Test-Backed Delivery (NON-NEGOTIABLE)
 
 - Every feature MUST ship with automated pytest tests that verify the milestone's stated
-  acceptance criterion ("_Test:_" line in the technical requirements) and the spec's
+  acceptance criterion ("_Test:_" line in the milestones document) and the spec's
   acceptance scenarios.
 - Tests live in `tests/unit/` (pure logic, services), `tests/integration/` (HTTP routes via
   the FastAPI test client, database, auth flows) and `tests/e2e/` (Playwright, from
@@ -127,8 +127,9 @@ deployments and database engine changes.
 
 ### Technology Stack
 
-The stack is taken from `docs/requirements/technical-requirements.md` (the "Technology Stack"
-table and the "Milestones" ladder) and is binding for every spec and plan. The "Milestone"
+The stack is taken from the "Technology Stack" table in
+`docs/requirements/technical-requirements.md` and the milestone ladder in
+`docs/requirements/milestones.md`, and is binding for every spec and plan. The "Milestone"
 column shows when each component enters the codebase.
 
 | Area | Technology | Binding rules | Milestone |
@@ -236,4 +237,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-09-18
+**Version**: 1.0.1 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-10-14

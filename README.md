@@ -274,7 +274,8 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 ## Requirements
 
 - Product requirements: [`docs/requirements/product-requirements.md`](docs/requirements/product-requirements.md)
-- Technical requirements & milestones: [`docs/requirements/technical-requirements.md`](docs/requirements/technical-requirements.md)
+- Technical requirements: [`docs/requirements/technical-requirements.md`](docs/requirements/technical-requirements.md)
+- Milestones: [`docs/requirements/milestones.md`](docs/requirements/milestones.md)
 
 ## Tech stack
 
@@ -301,7 +302,7 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 │   ├── checks.yml           # Reusable: quality + image jobs
 │   ├── ci.yml               # Pull requests → checks (the merge gate)
 │   └── deploy.yml           # Push to main → checks, deploy, verify
-├── docs/requirements/       # Source product & technical requirements
+├── docs/requirements/       # Product & technical requirements, milestones
 ├── specs/                   # Feature specs created by /speckit-specify (NNN-feature-name/)
 ├── Dockerfile               # Two-stage image: uv builder → python:3.13-slim runtime; migrates, then serves
 ├── .dockerignore            # Build context: keeps tests, specs, .git, env files and local databases out

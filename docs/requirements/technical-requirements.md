@@ -94,129 +94,78 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - **Delete** is refused while anything uses the institution. Nothing does in this milestone, so deletion always succeeds; milestone 8 adds teacher links and milestone 9 adds students as uses.
    - **Deactivate** means the institution can no longer be selected when inviting or editing teachers (milestone 8) or students (milestone 9). **Activate** reverses it.
 
-8. **User management with consent: teachers.** Administrators keep the list of educational institutions and invite teachers. No personal data about a person is stored until that person agrees to it. This milestone builds the invitation and consent flow, and milestone 9 reuses it for students. The teacher and student lists from milestone 5 are retired. Administrators stay in `ADMIN_EMAILS`.
-   _Personal data and consent:_ a person's email, first name and last name are personal data. The application stores them only after the person agrees, on a page of this site, to a consent text. The text says what is stored, why, who can see it and how to withdraw consent. The form an inviter fills in is not saved anywhere. Its contents travel only inside the invitation link, and until the person accepts, nothing about them exists in the database.
-   _Built for reuse:_ the invitation, the acceptance, the consent record, the profile and the withdrawal are written once and do not depend on a particular role. Each role that can be invited supplies:
-   - the fields of its invitation form and their validation
-   - which role may invite it
-   - its extra checks at acceptance
-   - the details stored on acceptance and erased on withdrawal
-   - its consent text
-
-   This milestone defines the teacher role. Milestone 9 adds the student role the same way, without changing the flow.
-   _Educational institutions:_ administrators keep the regions and institutions created in milestone 7. Institution names are unique only within a region, so every institution picker shows each one as "Name (Region)". Each teacher is linked to one or more institutions. Only an administrator sets these links, when inviting the teacher and later from the teacher's page. On both forms the administrator selects the institutions from the list, at least one. The list offers only active institutions in active regions. There is no free-text entry, so an institution is added to the list before a teacher can be linked to it. The server accepts only institutions that exist, are active and are in an active region. A teacher link is a use of the institution, so an institution linked to a teacher cannot be deleted.
-   - Each link has its own access level, **Read** or **Write**, so a teacher can have Write for one institution and Read for another. Write lets the teacher manage the institution's students: invite, edit and remove them (milestone 9). Read lets the teacher only see the institution's students and their competition results (milestones 9 and 14). A newly selected institution starts at Read.
-   - Separately, each teacher has one **Can create competitions** setting: a single checkbox that applies to all their institutions and does not depend on the access levels (milestone 11). It starts unchecked.
-   - The administrator sets the access levels and the checkbox on the same two forms as the links. The server accepts only Read or Write as a level. In this milestone they are only stored and shown; milestones 9, 11 and 14 enforce them.
+8. **User management with consent: teachers.** Administrators invite and manage teachers. No personal data about a person is stored until that person agrees to it. Milestone 9 reuses this flow for students. The teacher and student lists from milestone 5 are retired; administrators stay in `ADMIN_EMAILS`.
+   _Personal data and consent:_ a person's email, first name and last name are personal data. They are stored only after the person agrees to a consent text on this site. Until then, the invitation exists only inside the emailed link. The only exception is a keyed one-way hash of an email address, which cannot be turned back into the address and is kept only for rate limits and to stop outdated invitations (see _Accepting_).
+   _Built for reuse:_ the invitation, acceptance, consent record, profile and withdrawal work the same for every invitable role. Each role defines its invitation form and validation, who may invite it and for which institutions, its extra checks at acceptance, the details stored on acceptance and its consent text. This milestone defines the teacher role; milestone 9 adds students without changing the flow.
+   _Teacher details:_
+   - Each teacher is linked to one or more educational institutions (milestone 7). Each link has an access level: **Read** lets the teacher see the institution's students and their results; **Write** also lets them invite, edit and remove those students. A new link starts at Read.
+   - Each teacher has one **Can create competitions** setting covering all their institutions, unchecked by default.
+   - Only an administrator sets these, when inviting and from the teacher's page. Institutions are picked from a list, at least one, each shown as "Name (Region)". The list offers only active institutions in active regions, and the server accepts nothing else. A link to an institution deactivated later is kept and shown as deactivated; it can be removed but not added again.
+   - An institution linked to a teacher cannot be deleted. In this milestone, access levels and the setting are only stored and shown; milestones 9, 11 and 14 enforce them.
 
    _Inviting a teacher:_
-   - An administrator fills in the email, first name and last name, selects one or more institutions with an access level for each, and sets **Can create competitions**.
-   - Submitting the form sends the invitation email and shows "Invitation sent to …". Nothing from the form is kept, and there is no list of pending invitations. To resend, the inviter fills in the form again. Every invitation sent is valid on its own until it expires.
-   - Validation: the email is checked as at sign-in. Names are 1–100 characters after trimming, with no control characters.
-   - An administrator who also needs to work as a teacher invites their own address. They go through the same email, acceptance and consent as anyone else, and the consent record names them as their own inviter. To give up the teacher role, they withdraw consent like any other teacher.
-   - Invitations are rate-limited per inviter and per invited address, using the existing rate-limit counters.
+   - An administrator enters the email, first name and last name, picks institutions with access levels and sets **Can create competitions**. The email is validated as at sign-in. Names are 1–100 characters after trimming, with no control characters.
+   - Submitting sends the invitation email and shows "Invitation sent to …". If sending fails, the form shows an error with the entered values. Nothing from the form is kept and there is no list of pending invitations. Each invitation is valid on its own for 7 days; to resend, the administrator fills in the form again.
+   - Invitations are rate-limited per inviter and per invited address.
+   - The link carries the whole invitation, encrypted and tamper-proof: its contents cannot be read from the URL, and any change makes it invalid.
+   - The email is plain text: who invites, the role, the institutions with access levels, whether it includes creating competitions, that nothing is stored unless the person accepts, the link and its expiry. Links are not click-tracked, and the application keeps no copy of the email.
+   - An administrator who also works as a teacher invites their own address and goes through the same steps.
 
-   _The invitation link:_ the link carries one opaque token, and the token is the whole invitation. It holds:
-   - the role
-   - the person's details
-   - the institutions, by id, each with its access level, so renaming an institution before acceptance does not break the invitation
-   - the **Can create competitions** setting
-   - the inviter's user id
-   - the time of issue
-   - a purpose label
-
-   The token is encrypted and authenticated (for example Fernet or AES-GCM) with a key derived from `SECRET_KEY` for invitations only. So the personal data cannot be read from the URL, wherever the URL ends up: server request logs, browser history, mail scanners. Any change to the token makes it invalid. A token is valid for 7 days from issue. Rotating `SECRET_KEY` invalidates every invitation not yet accepted, and inviters then send new ones.
-   _The invitation email:_ plain text, sent through the existing email sender. Its content:
-   - who sent the invitation
-   - the role and the institutions it is for, with the access level for each, and whether it includes creating competitions
-   - that nothing is stored unless the person accepts
-   - the link, and when it expires
-
-   Click tracking stays off in Resend, because it would store the link. The application keeps no copy of the email: no BCC and no archive mailbox.
    _Accepting:_
-   - Opening the link (GET) changes nothing. Mail security scanners open links automatically, so only the person's own button press may create anything. The page shows:
-     - the data that will be stored, with the current names of the institutions, their access levels and the **Can create competitions** setting
-     - the consent text
-     - the inviter and the role
-     - an **I agree** button
-   - Nothing can be changed on that page: the data stored is exactly the data in the token. Under the button, the page says that if any detail is wrong, the person can either ask the inviter for a corrected invitation, or accept and ask the inviter to correct it afterwards. Letting the person edit their own name would let them take on someone else's name.
-   - **I agree** submits a POST with the token in a hidden field, under the existing cross-site check. The server checks the token again. Then it checks that the inviter is still active and still holds the role that allows the invitation (for a teacher, administrator), and runs the invited role's own checks.
-   - The acceptance is refused if, after the invitation was issued, the person lost the invited role or withdrew consent. This holds whether the person is still active (for example an administrator who keeps the administrator role), was deactivated, or no longer has their email stored. A removal or a withdrawal always wins over an older invitation.
-   - Otherwise, what happens next depends on whether the email already belongs to a user:
-     - No user has the email: an active user is created with the names, role and details.
-     - An active user without this role: the role and details are added. Names already stored stay unchanged. A user with no names yet, such as an administrator from `ADMIN_EMAILS`, gets the names from the invitation. Example: an administrator invited as a teacher.
-     - An active user who already holds the role: nothing changes, and the page says so. A second press of the button ends here too.
-     - An inactive user: reactivated with the role and details from the invitation.
-   - Every acceptance that changes something stores a consent record:
-     - the user
-     - the role granted
-     - the consent text version
-     - when it was accepted
-     - the inviter
-     - when the invitation was issued
+   - Opening the link changes nothing, because mail scanners open links automatically. The page shows the inviter, the role, exactly the data that will be stored (institutions by their current names), the consent text and an **I agree** button. Nothing can be edited there. Under the button, the page says that a wrong detail is fixed by asking the inviter for a new invitation, or by accepting and asking the inviter to correct it.
+   - **I agree** is refused if:
+     - the inviter is no longer an active administrator
+     - any invited institution was deleted or deactivated, or its region was deactivated
+     - after the invitation was issued, the person lost the teacher role or withdrew consent, whether or not they are still active. A removal or withdrawal always wins over an older invitation.
+   - Otherwise, the names and teacher details from the invitation are stored, and:
+     - no user has the email: an active user is created with the teacher role
+     - an active user without the teacher role (for example an administrator): gains the role
+     - an inactive user: is reactivated with the role
+     - a user who already holds the role: nothing changes, and the page says so. A second press ends here too.
+   - Every acceptance that changes something stores a consent record: the user, the role, the consent text version, when it was accepted, the inviter and when the invitation was issued. This record is the proof of consent.
+   - Accepting never signs anyone in. The person lands on the sign-in page with their email filled in.
+   - An expired link shows "This invitation has expired; ask for a new one." Any other failure shows one neutral message that does not say which check failed.
+   - The invitation pages act on the person named in the link, never on the signed-in session.
 
-     This record, not any email, is the proof of consent.
-   - After accepting, the person lands on the sign-in page with their email filled in and signs in with a code as usual. Accepting never signs anyone in.
-   - An expired link shows "This invitation has expired; ask for a new one." Any other failure shows one neutral message without saying which check failed: a tampered or unreadable token, an inviter who no longer qualifies, or a refused acceptance.
-   - The two invitation routes are added to the public allowlist. They act on the person named in the token, never on the signed-in session.
+   _Consent text:_ each invitable role has its own versioned consent text: what is stored, why, who can see it, which external service delivers the emails, and how to withdraw. Any wording change is a new version. Earlier versions are kept, and each record keeps the version that was accepted. Placeholder wording is fine until the product owner supplies the final text before real users arrive.
+   _Managing teachers:_ the **Teachers** tab (milestone 6) lists current teachers sorted by last name: name, email, institutions with access levels, **Can create competitions** and date of consent. An empty list shows "No teachers yet". Each teacher has a page where an administrator can:
+   - edit the names (validated as on the invitation), institutions, access levels and **Can create competitions**
+   - remove the teacher, after confirmation. This takes away the teacher role and details. A person left with no roles is deactivated, and the person is logged out everywhere. Their email, names and consent records stay until they delete their data. Users are never hard-deleted.
 
-   _Consent text:_ each invitable role has its own versioned template in the repository, because each role stores different data. Any change to its wording is a new version, and each existing record keeps the version that was accepted. Placeholder wording is fine until real users arrive. The product owner supplies the final wording before then.
-   _Managing teachers:_ on the **Teachers** tab from milestone 6, which now lists invited teachers instead of `TEACHER_EMAILS`.
-   - An administrator can:
-     - see all teachers: name, email, institutions with their access levels, **Can create competitions**, date of consent
-     - edit a teacher's names, institutions, access levels and **Can create competitions**, selecting the institutions from the list, at least one
-     - remove a teacher
-   - An email cannot be edited. To change one, remove the person and invite the new address.
-   - Removing a person takes away that role and its details. A person left with no roles is deactivated. As in milestone 5, they are logged out everywhere. Users are never hard-deleted.
+   An email cannot be edited: remove the teacher and invite the new address.
+   _Profile:_ every signed-in person can open their own read-only profile: their personal data, roles, for a teacher the institutions with access levels and **Can create competitions**, and their consent records with each accepted text. Corrections to teacher data go through an administrator.
+   _Withdrawing consent:_ anyone whose data was stored on consent and not yet erased, including a removed teacher who is still an administrator, sees **Withdraw consent** on the profile, with a confirmation step. Withdrawing:
+   - removes every role granted by consent (here, teacher) and its details
+   - erases the names and replaces the email, so the account identifies no one while later records, such as results, can still refer to it
+   - keeps the consent records
+   - deactivates a person left with no roles, logs the person out everywhere and shows a confirmation page
 
-   _Profile:_ every signed-in person can open their own profile. It shows the personal data stored about them, their roles, for a teacher their institutions with access levels and **Can create competitions**, and their consent records with the text of each accepted version. The profile is read-only. Corrections go through an administrator.
-   _Withdrawing consent:_ a person holding a role granted by consent sees **Withdraw consent** on the profile, with a confirmation step. Withdrawing:
-   - removes the roles granted by consent (in this milestone, teacher)
-   - clears the names
-   - deletes the role's details (for a teacher, the institution links with their access levels and the **Can create competitions** setting)
-   - replaces the email with an anonymous placeholder, so later records such as competition results can still refer to the user row without identifying anyone
-   - keeps only the dates and versions in the consent records
-   - logs the person out everywhere
+   An administrator from `ADMIN_EMAILS` keeps that role and address, because they come from deployment configuration, not from consent. A person who withdrew can be invited again with an invitation issued after the withdrawal.
+   _Deleting data without signing in:_ the sign-in page has a **Delete my data** link, also for people who can no longer sign in, such as removed teachers.
+   - The person enters an email and always sees "If this email is registered, we have sent you a link." Requests are rate-limited per address.
+   - The email is sent only if the address has data stored on consent and not yet erased. It says what the link does and when it expires. No copy is kept.
+   - The link works once, within one hour. Opening it changes nothing. The page shows the data to be erased, the roles to be removed, for an administrator from `ADMIN_EMAILS` that this role and address stay, and a **Delete my data** button. The button works like **Withdraw consent**, then confirms the deletion.
+   - An expired or used link shows "This link has expired; request a new one." Any other failure shows one neutral message.
+   - These pages act on the person the link was sent to, never on the signed-in session.
 
-   An administrator from `ADMIN_EMAILS` keeps that role and that address, because that role comes from deployment configuration, not from consent. A person who withdrew can be invited again like anyone new, with an invitation issued after the withdrawal.
-   _Deleting data without signing in:_ the sign-in page has a **Delete my data** link. It lets a person withdraw consent without signing in, including a person who can no longer sign in because an administrator removed them.
-   - The person enters their email. The page always answers "If this email is registered, we have sent you a link", whether or not the address is known. Requests are rate-limited per address.
-   - An email with a link is sent only if the address belongs to a person whose data was stored on consent and has not been deleted yet, whether the account is active or removed. The email says what the link does and when it expires. As with invitations, the application keeps no copy of it.
-   - The link is valid for one hour and works once.
-   - Opening the link changes nothing. The page shows the personal data that will be erased, the roles that will be removed and a **Delete my data** button. For an administrator from `ADMIN_EMAILS`, it also says that the administrator role and address stay, because they come from deployment configuration.
-   - Pressing the button has the same effect as **Withdraw consent** on the profile, and the page then confirms that the data has been deleted.
-   - An expired or already used link shows "This link has expired; request a new one." Any other failure shows one neutral message.
-   - These pages are public. They act on the person the link was sent to, never on the signed-in session.
-
-   _Retiring the role lists:_ `TEACHER_EMAILS` and `STUDENT_EMAILS` are removed from the configuration and from `render.yaml`. The startup reconcile manages only the administrator role. It removes that role from addresses no longer listed, and deactivates a user only when no role is left. The migration deletes the teacher and student roles granted by the old lists. Until milestone 9, nobody holds the student role.
-   _Access:_ each new page states its roles, as milestone 5 requires:
-   - institutions and teacher management: administrators
-   - profile: every role
-   - the invitation pages: public
-   - the data deletion pages: public
-
-   _Privacy:_ no log line contains an email, a name or a decrypted token. The console email backend remains the only code path that prints a message body.
-   _Out of scope:_
-   - anything about students: inviting, managing, their details and consent text (milestone 9)
-   - a list of pending invitations, or cancelling one. Known limitation: an invitation sent by mistake stays valid for 7 days. If the person accepts, remove them.
-   - changing a person's email
-   - self sign-up
-
+   _Retiring the role lists:_ `TEACHER_EMAILS` and `STUDENT_EMAILS` are removed. `ADMIN_EMAILS` grants and removes only the administrator role, and deactivates a person only when no role is left. Teacher and student roles granted by the old lists are removed; users left with no role are deactivated and their emails replaced as on withdrawal. Until milestone 9, nobody holds the student role.
+   _Access:_ teacher management: administrators. Profile: every role. Invitation and data deletion pages: public.
+   _Privacy:_ no log line contains an email, a name, or an invitation or deletion link.
+   _Out of scope:_ anything about students (milestone 9); a list of pending invitations or cancelling one (known limitation: an invitation sent by mistake stays valid for 7 days; if it is accepted, remove the person); changing a person's email; self sign-up.
    _Test:_
-   - End to end: an administrator adds two institutions and invites a teacher with both selected, one with Write and one with Read, and **Can create competitions** checked. The link is read from the `memory` outbox. The GET creates nothing. The POST creates the user with the role, both institutions with their access levels, the setting and a consent record. The teacher then signs in and sees all of these on their profile.
-   - The invitation and teacher edit forms offer only active institutions in active regions. A submission with no institution, an unknown institution id, a deactivated institution, an institution in a deactivated region or an access level other than Read or Write is refused.
-   - From the teacher's page, an administrator changes one institution's access level and the **Can create competitions** setting; the other institution's level stays unchanged.
-   - An institution linked to a teacher cannot be deleted.
-   - An institution renamed between invitation and acceptance is still linked, and the acceptance page shows its new name.
+   - End to end: an administrator invites a teacher to two institutions, one Write and one Read, with **Can create competitions** checked. Opening the link from the `memory` outbox creates nothing. **I agree** creates the user with the role, both links, the setting and a consent record. The teacher signs in and sees all of it on the profile.
    - Before acceptance, no table contains the invited email or names.
-   - A tampered token, an expired token and a token with the wrong purpose label are each refused. The POST stores only what the token holds: any extra or changed form field is ignored.
-   - The invitation is refused if the inviter loses the administrator role before acceptance.
-   - An invitation issued before the teacher role was removed or consent was withdrawn cannot bring it back. This holds for a deactivated teacher, for a teacher whose data was deleted, and for an administrator who lost the teacher role but stayed active. A newer invitation can bring them back.
-   - An administrator invites their own address as a teacher. On acceptance they gain the teacher role, keep the administrator role, and get the names from the invitation. The consent record names them as their own inviter. After they withdraw consent, they keep the administrator role and address and no longer appear on the **Teachers** tab.
-   - Withdrawing consent erases the personal data and logs the person out, and that person can no longer sign in. An administrator who withdraws keeps the administrator role and address.
-   - Deleting data without signing in: a known address, an unknown address and an address whose data was already deleted get the same answer, and only the first receives an email. Opening the link changes nothing. Pressing the button erases the data as withdrawing does. A used link and an expired link are each refused.
-   - A teacher removed by an administrator can delete their data through the sign-in page link.
-   - Logs captured during all of the above contain no email, name or token.
+   - The forms offer only active institutions in active regions. No institution, an unknown or deactivated institution, an institution in a deactivated region, or an access level other than Read or Write is refused. A link to an institution deactivated later survives an edit.
+   - Changing one link's access level and the setting leaves the other link unchanged. A linked institution cannot be deleted.
+   - An institution renamed before acceptance shows its new name. One deleted or deactivated before acceptance makes the acceptance fail.
+   - A tampered or expired link is refused. Exactly what the link holds is stored; extra or changed form fields are ignored.
+   - Acceptance is refused if the inviter lost the administrator role.
+   - An invitation issued before the teacher role was removed or consent was withdrawn cannot bring it back: for a deactivated teacher, a teacher whose data was deleted, and an administrator who lost the teacher role but stayed active. A newer invitation can.
+   - An administrator invites their own address: they gain the teacher role and the invitation's names, keep the administrator role, and are their own inviter. After withdrawing, they keep the administrator role and address and leave the **Teachers** tab.
+   - Withdrawing erases the personal data and logs the person out; a person without the administrator role can no longer sign in.
+   - A removed teacher can delete their data: from the profile if still an administrator, otherwise through **Delete my data**.
+   - Delete my data: known, unknown and already erased addresses get the same answer, and only the known one receives an email. Opening the link changes nothing. The button erases as withdrawing does. A used or an expired link is refused.
+   - Logs contain no email, name or link.
    - The reconcile manages only the administrator role.
 
 9. **User management with consent: students.** Teachers invite students to the institutions where they have Write access (milestone 8). The student role is added to the invitation and consent flow from milestone 8 as one more invitable role, so the flow itself does not change.

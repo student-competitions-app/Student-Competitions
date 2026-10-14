@@ -50,12 +50,15 @@ A web application for running online competitions among students, testing their 
 
 - A teacher is linked to one or more educational institutions.
 - A teacher only has access to the list of students from their own educational institutions.
-- Only an administrator can link a teacher to an educational institution.
+- Each link has an access level: **Read** (see the institution's students and their results) or **Write** (also add, edit and delete them).
+- Only an administrator can link a teacher to an educational institution and set the access level.
+- Only a teacher whom an administrator allowed to create competitions can create them.
 
 ### Administrator
 
 - Adds and deletes teachers in the application.
-- Links a teacher to one or more educational institutions, selecting them from the list of institutions.
+- Links a teacher to one or more educational institutions, selecting them from the list of institutions, with Read or Write access to each.
+- Decides whether a teacher can create competitions.
 - Is the only role that can edit the list of educational institutions.
 - Is the only role that can edit the list of subjects.
 
@@ -63,7 +66,8 @@ A web application for running online competitions among students, testing their 
 
 - Email, first name and last name are personal data for every role. A student's educational institution, group code and year of study are personal data too.
 - Personal data is stored only after the person has agreed to it. An administrator or teacher who adds someone sends an invitation. The person's data is saved only when that person opens the invitation and accepts the consent text. Until then, nothing about them is kept.
-- Every person can see the personal data stored about them and can withdraw consent at any time. Withdrawing erases their personal data and ends their access.
+- Every person can see the personal data stored about them and can withdraw consent at any time, even after being removed. Withdrawing erases their personal data and ends their access.
+- Administrators are the exception: they are set by deployment configuration, not invited. Withdrawing consent does not remove an administrator's role or email.
 
 ## Competition
 

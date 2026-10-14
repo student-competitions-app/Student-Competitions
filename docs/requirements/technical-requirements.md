@@ -146,6 +146,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
      - An active user who already holds the role: nothing changes, and the page says so. A second press of the button ends here too.
      - An inactive user deactivated *after* the invitation was issued: refused. A removal always wins over an older invitation.
      - An inactive user deactivated *before* the invitation was issued: reactivated with the role and details from the invitation.
+     - A person who withdrew consent *after* the invitation was issued: refused, even though their email no longer belongs to any user. Withdrawing always wins over an older invitation.
    - Every acceptance that changes something stores a consent record:
      - the user
      - the role granted
@@ -177,12 +178,22 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - keeps only the dates and versions in the consent records
    - logs the person out everywhere
 
-   An administrator from `ADMIN_EMAILS` keeps that role and that address, because that role comes from deployment configuration, not from consent. A person who withdrew can be invited again like anyone new.
+   An administrator from `ADMIN_EMAILS` keeps that role and that address, because that role comes from deployment configuration, not from consent. A person who withdrew can be invited again like anyone new, with an invitation issued after the withdrawal.
+   _Deleting data without signing in:_ the sign-in page has a **Delete my data** link. It lets a person withdraw consent without signing in, including a person who can no longer sign in because an administrator removed them.
+   - The person enters their email. The page always answers "If this email is registered, we have sent you a link", whether or not the address is known. Requests are rate-limited per address.
+   - An email with a link is sent only if the address belongs to a person whose data was stored on consent and has not been deleted yet, whether the account is active or removed. The email says what the link does and when it expires. As with invitations, the application keeps no copy of it.
+   - The link is valid for one hour and works once.
+   - Opening the link changes nothing. The page shows the personal data that will be erased, the roles that will be removed and a **Delete my data** button. For an administrator from `ADMIN_EMAILS`, it also says that the administrator role and address stay, because they come from deployment configuration.
+   - Pressing the button has the same effect as **Withdraw consent** on the profile, and the page then confirms that the data has been deleted.
+   - An expired or already used link shows "This link has expired; request a new one." Any other failure shows one neutral message.
+   - These pages are public. They act on the person the link was sent to, never on the signed-in session.
+
    _Retiring the role lists:_ `TEACHER_EMAILS` and `STUDENT_EMAILS` are removed from the configuration and from `render.yaml`. The startup reconcile manages only the administrator role. It removes that role from addresses no longer listed, and deactivates a user only when no role is left. The migration deletes the teacher and student roles granted by the old lists. Until milestone 9, nobody holds the student role.
    _Access:_ each new page states its roles, as milestone 5 requires:
    - institutions and teacher management: administrators
    - profile: every role
    - the invitation pages: public
+   - the data deletion pages: public
 
    _Privacy:_ no log line contains an email, a name or a decrypted token. The console email backend remains the only code path that prints a message body.
    _Out of scope:_
@@ -203,6 +214,9 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - A person removed after an invitation was issued cannot be brought back by it. A newer invitation can bring them back.
    - An administrator invited as a teacher gains the teacher role and keeps the administrator role.
    - Withdrawing consent erases the personal data and logs the person out, and that person can no longer sign in. An administrator who withdraws keeps the administrator role and address.
+   - Deleting data without signing in: a known address, an unknown address and an address whose data was already deleted get the same answer, and only the first receives an email. Opening the link changes nothing. Pressing the button erases the data as withdrawing does. A used link and an expired link are each refused.
+   - A teacher removed by an administrator can delete their data through the sign-in page link.
+   - An invitation issued before a person withdrew consent cannot bring them back, including a person whom an administrator removed before they withdrew. A newer invitation can bring them back.
    - Logs captured during all of the above contain no email, name or token.
    - The reconcile manages only the administrator role.
 

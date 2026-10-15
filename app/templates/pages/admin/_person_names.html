@@ -1,0 +1,6 @@
+<label for="first_name">First name</label>
+<input type="text" id="first_name" name="first_name" maxlength="100" required value="{{ values.first_name }}"{% if errors.first_name %} aria-invalid="true" aria-describedby="first-name-error"{% endif %}>
+{% if errors.first_name %}<small id="first-name-error">{{ errors.first_name }}</small>{% endif %}
+<label for="last_name">Last name</label>
+<input type="text" id="last_name" name="last_name" maxlength="100" required value="{{ values.last_name }}"{% if errors.last_name %} aria-invalid="true" aria-describedby="last-name-error"{% endif %}>
+{% if errors.last_name %}<small id="last-name-error">{{ errors.last_name }}</small>{% endif %}

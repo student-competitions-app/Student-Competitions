@@ -59,8 +59,8 @@ def test_the_route_table_is_not_empty() -> None:
 
 
 def test_the_write_routes_are_exact() -> None:
-    """Signing in and out, choosing a role, and the administrator's subject, region and
-    institution actions."""
+    """Signing in and out, choosing a role, the administrator's subject, region, institution and
+    teacher actions, and accepting an invitation."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -82,6 +82,13 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", f"{INSTITUTION}/deactivate"),
         ("POST", f"{INSTITUTION}/activate"),
         ("POST", f"{INSTITUTION}/delete"),
+        ("POST", "/admin/teachers/invite"),
+        ("POST", "/admin/teachers/{user_id:int}"),
+        ("POST", "/admin/teachers/{user_id:int}/remove"),
+        ("POST", "/invitations/{token}"),
+        ("POST", "/profile/withdraw"),
+        ("POST", "/data-deletion"),
+        ("POST", "/data-deletion/confirm/{token}"),
     }
 
 
@@ -97,6 +104,14 @@ def test_the_allowlist_is_exact() -> None:
         ("POST", "/login/code"),
         ("POST", "/logout"),
         ("GET", "/healthz"),
+        ("GET", "/invitations/{token}"),
+        ("POST", "/invitations/{token}"),
+        ("GET", "/data-deletion"),
+        ("POST", "/data-deletion"),
+        ("GET", "/data-deletion/requested"),
+        ("GET", "/data-deletion/confirm/{token}"),
+        ("POST", "/data-deletion/confirm/{token}"),
+        ("GET", "/data-erased"),
     }
 
 

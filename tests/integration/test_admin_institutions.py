@@ -17,8 +17,10 @@ from sqlmodel import Session, select
 
 import app.services.institutions
 from app.core.db import utc_now
-from app.models import Institution, Region
+from app.main import app as app_module
+from app.models import AccessLevel, Institution, Region
 from app.schemas.names import name_key
+from tests.conftest import invite_and_accept
 
 TAB = "/admin/institutions"
 MISSING = 999
@@ -916,6 +918,25 @@ def test_an_institution_in_use_cannot_be_deleted(
     assert f'<form method="post" action="{institution_path(kyiv, academy)}/deactivate">' in body
     assert f'<a href="{region_path(kyiv)}">Back to “Kyiv”</a>' in body
     assert current_tabs(body) == [TAB]
+    assert institutions(session) == before
+
+
+def test_an_institution_linked_to_a_teacher_cannot_be_deleted(
+    admin_client: TestClient, session: Session
+) -> None:
+    """Milestone 8 FR-012, US3-8: a real teacher link, with no stand-in for the count."""
+    kyiv = add_region(session, "Kyiv")
+    academy = add_institution(session, kyiv, "Academy")
+    invite_and_accept(
+        app_module.state.engine,
+        app_module.state.settings,
+        email="olena@example.org",
+        institutions={academy: AccessLevel.READ},
+    )
+    before = institutions(session)
+    response = post(admin_client, f"{institution_path(kyiv, academy)}/delete")
+    assert response.status_code == 409
+    assert IN_USE.format("Academy") in response.text
     assert institutions(session) == before
 
 

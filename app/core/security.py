@@ -8,9 +8,10 @@ unit-testable without an application or a database, and this module never import
 D7). Like everything here it only looks at what it is given.
 
 Every keyed value uses HMAC-SHA256 over a message that starts with a fixed purpose label
-(`login-code`, `session`, `rate-limit`) and a NUL, so a value computed for one purpose can never
-be replayed as another, although one `SECRET_KEY` keys them all. See
-specs/004-email-otp-auth/research.md#d2, #d3, #d5, #d8 and #d12.
+(`login-code`, `session`, `rate-limit`, `invitation-cutoff`) and a NUL, so a value computed for
+one purpose can never be replayed as another, although one `SECRET_KEY` keys them all. See
+specs/004-email-otp-auth/research.md#d2, #d3, #d5, #d8 and #d12, and
+specs/008-teacher-management-consent/research.md#d5.
 """
 
 import base64
@@ -121,6 +122,16 @@ def hash_rate_limit_key(secret_key: str, bucket: str, key: str) -> str:
     """What is stored for a rate-limit hit, so neither addresses nor client IPs are kept in
     plain form (research D5)."""
     return _hmac_hex(secret_key, f"rate-limit\x00{bucket}\x00{key}")
+
+
+def hash_invitation_cutoff_key(secret_key: str, email: str) -> str:
+    """What an invitation cut-off is stored under: a keyed hash of the address, which the caller
+    has already normalised (specs/008-teacher-management-consent/research.md#d5).
+
+    The one keyed hash FR-003 allows for cut-offs. It must be keyed: a plain hash of an address
+    can be reversed by hashing candidate addresses.
+    """
+    return _hmac_hex(secret_key, f"invitation-cutoff\x00{email}")
 
 
 def safe_next_path(value: str | None) -> str:

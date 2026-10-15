@@ -1,0 +1,12 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Your data has been erased — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <h1>Your data has been erased.</h1>
+  <p>Your names, and your email address unless you are an administrator, have been erased, and the roles granted with your consent were removed. The records that you once agreed are kept as proof of consent.</p>
+  <p>Any session you had was ended.</p>
+  <p><a href="/">Go to the home page</a></p>
+</section>
+{% endblock %}

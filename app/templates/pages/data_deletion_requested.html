@@ -1,0 +1,11 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Link requested — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <h1>Check your email</h1>
+  <p>If this email is registered, we have sent you a link.</p>
+  <p class="auth-alternatives"><a href="/login">Back to sign in</a></p>
+</section>
+{% endblock %}

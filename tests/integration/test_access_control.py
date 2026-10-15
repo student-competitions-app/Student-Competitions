@@ -12,9 +12,19 @@ from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from app.models import Role
+from app.main import app
+from app.models import (
+    AccessLevel,
+    ConsentRecord,
+    Role,
+    TeacherInstitution,
+    TeacherProfile,
+    User,
+    UserRole,
+)
+from app.services.consent import current_consent_text
 from app.services.email import EmailMessage
 from app.services.institutions import create_institution, list_institutions
 from app.services.regions import create_region, list_regions
@@ -25,6 +35,9 @@ from tests.conftest import (
     STUDENT_EMAIL,
     TEACHER_EMAIL,
     ClientAs,
+    invite,
+    invite_and_accept,
+    make_institution,
 )
 from tests.integration.test_login_flow import sign_in
 
@@ -416,3 +429,168 @@ def test_signing_in_returns_to_the_selected_region(
     page = client.get(path)
     assert page.status_code == 200
     assert f'<a href="{path}" aria-current="true">Kyiv</a>' in page.text
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 8: teacher management, the profile and the link pages
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/008-teacher-management-consent/spec.md user story 8 and contracts/http-routes.md
+# "Access summary". `{t}` is a real teacher, created through the invitation services.
+
+TEACHER_PAGES = [
+    "/admin/teachers",
+    "/admin/teachers/invite",
+    "/admin/teachers/{t}",
+    "/admin/teachers/{t}/remove",
+]
+
+
+def teacher_actions(school: int) -> list[tuple[str, dict[str, object]]]:
+    picker = {"institution": [str(school)], "access": [f"{school}:write"]}
+    return [
+        (
+            "/admin/teachers/invite",
+            {"email": "new@example.org", "first_name": "N", "last_name": "N", **picker},
+        ),
+        ("/admin/teachers/{t}", {"first_name": "Hacked", "last_name": "Hacked", **picker}),
+        ("/admin/teachers/{t}/remove", {}),
+    ]
+
+
+@pytest.fixture
+def school(client: TestClient) -> int:
+    return make_institution(app.state.engine, "School 5", "Kyiv")
+
+
+@pytest.fixture
+def teacher_id(school: int) -> int:
+    return invite_and_accept(
+        app.state.engine,
+        app.state.settings,
+        email="olena@example.org",
+        institutions={school: AccessLevel.READ},
+    )
+
+
+def teacher_state(session: Session) -> list[list[tuple[object, ...]]]:
+    """Users, roles, links, profiles and consent records: everything teacher management writes."""
+    session.expire_all()
+    return [
+        [
+            (u.id, u.email, u.is_active, u.first_name, u.last_name, u.updated_at)
+            for u in session.exec(select(User).order_by(User.id))
+        ],
+        sorted((r.user_id, r.role) for r in session.exec(select(UserRole))),
+        sorted(
+            (link.user_id, link.institution_id, link.access_level, link.updated_at)
+            for link in session.exec(select(TeacherInstitution))
+        ),
+        sorted(
+            (p.user_id, p.can_create_competitions, p.updated_at)
+            for p in session.exec(select(TeacherProfile))
+        ),
+        sorted((c.id, c.user_id) for c in session.exec(select(ConsentRecord))),
+    ]
+
+
+@pytest.mark.parametrize("who", ["teacher", "student", "admin-as-student"])
+def test_others_are_denied_every_teacher_page_and_action(
+    client_as: ClientAs,
+    session: Session,
+    outbox: list[EmailMessage],
+    school: int,
+    teacher_id: int,
+    who: str,
+) -> None:
+    """US8-1, US8-2, FR-063, FR-064: `403`, and nothing changes, nothing is sent."""
+    if who == "admin-as-student":
+        browser, label = client_as(ADMIN_STUDENT_EMAIL, STUDENT), STUDENT.label
+    else:
+        role = TEACHER if who == "teacher" else STUDENT
+        browser, label = client_as(SINGLE_ROLE[role]), role.label
+    for template in TEACHER_PAGES:
+        response = browser.get(template.format(t=teacher_id), follow_redirects=False)
+        assert response.status_code == 403, template
+        assert f"Your current role, {label}, cannot open this page." in response.text
+    before, sent = teacher_state(session), len(outbox)
+    for template, data in teacher_actions(school):
+        response = browser.post(template.format(t=teacher_id), data=data, follow_redirects=False)
+        assert response.status_code == 403, template
+        assert teacher_state(session) == before, template
+    assert len(outbox) == sent
+
+
+def test_anonymous_visitors_are_sent_to_sign_in_from_teacher_pages_and_actions(
+    client: TestClient, session: Session, outbox: list[EmailMessage], school: int, teacher_id: int
+) -> None:
+    for template in [*TEACHER_PAGES, "/profile", "/profile/withdraw"]:
+        path = template.format(t=teacher_id)
+        response = client.get(path, follow_redirects=False)
+        assert response.status_code == 303, path
+        assert response.headers["location"] == f"/login?next={quote(path, safe='')}"
+    before, sent = teacher_state(session), len(outbox)
+    for template, data in [*teacher_actions(school), ("/profile/withdraw", {})]:
+        response = client.post(template.format(t=teacher_id), data=data, follow_redirects=False)
+        assert response.status_code == 303, template
+        assert response.headers["location"] == "/login"
+    assert teacher_state(session) == before
+    assert len(outbox) == sent
+
+
+@pytest.mark.parametrize("email", [ADMIN_EMAIL, TEACHER_EMAIL, STUDENT_EMAIL])
+def test_every_role_opens_only_its_own_profile(client_as: ClientAs, email: str) -> None:
+    """FR-062: the profile and the withdrawal step show the signed-in person only."""
+    browser = client_as(email)
+    for path in ("/profile", "/profile/withdraw"):
+        response = browser.get(path)
+        assert response.status_code in {200, 409}, path
+        others = {ADMIN_EMAIL, TEACHER_EMAIL, STUDENT_EMAIL} - {email}
+        for other in others:
+            assert f">{other}<" not in response.text.replace(f">{email}<", "")
+
+
+def test_a_person_without_a_current_role_chooses_one_first(
+    client_as: ClientAs, outbox: list[EmailMessage], school: int
+) -> None:
+    """Milestone 5's rule for every private page; the link pages are served directly."""
+    browser = client_as(ADMIN_STUDENT_EMAIL, None)
+    for path in ("/profile", "/admin/teachers"):
+        response = browser.get(path, follow_redirects=False)
+        assert response.status_code == 303
+        assert response.headers["location"] == f"/role?next={quote(path, safe='')}"
+    for path in ("/data-deletion", "/data-deletion/requested", "/data-erased"):
+        assert browser.get(path, follow_redirects=False).status_code == 200, path
+    token = invite(
+        app.state.engine,
+        app.state.settings,
+        email="olena@example.org",
+        institutions={school: AccessLevel.READ},
+    )
+    assert browser.get(f"/invitations/{token}", follow_redirects=False).status_code == 200
+
+
+@pytest.mark.parametrize("who", ["anonymous", ADMIN_EMAIL, TEACHER_EMAIL])
+def test_link_pages_act_only_on_the_person_in_the_link(
+    client: TestClient, client_as: ClientAs, school: int, who: str
+) -> None:
+    """US8-4, FR-055."""
+    browser = client if who == "anonymous" else client_as(who)
+    token = invite(
+        app.state.engine,
+        app.state.settings,
+        email="olena@example.org",
+        institutions={school: AccessLevel.READ},
+    )
+    page = browser.get(f"/invitations/{token}")
+    assert page.status_code == 200
+    assert "olena@example.org" in page.text
+    with Session(app.state.engine) as session:
+        text_id = current_consent_text(session, TEACHER).id
+    browser.post(f"/invitations/{token}", data={"consent_text_id": str(text_id)})
+    with Session(app.state.engine) as session:
+        olena = session.exec(select(User).where(User.email == "olena@example.org")).one()
+        assert olena.first_name == "Olena"
+        for email in (ADMIN_EMAIL, TEACHER_EMAIL):
+            other = session.exec(select(User).where(User.email == email)).one()
+            assert other.first_name is None

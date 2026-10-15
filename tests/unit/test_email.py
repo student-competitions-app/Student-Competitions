@@ -1,11 +1,13 @@
-"""The login email and the three ways of sending it.
+"""The emails (sign-in code, invitation, data deletion) and the three ways of sending them.
 
-See specs/004-email-otp-auth/contracts/email-sender.md. No test here, or anywhere in the suite,
-reaches a real email service: the Resend sender is exercised through a fake transport.
+See specs/004-email-otp-auth/contracts/email-sender.md and
+specs/008-teacher-management-consent/contracts/services.md §email. No test here, or anywhere in the
+suite, reaches a real email service: the Resend sender is exercised through a fake transport.
 """
 
 import json
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from urllib.error import URLError
 
 import pytest
@@ -18,6 +20,8 @@ from app.services.email import (
     MemoryEmailSender,
     ResendEmailSender,
     build_email_sender,
+    deletion_message,
+    invitation_message,
     login_code_message,
 )
 
@@ -172,3 +176,77 @@ def test_build_email_sender_maps_resend() -> None:
     assert isinstance(sender, ResendEmailSender)
     assert sender.api_key == "re_test"
     assert sender.sender == "Sender <login@example.org>"
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 8: the invitation and the data-deletion link
+# ---------------------------------------------------------------------------------------------
+
+EXPIRES = datetime(2026, 10, 22, 14, 5, 9, tzinfo=UTC)
+INVITE_LINK = "https://brainring.org.ua/invitations/AbC-123_xyz"
+DELETE_LINK = "https://brainring.org.ua/data-deletion/confirm/AbC-123_xyz"
+
+
+def an_invitation() -> EmailMessage:
+    return invitation_message(
+        "olena@example.org",
+        "Admin Person",
+        "admin@example.com",
+        "Teacher",
+        [
+            "Kyiv Lyceum (Kyiv) — Write",
+            "Lviv School (Lviv) — Read",
+            "You will be able to create competitions.",
+        ],
+        INVITE_LINK,
+        EXPIRES,
+    )
+
+
+def test_the_invitation_states_everything_required() -> None:
+    """FR-021: who invites, the role, the institutions with levels, the competitions setting,
+    that nothing is stored unless accepted, the link and its expiry."""
+    message = an_invitation()
+    assert message.to == "olena@example.org"
+    assert message.subject == "You are invited to Student Competitions as a teacher"
+    for statement in (
+        "Admin Person (admin@example.com) invites you",
+        "Role: Teacher",
+        "Kyiv Lyceum (Kyiv) — Write",
+        "Lviv School (Lviv) — Read",
+        "You will be able to create competitions.",
+        "Nothing about you is stored unless you accept.",
+        f"\n{INVITE_LINK}\n",
+        "This invitation expires on 2026-10-22 14:05 UTC.",
+    ):
+        assert statement in message.text
+
+
+def test_the_invitation_subject_names_nobody() -> None:
+    message = invitation_message(
+        "olena@example.org", "Olena Admin", "a@x.org", "Teacher", [], INVITE_LINK, EXPIRES
+    )
+    assert "Olena" not in message.subject
+    assert "olena" not in message.subject
+
+
+def test_the_deletion_message() -> None:
+    """FR-051: what the link does, once, one hour, the expiry, and the ignore sentence."""
+    message = deletion_message("olena@example.org", DELETE_LINK, EXPIRES)
+    assert message.to == "olena@example.org"
+    assert message.subject == "Delete your Student Competitions data"
+    for statement in (
+        "erases your first and last name and this email address",
+        "removes the roles granted with your consent",
+        f"\n{DELETE_LINK}\n",
+        "works once, within one hour, until 2026-10-22 14:05 UTC",
+        "If you did not ask for this, you can ignore this email.",
+    ):
+        assert statement in message.text
+
+
+def test_both_messages_are_plain_text() -> None:
+    for message in (an_invitation(), deletion_message("a@x.org", DELETE_LINK, EXPIRES)):
+        assert "<" not in message.text
+        assert "href" not in message.text
+        assert set(vars(message)) == {"to", "subject", "text"}

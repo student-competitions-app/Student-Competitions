@@ -1,0 +1,41 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Teachers — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+<h1>Teachers</h1>
+{% if sent_to %}<p class="notice" role="status">Invitation sent to {{ sent_to }}</p>{% endif %}
+<p><a href="/admin/teachers/invite" role="button">Invite teacher</a></p>
+{% if teachers %}
+<div class="overflow-auto">
+  <table class="teachers-table">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Email</th>
+        <th scope="col">Educational institutions</th>
+        <th scope="col">Can create competitions</th>
+        <th scope="col">Date of consent</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in teachers %}
+      <tr>
+        <td><a href="/admin/teachers/{{ t.user_id }}">{{ t.first_name }} {{ t.last_name }}</a></td>
+        <td>{{ t.email }}</td>
+        <td>
+          {% for link in t.links %}
+          <div>{{ link.label }} — {{ link.access_level.label }}{% if not link.is_selectable %} <small class="status-deactivated">(deactivated)</small>{% endif %}</div>
+          {% endfor %}
+        </td>
+        <td>{% if t.can_create_competitions %}Yes{% else %}No{% endif %}</td>
+        <td>{{ t.consented_at|utc("date") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="list-empty">No teachers yet</p>
+{% endif %}
+{% endblock %}

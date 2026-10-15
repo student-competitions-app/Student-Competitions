@@ -1,10 +1,15 @@
 """The `user_roles` table: one row per role a person holds.
 
-See specs/005-roles-authorization/data-model.md, section 3.
+See specs/005-roles-authorization/data-model.md, section 3, and
+specs/008-teacher-management-consent/data-model.md §2.
 A person holds a role exactly when the row exists. The composite primary key allows each role at
 most once per person, and is also what rejects a concurrently starting instance's duplicate
-insert (research D8). Rows are written only by `reconcile_users`, from the deployment's role
-lists (FR-003, FR-009); no route grants, revokes or lists roles.
+insert (research D8). The writers, per role:
+
+- `admin`: only `reconcile_users`, from `ADMIN_EMAILS`;
+- `teacher`: granted only by an accepted invitation (`TEACHER_INVITATION.grant`), removed by
+  removing the teacher, withdrawal and data deletion;
+- `student`: nobody until milestone 9 (the test cast seeds it directly).
 """
 
 from datetime import datetime

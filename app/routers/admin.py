@@ -5,8 +5,10 @@ declared once, in `ADMIN_TABS`, and every administrator page renders them throug
 and `layouts/admin.html`, which marks the current tab. Tabs are ordinary links: no script.
 
 `GET /admin` keeps milestone 5's address (the home page links to it) and sends the browser on to
-the first tab. Teachers is a placeholder until milestone 8. The Educational institutions tab lives
-in `app.routers.admin_institutions`, and the Subjects tab in `app.routers.admin_subjects`.
+the first tab. The Teachers tab lives in `app.routers.admin_teachers` (milestone 8), the
+Educational institutions tab in `app.routers.admin_institutions`, and the Subjects tab in
+`app.routers.admin_subjects`. `_placeholder` and `pages/admin/placeholder.html` stay for tabs whose
+features arrive later.
 """
 
 from dataclasses import dataclass
@@ -18,7 +20,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.core.auth import allow_roles
 from app.core.config import APP_NAME
 from app.core.templates import templates
-from app.models import Role
 from app.routers.areas import ADMIN_AREA
 
 router = APIRouter()
@@ -71,12 +72,4 @@ def _placeholder(request: Request, tab: str, heading: str, note: str) -> HTMLRes
     """A tab whose features arrive later: a heading and one sentence, no actions (FR-007)."""
     return render_admin(
         request, "pages/admin/placeholder.html", tab, {"heading": heading, "note": note}
-    )
-
-
-@router.get("/admin/teachers", response_class=HTMLResponse)
-@allow_roles(Role.ADMIN)
-def admin_teachers(request: Request) -> HTMLResponse:
-    return _placeholder(
-        request, "teachers", "Teachers", "Teacher management will arrive in a later milestone."
     )

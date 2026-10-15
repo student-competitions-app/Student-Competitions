@@ -7,11 +7,12 @@ another region. Its leading `region_id` column also serves the per-region querie
 separate index (research D3).
 
 An institution is available for selection only when the institution and its region are both
-active. Nothing selects institutions yet; milestone 8's picker must compute exactly this rule.
+active; `app.services.institutions` computes this rule for the teacher picker (milestone 8).
 
-Nothing refers to institutions yet. Milestones 8 (teacher links) and 9 (students) add references,
-and each must extend `app.services.institutions.count_institution_uses`, so an institution in use
-can never be deleted.
+Teacher links (`teacher_institutions`, milestone 8) refer to institutions, and milestone 9's
+students will too; each reference is counted by
+`app.services.institutions.count_institution_uses`, so an institution in use can never be
+deleted.
 """
 
 from datetime import datetime

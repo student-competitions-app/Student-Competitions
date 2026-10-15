@@ -6,12 +6,17 @@ the address travels in a hidden field instead of a URL, where access logs would 
 (research D11). The code is issued and emailed by a background task after the response, so the
 response is the same whoever the address belongs to (research D10).
 
+After an invitation is accepted, the sign-in page is opened with the address sealed in
+`?prefill=…` (purpose `login-prefill`, 10 minutes; specs/008-teacher-management-consent research
+D13): the field is filled and the page says the account is ready. Any other value is ignored.
+
 Sync handlers: the database calls block, so FastAPI runs them in its thread pool. Every database
 failure renders a friendly 503 on the same page and is logged by exception type only. No
 handler logs an address, a code, a token or a cookie.
 """
 
 import logging
+from datetime import timedelta
 from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, Form, Query, Request
@@ -22,6 +27,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.auth import clear_session_cookie, set_session_cookie
 from app.core.config import APP_NAME, AuthSettings
 from app.core.db import SessionDep
+from app.core.sealing import SealExpired, SealInvalid, unseal
 from app.core.security import (
     SESSION_COOKIE_NAME,
     client_address,
@@ -43,6 +49,11 @@ INVALID_CODE = "Invalid or expired code. Request a new code if needed."
 UNAVAILABLE = "Sign-in is temporarily unavailable. Please try again in a moment."
 TOO_MANY = "Too many attempts. Please try again later."
 
+ACCOUNT_READY = "Your account is ready. Send yourself a sign-in code to continue."
+
+LOGIN_PREFILL_PURPOSE = "login-prefill"
+PREFILL_TTL = timedelta(minutes=10)
+
 STEP_ONE = "pages/login.html"
 STEP_TWO = "pages/login_code.html"
 
@@ -54,12 +65,19 @@ def _page(
     email: str = "",
     next_path: str = "/",
     message: str | None = None,
+    notice: str | None = None,
     status_code: int = 200,
 ) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         template,
-        {"app_name": APP_NAME, "email": email, "next": next_path, "message": message},
+        {
+            "app_name": APP_NAME,
+            "email": email,
+            "next": next_path,
+            "message": message,
+            "notice": notice,
+        },
         status_code=status_code,
     )
 
@@ -68,12 +86,32 @@ def _settings(request: Request) -> AuthSettings:
     return request.app.state.settings
 
 
+def _prefilled_email(settings: AuthSettings, prefill: str | None) -> str | None:
+    """The address in a valid, fresh `prefill` value; `None` for anything else."""
+    if not prefill:
+        return None
+    try:
+        payload = unseal(settings.secret_key, LOGIN_PREFILL_PURPOSE, prefill, PREFILL_TTL)
+    except (SealInvalid, SealExpired):
+        return None
+    email = payload.get("email")
+    return email if isinstance(email, str) else None
+
+
 @router.get("/login", response_class=HTMLResponse)
-def login_page(request: Request, next_path: str = Query("/", alias="next")) -> Response:
-    """Step 1: the email form; a signed-in user is sent straight on to `next` (FR-031)."""
+def login_page(
+    request: Request,
+    next_path: str = Query("/", alias="next"),
+    prefill: str | None = Query(None),
+) -> Response:
+    """Step 1: the email form; a signed-in user is sent straight on to `next` (FR-031), whatever
+    `prefill` says, so a self-invited administrator keeps their session."""
     next_path = safe_next_path(next_path)
     if request.state.user is not None:
         return RedirectResponse(next_path, status_code=303)
+    email = _prefilled_email(_settings(request), prefill)
+    if email is not None:
+        return _page(request, STEP_ONE, email=email, next_path=next_path, notice=ACCOUNT_READY)
     return _page(request, STEP_ONE, next_path=next_path)
 
 

@@ -3,19 +3,24 @@
 The application refuses to start without a usable database at head, or on Render without safe
 sign-in settings, so an instance that answers at all has both. See
 specs/003-database-questions/contracts/http-routes.md#application-startup-the-effective-readiness-
-gate, specs/004-email-otp-auth/contracts/configuration.md and
-specs/005-roles-authorization/contracts/configuration.md.
+gate, specs/004-email-otp-auth/contracts/configuration.md,
+specs/005-roles-authorization/contracts/configuration.md and
+specs/008-teacher-management-consent/contracts/configuration.md.
 """
+
+import logging
 
 import pytest
 from alembic.script import ScriptDirectory
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 import app.core.config as config
 from app.core.db import create_db_engine
+from app.core.log_redaction import AccessLogRedactor
 from app.core.migrations import alembic_config, head_revision
 from app.main import app
+from app.models import User, UserRole
 from app.services.database_status import read_database_status
 from tests.conftest import migrate
 
@@ -130,22 +135,41 @@ def test_starts_locally_with_no_auth_settings(
     with TestClient(app) as client:
         assert client.get("/healthz").status_code == 200
         assert app.state.settings.email_backend == "console"
-        assert app.state.settings.teacher_emails == ()
-        assert app.state.settings.student_emails == ()
+        assert app.state.settings.public_base_url is None
     assert _boots(database_url) == 1
 
 
-@pytest.mark.parametrize("name", ["TEACHER_EMAILS", "STUDENT_EMAILS"])
-def test_a_malformed_role_list_refuses_the_start_locally(
-    monkeypatch: pytest.MonkeyPatch, database_url: str, name: str
+@pytest.mark.parametrize("value", ["listed@example.com", "planted-not-an-address"])
+def test_the_retired_role_lists_are_ignored(
+    monkeypatch: pytest.MonkeyPatch, database_url: str, value: str
 ) -> None:
-    """FR-035: before any database access, naming the list and the position, never the value;
-    and the refused start is not counted."""
+    """Milestone 8 FR-056, US7-4: a leftover `TEACHER_EMAILS` or `STUDENT_EMAILS` value, valid
+    or not, neither refuses the start nor creates a user or a role."""
     monkeypatch.setenv("DATABASE_URL", database_url)
-    monkeypatch.setenv(name, "ok@example.com,planted-not-an-address")
-    with pytest.raises(config.AuthConfigError) as caught, TestClient(app):
-        pass
-    message = str(caught.value)
-    assert f"{name} entry 2 is not a valid email address." in message
-    assert "planted" not in message
-    assert _boots(database_url) == 0
+    monkeypatch.setenv("ADMIN_EMAILS", "admin@example.com")
+    monkeypatch.setenv("TEACHER_EMAILS", value)
+    monkeypatch.setenv("STUDENT_EMAILS", value)
+    with TestClient(app) as client:
+        assert client.get("/healthz").status_code == 200
+    engine = create_db_engine(database_url)
+    try:
+        with Session(engine) as session:
+            assert [user.email for user in session.exec(select(User))] == ["admin@example.com"]
+            roles = session.exec(select(UserRole.role)).all()
+            assert roles == ["admin"]
+    finally:
+        engine.dispose()
+    assert _boots(database_url) == 1
+
+
+def test_the_access_log_redactor_is_installed_once(
+    monkeypatch: pytest.MonkeyPatch, database_url: str
+) -> None:
+    """Milestone 8 research D14: one filter on `uvicorn.access`, also after a second start."""
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    access_logger = logging.getLogger("uvicorn.access")
+    for _ in range(2):
+        with TestClient(app):
+            pass
+        redactors = [f for f in access_logger.filters if isinstance(f, AccessLogRedactor)]
+        assert len(redactors) == 1

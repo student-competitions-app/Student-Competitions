@@ -100,8 +100,9 @@ jobs:
           echo "Refused as expected (exit $exit_code): $(printf '%s' "$output" | grep 'DATABASE_URL is required')"
 
       # On Render the application must also refuse to start without its sign-in settings, and
-      # the error must name every one of them (FR-041). The database is reachable here, so the
-      # refusal comes from the settings check, not from the database one.
+      # the error must name every one of them (FR-041), including milestone 8's PUBLIC_BASE_URL.
+      # The database is reachable here, so the refusal comes from the settings check, not from
+      # the database one.
       - name: Refuse to start on Render without auth settings
         run: |
           set -euo pipefail
@@ -113,13 +114,13 @@ jobs:
             echo "::error::The container started with RENDER=true and no auth settings (expected a non-zero exit). Output: ${output:0:1000}"
             exit 1
           fi
-          for name in EMAIL_BACKEND SECRET_KEY ADMIN_EMAILS RESEND_API_KEY EMAIL_FROM; do
+          for name in EMAIL_BACKEND SECRET_KEY ADMIN_EMAILS RESEND_API_KEY EMAIL_FROM PUBLIC_BASE_URL; do
             if ! printf '%s' "$output" | grep -q "$name"; then
               echo "::error::The refusal (exit $exit_code) does not name $name. Output: ${output:0:1000}"
               exit 1
             fi
           done
-          echo "Refused as expected (exit $exit_code), naming all five settings."
+          echo "Refused as expected (exit $exit_code), naming all six settings."
 
       # A complete set of settings with the console backend is still refused on Render, and the
       # error does not echo any value. The values are deliberately fake and labelled as such: this

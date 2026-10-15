@@ -14,6 +14,7 @@ from app.core.security import (
     client_address,
     generate_code,
     hash_code,
+    hash_invitation_cutoff_key,
     hash_rate_limit_key,
     hash_token,
     is_valid_email,
@@ -150,6 +151,29 @@ def test_hash_rate_limit_key_is_hex_and_differs_per_bucket() -> None:
     assert HEX64.fullmatch(first)
     assert first != hash_rate_limit_key(KEY, "code_client", "a@x.org")
     assert first != hash_rate_limit_key(OTHER_KEY, "code_email", "a@x.org")
+
+
+ALL_BUCKETS = (
+    "code_email",
+    "code_client",
+    "invite_inviter",
+    "invite_email",
+    "deletion_email",
+    "deletion_client",
+)
+
+
+def test_the_invitation_cutoff_key_is_keyed_and_purpose_separated() -> None:
+    """Milestone 8 research D5: deterministic, keyed, never the address itself, and never equal
+    to a rate-limit hash of the same address."""
+    value = hash_invitation_cutoff_key(KEY, "olena@example.org")
+    assert HEX64.fullmatch(value)
+    assert value == hash_invitation_cutoff_key(KEY, "olena@example.org")
+    assert value != hash_invitation_cutoff_key(OTHER_KEY, "olena@example.org")
+    assert value != hash_invitation_cutoff_key(KEY, "other@example.org")
+    assert "olena" not in value
+    for bucket in ALL_BUCKETS:
+        assert value != hash_rate_limit_key(KEY, bucket, "olena@example.org")
 
 
 def _request(forwarded: str | None = None, peer: str | None = "10.0.0.1") -> Request:

@@ -11,12 +11,24 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 import app.core.auth as auth
+from app.core.sealing import seal
 from app.core.security import SESSION_COOKIE_NAME, hash_token
-from app.models import Role, UserSession
+from app.main import app
+from app.models import AccessLevel, ConsentRecord, Role, User, UserRole, UserSession
+from app.services.consent import current_consent_text
+from app.services.email import EmailMessage
 from app.services.institutions import create_institution, list_institutions
 from app.services.regions import create_region, list_regions
 from app.services.subjects import create_subject, list_subjects
-from tests.conftest import ADMIN_EMAIL, ADMIN_STUDENT_EMAIL, ClientAs
+from tests.conftest import (
+    ADMIN_EMAIL,
+    ADMIN_STUDENT_EMAIL,
+    ClientAs,
+    invite,
+    invite_and_accept,
+    make_institution,
+    sign_in_directly,
+)
 
 REFUSED = "This request was refused because it did not come from this site."
 CROSS_SITE_HEADERS = [
@@ -137,3 +149,72 @@ def test_a_cross_site_region_or_institution_change_is_refused(
     session.expire_all()
     assert [r.name for r in list_regions(session)] == ["Kyiv"]
     assert [i.name for i in list_institutions(session, kyiv.id)] == ["Academy"]
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 8: invitations, acceptance, withdrawal and data deletion (FR-059)
+# ---------------------------------------------------------------------------------------------
+
+
+def consent_state(session: Session) -> list[list[tuple[object, ...]]]:
+    session.expire_all()
+    return [
+        [
+            (u.id, u.email, u.is_active, u.first_name)
+            for u in session.exec(select(User).order_by(User.id))
+        ],
+        sorted((r.user_id, r.role) for r in session.exec(select(UserRole))),
+        sorted((c.id, c.user_id) for c in session.exec(select(ConsentRecord))),
+    ]
+
+
+@pytest.mark.parametrize("forged", CROSS_SITE_HEADERS)
+def test_cross_site_consent_writes_change_nothing(
+    client: TestClient,
+    admin_client: TestClient,
+    session: Session,
+    outbox: list[EmailMessage],
+    forged: dict[str, str],
+) -> None:
+    school = make_institution(app.state.engine, "School 5", "Kyiv")
+    settings = app.state.settings
+    teacher_email = "teacher.one@example.org"
+    invite_and_accept(
+        app.state.engine, settings, email=teacher_email, institutions={school: AccessLevel.READ}
+    )
+    pending = invite(
+        app.state.engine,
+        settings,
+        email="olena@example.org",
+        institutions={school: AccessLevel.READ},
+    )
+    with Session(app.state.engine) as db:
+        user = db.exec(select(User).where(User.email == teacher_email)).one()
+        text_id = current_consent_text(db, Role.TEACHER).id
+    deletion = seal(settings.secret_key, "data-deletion", {"user": user.id})
+    teacher_browser = TestClient(app)
+    sign_in_directly(teacher_browser, teacher_email)
+
+    before, sent = consent_state(session), len(outbox)
+    attempts = [
+        (
+            admin_client,
+            "/admin/teachers/invite",
+            {
+                "email": "new@example.org",
+                "first_name": "N",
+                "last_name": "N",
+                "institution": str(school),
+                "access": f"{school}:read",
+            },
+        ),
+        (client, f"/invitations/{pending}", {"consent_text_id": str(text_id)}),
+        (teacher_browser, "/profile/withdraw", {}),
+        (client, f"/data-deletion/confirm/{deletion}", {}),
+    ]
+    for browser, path, data in attempts:
+        response = browser.post(path, data=data, headers=forged, follow_redirects=False)
+        assert response.status_code == 403, path
+        assert REFUSED in response.text
+    assert consent_state(session) == before
+    assert len(outbox) == sent

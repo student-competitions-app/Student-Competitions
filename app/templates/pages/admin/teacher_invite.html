@@ -1,0 +1,24 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Invite teacher — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+<section>
+  <h1>Invite teacher</h1>
+  <p>The person receives an email with a link. Nothing about them is stored unless they accept.</p>
+  {% if form_error %}<p class="auth-message" role="alert">{{ form_error }}</p>{% endif %}
+  <form method="post" action="/admin/teachers/invite">
+    <label for="email">Email address</label>
+    <input type="email" id="email" name="email" maxlength="254" required value="{{ values.email }}"{% if errors.email %} aria-invalid="true" aria-describedby="email-error"{% endif %}>
+    {% if errors.email %}<small id="email-error">{{ errors.email }}</small>{% endif %}
+    {% include "pages/admin/_person_names.html" %}
+    {% include "pages/admin/_institution_picker.html" %}
+    <label for="can_create_competitions">
+      <input type="checkbox" id="can_create_competitions" name="can_create_competitions"{% if values.can_create_competitions %} checked{% endif %}>
+      Can create competitions
+    </label>
+    <button type="submit">Send invitation</button>
+    <a href="/admin/teachers">Cancel</a>
+  </form>
+</section>
+{% endblock %}

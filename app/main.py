@@ -1,11 +1,15 @@
 """FastAPI application construction: startup, static mount, router registration, error handling.
 
 Startup needs a database at the schema this code expects and valid sign-in settings. The
-`lifespan` runs, in this order (specs/005-roles-authorization/contracts/configuration.md,
-FR-038):
+`lifespan` runs, in this order (specs/008-teacher-management-consent/contracts/configuration.md
+§Start-up order):
 
     resolve_database_url → resolve_auth_settings → create engine → ensure_at_head
-      → reconcile_users (one retry) → purge_expired → record_boot
+      → reconcile_users(admin_emails only, one retry) → purge_expired → record_boot
+      → install AccessLogRedactor on "uvicorn.access"
+
+The redactor keeps sealed invitation and data-deletion tokens, and the sealed `sent` and
+`prefill` values, out of uvicorn's access log (milestone 8 research D14).
 
 Both settings checks come before any database connection, so a refused start never touches the
 data and is never counted. Only then does uvicorn open the port, so an instance that answers
@@ -23,7 +27,7 @@ serves the same files wherever it is started from (FR-011, research D14).
 
 import logging
 import os
-from collections.abc import AsyncIterator, Mapping, Sequence
+from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -49,10 +53,23 @@ from app.core.config import (
     resolve_database_url,
 )
 from app.core.db import create_db_engine
+from app.core.log_redaction import AccessLogRedactor
 from app.core.migrations import ensure_at_head
 from app.core.templates import templates
-from app.models import Role
-from app.routers import admin, admin_institutions, admin_subjects, areas, auth, health, pages, roles
+from app.routers import (
+    admin,
+    admin_institutions,
+    admin_subjects,
+    admin_teachers,
+    areas,
+    auth,
+    data_deletion,
+    health,
+    invitations,
+    pages,
+    profile,
+    roles,
+)
 from app.services.database_status import record_boot
 from app.services.email import build_email_sender
 from app.services.login import purge_expired
@@ -65,10 +82,16 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 logger = logging.getLogger("uvicorn.error")
 
 
-def reconcile_users_with_retry(
-    engine: Engine, role_lists: Mapping[Role, Sequence[str]]
-) -> ReconcileResult:
-    """Reconcile the people and their roles, retrying once if another instance got there first.
+def install_access_log_redactor() -> None:
+    """Add one `AccessLogRedactor` to uvicorn's access logger, unless it already has one: the
+    application may start more than once in a process (the tests do)."""
+    access_logger = logging.getLogger("uvicorn.access")
+    if not any(isinstance(item, AccessLogRedactor) for item in access_logger.filters):
+        access_logger.addFilter(AccessLogRedactor())
+
+
+def reconcile_users_with_retry(engine: Engine, admin_emails: Sequence[str]) -> ReconcileResult:
+    """Reconcile the administrators, retrying once if another instance got there first.
 
     The only conflict possible is a second instance, started at the same moment, inserting the
     same new address or role: a unique constraint rejects one of the two inserts. The retry then
@@ -77,16 +100,16 @@ def reconcile_users_with_retry(
     """
     with Session(engine) as session:
         try:
-            return reconcile_users(session, role_lists)
+            return reconcile_users(session, admin_emails)
         except IntegrityError:
             session.rollback()
-            return reconcile_users(session, role_lists)
+            return reconcile_users(session, admin_emails)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Validate the settings, connect, refuse to start unless at head, reconcile the people
-    and their roles with the three lists, clean up expired sign-in data, and count this start.
+    """Validate the settings, connect, refuse to start unless at head, reconcile the
+    administrators with `ADMIN_EMAILS`, clean up expired sign-in data, and count this start.
 
     Any failure propagates: uvicorn exits non-zero before binding the port, so a start that was
     refused is never counted. The log lines name the engine, the revision, the boot number and
@@ -97,14 +120,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     engine = create_db_engine(database_url)
     try:
         revision = ensure_at_head(engine)
-        reconciled = reconcile_users_with_retry(
-            engine,
-            {
-                Role.ADMIN: settings.admin_emails,
-                Role.TEACHER: settings.teacher_emails,
-                Role.STUDENT: settings.student_emails,
-            },
-        )
+        reconciled = reconcile_users_with_retry(engine, settings.admin_emails)
         logger.info(
             "Users reconciled: %d created, %d reactivated, %d deactivated, %d roles added, "
             "%d roles removed, %d unchanged",
@@ -121,6 +137,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.engine = engine
         app.state.settings = settings
         app.state.email_sender = build_email_sender(settings)
+        install_access_log_redactor()
         logger.info(
             "Database: %s at schema revision %s, boot #%d", engine.dialect.name, revision, boots
         )
@@ -153,8 +170,12 @@ app.include_router(auth.router)
 app.include_router(roles.router)
 app.include_router(areas.router)
 app.include_router(admin.router)
+app.include_router(admin_teachers.router)
 app.include_router(admin_institutions.router)
 app.include_router(admin_subjects.router)
+app.include_router(invitations.router)
+app.include_router(profile.router)
+app.include_router(data_deletion.router)
 
 
 @app.exception_handler(LoginRequired)

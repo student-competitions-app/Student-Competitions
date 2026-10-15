@@ -1,9 +1,10 @@
 """Authentication settings: what is required where, and that no value is ever echoed.
 
-See specs/004-email-otp-auth/contracts/configuration.md and, for the teacher and student lists,
-specs/005-roles-authorization/contracts/configuration.md. Every case passes an explicit `environ`
-dict to `resolve_auth_settings`, never `os.environ`, so nothing depends on the shell running the
-suite.
+See specs/004-email-otp-auth/contracts/configuration.md,
+specs/005-roles-authorization/contracts/configuration.md and, for the retired teacher and student
+lists and `PUBLIC_BASE_URL`, specs/008-teacher-management-consent/contracts/configuration.md.
+Every case passes an explicit `environ` dict to `resolve_auth_settings`, never `os.environ`, so
+nothing depends on the shell running the suite.
 """
 
 import logging
@@ -27,6 +28,7 @@ RENDER_OK = {
     "ADMIN_EMAILS": "admin@example.com",
     "RESEND_API_KEY": "re_test_key",
     "EMAIL_FROM": "Student Competitions <login@example.org>",
+    "PUBLIC_BASE_URL": "https://brainring.org.ua",
 }
 
 C1 = "EMAIL_BACKEND must be one of console, memory, resend."
@@ -38,8 +40,10 @@ C7 = "RESEND_API_KEY is required for the resend email backend."
 C8 = "EMAIL_FROM is required for the resend email backend and must be a valid sender address."
 W1 = "SECRET_KEY is not set; using an insecure development key. Never do this in production."
 W2 = "EMAIL_BACKEND is not set; login emails will be printed to this console."
+C11 = "PUBLIC_BASE_URL is required when running on Render."
+C12 = "PUBLIC_BASE_URL must be an absolute URL with no path, query or fragment."
+C13 = "PUBLIC_BASE_URL must use https when running on Render."
 W3 = "ADMIN_EMAILS is empty; nobody will be able to sign in as an administrator."
-W4 = "No role lists are set; nobody will be able to sign in."
 
 
 def error_lines(environ: dict[str, str]) -> list[str]:
@@ -99,20 +103,15 @@ def test_admin_emails_are_trimmed_lowercased_deduplicated_and_sorted() -> None:
     assert settings.admin_emails == ("a@x.org", "b@x.org")
 
 
-@pytest.mark.parametrize("name", ["TEACHER_EMAILS", "STUDENT_EMAILS"])
-def test_the_new_lists_are_parsed_like_admin_emails(name: str) -> None:
-    settings = resolve_auth_settings({name: " B@example.org, a@example.org ,A@EXAMPLE.ORG,"})
-    field = name.lower()
-    assert getattr(settings, field) == ("a@example.org", "b@example.org")
-
-
-@pytest.mark.parametrize("value", [None, "", " , ,"])
-def test_the_new_lists_may_be_unset_or_empty(value: str | None) -> None:
-    """FR-037: nobody holds that role, and the start is allowed."""
-    environ = {} if value is None else {"TEACHER_EMAILS": value, "STUDENT_EMAILS": value}
-    settings = resolve_auth_settings(environ)
-    assert settings.teacher_emails == ()
-    assert settings.student_emails == ()
+@pytest.mark.parametrize("value", ["t@example.org", "not an address@@", " , ,"])
+@pytest.mark.parametrize("render", [False, True])
+def test_the_retired_lists_are_ignored(value: str, render: bool) -> None:
+    """Milestone 8 FR-056: a leftover value, valid or not, is neither read nor refused."""
+    base = dict(RENDER_OK) if render else {}
+    settings = resolve_auth_settings({**base, "TEACHER_EMAILS": value, "STUDENT_EMAILS": value})
+    assert settings == resolve_auth_settings(base)
+    assert not hasattr(settings, "teacher_emails")
+    assert not hasattr(settings, "student_emails")
 
 
 @pytest.mark.parametrize("backend", ["console", "memory"])
@@ -128,6 +127,7 @@ def test_a_complete_render_configuration_is_accepted() -> None:
     assert settings.admin_emails == ("admin@example.com",)
     assert settings.resend_api_key == "re_test_key"
     assert settings.email_from == "Student Competitions <login@example.org>"
+    assert settings.public_base_url == "https://brainring.org.ua"
 
 
 def test_auth_config_error_is_a_runtime_error() -> None:
@@ -217,7 +217,7 @@ def test_c8_both_sender_forms_are_accepted(sender: str) -> None:
 
 
 def test_render_with_nothing_set_names_every_setting_in_one_error() -> None:
-    assert error_lines({"RENDER": "true"}) == [C2, C3, C5, C7, C8]
+    assert error_lines({"RENDER": "true"}) == [C2, C3, C5, C7, C8, C11]
 
 
 def test_every_violation_is_reported_together_in_rule_order() -> None:
@@ -230,61 +230,60 @@ def test_every_violation_is_reported_together_in_rule_order() -> None:
 
 
 # ---------------------------------------------------------------------------------------------
-# Rules C9–C10: the teacher and student lists (milestone 5)
+# Rules C11–C13: the public base URL (milestone 8)
 # ---------------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("name", ["TEACHER_EMAILS", "STUDENT_EMAILS"])
+def test_c11_render_requires_a_public_base_url() -> None:
+    environ = {k: v for k, v in RENDER_OK.items() if k != "PUBLIC_BASE_URL"}
+    assert error_lines(environ) == [C11]
+    assert error_lines({**environ, "PUBLIC_BASE_URL": ""}) == [C11]
+
+
+def test_the_public_base_url_is_optional_locally() -> None:
+    assert resolve_auth_settings({}).public_base_url is None
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["ftp://x.org", "https://x.org/path", "https://x.org?q=1", "https://x.org#f", "example.org"],
+)
 @pytest.mark.parametrize("render", [False, True])
-def test_c9_c10_malformed_entries_are_reported_by_position(name: str, render: bool) -> None:
+def test_c12_only_a_bare_origin_is_accepted(value: str, render: bool) -> None:
     base = dict(RENDER_OK) if render else {}
-    assert error_lines({**base, name: "ok@example.org,bad,also@@bad"}) == [
-        f"{name} entry 2 is not a valid email address.",
-        f"{name} entry 3 is not a valid email address.",
-    ]
+    assert error_lines({**base, "PUBLIC_BASE_URL": value}) == [C12]
 
 
-def test_the_new_lists_are_optional_on_render() -> None:
-    """FR-036: a valid Render configuration without them starts."""
-    settings = resolve_auth_settings(RENDER_OK)
-    assert settings.teacher_emails == ()
-    assert settings.student_emails == ()
-    with_lists = {**RENDER_OK, "TEACHER_EMAILS": "t@example.org", "STUDENT_EMAILS": ""}
-    assert resolve_auth_settings(with_lists).teacher_emails == ("t@example.org",)
+@pytest.mark.parametrize("value", ["https://x.org/", "https://x.org"])
+def test_c12_a_trailing_slash_is_removed(value: str) -> None:
+    assert resolve_auth_settings({"PUBLIC_BASE_URL": value}).public_base_url == "https://x.org"
 
 
-def test_every_list_is_reported_in_one_error_in_rule_order() -> None:
-    environ = {
-        "EMAIL_BACKEND": "nope",
-        "ADMIN_EMAILS": "bad",
-        "TEACHER_EMAILS": "bad",
-        "STUDENT_EMAILS": "ok@example.org,bad",
-    }
-    assert error_lines(environ) == [
-        C1,
-        "ADMIN_EMAILS entry 1 is not a valid email address.",
-        "TEACHER_EMAILS entry 1 is not a valid email address.",
-        "STUDENT_EMAILS entry 2 is not a valid email address.",
-    ]
+def test_c13_render_requires_https() -> None:
+    assert error_lines({**RENDER_OK, "PUBLIC_BASE_URL": "http://x.org"}) == [C13]
+    local = resolve_auth_settings({"PUBLIC_BASE_URL": "http://localhost:8000"})
+    assert local.public_base_url == "http://localhost:8000"
+
+
+def test_c11_to_c13_come_after_c1_to_c8_in_one_error() -> None:
+    environ = {"RENDER": "true", "EMAIL_BACKEND": "nope", "PUBLIC_BASE_URL": "http://x.org"}
+    assert error_lines(environ) == [C1, C3, C5, C7, C8, C13]
+    assert error_lines({"SECRET_KEY": "short", "PUBLIC_BASE_URL": "x"}) == [C4, C12]
 
 
 # ---------------------------------------------------------------------------------------------
-# Warnings W1–W4
+# Warnings W1–W3
 # ---------------------------------------------------------------------------------------------
 
 
-def test_w1_w2_w4_warn_locally_when_unset(caplog: pytest.LogCaptureFixture) -> None:
-    """With no list at all, W4 replaces W3."""
+def test_w1_w2_w3_warn_locally_when_unset(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING, logger=WARNING_LOGGER):
         resolve_auth_settings({})
-    assert warnings(caplog) == [W1, W2, W4]
+    assert warnings(caplog) == [W1, W2, W3]
 
 
-@pytest.mark.parametrize("name", ["TEACHER_EMAILS", "STUDENT_EMAILS"])
-def test_w3_warns_when_only_the_administrators_are_missing(
-    name: str, caplog: pytest.LogCaptureFixture
-) -> None:
-    environ = {"SECRET_KEY": GOOD_KEY, "EMAIL_BACKEND": "memory", name: "a@example.org"}
+def test_w3_warns_when_the_administrators_are_missing(caplog: pytest.LogCaptureFixture) -> None:
+    environ = {"SECRET_KEY": GOOD_KEY, "EMAIL_BACKEND": "memory", "TEACHER_EMAILS": "a@x.org"}
     with caplog.at_level(logging.WARNING, logger=WARNING_LOGGER):
         resolve_auth_settings(environ)
     assert warnings(caplog) == [W3]
@@ -314,7 +313,7 @@ PLANTED_KEY = "re_planted_key"
 
 
 def assert_nothing_planted(text: str) -> None:
-    for planted in ("plantedsecret", PLANTED_KEY, "planted@@bad", "planted-from"):
+    for planted in ("plantedsecret", PLANTED_KEY, "planted@@bad", "planted-from", "planted.org"):
         assert planted not in text
     assert "planted" not in text, "no planted value of any list may appear"
 
@@ -331,6 +330,7 @@ def test_no_value_appears_in_an_error_or_a_log(
         "TEACHER_EMAILS": "teacher-planted@@bad",
         "STUDENT_EMAILS": "student-planted@@bad",
         "EMAIL_FROM": "planted-from",
+        "PUBLIC_BASE_URL": "ftp://planted.org/path",
     }
     if render:
         environ["RENDER"] = "true"
@@ -355,8 +355,9 @@ def test_repr_masks_the_secrets(caplog: pytest.LogCaptureFixture) -> None:
     assert_nothing_planted(repr(settings))
     assert_nothing_planted(str(settings))
     assert "@" not in repr(settings)
-    for counted in ("admin_emails=<1 addresses>", "teacher_emails=<2 addresses>"):
-        assert counted in repr(settings)
-    assert "student_emails=<1 addresses>" in repr(settings)
+    assert "admin_emails=<1 addresses>" in repr(settings)
+    assert "teacher_emails" not in repr(settings)
+    assert "student_emails" not in repr(settings)
+    assert "public_base_url='https://brainring.org.ua'" in repr(settings)
     for record in caplog.records:
         assert_nothing_planted(record.getMessage())

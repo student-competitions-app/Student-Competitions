@@ -15,18 +15,21 @@ from sqlmodel import Session, select
 
 import app.services.institutions
 from app.core.db import utc_now
-from app.models import Institution, Region
+from app.models import AccessLevel, Institution, Region, TeacherInstitution, User
 from app.schemas.names import InvalidName, name_key
 from app.services.institutions import (
     DuplicateInstitutionName,
     InstitutionInUse,
     InstitutionNotFound,
     RegionInactive,
+    SelectableInstitution,
     count_institution_uses,
     create_institution,
     delete_institution,
+    describe_institutions,
     get_institution,
     list_institutions,
+    list_selectable_institutions,
     rename_institution,
     set_institution_active,
 )
@@ -358,7 +361,7 @@ def test_an_institution_named_with_another_region_is_not_found(
     assert all_rows(session) == before
 
 
-def test_nothing_uses_an_institution_yet(session: Session, kyiv: Region) -> None:
+def test_a_new_institution_is_not_in_use(session: Session, kyiv: Region) -> None:
     institution = create_institution(session, kyiv.id, "Academy")
     assert count_institution_uses(session, institution.id) == 0
 
@@ -368,6 +371,39 @@ def test_delete_removes_the_row_and_frees_the_name(session: Session, kyiv: Regio
     delete_institution(session, kyiv.id, institution.id)
     assert names(session, kyiv) == []
     assert create_institution(session, kyiv.id, "ACADEMY").name == "ACADEMY"
+
+
+def link_a_teacher(session: Session, institution: Institution) -> None:
+    """A teacher link inserted directly, bypassing the teacher services."""
+    now = utc_now()
+    user = User(email="olena@example.org", is_active=True, created_at=now, updated_at=now)
+    session.add(user)
+    session.flush()
+    assert user.id is not None and institution.id is not None
+    session.add(
+        TeacherInstitution(
+            user_id=user.id,
+            institution_id=institution.id,
+            access_level=AccessLevel.READ,
+            created_at=now,
+            updated_at=now,
+        )
+    )
+    session.commit()
+
+
+def test_a_teacher_link_puts_an_institution_in_use(session: Session, kyiv: Region) -> None:
+    """Milestone 8 FR-012, US3-8: the real count, with no stand-in."""
+    institution = create_institution(session, kyiv.id, "Academy")
+    other = create_institution(session, kyiv.id, "College")
+    link_a_teacher(session, institution)
+    assert count_institution_uses(session, institution.id) == 1
+    assert count_institution_uses(session, other.id) == 0
+    before = all_rows(session)
+    with pytest.raises(InstitutionInUse) as caught:
+        delete_institution(session, kyiv.id, institution.id)
+    assert caught.value.uses == 1
+    assert all_rows(session) == before
 
 
 def test_an_institution_in_use_cannot_be_deleted(
@@ -432,3 +468,45 @@ def test_each_change_logs_the_ids_and_never_the_name(
         f"Institution deleted: id={iid} region_id={rid}",
     ]
     assert not any("Academy" in m or "College" in m for m in messages)
+
+
+# ---------------------------------------------------------------------------------------------
+# Selectable institutions (milestone 8, FR-009)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_only_active_institutions_in_active_regions_are_selectable(
+    session: Session, kyiv: Region, lviv: Region
+) -> None:
+    closed = add_region(session, "Odesa", active=False)
+    school = add_institution(session, kyiv, "school 5")
+    lyceum = add_institution(session, lviv, "Lyceum")
+    academy = add_institution(session, kyiv, "Academy")
+    add_institution(session, kyiv, "Deactivated", active=False)
+    add_institution(session, closed, "In a closed region")
+    assert list_selectable_institutions(session) == [
+        SelectableInstitution(academy.id, "Academy (Kyiv)", True),
+        SelectableInstitution(lyceum.id, "Lyceum (Lviv)", True),
+        SelectableInstitution(school.id, "school 5 (Kyiv)", True),
+    ]
+
+
+def test_describe_reports_unknown_and_unavailable_ids(
+    session: Session, kyiv: Region, lviv: Region
+) -> None:
+    open_one = add_institution(session, kyiv, "Academy")
+    deactivated = add_institution(session, kyiv, "Old", active=False)
+    in_closed = add_institution(session, lviv, "Lyceum")
+    set_region_active(session, lviv.id, False)
+    for lock in (False, True):
+        described = describe_institutions(
+            session, [open_one.id, deactivated.id, in_closed.id, MISSING], lock=lock
+        )
+        session.rollback()
+        assert set(described) == {open_one.id, deactivated.id, in_closed.id}
+        assert described[open_one.id] == SelectableInstitution(open_one.id, "Academy (Kyiv)", True)
+        assert described[deactivated.id].is_selectable is False
+        assert described[in_closed.id] == SelectableInstitution(
+            in_closed.id, "Lyceum (Lviv)", False
+        )
+    assert describe_institutions(session, []) == {}

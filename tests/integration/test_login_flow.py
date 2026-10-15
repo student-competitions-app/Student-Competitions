@@ -345,18 +345,17 @@ def test_a_single_role_person_signs_in_exactly_as_before(
     assert '<span class="site-role">· Teacher</span>' in landed.text
 
 
-def test_a_person_on_no_list_gets_no_code(
+def test_a_person_with_no_role_left_gets_no_code(
     monkeypatch: pytest.MonkeyPatch, database_url: str
 ) -> None:
-    """FR-010, US2-5: removed from every list, a person is answered like anyone else, is sent
-    nothing, and a code they already had stops working."""
+    """FR-010, US2-5: removed from the administrator list and holding no other role, a person is
+    answered like anyone else, is sent nothing, and a code they already had stops working."""
     monkeypatch.setenv("DATABASE_URL", database_url)
-    monkeypatch.setenv("STUDENT_EMAILS", STUDENT_EMAIL)
+    monkeypatch.setenv("ADMIN_EMAILS", f"{ADMIN_EMAIL},{STUDENT_EMAIL}")
     with TestClient(app) as before:
         request_code(before, email=STUDENT_EMAIL)
         old_code = code_from(app.state.email_sender.outbox[-1])
 
-    monkeypatch.setenv("STUDENT_EMAILS", "")
     monkeypatch.setenv("ADMIN_EMAILS", ADMIN_EMAIL)
     with TestClient(app) as after:
         removed = request_code(after, email=STUDENT_EMAIL)

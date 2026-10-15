@@ -18,6 +18,7 @@ same way, through a context processor that reads `request.state` (set by
 role switch and the logout form without each handler passing them (FR-031, FR-018).
 """
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,20 @@ def _current_user(request: Request) -> dict[str, Any]:
 
 
 templates = Jinja2Templates(directory=TEMPLATES_DIR, context_processors=[_current_user])
+
+
+def utc(value: datetime | None, form: str = "time") -> str:
+    """The `utc` filter (milestone 8 research D19): `value|utc` → `2026-10-22 14:05 UTC`,
+    `value|utc("date")` → `2026-10-15`, and `None` → an empty string. Stored times are already
+    UTC; the label says so, since there is no per-person time zone yet."""
+    if value is None:
+        return ""
+    if form == "date":
+        return value.strftime("%Y-%m-%d")
+    return value.strftime("%Y-%m-%d %H:%M UTC")
+
+
+templates.env.filters["utc"] = utc
 
 templates.env.globals["app_version"] = APP_VERSION
 templates.env.globals["commit_sha"] = COMMIT_SHA

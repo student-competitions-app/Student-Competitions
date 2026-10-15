@@ -15,7 +15,11 @@ Sign-in (milestone 4): every test runs with `EMAIL_BACKEND=memory`, so no email 
 process and the code can be read from the `outbox`. `client` is anonymous.
 
 Roles (milestone 5): every application fixture starts with the same cast of five people, covering
-each role and both multi-role combinations the stories use (research D12). `client_as(email,
+each role and both multi-role combinations the stories use (research D12). Since milestone 8 only
+the administrators come from configuration (`ADMIN_EMAILS`); the cast's teacher and student roles
+are seeded directly by `seed_roles_directly`, a test-only helper like `sign_in_directly`
+(milestone 8 research D16). Those cast teachers have no teacher profile, so they are not on the
+Teachers tab; tests that need a real teacher create one with `invite_and_accept`. `client_as(email,
 current_role=AUTO)` returns a client signed in as one of them, and `admin_client` is
 `client_as(ADMIN_EMAIL)`. Both go through `sign_in_directly`, which creates the session directly in
 the database: the suite's only sign-in shortcut, and it exists only in `tests/` (FR-041).
@@ -23,9 +27,11 @@ the database: the suite's only sign-in shortcut, and it exists only in `tests/` 
 
 import itertools
 import os
+import re
 import secrets
 import shutil
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -35,17 +41,23 @@ from alembic.script import ScriptDirectory
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from app.core.config import resolve_database_url
-from app.core.db import create_db_engine
+from app.core.config import AuthSettings, resolve_database_url
+from app.core.db import create_db_engine, utc_now
 from app.core.migrations import alembic_config
 from app.core.security import SESSION_COOKIE_NAME, sign_cookie_value
 from app.main import app
-from app.models import Role
+from app.models import AccessLevel, Region, Role, User, UserRole
+from app.schemas.names import name_key
+from app.schemas.teachers import TeacherDetails
+from app.services.consent import current_consent_text
 from app.services.email import EmailMessage, MemoryEmailSender
+from app.services.institutions import create_institution, set_institution_active
+from app.services.invitations import Accepted, accept_invitation, issue_invitation
+from app.services.regions import create_region, set_region_active
 from app.services.sessions import create_session, start_session
-from app.services.users import get_active_user_by_email
+from app.services.users import get_active_user_by_email, get_user_by_email
 
 ENGINES = ["sqlite", "postgresql"]
 
@@ -67,6 +79,19 @@ CAST_ADMIN_EMAILS = f"{ADMIN_EMAIL},{ADMIN_STUDENT_EMAIL}"
 CAST_TEACHER_EMAILS = f"{TEACHER_EMAIL},{TEACHER_STUDENT_EMAIL}"
 CAST_STUDENT_EMAILS = f"{STUDENT_EMAIL},{ADMIN_STUDENT_EMAIL},{TEACHER_STUDENT_EMAIL}"
 
+
+def _cast_roles() -> dict[str, set[Role]]:
+    """The cast's teacher and student roles, by address, from the two lists above."""
+    roles: dict[str, set[Role]] = {}
+    for emails, role in ((CAST_TEACHER_EMAILS, Role.TEACHER), (CAST_STUDENT_EMAILS, Role.STUDENT)):
+        for email in emails.split(","):
+            roles.setdefault(email, set()).add(role)
+    return roles
+
+
+CAST_SEEDED_ROLES = _cast_roles()
+"""What `client` seeds directly after start-up, since no setting grants these roles any more."""
+
 AUTH_VARIABLES = (
     "SECRET_KEY",
     "ADMIN_EMAILS",
@@ -74,7 +99,10 @@ AUTH_VARIABLES = (
     "STUDENT_EMAILS",
     "RESEND_API_KEY",
     "EMAIL_FROM",
+    "PUBLIC_BASE_URL",
 )
+"""Cleared for every test. The two retired lists stay here so that a developer's shell value can
+never leak into a test that asserts they are ignored."""
 
 RUN_TOKEN = secrets.token_hex(4)
 """In every PostgreSQL database name, so parallel or repeated runs against one server never
@@ -221,19 +249,49 @@ def session(engine: Engine) -> Iterator[Session]:
         yield db_session
 
 
+def seed_roles_directly(engine: Engine, roles_by_email: Mapping[str, Iterable[Role]]) -> None:
+    """Give each address the listed roles, creating an active user where there is none.
+
+    **Test-only**, like `sign_in_directly`: it writes `users` and `user_roles` rows directly. No
+    route or setting of the running application can grant a teacher or student role this way;
+    in the application a teacher role comes only from an accepted invitation (milestone 8
+    research D16). Roles already held are left alone.
+    """
+    now = utc_now()
+    with Session(engine) as db_session:
+        for email, roles in roles_by_email.items():
+            user = get_user_by_email(db_session, email)
+            if user is None:
+                user = User(email=email, is_active=True, created_at=now, updated_at=now)
+                db_session.add(user)
+                db_session.flush()
+            user.is_active = True
+            db_session.add(user)
+            assert user.id is not None
+            held = {
+                row.role
+                for row in db_session.exec(select(UserRole).where(UserRole.user_id == user.id))
+            }
+            for role in roles:
+                if role not in held:
+                    db_session.add(UserRole(user_id=user.id, role=role, created_at=now))
+        db_session.commit()
+
+
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch, database_url: str) -> Iterator[TestClient]:
     """Drive the real ASGI application in-process — no live server, no bound port.
 
     The database is given the way production gives it, through `DATABASE_URL`, so `lifespan`
-    resolves, guards and counts the start exactly as it does on Render. The cast is reconciled at
-    start from the three role lists. The client itself is anonymous.
+    resolves, guards and counts the start exactly as it does on Render. The cast's administrators
+    are reconciled at start from `ADMIN_EMAILS`; its teacher and student roles are then seeded
+    directly (`seed_roles_directly`), since no setting grants them any more. The client itself is
+    anonymous.
     """
     monkeypatch.setenv("DATABASE_URL", database_url)
     monkeypatch.setenv("ADMIN_EMAILS", CAST_ADMIN_EMAILS)
-    monkeypatch.setenv("TEACHER_EMAILS", CAST_TEACHER_EMAILS)
-    monkeypatch.setenv("STUDENT_EMAILS", CAST_STUDENT_EMAILS)
     with TestClient(app) as test_client:
+        seed_roles_directly(app.state.engine, CAST_SEEDED_ROLES)
         yield test_client
 
 
@@ -328,3 +386,130 @@ def sample_questions() -> list[dict[str, Any]]:
         if samples is not None:
             return samples
     raise LookupError("no revision in migrations/versions/ defines SAMPLE_QUESTIONS")
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 8: institutions, invitations and links
+# ---------------------------------------------------------------------------------------------
+
+TEST_SECRET_KEY = "test-secret-key-0123456789abcdefghij"
+"""The key of `auth_settings`, for service-level tests that run without the application."""
+
+
+@pytest.fixture
+def auth_settings() -> AuthSettings:
+    """Settings for service-level tests: the `memory` backend and a fixed key."""
+    return AuthSettings(
+        production=False,
+        email_backend="memory",
+        secret_key=TEST_SECRET_KEY,
+        admin_emails=(ADMIN_EMAIL,),
+        resend_api_key=None,
+        email_from=None,
+    )
+
+
+def make_institution(
+    engine: Engine,
+    name: str,
+    region: str = "Kyiv",
+    active: bool = True,
+    region_active: bool = True,
+) -> int:
+    """An institution created through the milestone 7 services, in `region` (created if missing);
+    returns its id. The statuses are applied after creation, as an administrator would."""
+    with Session(engine) as db_session:
+        found = db_session.exec(select(Region).where(Region.name_key == name_key(region))).first()
+        region_row = found if found is not None else create_region(db_session, region)
+        assert region_row.id is not None
+        if not region_row.is_active:
+            set_region_active(db_session, region_row.id, True)
+        institution = create_institution(db_session, region_row.id, name)
+        assert institution.id is not None
+        if not active:
+            set_institution_active(db_session, region_row.id, institution.id, False)
+        if not region_active:
+            set_region_active(db_session, region_row.id, False)
+        return institution.id
+
+
+TOKEN_PATTERN = re.compile(r"/(?:invitations|data-deletion/confirm)/([A-Za-z0-9_-]+)")
+
+
+def token_from(message: EmailMessage) -> str:
+    """The sealed token of the invitation or data-deletion link in `message`."""
+    found = TOKEN_PATTERN.search(message.text)
+    assert found is not None, "no link in the message"
+    return found.group(1)
+
+
+def invite(
+    engine: Engine,
+    settings: AuthSettings,
+    *,
+    email: str,
+    first: str = "Olena",
+    last: str = "Kovalenko",
+    institutions: Mapping[int, AccessLevel],
+    can_create: bool = False,
+    inviter_email: str = ADMIN_EMAIL,
+    now: datetime | None = None,
+) -> str:
+    """Issue an invitation through the real service, as `inviter_email`, and return its token."""
+    sender = MemoryEmailSender()
+    with Session(engine) as db_session:
+        inviter = get_user_by_email(db_session, inviter_email)
+        assert inviter is not None, "the inviter must exist"
+        issue_invitation(
+            db_session,
+            settings,
+            sender,
+            "http://testserver",
+            inviter,
+            Role.TEACHER,
+            email,
+            first,
+            last,
+            TeacherDetails(institutions=dict(institutions), can_create_competitions=can_create),
+            now=now,
+        )
+    [message] = sender.outbox
+    return token_from(message)
+
+
+def accept(engine: Engine, settings: AuthSettings, token: str, now: datetime | None = None) -> int:
+    """Accept `token` with the current consent text through the real service; the user id."""
+    with Session(engine) as db_session:
+        consent_text_id = current_consent_text(db_session, Role.TEACHER).id
+        assert consent_text_id is not None
+        outcome = accept_invitation(db_session, settings, token, consent_text_id, now=now)
+    assert isinstance(outcome, Accepted), outcome
+    return outcome.user_id
+
+
+def invite_and_accept(
+    engine: Engine,
+    settings: AuthSettings,
+    *,
+    email: str,
+    first: str = "Olena",
+    last: str = "Kovalenko",
+    institutions: Mapping[int, AccessLevel],
+    can_create: bool = False,
+    inviter_email: str = ADMIN_EMAIL,
+    now: datetime | None = None,
+) -> int:
+    """A real teacher: invited by `inviter_email` and accepted, through the real services.
+    Returns the teacher's user id."""
+    token = invite(
+        engine,
+        settings,
+        email=email,
+        first=first,
+        last=last,
+        institutions=institutions,
+        can_create=can_create,
+        inviter_email=inviter_email,
+        now=now,
+    )
+    return accept(engine, settings, token, now=now)

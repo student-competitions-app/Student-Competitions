@@ -54,6 +54,16 @@ PUBLIC_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/login/code"),
         ("POST", "/logout"),
         ("GET", HEALTH_PATH),
+        # Milestone 8: pages opened from an emailed link carry their own authority, the sealed
+        # token, and act only on the person it names (FR-055, FR-065).
+        ("GET", "/invitations/{token}"),
+        ("POST", "/invitations/{token}"),
+        ("GET", "/data-deletion"),
+        ("POST", "/data-deletion"),
+        ("GET", "/data-deletion/requested"),
+        ("GET", "/data-deletion/confirm/{token}"),
+        ("POST", "/data-deletion/confirm/{token}"),
+        ("GET", "/data-erased"),
     }
 )
 """The complete allowlist of `(method, path)` pairs served to anonymous visitors, and to anyone

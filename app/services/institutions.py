@@ -1,5 +1,5 @@
 """Institution operations: what the `/admin/institutions` routes call for the right-hand list,
-and milestones 8 and 9 build on.
+and what the teacher picker of milestone 8 (and the students of milestone 9) build on.
 
 See specs/007-region-and-institutions-management/contracts/institution-service.md and research
 D3–D5, D7, D9. These functions enforce no authorization: every route that calls them is
@@ -13,15 +13,22 @@ name valid, name unique.
 
 Each successful change logs one line with the institution and region ids only; a no-op logs
 nothing.
+
+**Selectable** (milestone 8, FR-009): an institution can be newly picked for a teacher only when
+it and its region are both active. `list_selectable_institutions` and `describe_institutions` are
+the one place that computes it.
 """
 
 import logging
+from collections.abc import Iterable
+from dataclasses import dataclass
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
-from app.models import Institution, Region
+from app.models import Institution, Region, TeacherInstitution
 from app.schemas.names import clean_name, name_key
 from app.services.regions import RegionNotFound, get_region
 
@@ -64,6 +71,70 @@ class InstitutionInUse(ValueError):
         super().__init__(f"Institution {institution.id} is in use")
         self.institution = institution
         self.uses = uses
+
+
+@dataclass(frozen=True)
+class SelectableInstitution:
+    """An institution as the teacher picker and the teacher pages show it."""
+
+    id: int
+    label: str
+    """"Name (Region)", by the current names."""
+    is_selectable: bool
+    """The institution and its region are both active (FR-009)."""
+
+
+def _describe(institution: Institution, region: Region) -> SelectableInstitution:
+    assert institution.id is not None
+    return SelectableInstitution(
+        id=institution.id,
+        label=f"{institution.name} ({region.name})",
+        is_selectable=institution.is_active and region.is_active,
+    )
+
+
+def _sort_key(item: SelectableInstitution) -> tuple[str, int]:
+    return (item.label.casefold(), item.id)
+
+
+def list_selectable_institutions(session: Session) -> list[SelectableInstitution]:
+    """Every active institution in an active region, sorted by "Name (Region)" ignoring case,
+    ties by id. Sorted in Python, as everywhere else (research D6)."""
+    statement = (
+        select(Institution, Region)
+        .join(Region, col(Region.id) == col(Institution.region_id))
+        .where(col(Institution.is_active), col(Region.is_active))
+    )
+    found = [_describe(institution, region) for institution, region in session.exec(statement)]
+    return sorted(found, key=_sort_key)
+
+
+def describe_institutions(
+    session: Session, ids: Iterable[int], lock: bool = False
+) -> dict[int, SelectableInstitution]:
+    """The institutions among `ids` that exist, with their current labels and whether they are
+    selectable now; an unknown id is simply absent.
+
+    With `lock`, the institution and region rows are read `FOR SHARE` for the rest of the
+    transaction (milestone 8 research D6): a concurrent deactivation or deletion of either waits
+    until this transaction commits, so what was checked here is still true when the links are
+    written. On SQLite the lock renders nothing; SQLite already serialises writers.
+    """
+    wanted = sorted(set(ids))
+    if not wanted:
+        return {}
+    statement = (
+        select(Institution, Region)
+        .join(Region, col(Region.id) == col(Institution.region_id))
+        .where(col(Institution.id).in_(wanted))
+    )
+    if lock:
+        statement = statement.with_for_update(read=True)
+    return {
+        institution.id: _describe(institution, region)
+        for institution, region in session.exec(statement)
+        if institution.id is not None
+    }
 
 
 def list_institutions(session: Session, region_id: int) -> list[Institution]:
@@ -199,15 +270,19 @@ def set_institution_active(
 
 
 def count_institution_uses(session: Session, institution_id: int) -> int:
-    """How many records refer to the institution. Nothing does yet, so this is `0` (research D9).
+    """How many records refer to the institution: its teacher links (milestone 8 FR-012).
 
-    Milestone 8 (teacher links) and milestone 9 (students) each add their count here when they
-    add an `institution_id` reference: this is the single place that decides whether an
-    institution may be deleted (FR-038). Do not rely on the foreign key alone: SQLite does not
-    enforce foreign keys in this application, so without a count here an institution in use
-    could be deleted.
+    Milestone 9 (students) adds its count here when it adds an `institution_id` reference: this
+    is the single place that decides whether an institution may be deleted (FR-038). Do not rely
+    on the foreign key alone: SQLite does not enforce foreign keys in this application, so without
+    a count here an institution in use could be deleted.
     """
-    return 0
+    statement = (
+        select(func.count())
+        .select_from(TeacherInstitution)
+        .where(col(TeacherInstitution.institution_id) == institution_id)
+    )
+    return session.exec(statement).one()
 
 
 def delete_institution(session: Session, region_id: int, institution_id: int) -> None:

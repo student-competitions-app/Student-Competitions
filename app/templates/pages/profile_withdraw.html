@@ -1,0 +1,30 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Withdraw consent — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <h1>Withdraw consent</h1>
+  {% if plan is none %}
+  <p>There is no data stored on your consent to withdraw.</p>
+  <p><a href="/profile">Back to your profile</a></p>
+  {% else %}
+  <p>Withdrawing your consent erases this data:</p>
+  <ul>
+    <li>Your first name ({{ plan.first_name }}) and last name ({{ plan.last_name }})</li>
+    {% if not plan.email_kept %}<li>Your email address ({{ plan.email }})</li>{% endif %}
+  </ul>
+  {% if plan.roles_to_remove %}
+  <p>These roles are removed: {{ plan.roles_to_remove | map(attribute="label") | join(", ") }}.</p>
+  {% endif %}
+  {% if plan.email_kept %}<p>Your administrator role and email stay: they come from the deployment configuration.</p>{% endif %}
+  <p>You will be signed out everywhere.</p>
+  {% if plan.will_deactivate %}<p>You will no longer be able to sign in.</p>{% endif %}
+  <p>The record that you agreed is kept as proof of your consent.</p>
+  <form method="post" action="/profile/withdraw">
+    <button type="submit">Withdraw consent</button>
+    <a href="/profile">Cancel</a>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

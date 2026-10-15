@@ -1,14 +1,17 @@
-"""Users and their roles: looking them up, and making them match the deployment configuration.
+"""Users and their roles: looking them up, and making the administrators match the deployment
+configuration.
 
-See specs/005-roles-authorization/contracts/auth-services.md#appservicesuserspy and research D8.
-No route creates, changes or lists users or roles (FR-009): `reconcile_users`, run at every start
-from the three role lists, is the only writer. It keeps the invariant "active ⇔ holds at least
-one role", so the milestone 4 checks on `is_active` still decide who may obtain a code (FR-010).
-Nothing here logs an address.
+See specs/005-roles-authorization/contracts/auth-services.md#appservicesuserspy and
+specs/008-teacher-management-consent/contracts/services.md#appservicesuserspy-changed (research
+D16). `reconcile_users`, run at every start from `ADMIN_EMAILS`, is the only writer of the
+administrator role, and it never reads or writes any other role: teachers are granted by accepted
+invitations (`app.services.invitations`) and removed by `app.services.teachers` and
+`app.services.consent`. Every writer keeps the invariant "active ⇔ holds at least one role", so
+the milestone 4 checks on `is_active` still decide who may obtain a code (FR-010). Nothing here
+logs an address.
 """
 
-from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -41,84 +44,100 @@ def get_roles(session: Session, user_id: int) -> tuple[Role, ...]:
     return tuple(role for role in Role if role in held)
 
 
+def get_user_by_email(session: Session, email: str) -> User | None:
+    """The user with this (already normalised) address, active or not."""
+    return session.exec(select(User).where(User.email == email)).first()
+
+
+def end_all_sessions(session: Session, user_id: int) -> None:
+    """Delete every session of the user: signed out in every browser. Does not commit."""
+    session.execute(delete(UserSession).where(col(UserSession.user_id) == user_id))
+
+
+def display_name(user: User) -> str:
+    """How a person is named to others: "<first> <last>" when names are stored, otherwise the
+    email."""
+    if user.first_name is not None:
+        return f"{user.first_name} {user.last_name}"
+    return user.email
+
+
 def _all_users(session: Session) -> dict[str, User]:
     """Every user, by address. The table holds hundreds of rows at most."""
     return {user.email: user for user in session.exec(select(User))}
 
 
-def _roles_by_user(session: Session) -> dict[int, set[Role]]:
-    """Every role assignment, by user id."""
-    held: dict[int, set[Role]] = defaultdict(set)
-    for row in session.exec(select(UserRole)):
-        held[row.user_id].add(Role(row.role))
-    return held
-
-
 def reconcile_users(
     session: Session,
-    role_lists: Mapping[Role, Sequence[str]],
+    admin_emails: Sequence[str],
     now: datetime | None = None,
 ) -> ReconcileResult:
-    """Make the people and their roles exactly what the role lists say, in one transaction.
+    """Make the administrators exactly the people `ADMIN_EMAILS` lists, in one transaction.
 
-    `role_lists` holds addresses already normalised and de-duplicated by the settings loader; a
-    role missing from the mapping counts as an empty list. An address on several lists is one
-    person with several roles. A listed address with no user is created, an inactive one is
-    reactivated, and every active user on no list is deactivated. Role rows are inserted and
-    deleted so each person holds exactly the roles of the lists they are on.
+    `admin_emails` holds addresses already normalised and de-duplicated by the settings loader.
+    Only `admin` role rows are read and written (FR-057):
 
-    Every session of anyone who lost any role is deleted, so a removal logs them out everywhere;
-    adding a role keeps their sessions (FR-005). Every session and code of every inactive user is
-    deleted too, which also finishes any earlier partial run. `updated_at` changes only for people
-    whose active flag or role set changed, so a second run writes nothing (FR-006, SC-007). Users
-    are never deleted (FR-008).
+    - a listed address with no user is created, active;
+    - an inactive listed user is reactivated;
+    - the administrator role is added to every listed user who lacks it, and removed from every
+      unlisted user who holds it;
+    - a user who lost the administrator role is deactivated only when no role at all is left, so a
+      teacher removed from the list stays a teacher.
+
+    Every session of anyone who lost the administrator role is deleted, so a removal logs them out
+    everywhere; adding it keeps their sessions (FR-005). Every session and code of every inactive
+    user is deleted too, which also finishes any earlier partial run. `updated_at` changes only
+    for people whose active flag or administrator role changed, so a second run writes nothing
+    (SC-007). Users are never deleted.
 
     Commits once. If that fails with `IntegrityError` (another instance inserted the same new user
     or role at the same moment), the caller rolls back and calls this once more.
     """
     now = now or utc_now()
-    desired: dict[str, set[Role]] = defaultdict(set)
-    for role in Role:
-        for email in role_lists.get(role, ()):
-            desired[email].add(role)
-
+    listed = set(admin_emails)
     users = _all_users(session)
     created = 0
-    for email in sorted(desired):
+    for email in sorted(listed):
         if email not in users:
             users[email] = User(email=email, is_active=True, created_at=now, updated_at=now)
             session.add(users[email])
             created += 1
     session.flush()
 
-    held = _roles_by_user(session)
+    roles_by_user: dict[int, set[str]] = {}
+    for row in session.exec(select(UserRole)):
+        roles_by_user.setdefault(row.user_id, set()).add(row.role)
+
     reactivated = deactivated = roles_added = roles_removed = unchanged = 0
-    lost_a_role: set[int] = set()
+    lost_admin: set[int] = set()
     for email, user in users.items():
         assert user.id is not None
-        wanted = desired.get(email, set())
-        have = held.get(user.id, set())
-        added, removed = wanted - have, have - wanted
-        changed = bool(added or removed)
-        if wanted and not user.is_active:
+        held = roles_by_user.get(user.id, set())
+        wanted = email in listed
+        has_admin = Role.ADMIN in held
+        changed = False
+        if wanted and not has_admin:
+            session.add(UserRole(user_id=user.id, role=Role.ADMIN, created_at=now))
+            roles_added += 1
+            changed = True
+        elif not wanted and has_admin:
+            session.execute(
+                delete(UserRole).where(
+                    col(UserRole.user_id) == user.id, col(UserRole.role) == Role.ADMIN
+                )
+            )
+            roles_removed += 1
+            lost_admin.add(user.id)
+            changed = True
+        remaining = (held - {Role.ADMIN}) | ({Role.ADMIN} if wanted else set())
+        if remaining and not user.is_active:
             user.is_active = True
             reactivated += 1
             changed = True
-        elif not wanted and user.is_active:
+        elif not remaining and user.is_active:
             user.is_active = False
             deactivated += 1
             changed = True
-        for role in sorted(added):
-            session.add(UserRole(user_id=user.id, role=role, created_at=now))
-        if removed:
-            session.execute(
-                delete(UserRole).where(
-                    col(UserRole.user_id) == user.id, col(UserRole.role).in_(removed)
-                )
-            )
-            lost_a_role.add(user.id)
-        roles_added += len(added)
-        roles_removed += len(removed)
         if changed:
             user.updated_at = now
             session.add(user)
@@ -126,8 +145,8 @@ def reconcile_users(
             unchanged += 1
     session.flush()
 
-    if lost_a_role:
-        session.execute(delete(UserSession).where(col(UserSession.user_id).in_(lost_a_role)))
+    if lost_admin:
+        session.execute(delete(UserSession).where(col(UserSession.user_id).in_(lost_admin)))
     inactive = select(User.id).where(col(User.is_active).is_(False))
     session.execute(delete(UserSession).where(col(UserSession.user_id).in_(inactive)))
     session.execute(delete(LoginCode).where(col(LoginCode.user_id).in_(inactive)))

@@ -1,0 +1,40 @@
+{#- The institution picker (specs/008-teacher-management-consent research D11): one row per
+    selectable institution, a checkbox to pick it and a Read/Write select, Read preselected.
+    Rows marked `kept` are linked institutions that are no longer selectable (edit page only):
+    checked, with the level as text and no select, since their level cannot change (FR-011). -#}
+<fieldset class="picker">
+  <legend>Educational institutions</legend>
+  {% if errors.picker %}<small id="picker-error" class="form-error" role="alert">{{ errors.picker }}</small>{% endif %}
+  {% if picker_rows %}
+  <div class="overflow-auto">
+    <table class="picker-table"{% if errors.picker %} aria-describedby="picker-error"{% endif %}>
+      <thead>
+        <tr>
+          <th scope="col">Pick</th>
+          <th scope="col">Educational institution</th>
+          <th scope="col">Access</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in picker_rows %}
+        <tr>
+          <td><input type="checkbox" name="institution" value="{{ row.id }}" id="institution-{{ row.id }}"{% if row.checked %} checked{% endif %}></td>
+          <td><label for="institution-{{ row.id }}">{{ row.label }}{% if row.kept %} <small class="status-deactivated">(deactivated)</small>{% endif %}</label></td>
+          <td>
+            {% if row.kept %}{{ row.level_label }}
+            {% else %}
+            <select name="access" aria-label="Access to {{ row.label }}">
+              <option value="{{ row.id }}:read"{% if row.level == "read" %} selected{% endif %}>Read</option>
+              <option value="{{ row.id }}:write"{% if row.level == "write" %} selected{% endif %}>Write</option>
+            </select>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="list-empty">No educational institution can be selected yet. Create one on the Educational institutions tab.</p>
+  {% endif %}
+</fieldset>

@@ -34,7 +34,18 @@ from app.core.migrations import (
 )
 from app.models import BootCounter, Question
 
-APPLICATION_TABLES = {"questions", "boot_counter", "subjects", "regions", "institutions"}
+APPLICATION_TABLES = {
+    "questions",
+    "boot_counter",
+    "subjects",
+    "regions",
+    "institutions",
+    "teacher_profiles",
+    "teacher_institutions",
+    "consent_texts",
+    "consent_records",
+    "invitation_cutoffs",
+}
 
 
 @pytest.fixture
@@ -356,3 +367,121 @@ def test_downgrade_deactivates_everyone_who_is_not_an_administrator(
 
     with pytest.raises(IntegrityError), migration_engine.begin() as connection:
         add_user(connection, "nobody@example.com", None, False)
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 8: the teacher and student lists are retired, once
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/008-teacher-management-consent/data-model.md §10 and research D16. Seeded at the schema
+# revision, before the data step, with `users` as it is from milestone 6 on (no `role` column).
+
+CONSENT_SCHEMA_REVISION = "f3bd41a67737"
+RETIREMENT_REVISION = "f13dab4dd8ba"
+
+users_m8_t = sa.table(
+    "users",
+    sa.column("id", sa.Integer()),
+    sa.column("email", sa.String()),
+    sa.column("is_active", sa.Boolean()),
+    sa.column("data_erased_at", sa.DateTime(timezone=True)),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("updated_at", sa.DateTime(timezone=True)),
+)
+
+
+def add_m8_user(connection: Connection, email: str, active: bool, *roles: str) -> int:
+    now = utc_now()
+    user_id = connection.execute(
+        users_m8_t.insert()
+        .values(email=email, is_active=active, created_at=now, updated_at=now)
+        .returning(users_m8_t.c.id)
+    ).scalar_one()
+    for role in roles:
+        add_role(connection, user_id, role)
+    return user_id
+
+
+def add_login_code(connection: Connection, user_id: int) -> None:
+    now = utc_now()
+    connection.execute(
+        login_codes_t.insert().values(
+            user_id=user_id,
+            code_hash="c" * 64,
+            created_at=now,
+            expires_at=now + timedelta(minutes=20),
+            attempts=0,
+        )
+    )
+
+
+def retirement_state(engine: Engine) -> dict[str, Any]:
+    with engine.begin() as connection:
+        found = {
+            row.id: (row.email, row.is_active, row.data_erased_at is not None)
+            for row in connection.execute(
+                sa.select(
+                    users_m8_t.c.id,
+                    users_m8_t.c.email,
+                    users_m8_t.c.is_active,
+                    users_m8_t.c.data_erased_at,
+                )
+            )
+        }
+        roles = sorted(
+            tuple(row)
+            for row in connection.execute(sa.select(user_roles_t.c.user_id, user_roles_t.c.role))
+        )
+        session_owners = sorted(connection.execute(sa.select(sessions_t.c.user_id)).scalars())
+        code_owners = sorted(connection.execute(sa.select(login_codes_t.c.user_id)).scalars())
+        cutoffs = connection.execute(text("SELECT count(*) FROM invitation_cutoffs")).scalar_one()
+    return {
+        "users": found,
+        "roles": roles,
+        "sessions": session_owners,
+        "codes": code_owners,
+        "cutoffs": cutoffs,
+    }
+
+
+def test_the_role_lists_are_retired_once(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """FR-058, US7-1: list-granted teacher and student roles are gone; administrators keep their
+    role and email; people left with no role are deactivated with their email replaced; everyone
+    affected is signed out; and the way back changes nothing."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", CONSENT_SCHEMA_REVISION)
+    with migration_engine.begin() as connection:
+        admin = add_m8_user(connection, "admin@example.com", True, "admin")
+        admin_teacher = add_m8_user(
+            connection, "admin.teacher@example.com", True, "admin", "teacher"
+        )
+        teacher = add_m8_user(connection, "teacher@example.com", True, "teacher")
+        student = add_m8_user(connection, "student@example.com", True, "student")
+        both = add_m8_user(connection, "teacher.student@example.com", True, "teacher", "student")
+        former = add_m8_user(connection, "former@example.com", False)
+        for user_id, token in zip(
+            (admin, admin_teacher, teacher, student, both, former), "abcdef", strict=True
+        ):
+            add_session(connection, user_id, token * 64)
+        add_login_code(connection, teacher)
+        add_login_code(connection, admin)
+
+    run_alembic(monkeypatch, empty_database_url, "upgrade", RETIREMENT_REVISION)
+
+    state = retirement_state(migration_engine)
+    assert state["roles"] == [(admin, "admin"), (admin_teacher, "admin")]
+    assert state["users"] == {
+        admin: ("admin@example.com", True, False),
+        admin_teacher: ("admin.teacher@example.com", True, False),
+        teacher: (f"erased-{teacher}", False, True),
+        student: (f"erased-{student}", False, True),
+        both: (f"erased-{both}", False, True),
+        former: (f"erased-{former}", False, True),
+    }
+    assert state["sessions"] == [admin]
+    assert state["codes"] == [admin]
+    assert state["cutoffs"] == 0
+
+    run_alembic(monkeypatch, empty_database_url, "downgrade", "-1")
+    assert retirement_state(migration_engine) == state

@@ -16,7 +16,17 @@ from app.core.db import utc_now
 from app.core.security import hash_code, hash_token
 from app.models import LoginCode, RateLimitHit, Role, User, UserRole, UserSession
 from app.services.login import CODE_TTL, issue_code, purge_expired, verify_code
-from app.services.rate_limits import BUCKET_CODE_CLIENT, BUCKET_CODE_EMAIL, allow_code_request
+from app.services.rate_limits import (
+    BUCKET_CODE_CLIENT,
+    BUCKET_CODE_EMAIL,
+    BUCKET_DELETION_CLIENT,
+    BUCKET_DELETION_EMAIL,
+    BUCKET_INVITE_EMAIL,
+    BUCKET_INVITE_INVITER,
+    LimitCheck,
+    allow,
+    allow_code_request,
+)
 from app.services.sessions import (
     create_session,
     get_session_identity,
@@ -115,7 +125,7 @@ def test_no_code_at_all_is_refused(session: Session) -> None:
 def test_l5_a_deactivated_user_cannot_use_an_issued_code(session: Session) -> None:
     user = make_user(session, "a@x.org")
     code = issue_code(session, KEY, user)
-    reconcile_users(session, {})
+    reconcile_users(session, [])
     assert codes(session) == []
     assert verify_code(session, KEY, "a@x.org", code) is None
 
@@ -212,6 +222,32 @@ def hits(session: Session, bucket: str) -> int:
     session.expire_all()
     statement = select(func.count()).select_from(RateLimitHit).where(RateLimitHit.bucket == bucket)
     return session.exec(statement).one()
+
+
+def test_r5_the_generic_check_refuses_on_any_bucket_and_records_nothing(session: Session) -> None:
+    """Milestone 8 research D12: one bucket at its limit refuses the whole request, and a refused
+    request adds no hit to the other buckets."""
+    now = utc_now()
+    checks = (LimitCheck("invite_inviter", "3", 2), LimitCheck("invite_email", "a@x.org", 5))
+    assert allow(session, KEY, checks, now=now)
+    assert allow(session, KEY, checks, now=now)
+    assert not allow(session, KEY, checks, now=now)
+    assert hits(session, "invite_inviter") == 2
+    assert hits(session, "invite_email") == 2
+    stored = session.exec(select(RateLimitHit.key_hash)).all()
+    assert all("a@x.org" not in key_hash and key_hash != "3" for key_hash in stored)
+
+
+def test_r6_bucket_names_fit_the_column() -> None:
+    for bucket in (
+        BUCKET_CODE_EMAIL,
+        BUCKET_CODE_CLIENT,
+        BUCKET_INVITE_INVITER,
+        BUCKET_INVITE_EMAIL,
+        BUCKET_DELETION_EMAIL,
+        BUCKET_DELETION_CLIENT,
+    ):
+        assert len(bucket) <= 32
 
 
 # ---------------------------------------------------------------------------------------------

@@ -34,9 +34,15 @@ def _is_control(character: str) -> bool:
     return category.startswith("C") or category in _CONTROL_CATEGORIES
 
 
+def has_control_character(raw: str) -> bool:
+    """Whether `raw` holds a control character: any `C*` category, a line separator (`Zl`) or a
+    paragraph separator (`Zp`). Shared with the person names of milestone 8."""
+    return any(_is_control(character) for character in raw)
+
+
 def clean_name(raw: str) -> str:
     """The trimmed name, or `InvalidName` with the first rule it breaks."""
-    if any(_is_control(character) for character in raw):
+    if has_control_character(raw):
         raise InvalidName("The name cannot contain tabs, line breaks or other control characters.")
     name = raw.strip()
     if not name:

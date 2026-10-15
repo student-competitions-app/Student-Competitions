@@ -8,13 +8,19 @@ only through `app.state.email_sender.send(message)` and never looks at which bac
   outputs a message body (FR-037).
 - `memory` (the test suite) keeps messages in `outbox`; nothing leaves the process.
 - `resend` (production) posts to Resend's HTTP API.
+
+Milestone 8 adds two messages, the invitation and the data-deletion link
+(specs/008-teacher-management-consent/contracts/services.md §email). Both are plain text, carry
+their link as given with no tracking, and are never stored: the `memory` outbox exists only in
+tests.
 """
 
 import json
 import urllib.error
 import urllib.request
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Protocol
 
 from app.core.config import APP_VERSION, AuthSettings
@@ -56,6 +62,65 @@ def login_code_message(email: str, code: str, minutes: int) -> EmailMessage:
         "If you did not try to sign in, you can ignore this email."
     )
     return EmailMessage(to=email, subject=LOGIN_SUBJECT, text=text)
+
+
+DELETION_SUBJECT = "Delete your Student Competitions data"
+
+
+def format_utc(moment: datetime) -> str:
+    """`2026-10-22 14:05 UTC`: how a time is shown to people (milestone 8 research D19)."""
+    return moment.strftime("%Y-%m-%d %H:%M UTC")
+
+
+def invitation_message(
+    to: str,
+    inviter_display: str,
+    inviter_email: str,
+    role_label: str,
+    detail_lines: Sequence[str],
+    link: str,
+    expires_at: datetime,
+) -> EmailMessage:
+    """The invitation email (FR-021). The subject names the role only, never the invited person,
+    so it reveals nothing in a preview; the body says who invites, to what, what will be stored,
+    and that nothing is stored unless the person accepts."""
+    role = role_label.lower()
+    details = "\n".join(f"- {line}" for line in detail_lines)
+    text = (
+        f"{inviter_display} ({inviter_email}) invites you to Student Competitions as a {role}.\n"
+        "\n"
+        f"Role: {role_label}\n"
+        f"{details}\n"
+        "\n"
+        "Nothing about you is stored unless you accept. Open this link to see exactly what will "
+        "be stored and to accept:\n"
+        "\n"
+        f"{link}\n"
+        "\n"
+        f"This invitation expires on {format_utc(expires_at)}.\n"
+        "If you were not expecting it, you can ignore this email."
+    )
+    return EmailMessage(
+        to=to, subject=f"You are invited to Student Competitions as a {role}", text=text
+    )
+
+
+def deletion_message(to: str, link: str, expires_at: datetime) -> EmailMessage:
+    """The data-deletion email (FR-051): what the link does, that it works once and for one hour,
+    and that it can be ignored."""
+    text = (
+        "Someone asked to delete the data Student Competitions stores about this email address.\n"
+        "\n"
+        "Opening this link and confirming erases your first and last name and this email address, "
+        "and removes the roles granted with your consent. The record that you once agreed is kept "
+        "as proof of consent.\n"
+        "\n"
+        f"{link}\n"
+        "\n"
+        f"The link works once, within one hour, until {format_utc(expires_at)}.\n"
+        "If you did not ask for this, you can ignore this email."
+    )
+    return EmailMessage(to=to, subject=DELETION_SUBJECT, text=text)
 
 
 class ConsoleEmailSender:

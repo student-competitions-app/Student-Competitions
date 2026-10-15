@@ -41,16 +41,13 @@ Open <http://127.0.0.1:8000>. If port 8000 is already taken, pass `--port 8001`.
 
 ### Signing in locally as each role
 
-Every page is private, so you sign in first, as one of the three roles: administrator, teacher or student. Who holds which role comes from three comma-separated lists, `ADMIN_EMAILS`, `TEACHER_EMAILS` and `STUDENT_EMAILS`. Locally any address works, because the code is printed to the terminal. Start the application with one person per role and one with two roles:
+Every page is private, so you sign in first, as one of the three roles: administrator, teacher or student. Administrators come from one comma-separated list, `ADMIN_EMAILS`. Teachers come from **invitations**: an administrator invites them, and they become teachers only when they accept (milestone 8). No student can sign in yet (milestone 9). Locally any address works, because every email is printed to the terminal. Start the application with an administrator:
 
 ```bash
-ADMIN_EMAILS=admin@example.com \
-TEACHER_EMAILS=teacher@example.com,multi@example.com \
-STUDENT_EMAILS=student@example.com,multi@example.com \
-uv run uvicorn app.main:app --reload
+ADMIN_EMAILS=admin@example.com uv run uvicorn app.main:app --reload
 ```
 
-Open <http://127.0.0.1:8000>, which sends you to the login page, and enter one of those addresses. Nothing is sent: with no `EMAIL_BACKEND` set, the email is printed to the terminal running uvicorn:
+Open <http://127.0.0.1:8000>, which sends you to the login page, and enter that address. Nothing is sent: with no `EMAIL_BACKEND` set, the email is printed to the terminal running uvicorn:
 
 ```text
 ======== EMAIL (console backend: not sent) ========
@@ -62,9 +59,11 @@ Your Student Competitions sign-in code is: 042917
 ======== END EMAIL ========
 ```
 
-Type the code into the second step. Someone with one role, such as `teacher@example.com`, lands straight on the page they asked for, with `Student Competitions · Teacher`, their address and **Log out** in the header. Someone with several roles, such as `multi@example.com`, first sees **Choose a role**, then lands on that page; the header then also offers **Switch to** the other role. To see another role's view, log out and sign in with another address, or open a private window. Sessions last 14 days and survive `--reload`, because the local signing key is a fixed development constant. The startup log warns about each sign-in setting left at its local default; that is expected locally and refused on Render ([settings](#environment-variables)).
+Type the code into the second step. Someone with one role lands straight on the page they asked for, with `Student Competitions · Administrator`, their address (a link to their profile) and **Log out** in the header.
 
-Only addresses on at least one list can sign in. The lists are applied on every start: removing an address from **any** list and restarting logs that person out everywhere, and removing it from every list also stops them obtaining a code. Any other address gets the same "we have sent a code" page, and nothing is sent.
+**To sign in as a teacher**, invite yourself: create a region and an educational institution on the **Educational institutions** tab, then **Teachers → Invite teacher** with your own address (or any other). The invitation email is printed to the terminal; open its link (`/invitations/…`), press **I agree**, and you are a teacher too. Someone with several roles, like a self-invited administrator, first sees **Choose a role** at the next sign-in, and the header then offers **Switch to** the other role. To see another role's view, log out and sign in with another address, or open a private window. Sessions last 14 days and survive `--reload`, because the local signing key is a fixed development constant. The startup log warns about each sign-in setting left at its local default; that is expected locally and refused on Render ([settings](#environment-variables)).
+
+Only people holding a role can sign in. `ADMIN_EMAILS` is applied on every start: removing an address and restarting takes the administrator role away and logs that person out everywhere; a person left with no role can no longer obtain a code. It never touches the teacher role: removing a teacher is done on the **Teachers** tab. Any other address gets the same "we have sent a code" page, and nothing is sent. `TEACHER_EMAILS` and `STUDENT_EMAILS` are retired and ignored.
 
 ### Roles and access
 
@@ -75,14 +74,16 @@ Every page states which roles may open it, and access is judged by the role the 
 | `/` home page | ✅ | ✅ | ✅ |
 | `/admin` Administrator area (redirects to `/admin/teachers`) | ✅ | ❌ | ❌ |
 | `/admin/teachers`, `/admin/institutions`, `/admin/subjects` (and every page and action under it) | ✅ | ❌ | ❌ |
+| `/profile` own profile, and withdrawing consent | ✅ | ✅ | ✅ |
 | `/teacher` Teacher area | ❌ | ✅ | ❌ |
 | `/student` Student area | ❌ | ❌ | ✅ |
 | `/staff` Staff area | ✅ | ✅ | ❌ |
 
-The teacher, student and staff areas are placeholders that later milestones fill. The administrator area has three tabs, each with its own address. **Teachers** is still a placeholder. **Educational institutions** shows regions on the left and the institutions of the selected region on the right; the selected region is part of the address (`/admin/institutions/regions/{id}`), so it survives a reload or a bookmark. Administrators create, rename, deactivate/activate and delete both. Region names are unique ignoring case, and institution names are unique ignoring case within their region (the same name may exist in another region). A deactivated region accepts no new institutions, but its institutions keep their own statuses and stay manageable. A region that still holds institutions, or an institution in use, cannot be deleted. **Subjects** lets administrators create, rename, deactivate/activate and delete subjects. Subject names are unique ignoring case (in every alphabet), and a subject in use cannot be deleted, only deactivated. The home page links exactly the areas the current role may open. A page the current role may not open answers **403 Access denied**, naming the current role; the application never switches role for you.
+The teacher, student and staff areas are placeholders that later milestones fill. The administrator area has three tabs, each with its own address. **Teachers** lists the current teachers (sorted by last name) with their institutions and access levels (Read or Write), the **Can create competitions** setting and the date of consent; **Invite teacher** emails an invitation, and each teacher's page edits names, institutions, levels and the setting, or removes the teacher. Nothing about an invited person is stored until they press **I agree**: the whole invitation travels encrypted in the emailed link (`/invitations/…`, valid for seven days). **Educational institutions** shows regions on the left and the institutions of the selected region on the right; the selected region is part of the address (`/admin/institutions/regions/{id}`), so it survives a reload or a bookmark. Administrators create, rename, deactivate/activate and delete both. Region names are unique ignoring case, and institution names are unique ignoring case within their region (the same name may exist in another region). A deactivated region accepts no new institutions, but its institutions keep their own statuses and stay manageable. A region that still holds institutions, or an institution in use, cannot be deleted. **Subjects** lets administrators create, rename, deactivate/activate and delete subjects. Subject names are unique ignoring case (in every alphabet), and a subject in use cannot be deleted, only deactivated. The home page links exactly the areas the current role may open. A page the current role may not open answers **403 Access denied**, naming the current role; the application never switches role for you.
 
 - **Current role.** Each browser has its own. Someone with one role is always in it. Someone with several chooses one at `GET /role` right after the code, and every other page sends them there until they do.
 - **Switching.** The header's **Switch to** buttons post to `/role` and land on the home page. Switching in one browser leaves the others as they are.
+- **Consent pages.** The invitation link, **Delete my data** (`/data-deletion`, linked from the sign-in page; it emails a one-hour, one-use link) and `/data-erased` are public: the sealed token in the link is their authority, and they act only on the person it names. Everyone signed in can open `/profile`, see what is stored about them and the consent text they accepted, and **Withdraw consent**, which erases their names (and email, unless they are an administrator), removes the teacher role and signs them out everywhere.
 - **Cross-site requests.** Every request that is not `GET`, `HEAD` or `OPTIONS` is refused with 403 when the browser says it came from another site (`Sec-Fetch-Site`, or else an `Origin` that does not match `Host`), before any session is read. This covers signing in and out, choosing a role, the administrator's subject actions, and every future write, with no per-form token. Requests that carry neither header, like `curl`'s, are allowed.
 
 ### Test
@@ -161,7 +162,7 @@ Open <http://localhost:8000>. `APP_COMMIT` is optional — it stamps the commit 
 
 The container migrates its database before the application starts. With no `DATABASE_URL` it uses a throw-away SQLite file inside the container; to use a PostgreSQL database instead, pass `-e DATABASE_URL=postgresql://…`.
 
-To sign in to the container, give it an administrator with `-e ADMIN_EMAILS=you@example.com` (and, to try the other roles, `-e TEACHER_EMAILS=…` and `-e STUDENT_EMAILS=…`), and read the code from its output (`docker logs <container>` if it runs detached). The CI `image` job signs in exactly this way.
+To sign in to the container, give it an administrator with `-e ADMIN_EMAILS=you@example.com` (to try the teacher role, invite yourself as described in [Signing in locally](#signing-in-locally-as-each-role)), and read the code from its output (`docker logs <container>` if it runs detached). The CI `image` job signs in exactly this way.
 
 The port is configuration, not code. To listen somewhere else, with no rebuild:
 
@@ -190,7 +191,7 @@ Every page also carries the same release identity in its footer — `v<version>`
 
 ### Environment variables
 
-The complete configuration surface. Locally every one is optional — the application starts on the defaults below with nothing supplied. On Render, `DATABASE_URL` and the five milestone 4 sign-in settings are required, and the application refuses to start without them; `TEACHER_EMAILS` and `STUDENT_EMAILS` may be empty. The refusal names every missing or invalid setting and never shows a value.
+The complete configuration surface. Locally every one is optional — the application starts on the defaults below with nothing supplied. On Render, `DATABASE_URL`, the five milestone 4 sign-in settings and `PUBLIC_BASE_URL` are required, and the application refuses to start without them. `TEACHER_EMAILS` and `STUDENT_EMAILS` are **retired** (milestone 8): they are no longer read, and a leftover value is ignored. The refusal names every missing or invalid setting and never shows a value.
 
 | Variable | Read by | Default | Purpose |
 |---|---|---|---|
@@ -202,15 +203,14 @@ The complete configuration surface. Locally every one is optional — the applic
 | `DATABASE_URL` | `app/core/config.py` and `migrations/env.py` | `sqlite:///<repository>/data/student_competitions.sqlite3`, **only when not on Render** | Where the database is. `sqlite:///…` or `postgresql://…` (also `postgres://`; normalised to the psycopg driver). **A secret in production**: Neon's connection string, set only in Render's dashboard and never committed, pasted or logged. |
 | `RENDER` | `app/core/config.py` | *(unset)* | Set to `true` by Render. Turns a missing `DATABASE_URL` into a refusal to start instead of a silent fallback to SQLite, applies the production rules for the settings below, marks the session cookie `Secure`, and makes the per-client rate limit read `X-Forwarded-For`. Do not set it locally. |
 | `EMAIL_BACKEND` | `app/core/config.py` | `console` (with a warning) | How login emails are delivered: `console` prints them to the application's output, `memory` keeps them in memory (tests only), `resend` sends them through Resend. **Must be `resend` on Render**; declared with that value in `render.yaml`. Not a secret. |
-| `SECRET_KEY` | `app/core/config.py` | a fixed, insecure development key (with a warning) | Signs session cookies and keys the stored code and rate-limit hashes. At least 32 characters, everywhere. **A secret; required on Render.** Generate one with `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`. Changing it signs everyone out. |
-| `ADMIN_EMAILS` | `app/core/config.py` | empty (with a warning: nobody can sign in as an administrator; if all three lists are empty, nobody can sign in at all) | Comma-separated administrator addresses, e.g. `a@example.com, b@example.com`. Trimmed, lowercased and de-duplicated; a malformed entry is refused by position, never echoed. Applied on every start, with the two lists below: listed addresses become active people holding the roles of the lists they are on, anyone who loses a role is logged out everywhere, and anyone on no list is deactivated. **A secret; required and non-empty on Render.** |
-| `TEACHER_EMAILS` | `app/core/config.py` | empty: nobody is a teacher | Comma-separated teacher addresses, parsed exactly like `ADMIN_EMAILS`. An address on several lists is one person with several roles. **Temporary**: milestone 7 replaces it with teacher management in the application. **A secret; optional and may be empty on Render, but every entry must be well-formed.** Removing an address logs that person out everywhere at the restart. |
-| `STUDENT_EMAILS` | `app/core/config.py` | empty: nobody is a student | Comma-separated student addresses, exactly as `TEACHER_EMAILS`, and temporary in the same way. **A secret; optional and may be empty on Render, but every entry must be well-formed.** |
+| `SECRET_KEY` | `app/core/config.py` | a fixed, insecure development key (with a warning) | Signs session cookies, keys the stored code, rate-limit and invitation cut-off hashes, and encrypts invitation and data-deletion links. At least 32 characters, everywhere. **A secret; required on Render.** Generate one with `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`. Changing it signs everyone out, makes every outstanding invitation and data-deletion link invalid, and resets the rate limits and the invitation cut-offs (harmless: every invitation issued before the change is invalid too). |
+| `ADMIN_EMAILS` | `app/core/config.py` | empty (with a warning: nobody can sign in as an administrator) | Comma-separated administrator addresses, e.g. `a@example.com, b@example.com`. Trimmed, lowercased and de-duplicated; a malformed entry is refused by position, never echoed. Applied on every start, to the administrator role only: listed addresses become active administrators, an unlisted administrator loses the role and is logged out everywhere, and is deactivated only when no other role (such as teacher) is left. **A secret; required and non-empty on Render.** |
+| `PUBLIC_BASE_URL` | `app/core/config.py` | *(unset: links use the request's address)* | The origin of every emailed link, e.g. `https://brainring.org.ua`: an absolute `http`/`https` URL with no path, query or fragment (a trailing `/` is removed). **Required on Render, and must be `https` there**, so a link is never built from a forged `Host` header. Not a secret; set as a plain value in `render.yaml`. |
 | `RESEND_API_KEY` | `app/core/config.py` | *(unset)* | Resend API key, sending-only and restricted to the domain. **A secret; required for `resend` and on Render.** |
 | `EMAIL_FROM` | `app/core/config.py` | *(unset)* | The sender, `addr@domain` or `Display Name <addr@domain>`, on the verified domain (`Student Competitions <login@brainring.org.ua>`). **Required for `resend` and on Render**; kept in Render's environment like the secrets. |
 | `TEST_POSTGRES_URL` | `tests/conftest.py` only | *(unset: PostgreSQL tests skipped)* | **Tests only** — never read by the application. A PostgreSQL server where the tests may create databases. Not a secret (a disposable, password-less server). |
 
-The application reads seven secrets in production: `DATABASE_URL`, `SECRET_KEY`, `ADMIN_EMAILS`, `TEACHER_EMAILS`, `STUDENT_EMAILS`, `RESEND_API_KEY` and `EMAIL_FROM`. They live in Render's service environment and nowhere else: not in this repository, not in the image and not in GitHub. `render.yaml` declares them by name only (`sync: false`). The application never logs a login code, a session token, a key or an address; only the local `console` backend prints an email.
+The application reads five secrets in production: `DATABASE_URL`, `SECRET_KEY`, `ADMIN_EMAILS`, `RESEND_API_KEY` and `EMAIL_FROM`. They live in Render's service environment and nowhere else: not in this repository, not in the image and not in GitHub. `render.yaml` declares them by name only (`sync: false`). The application never logs a login code, a session token, a key, an address, a name or a link token (the access log replaces invitation and deletion tokens with `***`); only the local `console` backend prints an email.
 
 ## Deployment
 
@@ -234,7 +234,7 @@ The home page's status line (schema revision and boot count) now requires signin
 
 Login emails are sent through [Resend](https://resend.com)'s HTTP API from the verified domain `brainring.org.ua`. DKIM, SPF and DMARC are published at NIC.UA. The one-time bootstrap (verify the domain, create a sending-only key, enter the four sign-in secrets in Render) is described in [`specs/004-email-otp-auth/quickstart.md`](specs/004-email-otp-auth/quickstart.md#one-time-bootstrap-production-do-this-before-merging-to-main). It must be done **before** the first release that needs it; otherwise that release refuses to start, by design, and the previous one keeps serving.
 
-To change who can sign in, and as what, edit `ADMIN_EMAILS`, `TEACHER_EMAILS` or `STUDENT_EMAILS` in Render → service → Environment and save; the restart applies the lists. Check every entry for typos: a malformed one refuses the start (the previous release keeps serving), and a well-formed misspelling silently signs nobody in. Removing an address from any list logs that person out everywhere. To rotate `SECRET_KEY` or `RESEND_API_KEY`, replace the value there the same way. A new `SECRET_KEY` signs everyone out.
+To change who is an administrator, edit `ADMIN_EMAILS` in Render → service → Environment and save; the restart applies the list. Check every entry for typos: a malformed one refuses the start (the previous release keeps serving), and a well-formed misspelling silently signs nobody in. Removing an address logs that person out everywhere. Teachers are invited and removed on the **Teachers** tab. After the milestone 8 release, delete the retired `TEACHER_EMAILS` and `STUDENT_EMAILS` from the dashboard: they are ignored, but keeping them is misleading. To rotate `SECRET_KEY` or `RESEND_API_KEY`, replace the value there the same way. A new `SECRET_KEY` signs everyone out.
 
 **Known issue: Outlook puts the codes in Junk.** Gmail delivers them to the inbox. Outlook/Hotmail addresses currently receive them in the Junk folder, although SPF, DKIM and DMARC all pass there too: Microsoft's filter rates the new sending domain on reputation (spam confidence level 5), not on authentication. Someone signing in with an Outlook address should check Junk and mark the message *Not junk*. This must be solved before teachers and students sign in; see the result recorded under T072 in [`specs/004-email-otp-auth/tasks.md`](specs/004-email-otp-auth/tasks.md).
 
@@ -315,36 +315,42 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 │   ├── main.py              # App construction: startup (settings, database guard, user reconcile, boot count), access dependency, routers, error handlers
 │   ├── core/                # Settings, security, access control, DB engine
 │   │   ├── config.py        # App constants, COMMIT_SHA, resolve_database_url, resolve_auth_settings
-│   │   ├── security.py      # Pure helpers: email rules, codes, tokens, cookie signing, safe return paths, the cross-site rule
+│   │   ├── security.py      # Pure helpers: email rules, codes, tokens, cookie signing, keyed hashes, safe return paths, the cross-site rule
+│   │   ├── sealing.py       # seal/unseal: AES-256-GCM sealed links and notices (invitation, data deletion)
+│   │   ├── log_redaction.py # AccessLogRedactor: link tokens and sealed values out of uvicorn's access log
 │   │   ├── auth.py          # PUBLIC_ROUTES, ROLE_CHOICE_ROUTES, @allow_roles, the access dependency, CurrentUser/CurrentRole, the session cookie
 │   │   ├── db.py            # Engine, per-request session, UTC timestamp column type
 │   │   ├── migrations.py    # Expected (head) and current schema revision; startup guard
-│   │   └── templates.py     # Shared Jinja2Templates instance (+ `current_user`, `current_role`, `user_roles` for every page)
-│   ├── models/              # SQLModel tables: Question, BootCounter, User, UserRole, UserSession, LoginCode, RateLimitHit, Subject, Region (region.py), Institution (institution.py)
-│   ├── schemas/             # Validation and view schemas: questions, login form input, names.py (name rules shared by subjects, regions and institutions; subject.py aliases them)
+│   │   └── templates.py     # Shared Jinja2Templates instance (+ `current_user`, `current_role`, `user_roles` for every page, the `utc` filter)
+│   ├── models/              # SQLModel tables: Question, BootCounter, User, UserRole, UserSession, LoginCode, RateLimitHit, Subject, Region, Institution, TeacherProfile and TeacherInstitution (teacher.py), ConsentText, ConsentRecord and InvitationCutoff (consent.py)
+│   ├── schemas/             # Validation and view schemas: questions, login form input, names.py (shared name rules), people.py (person names, addresses), teachers.py (role details, the institution picker)
 │   ├── routers/             # Route handlers grouped by area/role
 │   │   ├── pages.py         # GET / → home page with the question list and status line
 │   │   ├── auth.py          # GET/POST /login, POST /login/code, POST /logout
 │   │   ├── roles.py         # GET/POST /role → choose or switch the current role
 │   │   ├── areas.py         # /teacher, /student, /staff placeholders (AREAS, /admin included, drives the home links)
-│   │   ├── admin.py         # Administrator area shell: ADMIN_TABS, GET /admin → first tab, Teachers placeholder
+│   │   ├── admin.py         # Administrator area shell: ADMIN_TABS, GET /admin → first tab
+│   │   ├── admin_teachers.py  # /admin/teachers: list, invite, teacher page (edit), remove
+│   │   ├── invitations.py   # /invitations/{token}: the acceptance page and I agree (public)
+│   │   ├── profile.py       # /profile and /profile/withdraw (every role)
+│   │   ├── data_deletion.py # /data-deletion…, /data-erased (public)
 │   │   ├── admin_institutions.py  # /admin/institutions: regions and the selected region's institutions; create, rename, deactivate/activate, delete
 │   │   ├── admin_subjects.py  # /admin/subjects: list, create, rename, deactivate/activate, delete
 │   │   └── health.py        # GET /healthz → status, version, commit
-│   ├── services/            # Business logic: questions, subjects, regions, institutions, database_status, users, sessions, login, rate_limits, email
+│   ├── services/            # Business logic: questions, subjects, regions, institutions, database_status, users, sessions, login, rate_limits, email; invitations (the generic invite/accept flow and the role registry), teachers, consent (texts, records, cut-offs, erasure), data_deletion
 │   ├── templates/           # Jinja2: layouts/, partials/ (HTMX fragments), pages/
-│   │   ├── layouts/base.html  # Header with the current role, the signed-in address, the role switch and Log out
+│   │   ├── layouts/base.html  # Header with the current role, the signed-in address (a link to the profile), the role switch and Log out
 │   │   ├── layouts/admin.html # The administrator area's tab row, current tab marked
-│   │   └── pages/           # home.html, login.html, login_code.html, role_choice.html, area.html, error.html; admin/ (placeholder, subjects, subject form, delete, not found; institutions, region and institution forms and delete confirmations, institutions not found)
+│   │   └── pages/           # home, login, login_code, role_choice, area, error; invitation and invitation_status; profile, profile_withdraw; data_deletion_request, _requested, _confirm, link_status, data_erased; admin/ (placeholder; subjects; institutions and regions; teachers, teacher_invite, teacher_form, teacher_remove, teacher_not_found, _institution_picker, _person_names)
 │   └── static/              # css/ (vendored pico.min.css + app.css), js/, img/
 ├── migrations/              # Alembic migrations
 │   ├── env.py               # Uses resolve_database_url; one locked transaction on PostgreSQL
-│   └── versions/            # Revisions: tables + boot counter, the sample questions, the sign-in tables, user roles, drop the unused users.role, subjects, regions and institutions
+│   └── versions/            # Revisions: tables + boot counter, the sample questions, the sign-in tables, user roles, drop the unused users.role, subjects, regions and institutions, consent and teachers (+ the teacher consent text v1), the one-time retirement of the role lists
 ├── data/                    # Local SQLite database (git-ignored, created by the first migration)
 ├── tests/                   # unit/, integration/, e2e/ (Playwright)
-│   ├── conftest.py          # Both-engine database fixtures (template + clone), the cast, `client`, `client_as`, `admin_client`, `outbox`
-│   ├── unit/                # config, database and auth settings, security helpers, safe return paths, the cross-site rule, email, schemas, subject and shared name rules
-│   └── integration/         # admin area, subjects and institutions, subject, region and institution services, access control, role choice and switch, cross-site, login flow and privacy, sessions, user reconcile, auth services, home, health, routes, startup, migrations, boot counter, question service
+│   ├── conftest.py          # Both-engine database fixtures (template + clone), the cast (`seed_roles_directly`), `client`, `client_as`, `admin_client`, `outbox`; `make_institution`, `invite`, `invite_and_accept`, `token_from`
+│   ├── unit/                # config, database and auth settings, security helpers, sealing, log redaction, safe return paths, the cross-site rule, email, templates, schemas (names, people, teachers), pinned consent texts
+│   └── integration/         # teacher invitation, refusals, cut-offs and edge cases, admin teachers, profile, data deletion, self-invitation, consent privacy and service, admin area, subjects and institutions, subject, region and institution services, access control, role choice and switch, cross-site, login flow and privacy, sessions, user reconcile, auth services, home, health, routes, startup, migrations, boot counter, question service
 └── scripts/                 # Developer & ops helper scripts
     ├── render_deploy.sh            # Trigger a Render deploy of one commit
     ├── wait_for_release.sh         # Poll /healthz until that commit is serving

@@ -255,3 +255,59 @@
 .regions-list li.selected .row-actions a {
   color: var(--pico-primary-inverse);
 }
+
+/* Teachers (specs/008-teacher-management-consent): the list and the institution picker wrap
+   rather than widen the page; a field-level picker error reads like the others. */
+.teachers-table td,
+.picker-table td {
+  overflow-wrap: anywhere;
+}
+
+.picker-table select {
+  margin: 0;
+}
+
+.picker-table input[type="checkbox"] {
+  margin: 0;
+}
+
+.form-error {
+  color: var(--pico-del-color);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.notice {
+  border-left: 0.25rem solid var(--pico-ins-color);
+  padding: 0.75rem 1rem;
+}
+
+/* The details an invitation will store, and a profile's data: a plain two-column list. */
+.details-list {
+  display: grid;
+  gap: 0.25rem 1rem;
+  grid-template-columns: max-content 1fr;
+}
+
+.details-list dt {
+  font-weight: bold;
+}
+
+.details-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.consent-text {
+  border-left: 0.25rem solid var(--pico-muted-border-color);
+  padding-left: 1rem;
+}
+
+.detail-lines {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.consent-record {
+  margin-block: 1rem;
+}

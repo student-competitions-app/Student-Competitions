@@ -1,0 +1,52 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Your profile — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="profile">
+  <h1>Your profile</h1>
+  <dl class="details-list">
+    <dt>Email</dt>
+    <dd>{{ person.email }}</dd>
+    {% if person.first_name is not none %}
+    <dt>First name</dt>
+    <dd>{{ person.first_name }}</dd>
+    <dt>Last name</dt>
+    <dd>{{ person.last_name }}</dd>
+    {% endif %}
+    <dt>Roles</dt>
+    <dd>{{ roles | map(attribute="label") | join(", ") }}</dd>
+    {% if teacher %}
+    <dt>Educational institutions</dt>
+    <dd>
+      <ul class="detail-lines">
+        {% for link in teacher.links %}
+        <li>{{ link.label }} — {{ link.access_level.label }}{% if not link.is_selectable %} <small class="status-deactivated">(deactivated)</small>{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </dd>
+    <dt>Can create competitions</dt>
+    <dd>{% if teacher.can_create_competitions %}Yes{% else %}No{% endif %}</dd>
+    {% endif %}
+  </dl>
+  <p>Corrections to teacher data are made by an administrator.</p>
+
+  {% if records %}
+  <h2>Your consent</h2>
+  {% for record in records %}
+  <article class="consent-record">
+    <p><strong>Accepted {{ record.accepted_at|utc }}</strong> · {{ record.role.label }} · version {{ record.version }}</p>
+    <div class="consent-text">
+      {% for paragraph in record.text.split("\n\n") %}
+      <p>{{ paragraph }}</p>
+      {% endfor %}
+    </div>
+  </article>
+  {% endfor %}
+  {% endif %}
+
+  {% if can_withdraw %}
+  <p><a href="/profile/withdraw" role="button" class="secondary">Withdraw consent</a></p>
+  {% endif %}
+</section>
+{% endblock %}

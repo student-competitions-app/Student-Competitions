@@ -1,4 +1,7 @@
-"""The administrator area's shell: the `/admin` redirect, the tab row, and the placeholders.
+"""The administrator area's shell: the `/admin` redirect and the tab row.
+
+Since milestone 8 no tab is a placeholder: the last one, Teachers, is replaced by teacher
+management (specs/008-teacher-management-consent SC-010).
 
 See specs/006-admin-area/spec.md user story 3 and contracts/http-routes.md "Area shell" and "Admin
 layout". The expected tabs are a literal copy of the spec's, kept independent of
@@ -11,19 +14,18 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.main import app
+from app.models import AccessLevel
 from app.services.institutions import create_institution
 from app.services.regions import create_region, set_region_active
 from app.services.subjects import create_subject
+from tests.conftest import invite_and_accept
 
 TABS = [
     ("/admin/teachers", "Teachers"),
     ("/admin/institutions", "Educational institutions"),
     ("/admin/subjects", "Subjects"),
 ]
-
-PLACEHOLDERS = {
-    "/admin/teachers": ("Teachers", "Teacher management will arrive in a later milestone."),
-}
 
 NAV_OPEN = '<nav class="admin-tabs" aria-label="Administrator area">'
 
@@ -76,18 +78,6 @@ def test_tabs_are_plain_links(admin_client: TestClient, path: str) -> None:
     assert "<form" not in row
     assert "hx-" not in row
     assert "<script" not in body
-
-
-@pytest.mark.parametrize("path", list(PLACEHOLDERS))
-def test_the_placeholder_tabs_offer_no_actions(admin_client: TestClient, path: str) -> None:
-    """US3-4, FR-007."""
-    heading, note = PLACEHOLDERS[path]
-    body = admin_client.get(path).text
-    assert f"<h1>{heading}</h1>" in body
-    assert note in body
-    content = after_tab_row(body)
-    assert "<form" not in content
-    assert "<button" not in content
 
 
 @pytest.mark.parametrize("path", [path for path, _ in TABS])
@@ -180,3 +170,52 @@ def test_every_institutions_page_marks_the_institutions_tab(
         assert NAV_OPEN in body, path
         assert current_tabs(body) == ["/admin/institutions"], path
         assert body.count('aria-current="page"') == 1, path
+
+
+def test_the_teachers_tab_is_no_longer_a_placeholder(admin_client: TestClient) -> None:
+    """Milestone 8 SC-010: the cast's directly seeded teachers have no teacher profile, so the
+    list is empty."""
+    response = admin_client.get("/admin/teachers")
+    assert response.status_code == 200
+    body = after_tab_row(response.text)
+    assert "Teacher management will arrive in a later milestone." not in body
+    assert "<h1>Teachers</h1>" in body
+    assert "No teachers yet" in body
+    assert '<a href="/admin/teachers/invite" role="button">Invite teacher</a>' in body
+
+
+TEACHER_PAGES = ["/admin/teachers", "/admin/teachers/invite", "/admin/teachers/999999"]
+"""Every page of the tab that needs no teacher, including the not-found page."""
+
+
+@pytest.mark.parametrize("path", TEACHER_PAGES)
+def test_every_teachers_page_marks_the_teachers_tab(admin_client: TestClient, path: str) -> None:
+    """Milestone 8: every page of the tab is inside the area, with Teachers current."""
+    response = admin_client.get(path)
+    assert response.status_code in {200, 404}
+    assert NAV_OPEN in response.text
+    assert current_tabs(response.text) == ["/admin/teachers"]
+    assert response.text.count('aria-current="page"') == 1
+
+
+def test_every_page_of_a_teacher_marks_the_teachers_tab(
+    admin_client: TestClient, session: Session
+) -> None:
+    """Milestone 8: the teacher page, the remove confirmation and their not-found pages."""
+    region = create_region(session, "Kyiv")
+    institution = create_institution(session, region.id, "Academy")
+    user_id = invite_and_accept(
+        app.state.engine,
+        app.state.settings,
+        email="olena@example.org",
+        institutions={institution.id: AccessLevel.READ},
+    )
+    for path in (
+        f"/admin/teachers/{user_id}",
+        f"/admin/teachers/{user_id}/remove",
+        "/admin/teachers/999999/remove",
+    ):
+        response = admin_client.get(path)
+        assert response.status_code in {200, 404}, path
+        assert current_tabs(response.text) == ["/admin/teachers"], path
+        assert response.text.count('aria-current="page"') == 1, path

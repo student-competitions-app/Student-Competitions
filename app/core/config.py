@@ -12,9 +12,10 @@ This module is the only place that reads the environment, for three things:
   constant because it creates the local data directory and may refuse to run. See
   specs/003-database-questions/contracts/configuration.md.
 - `resolve_auth_settings` reads and validates the sign-in settings (email backend, secret key,
-  the three role lists, Resend key and sender), refusing an unsafe production setup. See
-  specs/004-email-otp-auth/contracts/configuration.md and
-  specs/005-roles-authorization/contracts/configuration.md.
+  the administrator list, Resend key and sender, public base URL), refusing an unsafe production
+  setup. See specs/004-email-otp-auth/contracts/configuration.md,
+  specs/005-roles-authorization/contracts/configuration.md and
+  specs/008-teacher-management-consent/contracts/configuration.md.
 
 No error, warning or `repr` produced here ever contains a setting's value: in production those
 values are secrets, and these messages reach the deploy log.
@@ -27,6 +28,7 @@ from dataclasses import dataclass
 from email.utils import parseaddr
 from pathlib import Path
 from typing import Literal, cast
+from urllib.parse import urlsplit
 
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError
@@ -165,13 +167,13 @@ class AuthSettings:
     email_backend: EmailBackend
     secret_key: str
     admin_emails: tuple[str, ...]
-    """Normalised, de-duplicated and sorted, like the two lists below."""
+    """Normalised, de-duplicated and sorted. The only role list: teachers come from accepted
+    invitations (milestone 8, FR-056)."""
     resend_api_key: str | None
     email_from: str | None
-    teacher_emails: tuple[str, ...] = ()
-    """Temporary until milestone 7, which manages teachers in the application."""
-    student_emails: tuple[str, ...] = ()
-    """Temporary until milestone 7, as above."""
+    public_base_url: str | None = None
+    """The origin of emailed links, without a trailing `/`; `None` locally means "the request's
+    base URL" (milestone 8 research D15). Not a secret."""
 
     def __repr__(self) -> str:
         # Masks every value that is a secret in production, so an accidental log line or
@@ -180,10 +182,9 @@ class AuthSettings:
             f"AuthSettings(production={self.production}, "
             f"email_backend={self.email_backend!r}, secret_key='***', "
             f"admin_emails=<{len(self.admin_emails)} addresses>, "
-            f"teacher_emails=<{len(self.teacher_emails)} addresses>, "
-            f"student_emails=<{len(self.student_emails)} addresses>, "
             f"resend_api_key={'***' if self.resend_api_key else None}, "
-            f"email_from={'***' if self.email_from else None})"
+            f"email_from={'***' if self.email_from else None}, "
+            f"public_base_url={self.public_base_url!r})"
         )
 
     __str__ = __repr__
@@ -195,7 +196,7 @@ def _entries(raw: str | None) -> list[str]:
 
 
 def _parse_email_list(name: str, raw: str | None, errors: list[str]) -> tuple[str, ...]:
-    """One comma-separated address list, the same way for all three role lists.
+    """One comma-separated address list.
 
     Entries are trimmed and lowercased, empty entries are ignored, duplicates collapse, and the
     result is sorted. Each malformed entry adds one error naming the list and its 1-based position
@@ -211,15 +212,44 @@ def _parse_email_list(name: str, raw: str | None, errors: list[str]) -> tuple[st
     return tuple(sorted(addresses))
 
 
+def _parse_public_base_url(raw: str | None, production: bool, errors: list[str]) -> str | None:
+    """`PUBLIC_BASE_URL` without its trailing `/`, adding C11–C13 to `errors` as they apply."""
+    if raw is None:
+        if production:
+            errors.append("PUBLIC_BASE_URL is required when running on Render.")
+        return None
+    try:
+        parts = urlsplit(raw)
+        valid = (
+            parts.scheme in ("http", "https")
+            and bool(parts.hostname)
+            and parts.path in ("", "/")
+            and not parts.query
+            and not parts.fragment
+            and "?" not in raw
+            and "#" not in raw
+        )
+    except ValueError:
+        valid = False
+    if not valid:
+        errors.append("PUBLIC_BASE_URL must be an absolute URL with no path, query or fragment.")
+        return None
+    if production and parts.scheme != "https":
+        errors.append("PUBLIC_BASE_URL must use https when running on Render.")
+    return raw.rstrip("/")
+
+
 def resolve_auth_settings(environ: Mapping[str, str] = os.environ) -> AuthSettings:
     """Read and validate the sign-in settings, or raise one `AuthConfigError` listing them all.
 
-    Rules C1–C10 and warnings W1–W4 of specs/004-email-otp-auth/contracts/configuration.md and
-    specs/005-roles-authorization/contracts/configuration.md, in that order. Empty strings count
-    as unset. On Render every setting is required and the email must really be sent, except
-    `TEACHER_EMAILS` and `STUDENT_EMAILS`, which are optional everywhere; locally every setting is
-    optional, but a value that is present and invalid is still refused, so a typo fails fast
-    instead of silently falling back.
+    Rules C1–C8 and C11–C13 and warnings W1–W3, in that order, as listed in
+    specs/008-teacher-management-consent/contracts/configuration.md (which changes the milestone 4
+    and 5 contracts). Empty strings count as unset. On Render every setting is required and the
+    email must really be sent; locally every setting is optional, but a value that is present and
+    invalid is still refused, so a typo fails fast instead of silently falling back.
+
+    `TEACHER_EMAILS` and `STUDENT_EMAILS` are no longer read: a leftover value is ignored
+    (FR-056).
     """
 
     def read(name: str) -> str | None:
@@ -252,8 +282,7 @@ def resolve_auth_settings(environ: Mapping[str, str] = os.environ) -> AuthSettin
             "EMAIL_FROM is required for the resend email backend and must be a valid sender "
             "address."
         )
-    teacher_emails = _parse_email_list("TEACHER_EMAILS", read("TEACHER_EMAILS"), errors)
-    student_emails = _parse_email_list("STUDENT_EMAILS", read("STUDENT_EMAILS"), errors)
+    public_base_url = _parse_public_base_url(read("PUBLIC_BASE_URL"), production, errors)
     if errors:
         raise AuthConfigError(
             "Invalid authentication configuration:\n" + "\n".join(f"- {e}" for e in errors)
@@ -269,9 +298,7 @@ def resolve_auth_settings(environ: Mapping[str, str] = os.environ) -> AuthSettin
             _logger.warning(
                 "EMAIL_BACKEND is not set; login emails will be printed to this console."
             )
-        if not (admin_emails or teacher_emails or student_emails):
-            _logger.warning("No role lists are set; nobody will be able to sign in.")
-        elif not admin_emails:
+        if not admin_emails:
             _logger.warning(
                 "ADMIN_EMAILS is empty; nobody will be able to sign in as an administrator."
             )
@@ -283,6 +310,5 @@ def resolve_auth_settings(environ: Mapping[str, str] = os.environ) -> AuthSettin
         admin_emails=admin_emails,
         resend_api_key=resend_api_key,
         email_from=email_from,
-        teacher_emails=teacher_emails,
-        student_emails=student_emails,
+        public_base_url=public_base_url,
     )

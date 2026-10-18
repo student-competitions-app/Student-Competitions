@@ -87,7 +87,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _Enrolment:_
    - A student belongs to exactly one educational institution and exactly one of its classes. This is the student's **enrolment**: the institution, the class and the consent record.
    - The student's institution and class are personal data. The enrolment is stored only when the student accepts an invitation.
-   - Joining an institution always needs the student's consent for it, given by accepting an invitation. Moving to another class of the same institution needs no new consent.
+   - Moving to another class needs no new consent.
    - Students of a deactivated institution or region are kept but are not reachable until it is active again.
 
    _Access:_
@@ -97,13 +97,17 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - A teacher has access to only assigned educational institutions including access by URL.
 
    _Inviting students:_
-   - A teacher invites students in the selected class one by one. To invite a student the teacher need to fill email, first name, second name. During submision the system checks uniqueness of entered email address in scope of users with the student role. The flow of adding a student and consent is the same as in milestone 8.
-   
+   - A teacher invites students into the selected class one by one, entering the email, first name and last name (validated as in milestone 8).
+   - On submission, the email must not belong to anyone who holds the student role, in any institution. Otherwise the form shows again with "This email already belongs to a student" and the entered values, and no invitation is sent. The message never names the institution or the class. This is an intended exception to the milestone 8 rule that the invitation form does not check existing roles: a teacher may learn that an address is used by a student of an institution they are not linked to, but nothing more about that student.
+   - Student invitations are limited to 100 per inviter per hour (teacher invitations stay at 20, milestone 8). The limit per invited address stays at 5 per hour.
+   - Otherwise, the invitation, its email and its link work as in milestone 8.
+
    _Accepting:_
 
    - On top of the milestone 8 checks. Checks related to administrator are excluded, the invitation is refused, with the neutral message from milestone 8, when the class was deleted or deactivated, its institution is no longer selectable, or the inviter is no longer a teacher with Write access to that institution.
-   - A new person is created with the names from the invitation; an existing person's names are never changed.
+   - A new person is created with the names from the invitation; an existing person's names are never changed that applies to students only.
    - Accepting creates the enrolment with a consent record naming the institution, and grants the student role if the person did not hold it (for example, a teacher keeps the teacher role and gains the student role).
+   - If the person became a student after the invitation was sent, accepting changes nothing and the page says they are already a student (the milestone 8 rule for a role already held).
 
    _Consent text:_ a student consent text, versioned like the teacher one and accepted on joining an institution. It names the institution and says that the class, and with it the year of study, is stored, that the teachers of that institution can see them along with the email and names, that teachers of other institutions cannot, and that a student belongs to one institution at a time. Placeholder wording is fine until real users arrive, as in milestone 8.
 
@@ -137,6 +141,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 
    _Out of scope:_
    - the content of the **Competitions** tab
+   - changes to the profile: it stays as in milestone 8 and shows the student role and the student consent records, but not the student's institution, class or year of study
 
   10. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
     _Subjects:_ every question belongs to exactly one subject. The teacher selects it from the list kept on the **Subjects** tab (milestone 6), with no free-text entry, and the server accepts only a subject that exists. Teachers can filter the question bank by subject. The sample questions seeded in milestone 3 have no subject, and the migration deletes them, since no real data exists yet.

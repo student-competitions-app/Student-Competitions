@@ -85,16 +85,16 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - Classes can be created, edited (name and year of study), deactivated, activated and deleted. A deactivated class accepts no new students; its students stay fully manageable but cannot take part in competitions. Delete is refused while the class holds any student. An institution that holds any class cannot be deleted (the milestone 7 rule).
 
    _Enrolment:_
-   - A student belongs to exactly one educational institution and exactly one of its classes. This is the student's **enrolment**: the institution, the class and the consent record.
+   - A student belongs to exactly one educational institution and exactly one of its classes. This is the student's **enrolment**: the institution and the class.
    - The student's institution and class are personal data. The enrolment is stored only when the student accepts an invitation.
    - Moving to another class needs no new consent.
-   - Students of a deactivated institution or region are kept but are not reachable until it is active again.
+   - Students of a deactivated institution, or of an institution in a deactivated region, are kept, but until it is active again they cannot sign in with the student role and cannot take part in competitions. A person with no other role cannot sign in at all; a person with other roles is not offered the student role. They can still withdraw consent through **Delete my data** on the sign-in page (milestone 8).
 
    _Access:_
    - The teacher area: the teacher role only.
    - Seeing classes and students: institutions the teacher is linked to, with Read or Write access. A teacher sees the names, email, class, of these students.
    - Managing classes and adding, editing and removing students: institutions with Write access. Administrators do not manage classes or students.
-   - A teacher has access to only assigned educational institutions including access by URL.
+   - A teacher can reach only the institutions they are linked to, and their classes and students, also through the page address. An institution, class or student outside these, in the page address or in a submitted form, shows "access denied". A management action on an institution with Read access also shows "access denied".
 
    _Inviting students:_
    - A teacher invites students into the selected class one by one, entering the email, first name and last name (validated as in milestone 8).
@@ -105,18 +105,22 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    _Accepting:_
 
    - On top of the milestone 8 checks. Checks related to administrator are excluded, the invitation is refused, with the neutral message from milestone 8, when the class was deleted or deactivated, its institution is no longer selectable, or the inviter is no longer a teacher with Write access to that institution.
-   - A new person is created with the names from the invitation; an existing person's names are never changed that applies to students only.
-   - Accepting creates the enrolment with a consent record naming the institution, and grants the student role if the person did not hold it (for example, a teacher keeps the teacher role and gains the student role).
+   - A new person is created with the names from the invitation. An existing person's names are never changed by a student invitation (unlike a teacher invitation in milestone 8); the acceptance page says "If you already have an account, your current names are kept."
+   - Accepting creates the enrolment and a consent record (as in milestone 8), and grants the student role if the person did not hold it (for example, a teacher keeps the teacher role and gains the student role).
    - If the person became a student after the invitation was sent, accepting changes nothing and the page says they are already a student (the milestone 8 rule for a role already held).
 
-   _Consent text:_ a student consent text, versioned like the teacher one and accepted on joining an institution. It names the institution and says that the class, and with it the year of study, is stored, that the teachers of that institution can see them along with the email and names, that teachers of other institutions cannot, and that a student belongs to one institution at a time. Placeholder wording is fine until real users arrive, as in milestone 8.
+   _Consent text:_ a student consent text, versioned like the teacher one: a fixed text that never names a particular institution or class. The invited institution and class are shown on the acceptance page as the data to be stored, not in the consent text, and the consent record does not store them. The text says that the class, and with it the year of study, is stored along with the email and names, and who can see them. Placeholder wording is fine until real users arrive, as in milestone 8.
 
    _Editing and removing students:_
    - **Edit** changes the student's names and class. The new class must be an active class of the same institution; the current class stays allowed even if deactivated. The email, the institution and the year of study (on its own) cannot be edited.
-   - **Remove** takes the student out of the institution: the enrolment is deleted and its consent record kept, then it works as in milestone 8: the student role is removed, the person is signed out everywhere, and is deactivated if no role is left.
+   - **Remove** takes the student out of the institution: the enrolment is deleted and the consent records are kept, then it works as in milestone 8: the student role is removed, the person is signed out everywhere, and is deactivated if no role is left.
 
    _Withdrawing consent:_
    - Withdrawing consent the same way as in milestone 8.
+
+   _Profile:_
+   - The profile (milestone 8) of a student also shows the enrolment: the institution with its region, the class and the year of study, next to the student role and the student consent records.
+   - For a student, the profile says that corrections to student data go through a teacher of their institution (for teacher data it still says an administrator, milestone 8).
 
    **User interface**
 
@@ -141,7 +145,6 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 
    _Out of scope:_
    - the content of the **Competitions** tab
-   - changes to the profile: it stays as in milestone 8 and shows the student role and the student consent records, but not the student's institution, class or year of study
 
   10. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
     _Subjects:_ every question belongs to exactly one subject. The teacher selects it from the list kept on the **Subjects** tab (milestone 6), with no free-text entry, and the server accepts only a subject that exists. Teachers can filter the question bank by subject. The sample questions seeded in milestone 3 have no subject, and the migration deletes them, since no real data exists yet.

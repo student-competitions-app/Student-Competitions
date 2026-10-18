@@ -97,7 +97,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - A teacher has access to only assigned educational institutions including access by URL.
 
    _Inviting students:_
-   - A teacher invites students in the selected class one by one. To invite a student the teacher need to fill email, first name, second name. During submision the system checks uniqueness of entered email address. The flow of adding a student and consent is the same as in milestone 8.
+   - A teacher invites students in the selected class one by one. To invite a student the teacher need to fill email, first name, second name. During submision the system checks uniqueness of entered email address in scope of users with the student role. The flow of adding a student and consent is the same as in milestone 8.
    
    _Accepting:_
 

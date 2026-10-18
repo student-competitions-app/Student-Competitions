@@ -104,7 +104,11 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 
    _Accepting:_
 
-   - On top of the milestone 8 checks. Checks related to administrator are excluded, the invitation is refused, with the neutral message from milestone 8, when the class was deleted or deactivated, its institution is no longer selectable, or the inviter is no longer a teacher with Write access to that institution.
+   - The milestone 8 checks apply unchanged: a tampered link is refused, an expired one has its own message, an invitation issued before the person lost the student role or withdrew consent is refused, and a changed consent text shows the page again.
+   - The milestone 8 inviter and institution checks are replaced for students. The invitation is refused, with the neutral message from milestone 8, when:
+     - the inviter is no longer an active user holding the teacher role with Write access to the invited institution;
+     - the invited institution is no longer selectable (it or its region was deactivated or deleted);
+     - the invited class was deleted or deactivated.
    - A new person is created with the names from the invitation. An existing person's names are never changed by a student invitation (unlike a teacher invitation in milestone 8); the acceptance page says "If you already have an account, your current names are kept."
    - Accepting creates the enrolment and a consent record (as in milestone 8), and grants the student role if the person did not hold it (for example, a teacher keeps the teacher role and gains the student role).
    - If the person became a student after the invitation was sent, accepting changes nothing and the page says they are already a student (the milestone 8 rule for a role already held).

@@ -101,11 +101,9 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    
    _Accepting:_
 
-   - On top of the milestone 8 checks, the invitation is refused, with the neutral message from milestone 8, when the class was deleted or deactivated, its institution is no longer selectable, or the inviter is no longer a teacher with Write access to that institution.
+   - On top of the milestone 8 checks. Checks related to administrator are excluded, the invitation is refused, with the neutral message from milestone 8, when the class was deleted or deactivated, its institution is no longer selectable, or the inviter is no longer a teacher with Write access to that institution.
    - A new person is created with the names from the invitation; an existing person's names are never changed.
    - Accepting creates the enrolment with a consent record naming the institution, and grants the student role if the person did not hold it (for example, a teacher keeps the teacher role and gains the student role).
-   - A student of another institution is warned on the consent page, before **I agree**, that accepting moves them out of their current institution and class. Accepting deletes the old enrolment, keeps its consent record and creates the new one; the old institution's teachers no longer see the student.
-   - If the person became a student of the inviting institution after the invitation was sent, nothing changes and the page says "already a student of this institution".
 
    _Consent text:_ a student consent text, versioned like the teacher one and accepted on joining an institution. It names the institution and says that the class, and with it the year of study, is stored, that the teachers of that institution can see them along with the email and names, that teachers of other institutions cannot, and that a student belongs to one institution at a time. Placeholder wording is fine until real users arrive, as in milestone 8.
 

@@ -74,104 +74,73 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 
 ## Upcoming
 
-9. **User management with consent: classes and students.** The teacher page becomes a teacher area. Teachers keep the classes of the institutions where they have Write access (milestone 8) and add students to them. A student belongs to exactly one class in exactly one educational institution. The student role is added to the invitation and consent flow from milestone 8 as one more invitable role, so the flow itself does not change.
-   _Teacher area:_
-   - The teacher page becomes a teacher area with two tabs: **Students** and **Competitions**. Each tab is an ordinary link to its own page (`/teacher/students`, `/teacher/competitions`), so it can be bookmarked and reloaded. The current tab is highlighted. The area is open only to the teacher role, and it looks like the administrator area from milestone 6.
-   - The **Competitions** tab is a placeholder; milestones 11 and 14 fill it.
+9. **User management with consent: classes and students.** Teachers keep the classes of the institutions where they have Write access (milestone 8) and invite students into them. The student role joins the milestone 8 invitation and consent flow as one more invitable role; the flow itself does not change.
+
+   **Functional requirements**
 
    _Classes:_
-   - A **class** is a named group of students inside one educational institution, such as "KN-21". Every class has a **year of study**, shared by all its students; a student's year of study is always the year of their class. A class is not personal data, so it is stored as soon as it is created.
-   - Class names follow the same rules as subject names (milestone 6) and are unique within their institution ignoring case ("already exists in this institution"), whatever their years of study. The same name may exist in different institutions. There is no preset list; every institution starts with no classes.
-   - The year of study is required and is a whole number from 1 to 12. Several classes of one institution may share a year.
-   - A class is created in the selected institution, which must be selectable (it and its region are active), and can never move to another institution.
-   - Only a teacher with Write access to the institution can create, edit, deactivate, activate or delete its classes. Administrators do not manage classes.
-   - **Deactivate** keeps the class and its students, but the class accepts no new students. Its students stay fully manageable. Students in deactivated class can not participate in competitions. 
-   - **Activate** reverses it.
-   - **Delete** asks for confirmation, naming the class and its institution, and is refused while the class holds any student, suggesting deactivation instead. An institution that holds any class cannot be deleted (the milestone 7 rule).
+   - A **class** is a named group of students inside one educational institution, such as "KN-21", with a required **year of study**: a whole number from 1 to 12. Several classes of one institution may share a year. Every institution starts with no classes.
+   - Class names follow the subject-name rules (milestone 6) and are unique within their institution ignoring case ("already exists in this institution"); the same name may exist in different institutions.
+   - A class is created in a selectable institution (it and its region are active) and never moves to another institution. A class is not personal data, so it is stored as soon as it is created.
+   - Classes can be created, edited (name and year of study), deactivated, activated and deleted. A deactivated class accepts no new students; its students stay fully manageable but cannot take part in competitions. Delete is refused while the class holds any student. An institution that holds any class cannot be deleted (the milestone 7 rule).
 
-   _Students, institutions and classes:_
-   - A student belongs to exactly one educational institution and exactly one of its classes. This membership is the student's **enrolment**: the institution, the class and the consent record. The enrolment holds no year of study of its own; it comes from the class. A student can never hold two enrolments or two classes at once, and the database enforces it.
-   - Joining an institution always needs the student's consent for that institution, given by accepting an invitation. Moving to another class of the same institution needs no new consent.
-   - A teacher sees the names, the email and the class (with its year of study) of the students of their institutions, and nothing about any institution a student belonged to before.
+   _Enrolment:_
+   - A student belongs to exactly one educational institution and exactly one of its classes. This is the student's **enrolment**: the institution, the class and the consent record.
+   - The student's institution and class are personal data. The enrolment is stored only when the student accepts an invitation.
+   - Joining an institution always needs the student's consent for it, given by accepting an invitation. Moving to another class of the same institution needs no new consent.
+   - Students of a deactivated institution or region are kept but are not reachable until it is active again.
 
-   _Students tab: choosing a class:_
-   - Three drop-down lists sit in a row at the top of the page: **Region**, **Educational institution** and **Class**. On narrow screens they stack in that order.
-   - **Region** offers the active regions that hold at least one active institution the teacher is linked to, with Read or Write access.
-   - **Educational institution** offers the active institutions of the selected region that the teacher is linked to, each marked "Read" or "Write".
-   - **Class** offers all classes of the selected institution, active and deactivated, each shown with its year of study, with deactivated ones marked. Where the teacher has Write access, the last entry of the list is **+ Add class**, which opens a form with two fields, the name and the year of study. After creating, the new class is selected. With Read access there is no **+ Add class**.
-   - All three lists are sorted by name ignoring case.
-   - Until the chain is complete, the middle of the page shows one message instead of the student list:
-     - no region selected: "Select a region to continue";
-     - no institution selected: "Select an educational institution to continue";
-     - no class selected: "Select a class to see its students".
-     A teacher linked to no selectable institution sees "You are not linked to any educational institution" and disabled lists.
-   - The selected region, institution and class are kept in the page address, so they survive reloads and bookmarks. After an action, the affected class stays selected. An address that names a region, institution or class the teacher may not see shows "access denied".
-   - Students of a deactivated institution or region are kept but are not reachable until it is active again, because such an institution cannot be selected (milestone 7).
+   _Access:_
+   - The teacher area: the teacher role only.
+   - Seeing classes and students: institutions the teacher is linked to, with Read or Write access. A teacher sees the names, email, class, of these students.
+   - Managing classes and adding, editing and removing students: institutions with Write access. Administrators do not manage classes or students.
+   - A teacher has access to only assigned educational institutions including access by URL.
 
-   _Students tab: the selected class:_
-   - A bar above the student list shows the class name and its year of study, marked if deactivated. Where the teacher has Write access, it offers **Edit**, **Deactivate** / **Activate**, **Delete** and **Add students**. **Edit** changes the name and the year of study, using the same form as creating; a change of the year applies at once to every student of the class (for example, moving the whole class to the next year). **Add students** is offered only while the class is active.
-   - Below the bar is the list of the class's students, sorted by last name ignoring case: name, email and the date of consent for this institution. An empty class shows "No students in this class yet".
-   - Where the teacher has Write access, each student has **Edit** and **Remove**. With Read access, the bar and the list are shown without any actions, and the server answers such a request with "access denied".
-
-   _Personal data:_ besides the email and names, a student's institution and class (and so their year of study) are personal data. The class itself, with its name and year, is not. The enrolment is stored only when the student accepts the invitation, like the rest.
-   _Adding students:_
-   - **Add students** opens a form for the selected class, which is shown at the top with its year of study and cannot be changed in the form. The form starts with one student row: email, first name and last name. Every student added gets the year of study of the class.
-   - **+ Add one more student** at the bottom of the form adds an empty row. Every row except the only one has a **Remove row** action. The form takes up to 20 rows, the per-inviter hourly limit from milestone 8.
-   - Validation: the email and names as in milestone 8. Two rows with the same email (ignoring case) are an error.
-   - All rows are checked first. If any row is invalid, nothing is done, and the form shows again with every entered value and an error next to each wrong field. If the invitations would exceed a rate limit, nothing is done and the form says so.
-   - When all rows are valid, each row is handled by its email:
-     - **already in this class:** nothing changes; the row reports "already in this class".
-     - **a student of this institution in another class:** nothing changes; the row reports "already in class <name>". The teacher moves the student with **Edit**.
-     - **anyone else** (a new address, a user without the student role, or a student of another institution): an invitation is sent; the row reports "invitation sent". The report is the same whether or not the address belongs to a user or a student elsewhere.
-     The teacher can already see every student of their institution, so the first two cases reveal nothing new. Only invitations count toward the rate limits.
-   - Sending, the token, the email and the acceptance page work as in milestone 8. The token holds the class id; the year of study is not in it, because it belongs to the class. After sending, the page lists the outcome of every row; if a send fails, it names the rows that were not sent so the teacher can send them again.
-   - The server accepts the form only for an active class of an institution where the teacher has Write access.
-
+   _Inviting students:_
+   - A teacher invites students in the selected class one by one. To invite a student the teacher need to fill email, first name, second name. During submision the system checks uniqueness of entered email address. The flow of adding a student and consent is the same as in milestone 8.
+   
    _Accepting:_
-   - On top of the checks in milestone 8, the class must still exist and be active, its institution must be selectable, and the inviter must still be a teacher with Write access to that institution. Each refusal uses the neutral message from milestone 8.
-   - A new person is created with the names from the invitation. An existing person's names are never changed by an invitation.
-   - Accepting creates the enrolment in the class's institution, with the class and a consent record naming the institution. The student's year of study is the class's year at that moment, even if the teacher changed it after sending the invitation. The person gains the student role if they did not hold it. Example: a teacher invited as a student gains the student role and keeps the teacher role.
-   - If the person is a student of another institution, the consent page says, before **I agree**, that accepting moves them out of their current institution and class. Accepting deletes the old enrolment, keeps its consent record and creates the new one. The teachers of the old institution no longer see the student.
+
+   - On top of the milestone 8 checks, the invitation is refused, with the neutral message from milestone 8, when the class was deleted or deactivated, its institution is no longer selectable, or the inviter is no longer a teacher with Write access to that institution.
+   - A new person is created with the names from the invitation; an existing person's names are never changed.
+   - Accepting creates the enrolment with a consent record naming the institution, and grants the student role if the person did not hold it (for example, a teacher keeps the teacher role and gains the student role).
+   - A student of another institution is warned on the consent page, before **I agree**, that accepting moves them out of their current institution and class. Accepting deletes the old enrolment, keeps its consent record and creates the new one; the old institution's teachers no longer see the student.
    - If the person became a student of the inviting institution after the invitation was sent, nothing changes and the page says "already a student of this institution".
 
    _Consent text:_ a student consent text, versioned like the teacher one and accepted on joining an institution. It names the institution and says that the class, and with it the year of study, is stored, that the teachers of that institution can see them along with the email and names, that teachers of other institutions cannot, and that a student belongs to one institution at a time. Placeholder wording is fine until real users arrive, as in milestone 8.
+
    _Editing and removing students:_
-   - **Edit** changes the student's names and class. The class list offers the active classes of the same institution, each with its year of study; the student's current class stays selectable even if deactivated. Changing the class moves the student, and the student takes the year of study of the new class. A student's year of study cannot be edited on its own. The email cannot be edited, and a student cannot be moved to another institution this way.
-   - **Remove** asks for confirmation, naming the student, the class and the institution, and takes the student out of the institution: the enrolment is deleted and its consent record is kept. The removal then works as in milestone 8: the student role is removed, the person is signed out everywhere, and they are deactivated if no role is left.
+   - **Edit** changes the student's names and class. The new class must be an active class of the same institution; the current class stays allowed even if deactivated. The email, the institution and the year of study (on its own) cannot be edited.
+   - **Remove** takes the student out of the institution: the enrolment is deleted and its consent record kept, then it works as in milestone 8: the student role is removed, the person is signed out everywhere, and is deactivated if no role is left.
 
-   _Profile and withdrawing consent:_
-   - The profile also shows the student's enrolment: the institution with its region, and the class with its year of study.
-   - The enrolment has **Leave this institution**. It asks for confirmation, deletes the enrolment, keeps the consent record, removes the student role and signs the person out everywhere; if they hold no other role, it then works exactly as the full withdrawal from milestone 8.
-   - The full **Withdraw consent** from milestone 8 also deletes the enrolment and removes the student role.
-   - Corrections to a student's data go through a teacher with Write access to their institution.
+   _Withdrawing consent:_
+   - Withdrawing consent the same way as in milestone 8.
 
-   _Access:_ the teacher area: teachers only. Seeing classes and students: institutions the teacher is linked to. Managing classes and adding, editing and removing students: institutions with Write access.
+   **User interface**
+
+   _Teacher area:_
+   - The teacher page becomes a teacher area that looks like the administrator area (milestone 6), with two tabs: **Students** (`/teacher/students`, opened by `/teacher`) and **Competitions** (`/teacher/competitions`). Each tab is an ordinary link, so it can be bookmarked and reloaded; the current tab is highlighted.
+   - **Competitions** is a placeholder; milestones 11 and 14 fill it.
+
+   _Students tab: choosing a class:_
+   - Three drop-down lists sit in a row at the top: **Region**, **Educational institution** and **Class**, stacked in that order on narrow screens. Each is disabled until the previous one is selected. All are sorted by name ignoring case.
+     - **Region**: active regions that hold at least one active institution the teacher is linked to.
+     - **Educational institution**: the teacher's active institutions of the selected region, each marked "Read" or "Write".
+     - **Class**: all classes of the selected institution, each with its year of study, deactivated ones marked. With Write access, the last entries **+ Add class**, which opens a form with the name and the year of study; the new class is then selected.
+   - Until the chain is complete, the middle of the page shows one message instead of the student list: "Select a region to continue", "Select an educational institution to continue" or "Select a class to see its students". A teacher linked to no selectable institution sees "You are not linked to any educational institution" and disabled lists.
+   - The selected region, institution and class are kept in the page address, so they survive reloads and bookmarks. After an action, the affected class stays selected.
+
+   _Students tab: the selected class:_
+
+   - UI to edint the selected class. A bar shows the class name and year of study, marked if deactivated. With Write access, it offers **Edit** (the same form as creating), **Deactivate** / **Activate**, **Delete** and, while the class is active, **Add student**. **Delete** asks for confirmation, naming the class and its institution; a refusal suggests deactivation instead.
+   - Below it, the class's students are listed by last name ignoring case: name, email. An empty class shows "No students in this class yet". With teacher's write access, each student has **Edit** and **Remove**; with Read access, the bar and the list have no actions.
+   - **Edit** offers the active classes of the institution. 
+   - **Remove** asks for confirmation, naming the student, the class and the institution. The same flow as for teachers
+
    _Out of scope:_
-   - importing students from a file
-   - administrators seeing, inviting or removing students
-   - parental consent for minors
    - the content of the **Competitions** tab
 
-   _Test:_
-   - `/teacher` opens the **Students** tab; both tabs open for the teacher role and show "access denied" for other roles. The **Competitions** tab is a placeholder.
-   - The region list offers only active regions with an active institution the teacher is linked to; the institution list only the teacher's active institutions of that region; the class list all classes of that institution. Each list is disabled, and the matching message shows in the middle of the page, until the previous one is selected. The selection survives a reload.
-   - Class names: validation, uniqueness within an institution, the same name in two institutions. The year of study is required and accepts only whole numbers from 1 to 12. Creating, editing, deactivating, activating and deleting a class work with Write access and are refused with Read access. Deleting a class with students is refused. A deactivated class offers no **Add students** and refuses a submitted form. An institution with a class cannot be deleted.
-   - End to end: a teacher adds two new students in one form, and both links are read from the `memory` outbox. The GET creates nothing. Each POST creates the user with the student role, the enrolment with its class and a consent record. A student then signs in and sees the institution and class on their profile.
-   - A row with a student of the same institution, in this class or another one, changes nothing, sends no email and reports the student's class. A row with a student of another institution sends an invitation; the consent page warns about the move, and accepting deletes the old enrolment, keeps its consent record, creates the new enrolment and consent record and leaves the names unchanged. The old institution's teachers no longer see the student.
-   - The database refuses a second enrolment or a second class for the same student. No student or enrolment table stores a year of study.
-   - Editing a class's year of study shows the new year for every student of the class, in the teacher's list and on each student's profile. A class's year changed between sending and accepting an invitation gives the student the new year.
-   - **Edit** moves a student to another active class of the same institution, and the student then has that class's year of study; it refuses a deactivated class or a class of another institution. The outcome reported for an address of an existing user outside the institution is the same as for a new address.
-   - The form with an invalid row or a duplicate email does nothing and keeps every entered value. A form over the rate limit does nothing. A submission for a class of a Read-access or unlinked institution is refused.
-   - The invitation is refused if, before acceptance, the inviter is removed, unlinked from the institution or lowered to Read access, or the class is deactivated or deleted.
-   - Before acceptance, no table contains the invited email, names or details, and an existing student's data is unchanged.
-   - A teacher sees only the classes and students of their own institutions and gets "access denied" for others by address. For a student who moved, a teacher of the new institution sees nothing about the old one. With Read access, a teacher sees the students but gets "access denied" when editing or removing them.
-   - Removing a student deletes the enrolment, keeps the consent record and removes the student role; a person left with no role is deactivated.
-   - **Leave this institution** deletes the enrolment and removes the student role. The full withdrawal deletes the enrolment.
-   - A teacher invited as a student holds both roles.
-   - Logs captured during all of the above contain no email, name or token.
-   - The milestone 8 tests pass unchanged.
-
-10. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
+  10. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
     _Subjects:_ every question belongs to exactly one subject. The teacher selects it from the list kept on the **Subjects** tab (milestone 6), with no free-text entry, and the server accepts only a subject that exists. Teachers can filter the question bank by subject. The sample questions seeded in milestone 3 have no subject, and the migration deletes them, since no real data exists yet.
     _Test:_ question CRUD works and is visible only to teachers. A question without a subject or with an unknown subject is refused. Filtering by subject shows only that subject's questions.
 

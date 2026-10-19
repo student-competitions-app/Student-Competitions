@@ -301,7 +301,7 @@ everything with no actions.
     - a child without its parent is denied;
     - resolve through `list_reachable_institutions`, `reach_institution(region_id=…)` and `reach_class(institution_id=…)`;
     - handle `class=new` (303 or 403);
-    - render `pages/teacher/students.html` with `regions`, `institutions` (of the selected region), `classes`, the selected objects, `message` (the FR-049 texts as module constants), `students` (empty for now; T029 fills it), `can_write` and `sent_to`.
+    - render `pages/teacher/students.html` with `regions`, `institutions` (of the selected region), `classes`, the selected objects, `message` (the FR-049 texts as module constants), `students` (empty for now; T030 fills it), `can_write` and `sent_to`.
   - **`selection_path(region_id, institution_id, class_id=None) -> str`**: builds the canonical query, and is used by every redirect in this module.
   - **`_denied()`**: raises `AccessDenied(Role.TEACHER)`.
   - **Wiring**: include the router in `app/main.py`.
@@ -378,7 +378,7 @@ shows the enrolment.
     - 5 to one address, counted across teacher and student invitations, then 429;
     - a teacher who is also an administrator has the 20 teacher invitations counted separately from the 100.
   - **Send failure**: the form comes back with 503 and the values, and the attempt counts.
-  - **Acceptance page**: opening the link changes nothing; it shows the inviter, "Student", the email, the names, the institution with its region, the class and its year, and the student consent text.
+  - **Acceptance page**: opening the link changes nothing. It shows the inviter, "Student", the email, the names, the institution with its region, the class and its year, the student consent text, and "If you are already a teacher or a student, your current names are kept." (US2-8, FR-038).
   - **I agree**:
     - creates an active user with the invited names, the student role, `Enrolment(user, class)`, and one `ConsentRecord` whose text is student v1;
     - redirects to `/login?prefill=…`;
@@ -407,7 +407,14 @@ shows the enrolment.
   - the `issue_invitation` log line adds `class_id=%s` (the details' `class_id`, or `-`).
 
   Also add `BUCKET_INVITE_STUDENT_INVITER = "invite_student_inviter"` and `STUDENT_INVITER_INVITE_LIMIT = 100` to `app/services/rate_limits.py`, with the docstring table row "`invite_student_inviter` | teacher's user id | 100". Depends on T027.
-- [ ] T029 [US2] Add the student list and the invitation form to `app/routers/teacher_students.py` per contracts/http-routes.md §2.1 and §2.3, and research D11:
+- [ ] T029 [US2] Implement the names rule and its note, per research D10 and FR-036–FR-038. The note promises what the rule does, so they ship together in US2, the MVP.
+  - **The rule**, in `app/services/invitations.py` `_accept_once`:
+    - compute `keep_names = user is not None and user.is_active and user.first_name is not None and bool({Role.TEACHER, Role.STUDENT} & set(get_roles(session, user.id)))` before granting;
+    - write `read.first_name` / `read.last_name` only when `not keep_names`;
+    - update the `accept_invitation` docstring (FR-036, a deliberate change to milestone 8 for teacher invitations).
+  - **The note**: add "If you are already a teacher or a student, your current names are kept." to `app/templates/pages/invitation.html`, under the details list, for every role (FR-038). Milestone 8's teacher acceptance page shows it too.
+
+- [ ] T030 [US2] Add the student list and the invitation form to `app/routers/teacher_students.py` per contracts/http-routes.md §2.1 and §2.3, and research D11:
   - **The list**: add `list_students(session, class_id) -> list[StudentRow]` to `app/services/students.py`, sorted by `(last.casefold(), first.casefold(), user_id)`. `students_page` passes it for an active selected class.
   - **The routes**: `GET`/`POST /classes/{class_id:int}/invite`. On `POST`, the first failure answers, in this order:
     1. `reach_class(write=True)`, else 403;
@@ -420,9 +427,9 @@ shows the enrolment.
   - **The banner**: `students_page` reads `sent` through a shared `_sent_to` (import or move it from `admin_teachers.py`).
   - **Templates**:
     - `app/templates/pages/teacher/student_invite.html`: the class and the institution as text; email, first name and last name fields with errors; **Send invitation** and **Cancel**. In the 409 state, the deactivated-class sentence and no form.
-    - In `students.html`, the student table: name ("Last First") and email, plus **Edit** / **Remove** links for Write (wired in T035).
+    - In `students.html`, the student table: name ("Last First") and email, plus **Edit** / **Remove** links for Write (wired in T036).
   - **Route test**: add `POST /teacher/students/classes/{class_id:int}/invite` to the exact write set in `tests/integration/test_routes.py`.
-- [ ] T030 [US2] Show the enrolment on the profile per research D16 and contracts/http-routes.md §4:
+- [ ] T031 [US2] Show the enrolment on the profile per research D16 and contracts/http-routes.md §4:
   - **The view**: add `@dataclass(frozen=True) EnrolmentView` and `get_enrolment_view(session, user_id)` to `app/services/students.py`, with the label from `describe_institutions` and `is_available` from `class_is_available`.
   - **The route**: in `app/routers/profile.py`, load it when `Role.STUDENT in get_roles(session, person.id)`; a blocked student no longer has it in `request.state.roles`.
   - **The template**, `app/templates/pages/profile.html`:
@@ -445,13 +452,13 @@ that must still succeed.
 
 ### Tests for User Story 3
 
-- [ ] T031 [P] [US3] Create `tests/integration/test_student_invitation_refusals.py`, covering US3-1 to US3-9 and SC-003. Each refusal asserts the milestone 8 neutral message, status 400, and no new `users`, `user_roles`, `enrolments` or `consent_records` rows:
+- [ ] T032 [P] [US3] Create `tests/integration/test_student_invitation_refusals.py`, covering US3-1 to US3-9 and SC-003. Each refusal asserts the milestone 8 neutral message, status 400, and no new `users`, `user_roles`, `enrolments` or `consent_records` rows:
   - **The link**: a tampered token → neutral; an expired one (`now` + 7 days via the service) → "This invitation has expired; ask for a new one."
   - **The inviter**: deactivated, removed as a teacher, unlinked from the institution, or lowered to Read.
   - **The class**: deleted, deactivated, its institution deactivated, or its region deactivated.
   - **Still valid**: the class renamed and its year changed → the page shows the new values, and **I agree** succeeds.
   - **The cut-off**:
-    - a link issued before the person was removed as a student (via `remove_student`, T034) or withdrew → refused, whether or not they are still active;
+    - a link issued before the person was removed as a student (via `remove_student`, T035) or withdrew → refused, whether or not they are still active;
     - a link issued after → succeeds.
   - **Already a student**:
     - accepted twice → "You are already a student.", with one enrolment and one record;
@@ -462,7 +469,7 @@ that must still succeed.
 
 ### Implementation for User Story 3
 
-- [ ] T032 [US3] Verify `STUDENT_INVITATION.inviter_may_invite` and `details_acceptable` cover every T031 case with no further code. If a case fails, fix it in `app/services/students.py`, never in `app/services/invitations.py`; the generic order of checks is unchanged (FR-024, FR-030). Confirm that `_accept_once` passes `lock=True`, so the class, institution and region are read `FOR SHARE` (FR-035).
+- [ ] T033 [US3] Verify `STUDENT_INVITATION.inviter_may_invite` and `details_acceptable` cover every T032 case with no further code. If a case fails, fix it in `app/services/students.py`, never in `app/services/invitations.py`; the generic order of checks is unchanged (FR-024, FR-030). Confirm that `_accept_once` passes `lock=True`, so the class, institution and region are read `FOR SHARE` (FR-035).
 
 **Checkpoint**: US1–US3 work. Old or forged student links cannot enrol anyone.
 
@@ -481,7 +488,7 @@ removes a student.
 
 ### Tests for User Story 4
 
-- [ ] T033 [P] [US4] Create `tests/integration/test_teacher_students.py`, covering US4-1 to US4-8 and the Edge Cases. Students are made with `enrol_student` (T026).
+- [ ] T034 [P] [US4] Create `tests/integration/test_teacher_students.py`, covering US4-1 to US4-8 and the Edge Cases. Students are made with `enrol_student` (T026).
   - **The list**: three students sorted by last name, then first name, ignoring case; name and email shown; Write shows **Edit**/**Remove**, Read shows neither.
   - **Edit**:
     - the page shows the email and the institution as text, and a class select of active classes of the same institution only;
@@ -500,7 +507,7 @@ removes a student.
 
 ### Implementation for User Story 4
 
-- [ ] T034 [US4] Add the management functions to `app/services/students.py` per contracts/services.md and research D12:
+- [ ] T035 [US4] Add the management functions to `app/services/students.py` per contracts/services.md and research D12:
   - **Types and lookups**:
     - `CLASS_DEACTIVATED = "This class is deactivated."` and `class ClassNotActive(ValueError)` with a `.message`;
     - `get_student(session, teacher_id, user_id)` through `reach_student`.
@@ -520,7 +527,7 @@ removes a student.
     - `end_all_sessions`; commit.
 
     Log "Student removed: user_id=%d deactivated=%s".
-- [ ] T035 [US4] Add `GET`/`POST /{user_id:int}` and `GET`/`POST /{user_id:int}/remove` to `app/routers/teacher_students.py` per contracts/http-routes.md §2.4:
+- [ ] T036 [US4] Add `GET`/`POST /{user_id:int}` and `GET`/`POST /{user_id:int}/remove` to `app/routers/teacher_students.py` per contracts/http-routes.md §2.4:
   - **Form fields**: only `first_name`, `last_name` and `class_id` are read (`Form("")`).
   - **The selection**: `region`, `institution` and `class` query values are carried through hidden fields for the redirect; when they are missing or unreachable, the redirect uses the student's class.
   - **Outcomes**:
@@ -554,7 +561,7 @@ administrator confirms region and institution deactivation (FR-017).
 
 ### Tests for User Story 5
 
-- [ ] T036 [P] [US5] Create `tests/integration/test_availability.py` (HTTP, end to end), covering US5-1 to US5-8, SC-005 and the Edge Cases. Use students in two classes of two institutions in two regions.
+- [ ] T037 [P] [US5] Create `tests/integration/test_availability.py` (HTTP, end to end), covering US5-1 to US5-8, SC-005 and the Edge Cases. Use students in two classes of two institutions in two regions.
   - **Signed out at once**: for each level, deactivation through its real route (the teacher route for a class; the admin `POST` for an institution or region) deletes every session of every student below. Those students' next request redirects to `/login`; students elsewhere stay signed in.
   - **Teacher's view**: the teacher no longer sees an unavailable institution in the lists, and its old address gives 403. A deactivated class in an available institution is listed and marked, but its students are hidden, and their Edit/Remove addresses give 403.
   - **No new students**: invite, move into, or accept into an unavailable class is refused.
@@ -562,18 +569,18 @@ administrator confirms region and institution deactivation (FR-017).
   - **Nested statuses**: with the institution reactivated while its class stays deactivated, the students stay blocked.
   - **Quick flip**: a class deactivated and reactivated quickly → the students sign in again, and nothing else changed.
   - **Data deletion**: a blocked student can request **Delete my data**, receives the link, and erasure deletes the enrolment.
-- [ ] T037 [P] [US5] Extend `tests/integration/test_login_flow.py`. Each case uses the real code flow and the outbox:
+- [ ] T038 [P] [US5] Extend `tests/integration/test_login_flow.py`. Each case uses the real code flow and the outbox:
   - **Blocked, student only**: `POST /login` answers exactly as for an unknown address and sends no email; a code issued before the block no longer verifies.
   - **Blocked, also a teacher**: signs in straight into the teacher role (single usable role, no role choice); the header offers no "Student" switch.
   - **After reactivation**: the student-only person signs in as a student.
 
 ### Implementation for User Story 5
 
-- [ ] T038 [US5] Update `app/services/regions.py` and `app/services/institutions.py` per research D4:
+- [ ] T039 [US5] Update `app/services/regions.py` and `app/services/institutions.py` per research D4:
   - in `set_region_active` and `set_institution_active`, when the status actually changes to `False`, call `sign_out_students_below(session, region_id=…)` (or `institution_id=…`) before `session.commit()`;
   - add `sessions=%d` to the existing log line;
   - update both docstrings ("deactivation signs out the students below; statuses below are untouched").
-- [ ] T039 [US5] Add the deactivation confirmations to `app/routers/admin_institutions.py` per research D15 and contracts/http-routes.md §3:
+- [ ] T040 [US5] Add the deactivation confirmations to `app/routers/admin_institutions.py` per research D15 and contracts/http-routes.md §3:
   - **The routes**: `GET /regions/{region_id:int}/deactivate` and `GET /regions/{region_id:int}/institutions/{institution_id:int}/deactivate`, both `@allow_roles(Role.ADMIN)`, with not-found pages as elsewhere; opening them changes nothing.
   - **The templates**:
     - `app/templates/pages/admin/region_deactivate.html`: "Deactivate region “{name}”?" and "Its students will be signed out and hidden until it is activated again.", a **Deactivate** form posting to the existing route, and **Cancel**;
@@ -581,7 +588,7 @@ administrator confirms region and institution deactivation (FR-017).
   - **The list and delete pages**:
     - in `institutions.html`, replace both **Deactivate** forms with links to the confirmations; **Activate** stays a form;
     - in `institution_delete.html`, the in-use **Deactivate** offer becomes a link to the confirmation.
-- [ ] T040 [US5] Update `tests/integration/test_admin_institutions.py`:
+- [ ] T041 [US5] Update `tests/integration/test_admin_institutions.py`:
   - every assertion of a direct `<form method="post" action="…/deactivate">` in the list or the delete page (around lines 548, 627, 748 and 918) now asserts the link `href="…/deactivate"`;
   - the "no deactivate offered" assertions are unchanged;
   - add tests: each confirmation page shows the FR-017 sentence and changes nothing; its button posts to the unchanged route; anonymous, teacher and student are refused as for the other admin pages.
@@ -601,7 +608,7 @@ which names are stored and which roles result.
 
 ### Tests for User Story 6
 
-- [ ] T041 [P] [US6] Create `tests/integration/test_names_on_acceptance.py`, covering US6-1 to US6-4 and SC-007:
+- [ ] T042 [P] [US6] Create `tests/integration/test_names_on_acceptance.py`, covering US6-1 to US6-4 and SC-007:
   - **A teacher** (real, with names "Olena Kovalenko") accepts a student invitation for "O. Kovalenko" → names unchanged, roles `(TEACHER, STUDENT)`, enrolment created.
   - **A student** (real) accepts a teacher invitation with other names → names unchanged, roles `(TEACHER, STUDENT)`, teacher links created.
   - **Invitation names stored**: a new person, a removed (inactive) former teacher, and an administrator with neither role each get the invitation's names.
@@ -609,12 +616,7 @@ which names are stored and which roles result.
 
 ### Implementation for User Story 6
 
-- [ ] T042 [US6] Implement the names rule in `app/services/invitations.py` `_accept_once`, per research D10:
-  - compute `keep_names = user is not None and user.is_active and user.first_name is not None and bool({Role.TEACHER, Role.STUDENT} & set(get_roles(session, user.id)))` before granting;
-  - write `read.first_name` / `read.last_name` only when `not keep_names`;
-  - update the `accept_invitation` docstring (FR-036, a deliberate change to milestone 8).
-
-  Add the FR-038 sentence to `app/templates/pages/invitation.html`, under the details list, for every role.
+- [ ] T043 [US6] Verify that the names rule and the note from T029 cover every T042 case with no further code. If a case fails, fix it in `app/services/invitations.py` `_accept_once` only; the rule is research D10, and nothing else in the generic flow changes (FR-024).
 
 **Checkpoint**: people who hold both roles keep one stable name.
 
@@ -630,7 +632,7 @@ through **Delete my data** without signing in.
 
 ### Tests for User Story 7
 
-- [ ] T043 [P] [US7] Extend `tests/integration/test_profile.py`, covering US7-1 to US7-4 and US5-3:
+- [ ] T044 [P] [US7] Extend `tests/integration/test_profile.py`, covering US7-1 to US7-4 and US5-3:
   - **A student**: the profile shows the email, names, "Student", the institution with its region, the class, the year, the student record with its text, and the student correction note.
   - **A teacher-and-student**: both notes.
   - **Withdrawal** as a student:
@@ -644,7 +646,7 @@ through **Delete my data** without signing in.
 
 ### Implementation for User Story 7
 
-- [ ] T044 [US7] Verify that `app/services/consent.py` needs no change: `erase_personal_data` and `describe_erasure` already iterate the registry, which now includes the student (contracts/services.md §consent). Make sure `app/templates/pages/profile_withdraw.html` lists "Student" among the roles to remove. Fix only what T043 shows missing.
+- [ ] T045 [US7] Verify that `app/services/consent.py` needs no change: `erase_personal_data` and `describe_erasure` already iterate the registry, which now includes the student (contracts/services.md §consent). Make sure `app/templates/pages/profile_withdraw.html` lists "Student" among the roles to remove. Fix only what T044 shows missing.
 
 **Checkpoint**: the milestone 8 rights apply to students unchanged.
 
@@ -660,7 +662,7 @@ student, and with a teacher link, and check each outcome.
 
 ### Tests for User Story 8
 
-- [ ] T045 [P] [US8] Extend `tests/integration/test_institution_service.py` and `tests/integration/test_admin_institutions.py`, covering US8-1 to US8-3:
+- [ ] T046 [P] [US8] Extend `tests/integration/test_institution_service.py` and `tests/integration/test_admin_institutions.py`, covering US8-1 to US8-3:
   - **Empty classes**: an institution with two empty classes and no links → the confirmation page says "Its 2 classes will be deleted too."; after `POST`, the institution and both class rows are gone.
   - **Enrolled student**: one enrolled student, also when the class is deactivated (a blocked student) → 409 "in use", and nothing deleted.
   - **Teacher link**: still refused.
@@ -668,7 +670,7 @@ student, and with a teacher link, and check each outcome.
 
 ### Implementation for User Story 8
 
-- [ ] T046 [US8] Update `app/services/institutions.py` per research D14:
+- [ ] T047 [US8] Update `app/services/institutions.py` per research D14:
   - **`count_institution_uses`**: adds `select(func.count()).select_from(Enrolment).join(SchoolClass, …).where(SchoolClass.institution_id == institution_id)`; update its docstring, since milestone 9's count is now here.
   - **`delete_institution`**: after the zero-uses check, `session.execute(delete(SchoolClass).where(col(SchoolClass.institution_id) == institution_id))`, then delete the institution, in one commit. The existing `IntegrityError` → `InstitutionInUse` mapping stays.
   - **The confirmation**: `app/routers/admin_institutions.py` passes `classes=count_institution_classes(...)` to `institution_delete.html`, which shows "Its N classes will be deleted too." when N > 0 (FR-007).
@@ -690,7 +692,7 @@ to an institution:
 
 ### Tests for User Story 9
 
-- [ ] T047 [US9] Create `tests/integration/test_teacher_access.py`, covering US9-1 to US9-5, FR-021–FR-023, SC-004 and research D17:
+- [ ] T048 [US9] Create `tests/integration/test_teacher_access.py`, covering US9-1 to US9-5, FR-021–FR-023, SC-004 and research D17:
   - **The route-table sweep**: `test_every_teacher_page_admits_a_write_teacher` iterates every declared `GET` route starting with `/teacher`, using `iter_routes` from `tests/integration/test_routes.py` (import it). It substitutes `{institution_id}`, `{class_id}` and `{user_id}` with a real Write-reachable institution, active class and enrolled student, then asserts the status is not 403 for the Write teacher. For every management page (all teacher pages except `/teacher`, `/teacher/students` and `/teacher/competitions`), it asserts 403 for a Read teacher of that institution and for an unlinked teacher.
   - **Writes**: for every teacher `POST` route (from the route table), the Read teacher, an unlinked teacher, an administrator, a student, and an administrator-and-student using the student role each get 403. A snapshot of `classes`, `enrolments`, `users`, `user_roles` and `consent_records` is equal before and after. Anonymous → `303 /login`.
   - **Hand-made addresses**, each 403:
@@ -706,7 +708,7 @@ to an institution:
 
 ### Implementation for User Story 9
 
-- [ ] T048 [US9] Fix any route in `app/routers/teacher_students.py` or `app/routers/teacher.py` that T047 shows answering other than 403, or changing data, for an unreachable or Read-only request. Confirm `test_the_write_routes_are_exact` in `tests/integration/test_routes.py` lists exactly the 8 new teacher `POST` routes, and that `PUBLIC_ROUTES` is unchanged. Add a cross-site class create and a cross-site student invite to `tests/integration/test_cross_site.py`: refused, and nothing stored (FR-055).
+- [ ] T049 [US9] Fix any route in `app/routers/teacher_students.py` or `app/routers/teacher.py` that T048 shows answering other than 403, or changing data, for an unreachable or Read-only request. Confirm `test_the_write_routes_are_exact` in `tests/integration/test_routes.py` lists exactly the 8 new teacher `POST` routes, and that `PUBLIC_ROUTES` is unchanged. Add a cross-site class create and a cross-site student invite to `tests/integration/test_cross_site.py`: refused, and nothing stored (FR-055).
 
 **Checkpoint**: all user stories are independently functional and access-tested.
 
@@ -716,18 +718,18 @@ to an institution:
 
 **Purpose**: privacy checks, documentation and the final walk-through.
 
-- [ ] T049 [P] Extend `tests/integration/test_consent_privacy.py` for SC-002 and SC-008:
+- [ ] T050 [P] Extend `tests/integration/test_consent_privacy.py` for SC-002 and SC-008:
   - before a student acceptance, the all-tables scan finds neither the invited student's email nor names, and `enrolments` has no row;
   - the log capture covers the new flows: class create, edit, deactivate and delete; student invite, accept, edit, move and remove; region and institution deactivation with sign-out; blocked sign-in;
   - no captured line contains an email, a first or last name, `/invitations/` followed by a token, or a deletion link.
-- [ ] T050 [P] Update `README.md`:
+- [ ] T051 [P] Update `README.md`:
   - the roles section: students come only from a teacher's invitation;
   - a short "Teacher area" section: Students tab, classes, inviting students, Read vs Write;
   - the deactivation chain in one paragraph;
   - the layout section: the new modules `availability`, `teacher_access`, `classes`, `students`, `teacher.py`, `teacher_students.py`.
-- [ ] T051 Run `uv run ruff check .`, `uv run ruff format --check .` and `uv run pytest`, on SQLite and, when available, PostgreSQL (`TEST_POSTGRES_URL`). Fix every failure. Every milestone 1–8 test must still pass, apart from the teacher placeholder tests replaced in T025 (SC-010).
-- [ ] T052 Walk through [quickstart.md](./quickstart.md) §2 manually in a browser, including phone width (the three lists stack). Record any deviation as a fix, not a note.
-- [ ] T053 On delivery, move milestone 9 in `docs/requirements/milestones.md` from "Upcoming" to "Delivered" as a short product-only summary linking to `specs/009-classes-students-management/spec.md`, as was done for milestones 1–8.
+- [ ] T052 Run `uv run ruff check .`, `uv run ruff format --check .` and `uv run pytest`, on SQLite and, when available, PostgreSQL (`TEST_POSTGRES_URL`). Fix every failure. Every milestone 1–8 test must still pass, apart from the teacher placeholder tests replaced in T025 (SC-010).
+- [ ] T053 Walk through [quickstart.md](./quickstart.md) §2 manually in a browser, including phone width (the three lists stack). Record any deviation as a fix, not a note.
+- [ ] T054 On delivery, move milestone 9 in `docs/requirements/milestones.md` from "Upcoming" to "Delivered" as a short product-only summary linking to `specs/009-classes-students-management/spec.md`, as was done for milestones 1–8.
 
 ---
 
@@ -739,11 +741,11 @@ to an institution:
 - **Foundational (Phase 2)**: can start at once (it does not need Phase 1). It blocks every story. T017 ends with the full suite green.
 - **US1 (Phase 3)**: depends on Phase 2.
 - **US2 (Phase 4)**: depends on Phase 2. It also needs US1's `teacher_students.py` page, the `selection_path` helper and `classes.py` (T021, T022), because the invite form lives on the Students tab. Its service work (T027, T028) can start in parallel with US1.
-- **US3 (Phase 5)**: depends on US2 (T027, T028). Its cut-off case needs `remove_student` (T034, US4); write that test last, or mark it until T034 is done.
+- **US3 (Phase 5)**: depends on US2 (T027, T028). Its cut-off case needs `remove_student` (T035, US4); write that test last, or mark it until T035 is done.
 - **US4 (Phase 6)**: depends on US2: real students come only from acceptance.
-- **US5 (Phase 7)**: depends on US1 (class deactivation route) and US2 (students exist). T038–T040 are independent of US3 and US4.
+- **US5 (Phase 7)**: depends on US1 (class deactivation route) and US2 (students exist). T039–T041 are independent of US3 and US4.
 - **US6 (Phase 8)**: depends on US2 (a student invitation exists).
-- **US7 (Phase 9)**: depends on US2 (T030, the profile) and US4 (removal, for the teacher-list check).
+- **US7 (Phase 9)**: depends on US2 (T031, the profile) and US4 (removal, for the teacher-list check).
 - **US8 (Phase 10)**: depends on Phase 2 only, plus US2's helpers for an enrolled student.
 - **US9 (Phase 11)**: depends on every route existing (US1, US2, US4, US5).
 - **Polish (Phase 12)**: depends on all stories.
@@ -771,14 +773,14 @@ US1 → US2 → (US3 ∥ US4) → (US5 ∥ US6 ∥ US8) → US7 → US9 → Poli
 - **US1**: T018 ∥ T019 (tests) while T020 is written; T021 ∥ T020, which are different files.
 - **US2**: T026 (tests) ∥ T027 (service).
 - **Across stories**, once US2 is done:
-  - T031 (US3 tests);
-  - T033 (US4 tests);
-  - T036 and T037 (US5 tests);
-  - T041 (US6 tests);
-  - T045 (US8 tests).
+  - T032 (US3 tests);
+  - T034 (US4 tests);
+  - T037 and T038 (US5 tests);
+  - T042 (US6 tests);
+  - T046 (US8 tests).
 
   They are different files and can be written in parallel.
-- **Polish**: T049 ∥ T050.
+- **Polish**: T050 ∥ T051.
 
 ---
 
@@ -803,11 +805,11 @@ Task: "T025 [US1] test_routes.py and test_access_control.py"
 ## Parallel Example: after US2
 
 ```text
-Task: "T031 [US3] tests/integration/test_student_invitation_refusals.py"
-Task: "T033 [US4] tests/integration/test_teacher_students.py"
-Task: "T036 [US5] tests/integration/test_availability.py"
-Task: "T041 [US6] tests/integration/test_names_on_acceptance.py"
-Task: "T045 [US8] tests in test_institution_service.py / test_admin_institutions.py"
+Task: "T032 [US3] tests/integration/test_student_invitation_refusals.py"
+Task: "T034 [US4] tests/integration/test_teacher_students.py"
+Task: "T037 [US5] tests/integration/test_availability.py"
+Task: "T042 [US6] tests/integration/test_names_on_acceptance.py"
+Task: "T046 [US8] tests in test_institution_service.py / test_admin_institutions.py"
 ```
 
 ---

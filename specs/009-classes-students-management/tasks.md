@@ -514,7 +514,7 @@ removes a student.
 - [ ] T035 [US4] Add the management functions to `app/services/students.py` per contracts/services.md and research D12:
   - **Types and lookups**:
     - `CLASS_DEACTIVATED = "This class is deactivated."` and `class ClassNotActive(ValueError)` with a `.message`;
-    - `get_student(session, teacher_id, user_id)` through `reach_student`.
+    - `get_student(session, teacher_id, user_id, *, write=False)` through `reach_student(write=write)`: with `write=True`, a Read teacher gets `WriteRequired` (contracts/http-routes.md §2.4).
   - **`update_student(session, teacher_id, user_id, first_name, last_name, raw_class_id, now=None) -> int`**:
     1. `reach_student(write=True, lock=True)`;
     2. parse `raw_class_id`, where a non-integer → `NotReachable`;
@@ -533,6 +533,7 @@ removes a student.
     Log "Student removed: user_id=%d deactivated=%s".
 - [ ] T036 [US4] Add `GET`/`POST /{user_id:int}` and `GET`/`POST /{user_id:int}/remove` to `app/routers/teacher_students.py` per contracts/http-routes.md §2.4:
   - **Form fields**: only `first_name`, `last_name` and `class_id` are read (`Form("")`).
+  - **Every `GET`** loads the student with `get_student(..., write=True)`, so Read and unreachable give 403 (contracts/http-routes.md §2.4, checked by T048).
   - **The selection**: `region`, `institution` and `class` query values are carried through hidden fields for the redirect; when they are missing or unreachable, the redirect uses the student's class.
   - **Outcomes**:
     - names via `clean_person_names`;
@@ -666,7 +667,7 @@ student, and with a teacher link, and check each outcome.
 
 ### Tests for User Story 8
 
-- [ ] T046 [P] [US8] Extend `tests/integration/test_institution_service.py` and `tests/integration/test_admin_institutions.py`, covering US8-1 to US8-3:
+- [ ] T046 [US8] Extend `tests/integration/test_institution_service.py` and `tests/integration/test_admin_institutions.py`, covering US8-1 to US8-3. Start after T041, which edits `test_admin_institutions.py` too:
   - **Empty classes**: an institution with two empty classes and no links → the confirmation page says "Its 2 classes will be deleted too."; after `POST`, the institution and both class rows are gone. With one empty class, the page says "Its class will be deleted too." With no classes, neither sentence appears.
   - **Enrolled student**: one enrolled student, also when the class is deactivated (a blocked student) → 409 "in use", and nothing deleted.
   - **Teacher link**: still refused.
@@ -750,13 +751,13 @@ to an institution:
 - **US5 (Phase 7)**: depends on US1 (class deactivation route) and US2 (students exist). T039–T041 are independent of US3 and US4.
 - **US6 (Phase 8)**: depends on US2 (a student invitation exists).
 - **US7 (Phase 9)**: depends on US2 (T031, the profile) and US4 (removal, for the teacher-list check).
-- **US8 (Phase 10)**: depends on Phase 2 only, plus US2's helpers for an enrolled student.
+- **US8 (Phase 10)**: depends on US2's helpers for an enrolled student, and on US5 (T039–T041), because T046 and T047 edit the same files: `app/services/institutions.py`, `app/routers/admin_institutions.py`, `institution_delete.html` and `tests/integration/test_admin_institutions.py`.
 - **US9 (Phase 11)**: depends on every route existing (US1, US2, US4, US5).
 - **Polish (Phase 12)**: depends on all stories.
 
 ### Story completion order
 
-US1 → US2 → (US3 ∥ US4) → (US5 ∥ US6 ∥ US8) → US7 → US9 → Polish
+US1 → US2 → (US3 ∥ US4) → (US5 ∥ US6) → (US7 ∥ US8) → US9 → Polish
 
 ### Within each story
 
@@ -780,10 +781,10 @@ US1 → US2 → (US3 ∥ US4) → (US5 ∥ US6 ∥ US8) → US7 → US9 → Poli
   - T032 (US3 tests);
   - T034 (US4 tests);
   - T037 and T038 (US5 tests);
-  - T042 (US6 tests);
-  - T046 (US8 tests).
+  - T042 (US6 tests).
 
-  They are different files and can be written in parallel.
+  They are different files and can be written in parallel. T046 (US8 tests) waits for T041, which
+  edits the same test file.
 - **Polish**: T050 ∥ T051.
 
 ---
@@ -813,6 +814,8 @@ Task: "T032 [US3] tests/integration/test_student_invitation_refusals.py"
 Task: "T034 [US4] tests/integration/test_teacher_students.py"
 Task: "T037 [US5] tests/integration/test_availability.py"
 Task: "T042 [US6] tests/integration/test_names_on_acceptance.py"
+
+# After T041 (same test file):
 Task: "T046 [US8] tests in test_institution_service.py / test_admin_institutions.py"
 ```
 
@@ -834,7 +837,8 @@ Task: "T046 [US8] tests in test_institution_service.py / test_admin_institutions
 1. Add US3 and US4 (P1): the refusals and student management. Every P1 story is now done.
 2. Add US5 (the chain and the admin confirmations), US6 (names) and US7 (the profile and
    withdrawal).
-3. Add US8 (institution deletion) and US9 (the full access matrix).
+3. Add US8 (institution deletion, after US5, which edits the same files) and US9 (the full access
+   matrix).
 4. Polish, then the pull request. The constitution gates: CI green, role-access tests, the
    migration, README.
 

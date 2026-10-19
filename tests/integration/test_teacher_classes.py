@@ -172,7 +172,21 @@ def test_a_teacher_with_no_links_sees_disabled_lists(scene: Scene, client_as: Cl
     assert "You are not linked to any educational institution" in body
     for name in ("region", "institution", "class"):
         assert select_tag(body, name).endswith(" disabled>")
-    assert body.count('class="secondary" disabled>Show</button>') == 3
+    assert "Show</button>" not in body
+
+
+def test_choosing_from_a_list_opens_the_selection_at_once(
+    scene: Scene, client_as: ClientAs
+) -> None:
+    """FR-048: each list submits its own form on change; there is no Show button."""
+    client = client_as(TEACHER_EMAIL)
+    body = client.get(STUDENTS).text
+    for name in ("region", "institution", "class"):
+        assert " data-auto-submit" in select_tag(body, name)
+    assert '<script src="/static/js/auto-submit.js" defer></script>' in body
+    script = client.get("/static/js/auto-submit.js")
+    assert script.status_code == 200
+    assert "requestSubmit()" in script.text
 
 
 def test_links_to_unavailable_institutions_only_count_as_none(

@@ -338,11 +338,7 @@
 }
 
 .class-picker select {
-  margin-bottom: 0.5rem;
-}
-
-.class-picker button {
-  width: auto;
+  margin-bottom: 0;
 }
 
 /* The selected class: its label, then its actions inline, as in the administrator's lists. */

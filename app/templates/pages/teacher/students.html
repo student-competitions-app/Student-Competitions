@@ -2,6 +2,8 @@
 
 {% block title %}Students — {{ app_name }}{% endblock %}
 
+{% block scripts %}<script src="/static/js/auto-submit.js" defer></script>{% endblock %}
+
 {% block teacher_content %}
 <h1>Students</h1>
 {% if sent_to %}<p class="notice" role="status">Invitation sent to {{ sent_to }}</p>{% endif %}
@@ -9,26 +11,24 @@
 <div class="class-picker">
   <form method="get" action="/teacher/students">
     <label for="region">Region</label>
-    <select id="region" name="region"{% if no_links %} disabled{% endif %}>
+    <select id="region" name="region" data-auto-submit{% if no_links %} disabled{% endif %}>
       <option value="">Select a region</option>
       {% for region_id, region_name in regions %}
       <option value="{{ region_id }}"{% if region_id == selected_region %} selected{% endif %}>{{ region_name }}</option>
       {% endfor %}
     </select>
-    <button type="submit" class="secondary"{% if no_links %} disabled{% endif %}>Show</button>
   </form>
 
   {% set institution_off = no_links or selected_region is none %}
   <form method="get" action="/teacher/students">
     {% if selected_region is not none %}<input type="hidden" name="region" value="{{ selected_region }}">{% endif %}
     <label for="institution">Educational institution</label>
-    <select id="institution" name="institution"{% if institution_off %} disabled{% endif %}>
+    <select id="institution" name="institution" data-auto-submit{% if institution_off %} disabled{% endif %}>
       <option value="">Select an educational institution</option>
       {% for i in institutions %}
       <option value="{{ i.id }}"{% if selected_institution and i.id == selected_institution.id %} selected{% endif %}>{{ i.label }}</option>
       {% endfor %}
     </select>
-    <button type="submit" class="secondary"{% if institution_off %} disabled{% endif %}>Show</button>
   </form>
 
   {% set class_off = no_links or not selected_institution %}
@@ -38,14 +38,13 @@
     <input type="hidden" name="institution" value="{{ selected_institution.id }}">
     {% endif %}
     <label for="class">Class</label>
-    <select id="class" name="class"{% if class_off %} disabled{% endif %}>
+    <select id="class" name="class" data-auto-submit{% if class_off %} disabled{% endif %}>
       <option value="">Select a class</option>
       {% for c in classes %}
       <option value="{{ c.id }}"{% if selected_class and c.id == selected_class.id %} selected{% endif %}>{{ c.label }}{% if not c.is_active %} (deactivated){% endif %}</option>
       {% endfor %}
       {% if can_write %}<option value="new">+ Add class</option>{% endif %}
     </select>
-    <button type="submit" class="secondary"{% if class_off %} disabled{% endif %}>Show</button>
   </form>
 </div>
 

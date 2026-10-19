@@ -310,8 +310,8 @@ everything with no actions.
   - **The list row**: `<div class="class-picker">` holding three `<form method="get" action="/teacher/students">`.
     - Each form has a labelled `<select>`; the first option is a placeholder with `value=""`.
     - The Institution form carries a hidden `region`; the Class form carries hidden `region` and `institution`.
-    - Each form has a **Show** submit button.
-    - A select and its button are `disabled` until the previous level is selected, or always when there is no reachable institution.
+    - Each `<select>` has `data-auto-submit`; `app/static/js/auto-submit.js` (loaded with `defer` through the `scripts` block of `layouts/base.html`) submits its own form on change. There is no **Show** button.
+    - A select is `disabled` until the previous level is selected, or always when there is no reachable institution.
   - **The options**: institutions show the "Name — Write" label; classes show `ClassView.label` plus " (deactivated)"; **+ Add class** (`value="new"`) is last, only with `can_write`.
   - **Messages**: the `message` paragraph, an "Invitation sent to …" banner when `sent_to` is set, and the class bar (FR-051) for a selected class.
   - **Class bar actions**, Write only, carrying the selection: **Edit**, **Deactivate** (link), **Activate** (form `POST`), **Delete** (link), and **Add student** only when the class is active.

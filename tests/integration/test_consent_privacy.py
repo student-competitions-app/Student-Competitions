@@ -1,8 +1,9 @@
 """Nothing personal before consent, nothing personal in a log, nothing left after erasure.
 
 See specs/008-teacher-management-consent/spec.md SC-002, SC-005, SC-007, FR-001–FR-004 and
-research D14. Every table is scanned column by column, and every log record the application emits
-during every flow of this milestone is captured at `DEBUG` on the root logger.
+research D14, and for the student flows of milestone 9, specs/009-classes-students-management
+SC-002, SC-008 and FR-057. Every table is scanned column by column, and every log record the
+application emits during every flow is captured at `DEBUG` on the root logger.
 
 The test client's own loggers (`httpx`, `httpcore`) are left out of the log scan: they record the
 URLs the test requests, on the client side, and are not part of the application.
@@ -18,11 +19,19 @@ from sqlalchemy import Engine, MetaData, select
 from sqlmodel import Session
 
 from app.main import app
-from app.models import Role
+from app.models import AccessLevel, Enrolment, Institution, Role, SchoolClass
 from app.services.consent import current_consent_text
 from app.services.email import EmailDeliveryError, EmailMessage
 from app.services.users import get_user_by_email
-from tests.conftest import ADMIN_EMAIL, ClientAs, make_institution, sign_in_directly, token_from
+from tests.conftest import (
+    ADMIN_EMAIL,
+    ClientAs,
+    make_institution,
+    make_teacher,
+    sign_in_directly,
+    token_from,
+)
+from tests.integration.test_login_flow import code_from
 
 INVITED = "zoryana.test@example.org"
 ADMIN_TEACHER = "admin.student@example.com"
@@ -194,3 +203,179 @@ def test_nothing_is_left_after_withdrawal_and_deletion(
 
     assert found_in_tables(app.state.engine, [INVITED, "zoryana", FIRST, LAST, "Bohdana"]) == []
     assert found_in_tables(app.state.engine, [ADMIN_TEACHER]) == ["users.email"]
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 9: the student flows
+# ---------------------------------------------------------------------------------------------
+
+STUDENT = "lesya.test@example.org"
+STUDENT_FIRST, STUDENT_LAST = "Lesya", "Ukrainka"
+TEACHER = "olha.test@example.org"
+TEACHER_FIRST, TEACHER_LAST = "Olha", "Kobylianska"
+
+
+def student_text_id() -> str:
+    with Session(app.state.engine) as session:
+        return str(current_consent_text(session, Role.STUDENT).id)
+
+
+def teacher_scene(client_as: ClientAs) -> tuple[TestClient, int, int, int]:
+    """A real Write teacher of "School 5" (Kyiv) with the class "KN-21"; the teacher's browser,
+    and the region, institution and class ids."""
+    engine = app.state.engine
+    school = make_institution(engine, "School 5", "Kyiv")
+    make_teacher(
+        engine,
+        app.state.settings,
+        email=TEACHER,
+        institutions={school: AccessLevel.WRITE},
+        first=TEACHER_FIRST,
+        last=TEACHER_LAST,
+    )
+    teacher = client_as(TEACHER)
+    created = teacher.post(
+        f"/teacher/students/institutions/{school}/classes",
+        data={"name": "KN-21", "year_of_study": "2"},
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+    with Session(engine) as session:
+        class_id = session.execute(select(SchoolClass.id)).scalar_one()
+        institution = session.get(Institution, school)
+        assert institution is not None and class_id is not None
+        return teacher, institution.region_id, school, class_id
+
+
+def test_nothing_about_a_student_is_stored_before_acceptance(
+    client: TestClient, client_as: ClientAs, outbox: list[EmailMessage]
+) -> None:
+    """Milestone 9 SC-002, FR-009: no email, no names, and no enrolment."""
+    teacher, _, _, class_id = teacher_scene(client_as)
+    response = teacher.post(
+        f"/teacher/students/classes/{class_id}/invite",
+        data={"email": STUDENT, "first_name": STUDENT_FIRST, "last_name": STUDENT_LAST},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    link = f"/invitations/{token_from(outbox[-1])}"
+    for _ in range(2):
+        assert client.get(link).status_code == 200
+    assert found_in_tables(app.state.engine, [STUDENT, "lesya", STUDENT_FIRST, STUDENT_LAST]) == []
+    with Session(app.state.engine) as session:
+        assert session.execute(select(Enrolment)).all() == []
+
+
+def test_no_student_flow_logs_an_address_a_name_or_a_link(
+    client: TestClient,
+    admin_client: TestClient,
+    client_as: ClientAs,
+    outbox: list[EmailMessage],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Milestone 9 SC-008, FR-057: classes, student invitations, acceptance, edits, moves,
+    removal, deactivation with sign-out at every level, blocked sign-in, and data deletion."""
+    caplog.set_level(logging.DEBUG)
+    teacher, region, school, class_id = teacher_scene(client_as)
+    classes = f"/teacher/students/classes/{class_id}"
+    sealed: list[str] = []
+
+    # Classes: create (above), edit, a refused duplicate, a second class, deactivate, activate.
+    teacher.post(f"{classes}/edit", data={"name": "KN-21a", "year_of_study": "3"})
+    teacher.post(
+        f"/teacher/students/institutions/{school}/classes",
+        data={"name": "kn-21a", "year_of_study": "3"},
+    )
+    teacher.post(
+        f"/teacher/students/institutions/{school}/classes",
+        data={"name": "KN-22", "year_of_study": "2"},
+    )
+    with Session(app.state.engine) as session:
+        second = session.execute(
+            select(SchoolClass.id).where(SchoolClass.name == "KN-22")
+        ).scalar_one()
+
+    # Invite (refused, sent), open, accept, sign in.
+    teacher.post(f"{classes}/invite", data={"email": "bad", "first_name": "", "last_name": ""})
+    sent = teacher.post(
+        f"{classes}/invite",
+        data={"email": STUDENT, "first_name": STUDENT_FIRST, "last_name": STUDENT_LAST},
+        follow_redirects=False,
+    )
+    sealed.append(sent.headers["location"].split("sent=")[1])
+    teacher.get(sent.headers["location"])
+    token = token_from(outbox[-1])
+    client.get(f"/invitations/{token}")
+    accepted = client.post(
+        f"/invitations/{token}", data={"consent_text_id": student_text_id()}, follow_redirects=False
+    )
+    sealed.append(accepted.headers["location"].split("prefill=")[1])
+    student_browser = TestClient(app)
+    student_browser.post("/login", data={"email": STUDENT})
+    student_browser.post("/login/code", data={"email": STUDENT, "code": code_from(outbox[-1])})
+    student_browser.get("/profile")
+    teacher.post(
+        f"{classes}/invite",
+        data={"email": STUDENT, "first_name": STUDENT_FIRST, "last_name": STUDENT_LAST},
+    )
+
+    # Edit and move, then deactivation at every level, with blocked sign-in in between.
+    with Session(app.state.engine) as session:
+        enrolment = session.execute(select(Enrolment)).scalar_one()
+    student_id = enrolment.user_id
+    teacher.post(
+        f"/teacher/students/{student_id}",
+        data={"first_name": "Larysa", "last_name": "Kosach", "class_id": str(second)},
+    )
+    teacher.post(f"/teacher/students/classes/{second}/deactivate")
+    client.post("/login", data={"email": STUDENT})
+    teacher.post(f"/teacher/students/classes/{second}/activate")
+    student_browser.post("/login", data={"email": STUDENT})
+    student_browser.post("/login/code", data={"email": STUDENT, "code": code_from(outbox[-1])})
+    institution = f"/admin/institutions/regions/{region}/institutions/{school}"
+    admin_client.post(f"{institution}/deactivate")
+    admin_client.post(f"{institution}/activate")
+    admin_client.post(f"/admin/institutions/regions/{region}/deactivate")
+    admin_client.post(f"/admin/institutions/regions/{region}/activate")
+
+    # Remove, then delete the data through the emailed link.
+    teacher.post(f"/teacher/students/{student_id}/remove")
+    teacher.post(f"/teacher/students/classes/{second}/delete")
+    client.post("/data-deletion", data={"email": STUDENT})
+    deletion = token_from(outbox[-1])
+    client.get(f"/data-deletion/confirm/{deletion}")
+    client.post(f"/data-deletion/confirm/{deletion}")
+
+    tokens = [token_from(message) for message in outbox if "/invitations/" in message.text]
+    forbidden = [
+        STUDENT,
+        "lesya",
+        STUDENT_FIRST,
+        STUDENT_LAST,
+        "Larysa",
+        "Kosach",
+        TEACHER,
+        TEACHER_FIRST,
+        TEACHER_LAST,
+        deletion,
+        *tokens,
+        *sealed,
+    ]
+    records = [record for record in caplog.records if not record.name.startswith(CLIENT_LOGGERS)]
+    messages = [record.getMessage() for record in records]
+    for text in messages:
+        for needle in forbidden:
+            assert needle.lower() not in text.lower(), text
+        assert not re.search(r"/invitations/[A-Za-z0-9_-]{20,}", text), text
+    for expected in (
+        r"Class created: id=\d+ institution_id=\d+",
+        r"Class updated: id=\d+",
+        r"Class deactivated: id=\d+ sessions=\d+",
+        r"Invitation sent: inviter_id=\d+ role=student institutions=0 class_id=\d+",
+        r"Invitation accepted: user_id=\d+ role=student created",
+        r"Student updated: user_id=\d+ moved=True",
+        r"Students signed out: (institution|region)_id=\d+ sessions=\d+",
+        r"Student removed: user_id=\d+ deactivated=True",
+        r"Class deleted: id=\d+ institution_id=\d+",
+    ):
+        assert any(re.match(expected, text) for text in messages), expected

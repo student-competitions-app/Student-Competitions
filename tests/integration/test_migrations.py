@@ -45,6 +45,8 @@ APPLICATION_TABLES = {
     "consent_texts",
     "consent_records",
     "invitation_cutoffs",
+    "classes",
+    "enrolments",
 }
 
 
@@ -485,3 +487,15 @@ def test_the_role_lists_are_retired_once(
 
     run_alembic(monkeypatch, empty_database_url, "downgrade", "-1")
     assert retirement_state(migration_engine) == state
+
+
+def test_the_student_consent_text_is_published_once(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Milestone 9 research D13, D18: head holds exactly one student text, version 1."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.connect() as connection:
+        rows = connection.execute(
+            text("SELECT version FROM consent_texts WHERE role = 'student'")
+        ).all()
+    assert [tuple(row) for row in rows] == [(1,)]

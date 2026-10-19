@@ -61,7 +61,10 @@ TITLES = {
 PLACEHOLDER = "The features of this area will arrive in a later milestone."
 """The milestone 5 areas' sentence. The administrator area's tabs have their own (milestone 6)."""
 
-PLACEHOLDER_AREAS = {"/teacher", "/student", "/staff"}
+PLACEHOLDER_AREAS = {"/student", "/staff"}
+
+REDIRECTS = {"/teacher": "/teacher/students"}
+"""Areas whose own address opens their first tab: since milestone 9 the teacher area (FR-047)."""
 
 SINGLE_ROLE = {ADMIN: ADMIN_EMAIL, TEACHER: TEACHER_EMAIL, STUDENT: STUDENT_EMAIL}
 
@@ -83,8 +86,15 @@ def header(body: str) -> str:
 @pytest.mark.parametrize(("role", "path"), CASES, ids=[f"{r.value}-{p}" for r, p in CASES])
 def test_the_access_table(client_as: ClientAs, role: Role, path: str) -> None:
     """SC-001, US1-2, US1-3: 3 roles × 5 pages."""
-    response = client_as(SINGLE_ROLE[role]).get(path, follow_redirects=False)
-    if role in ACCESS_TABLE[path]:
+    signed_in = client_as(SINGLE_ROLE[role])
+    response = signed_in.get(path, follow_redirects=False)
+    if role in ACCESS_TABLE[path] and path in REDIRECTS:
+        assert response.status_code == 303
+        assert response.headers["location"] == REDIRECTS[path]
+        tab = signed_in.get(REDIRECTS[path])
+        assert tab.status_code == 200
+        assert f'<a href="{REDIRECTS[path]}" aria-current="page">Students</a>' in tab.text
+    elif role in ACCESS_TABLE[path]:
         assert response.status_code == 200
         if path in TITLES:
             assert f"<h1>{TITLES[path]}</h1>" in response.text

@@ -15,7 +15,17 @@ from sqlmodel import Session, select
 
 import app.services.institutions
 from app.core.db import utc_now
-from app.models import AccessLevel, Institution, Region, TeacherInstitution, User
+from app.models import (
+    AccessLevel,
+    Enrolment,
+    Institution,
+    Region,
+    Role,
+    SchoolClass,
+    TeacherInstitution,
+    User,
+    UserRole,
+)
 from app.schemas.names import InvalidName, name_key
 from app.services.institutions import (
     DuplicateInstitutionName,
@@ -422,6 +432,80 @@ def test_an_institution_in_use_cannot_be_deleted(
     assert caught.value.institution.id == institution.id
     assert caught.value.uses == 1
     assert all_rows(session) == before
+
+
+def add_class(session: Session, institution: Institution, name: str, active: bool = True) -> int:
+    """A class inserted directly (milestone 9), bypassing the teacher's service."""
+    now = utc_now()
+    assert institution.id is not None
+    school_class = SchoolClass(
+        institution_id=institution.id,
+        name=name,
+        name_key=name_key(name),
+        year_of_study=2,
+        is_active=active,
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(school_class)
+    session.commit()
+    assert school_class.id is not None
+    return school_class.id
+
+
+def enrol_a_student(session: Session, class_id: int, email: str = "taras@example.org") -> None:
+    now = utc_now()
+    user = User(email=email, is_active=True, created_at=now, updated_at=now)
+    session.add(user)
+    session.flush()
+    assert user.id is not None
+    session.add(UserRole(user_id=user.id, role=Role.STUDENT, created_at=now))
+    session.add(Enrolment(user_id=user.id, class_id=class_id, created_at=now, updated_at=now))
+    session.commit()
+
+
+def class_ids(session: Session) -> list[int]:
+    session.expire_all()
+    return sorted(c.id for c in session.exec(select(SchoolClass)) if c.id is not None)
+
+
+def test_empty_classes_are_deleted_with_their_institution(session: Session, kyiv: Region) -> None:
+    """Milestone 9 FR-007, US8-1, research D14: classes alone are no use."""
+    institution = create_institution(session, kyiv.id, "Academy")
+    other = create_institution(session, kyiv.id, "College")
+    add_class(session, institution, "KN-21")
+    add_class(session, institution, "KN-11", active=False)
+    kept = add_class(session, other, "KN-21")
+    assert count_institution_uses(session, institution.id) == 0
+    delete_institution(session, kyiv.id, institution.id)
+    assert names(session, kyiv) == ["College"]
+    assert class_ids(session) == [kept]
+
+
+@pytest.mark.parametrize("active", [True, False], ids=["active-class", "deactivated-class"])
+def test_an_enrolled_student_puts_an_institution_in_use(
+    session: Session, kyiv: Region, active: bool
+) -> None:
+    """Milestone 9 FR-007, US8-2: a blocked student too; nothing is deleted."""
+    institution = create_institution(session, kyiv.id, "Academy")
+    class_id = add_class(session, institution, "KN-21", active=active)
+    add_class(session, institution, "KN-22")
+    enrol_a_student(session, class_id)
+    assert count_institution_uses(session, institution.id) == 1
+    before = (all_rows(session), class_ids(session))
+    with pytest.raises(InstitutionInUse) as caught:
+        delete_institution(session, kyiv.id, institution.id)
+    assert caught.value.uses == 1
+    assert (all_rows(session), class_ids(session)) == before
+
+
+def test_links_and_enrolments_are_counted_together(session: Session, kyiv: Region) -> None:
+    institution = create_institution(session, kyiv.id, "Academy")
+    link_a_teacher(session, institution)
+    class_id = add_class(session, institution, "KN-21")
+    enrol_a_student(session, class_id, "a@example.org")
+    enrol_a_student(session, class_id, "b@example.org")
+    assert count_institution_uses(session, institution.id) == 3
 
 
 @pytest.mark.parametrize(

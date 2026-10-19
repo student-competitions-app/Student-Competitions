@@ -9,10 +9,11 @@ separate index (research D3).
 An institution is available for selection only when the institution and its region are both
 active; `app.services.institutions` computes this rule for the teacher picker (milestone 8).
 
-Teacher links (`teacher_institutions`, milestone 8) refer to institutions, and milestone 9's
-students will too; each reference is counted by
-`app.services.institutions.count_institution_uses`, so an institution in use can never be
-deleted.
+An institution holds classes (`classes`, milestone 9). Teacher links (`teacher_institutions`,
+milestone 8) refer to institutions, and students through their classes' enrolments;
+`app.services.institutions.count_institution_uses` counts the links plus the enrolments in its
+classes, so an institution in use can never be deleted. Classes with no student never block the
+deletion: they are deleted with the institution (FR-007).
 """
 
 from datetime import datetime

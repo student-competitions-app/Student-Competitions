@@ -1,0 +1,30 @@
+{% extends "layouts/teacher.html" %}
+
+{% block title %}Invite a student to “{{ school_class.name }}” — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+<section>
+  <h1>Invite a student to “{{ school_class.name }}”</h1>
+  <dl class="details-list">
+    <dt>Educational institution</dt>
+    <dd>{{ institution.name }} ({{ institution.region_name }})</dd>
+    <dt>Class</dt>
+    <dd>{{ school_class.label }}</dd>
+  </dl>
+  {% if refused %}
+  <p>This class is deactivated. Students cannot be added to it.</p>
+  <p><a href="{{ cancel }}">Back to “{{ school_class.name }}”</a></p>
+  {% else %}
+  <p>The person receives an email with a link. Nothing about them is stored unless they accept.</p>
+  {% if form_error %}<p class="auth-message" role="alert">{{ form_error }}</p>{% endif %}
+  <form method="post" action="/teacher/students/classes/{{ school_class.id }}/invite">
+    <label for="email">Email address</label>
+    <input type="email" id="email" name="email" maxlength="254" required value="{{ values.email }}"{% if errors.email %} aria-invalid="true" aria-describedby="email-error"{% endif %}>
+    {% if errors.email %}<small id="email-error">{{ errors.email }}</small>{% endif %}
+    {% include "pages/admin/_person_names.html" %}
+    <button type="submit">Send invitation</button>
+    <a href="{{ cancel }}">Cancel</a>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

@@ -18,9 +18,18 @@ from sqlmodel import Session, select
 import app.services.institutions
 from app.core.db import utc_now
 from app.main import app as app_module
-from app.models import AccessLevel, Institution, Region
+from app.models import (
+    AccessLevel,
+    Enrolment,
+    Institution,
+    Region,
+    Role,
+    SchoolClass,
+    User,
+    UserRole,
+)
 from app.schemas.names import name_key
-from tests.conftest import invite_and_accept
+from tests.conftest import ClientAs, invite_and_accept
 
 TAB = "/admin/institutions"
 MISSING = 999
@@ -545,7 +554,7 @@ def test_each_region_offers_its_actions(admin_client: TestClient, session: Sessi
         item = region_item(body, rid)
         assert f'<a href="{region_path(rid)}/rename">Rename</a>' in item
         assert f'<a href="{region_path(rid)}/delete">Delete</a>' in item
-    assert f'<form method="post" action="{region_path(kyiv)}/deactivate">' in body
+    assert f'<a href="{region_path(kyiv)}/deactivate">Deactivate</a>' in body
     assert f'<form method="post" action="{region_path(odesa)}/activate">' in body
     assert f"{region_path(kyiv)}/activate" not in body
     assert f"{region_path(odesa)}/deactivate" not in body
@@ -623,9 +632,7 @@ def test_deactivate_and_activate_a_region(admin_client: TestClient, session: Ses
     assert region_names(session) == [("Kyiv", True)]
     body = admin_client.get(region_path(kyiv)).text
     assert f"{region_path(kyiv)}/institutions/new" in right(body)
-    assert re.search(
-        rf'action="{region_path(kyiv)}/deactivate">\s*<button[^>]*>Deactivate</button>', body
-    )
+    assert f'<a href="{region_path(kyiv)}/deactivate">Deactivate</a>' in body
 
 
 def test_a_region_status_never_changes_its_institutions(
@@ -708,6 +715,7 @@ def test_a_region_holding_an_institution_cannot_be_deleted(
     [
         ("GET", "/rename"),
         ("POST", "/rename"),
+        ("GET", "/deactivate"),
         ("POST", "/deactivate"),
         ("POST", "/activate"),
         ("GET", "/delete"),
@@ -745,9 +753,7 @@ def test_each_institution_offers_its_actions(
         assert f'<a href="{institution_path(kyiv, iid)}/delete">Delete</a>' in row
     academy_row = institution_row(body, academy)
     college_row = institution_row(body, college)
-    assert f'<form method="post" action="{institution_path(kyiv, academy)}/deactivate">' in (
-        academy_row
-    )
+    assert f'<a href="{institution_path(kyiv, academy)}/deactivate">Deactivate</a>' in (academy_row)
     assert f'<form method="post" action="{institution_path(kyiv, college)}/activate">' in (
         college_row
     )
@@ -915,7 +921,7 @@ def test_an_institution_in_use_cannot_be_deleted(
     assert IN_USE.format("Academy") in body
     assert ">Delete</button>" not in body
     assert f'action="{institution_path(kyiv, academy)}/delete"' not in body
-    assert f'<form method="post" action="{institution_path(kyiv, academy)}/deactivate">' in body
+    assert f'<a href="{institution_path(kyiv, academy)}/deactivate" role="button">' in body
     assert f'<a href="{region_path(kyiv)}">Back to “Kyiv”</a>' in body
     assert current_tabs(body) == [TAB]
     assert institutions(session) == before
@@ -970,6 +976,7 @@ def test_institutions_of_a_deactivated_region_stay_manageable(
 INSTITUTION_REQUESTS = [
     ("GET", "/rename"),
     ("POST", "/rename"),
+    ("GET", "/deactivate"),
     ("POST", "/deactivate"),
     ("POST", "/activate"),
     ("GET", "/delete"),
@@ -1044,3 +1051,144 @@ def test_reloading_after_each_action_repeats_nothing(
         before = (regions(session), institutions(session))
         admin_client.get(region_path(kyiv))
         assert (regions(session), institutions(session)) == before, action
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 9: confirmation before deactivating a region or an institution
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/009-classes-students-management/spec.md FR-017 and research D15. Deactivation now
+# signs out and hides the students below, so it is confirmed first; the `POST` is unchanged.
+
+SIGNED_OUT = "Its students will be signed out and hidden until it is activated again."
+
+
+def test_the_region_confirmation_changes_nothing_and_posts_to_the_route(
+    admin_client: TestClient, session: Session
+) -> None:
+    kyiv = add_region(session, "Kyiv")
+    before = regions(session)
+    response = admin_client.get(f"{region_path(kyiv)}/deactivate")
+    assert response.status_code == 200
+    body = response.text
+    assert "<h1>Deactivate region “Kyiv”?</h1>" in body
+    assert SIGNED_OUT in body
+    assert f'<form method="post" action="{region_path(kyiv)}/deactivate">' in body
+    assert f'<a href="{region_path(kyiv)}">Cancel</a>' in body
+    assert current_tabs(body) == [TAB]
+    assert regions(session) == before
+    assert_redirect(post(admin_client, f"{region_path(kyiv)}/deactivate"), region_path(kyiv))
+    assert region_names(session) == [("Kyiv", False)]
+
+
+def test_the_institution_confirmation_changes_nothing_and_posts_to_the_route(
+    admin_client: TestClient, session: Session
+) -> None:
+    kyiv = add_region(session, "Kyiv")
+    academy = add_institution(session, kyiv, "Academy")
+    path = institution_path(kyiv, academy)
+    before = institutions(session)
+    response = admin_client.get(f"{path}/deactivate")
+    assert response.status_code == 200
+    body = response.text
+    assert "<h1>Deactivate educational institution “Academy”?</h1>" in body
+    assert "Region: Kyiv" in body
+    assert SIGNED_OUT in body
+    assert f'<form method="post" action="{path}/deactivate">' in body
+    assert institutions(session) == before
+    assert_redirect(post(admin_client, f"{path}/deactivate"), region_path(kyiv))
+    assert institution_names(session, kyiv) == [("Academy", False)]
+
+
+@pytest.mark.parametrize("email", ["teacher@example.com", "student@example.com"])
+def test_the_confirmations_are_for_administrators_only(
+    client: TestClient, client_as: ClientAs, session: Session, email: str
+) -> None:
+    """Anonymous visitors are sent to sign in; teachers and students are denied."""
+    kyiv = add_region(session, "Kyiv")
+    academy = add_institution(session, kyiv, "Academy")
+    for path in (
+        f"{region_path(kyiv)}/deactivate",
+        f"{institution_path(kyiv, academy)}/deactivate",
+    ):
+        anonymous = client.get(path, follow_redirects=False)
+        assert anonymous.status_code == 303
+        assert anonymous.headers["location"].startswith("/login?next=")
+        assert client_as(email).get(path).status_code == 403
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 9: deleting an institution that holds classes (user story 8)
+# ---------------------------------------------------------------------------------------------
+
+
+def add_class(session: Session, institution_id: int, name: str, active: bool = True) -> int:
+    now = utc_now()
+    school_class = SchoolClass(
+        institution_id=institution_id,
+        name=name,
+        name_key=name_key(name),
+        year_of_study=1,
+        is_active=active,
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(school_class)
+    session.commit()
+    assert school_class.id is not None
+    return school_class.id
+
+
+def stored_classes(session: Session) -> list[int]:
+    session.expire_all()
+    return sorted(c.id for c in session.exec(select(SchoolClass)) if c.id is not None)
+
+
+@pytest.mark.parametrize(
+    ("count", "sentence"),
+    [
+        (0, None),
+        (1, "Its class will be deleted too."),
+        (2, "Its 2 classes will be deleted too."),
+    ],
+)
+def test_empty_classes_are_announced_and_deleted_with_the_institution(
+    admin_client: TestClient, session: Session, count: int, sentence: str | None
+) -> None:
+    """US8-1, FR-007."""
+    kyiv = add_region(session, "Kyiv")
+    academy = add_institution(session, kyiv, "Academy")
+    for number in range(count):
+        add_class(session, academy, f"KN-{number}", active=number == 0)
+    path = institution_path(kyiv, academy)
+    body = admin_client.get(f"{path}/delete").text
+    if sentence is None:
+        assert "will be deleted too." not in body
+    else:
+        assert sentence in body
+    assert_redirect(post(admin_client, f"{path}/delete"), region_path(kyiv))
+    assert institution_names(session, kyiv) == []
+    assert stored_classes(session) == []
+
+
+@pytest.mark.parametrize("active", [True, False], ids=["active-class", "deactivated-class"])
+def test_an_institution_with_an_enrolled_student_is_in_use(
+    admin_client: TestClient, session: Session, active: bool
+) -> None:
+    """US8-2: blocked or not; nothing is deleted."""
+    kyiv = add_region(session, "Kyiv")
+    academy = add_institution(session, kyiv, "Academy")
+    class_id = add_class(session, academy, "KN-21", active=active)
+    now = utc_now()
+    user = User(email="taras@example.org", is_active=True, created_at=now, updated_at=now)
+    session.add(user)
+    session.flush()
+    assert user.id is not None
+    session.add(UserRole(user_id=user.id, role=Role.STUDENT, created_at=now))
+    session.add(Enrolment(user_id=user.id, class_id=class_id, created_at=now, updated_at=now))
+    session.commit()
+    before = (institutions(session), stored_classes(session))
+    response = post(admin_client, f"{institution_path(kyiv, academy)}/delete")
+    assert response.status_code == 409
+    assert IN_USE.format("Academy") in response.text
+    assert (institutions(session), stored_classes(session)) == before

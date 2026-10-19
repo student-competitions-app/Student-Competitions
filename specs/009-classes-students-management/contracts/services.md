@@ -255,7 +255,10 @@ STUDENT_INVITATION}`. It imports `teachers` and `students` lazily.
 NOT_A_NEW_STUDENT = "This email already belongs to a student"
 CLASS_DEACTIVATED = "This class is deactivated."
 
-class ClassNotActive(ValueError): message
+
+class ClassNotActive(ValueError):
+    message
+
 
 @dataclass(frozen=True)
 class StudentRow:
@@ -265,9 +268,10 @@ class StudentRow:
     email: str
     class_id: int
 
+
 @dataclass(frozen=True)
 class EnrolmentView:
-    institution_label: str      # "Name (Region)"
+    institution_label: str  # "Name (Region)"
     class_name: str
     year_of_study: int
     is_available: bool

@@ -28,8 +28,17 @@
     <dt>Can create competitions</dt>
     <dd>{% if teacher.can_create_competitions %}Yes{% else %}No{% endif %}</dd>
     {% endif %}
+    {% if enrolment %}
+    <dt>Educational institution</dt>
+    <dd>{{ enrolment.institution_label }}</dd>
+    <dt>Class</dt>
+    <dd>{{ enrolment.class_name }}{% if not enrolment.is_available %} <small class="status-deactivated">(deactivated)</small>{% endif %}</dd>
+    <dt>Year of study</dt>
+    <dd>{{ enrolment.year_of_study }}</dd>
+    {% endif %}
   </dl>
-  <p>Corrections to teacher data are made by an administrator.</p>
+  {% if enrolment %}<p>Corrections to student data are made by a teacher of your educational institution.</p>{% endif %}
+  {% if teacher %}<p>Corrections to teacher data are made by an administrator.</p>{% endif %}
 
   {% if records %}
   <h2>Your consent</h2>

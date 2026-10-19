@@ -126,14 +126,17 @@
   margin-top: 1.5rem;
 }
 
-/* The administrator area's tab row (specs/006-admin-area FR-002–FR-004): plain links that wrap on
-   a phone rather than scrolling sideways, the current tab marked by a bold underline. */
-.admin-tabs {
+/* The administrator area's tab row (specs/006-admin-area FR-002–FR-004), shared since milestone 9
+   with the teacher area's (`area-tabs`): plain links that wrap on a phone rather than scrolling
+   sideways, the current tab marked by a bold underline. */
+.admin-tabs,
+.area-tabs {
   border-bottom: 1px solid var(--pico-muted-border-color);
   margin-bottom: 1.5rem;
 }
 
-.admin-tabs ul {
+.admin-tabs ul,
+.area-tabs ul {
   display: flex;
   flex-wrap: wrap;
   gap: 0 1.5rem;
@@ -141,13 +144,15 @@
   padding: 0;
 }
 
-.admin-tabs li {
+.admin-tabs li,
+.area-tabs li {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.admin-tabs a {
+.admin-tabs a,
+.area-tabs a {
   border-bottom: 0.2rem solid transparent;
   color: var(--pico-muted-color);
   display: inline-block;
@@ -155,7 +160,8 @@
   text-decoration: none;
 }
 
-.admin-tabs a[aria-current="page"] {
+.admin-tabs a[aria-current="page"],
+.area-tabs a[aria-current="page"] {
   border-bottom-color: var(--pico-primary);
   color: var(--pico-color);
   font-weight: bold;
@@ -310,4 +316,55 @@
 
 .consent-record {
   margin-block: 1rem;
+}
+
+/* The Students tab of the teacher area (specs/009-classes-students-management FR-048, research
+   D7): the Region, Educational institution and Class lists in a row from 768 px, stacked in that
+   order below, each in its own small form with a Show button. */
+.class-picker {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .class-picker {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.class-picker form {
+  margin: 0;
+}
+
+.class-picker select {
+  margin-bottom: 0.5rem;
+}
+
+.class-picker button {
+  width: auto;
+}
+
+/* The selected class: its label, then its actions inline, as in the administrator's lists. */
+.class-bar {
+  border-top: 1px solid var(--pico-muted-border-color);
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+}
+
+.class-bar h2 {
+  margin-bottom: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.class-bar .row-actions {
+  margin-bottom: 1rem;
+}
+
+.students-table td {
+  overflow-wrap: anywhere;
+}
+
+.students-table .row-actions {
+  white-space: nowrap;
 }

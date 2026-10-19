@@ -8,7 +8,9 @@ spec's access table.
 
 `ADMIN_AREA` stays here, so the home page keeps its "Administrator area" link to `/admin`, but the
 address itself is served by `app.routers.admin`: since milestone 6 it opens the administrator
-area's tabs (specs/006-admin-area/research.md D6).
+area's tabs (specs/006-admin-area/research.md D6). `TEACHER_AREA` likewise: since milestone 9
+`/teacher` is served by `app.routers.teacher` and opens the teacher area's tabs
+(specs/009-classes-students-management/research.md D6).
 """
 
 from dataclasses import dataclass
@@ -48,12 +50,6 @@ def _render(request: Request, area: Area) -> HTMLResponse:
     return templates.TemplateResponse(
         request, "pages/area.html", {"app_name": APP_NAME, "area": area}
     )
-
-
-@router.get(TEACHER_AREA.path, response_class=HTMLResponse)
-@allow_roles(*TEACHER_AREA.roles)
-def teacher_area(request: Request) -> HTMLResponse:
-    return _render(request, TEACHER_AREA)
 
 
 @router.get(STUDENT_AREA.path, response_class=HTMLResponse)

@@ -1,5 +1,5 @@
-"""Person names and addresses: the validation boundary for invitations and teacher edits. Pure,
-no I/O.
+"""Person names and addresses: the validation boundary for invitations, teacher edits and
+student edits. Pure, no I/O.
 
 See specs/008-teacher-management-consent/research.md#d11 and data-model.md §1. Names follow the
 milestone 6/7 rules with a shorter limit: control characters are refused on the value as
@@ -49,6 +49,22 @@ def clean_person_name(raw: str, field_label: str) -> str:
             f"The {field_label} can be at most {PERSON_NAME_MAX_LENGTH} characters."
         )
     return name
+
+
+def clean_person_names(first_name: str, last_name: str, errors: dict[str, str]) -> tuple[str, str]:
+    """Both names cleaned; a refused one is `""`, with its message recorded in `errors` under
+    `first_name` or `last_name`, so a form can show every error at once."""
+    cleaned = []
+    for field, raw, label in (
+        ("first_name", first_name, "first name"),
+        ("last_name", last_name, "last name"),
+    ):
+        try:
+            cleaned.append(clean_person_name(raw, label))
+        except InvalidPersonName as refused:
+            errors[field] = refused.message
+            cleaned.append("")
+    return cleaned[0], cleaned[1]
 
 
 def clean_email(raw: str) -> str:

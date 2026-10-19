@@ -1,0 +1,30 @@
+{% extends "layouts/teacher.html" %}
+
+{% block title %}{{ student.first_name }} {{ student.last_name }} — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+<section>
+  <h1>{{ student.first_name }} {{ student.last_name }}</h1>
+  <dl class="details-list">
+    <dt>Email</dt>
+    <dd>{{ student.email }}</dd>
+    <dt>Educational institution</dt>
+    <dd>{{ institution.name }} ({{ institution.region_name }})</dd>
+  </dl>
+  <form method="post" action="/teacher/students/{{ student.user_id }}">
+    <input type="hidden" name="region" value="{{ carried.region }}">
+    <input type="hidden" name="institution" value="{{ carried.institution }}">
+    <input type="hidden" name="class" value="{{ carried.class }}">
+    {% include "pages/admin/_person_names.html" %}
+    <label for="class_id">Class</label>
+    <select id="class_id" name="class_id"{% if errors.class_id %} aria-invalid="true" aria-describedby="class-error"{% endif %}>
+      {% for c in classes %}
+      <option value="{{ c.id }}"{% if c.id|string == values.class_id %} selected{% endif %}>{{ c.label }}</option>
+      {% endfor %}
+    </select>
+    {% if errors.class_id %}<small id="class-error">{{ errors.class_id }}</small>{% endif %}
+    <button type="submit">Save</button>
+    <a href="{{ cancel }}">Cancel</a>
+  </form>
+</section>
+{% endblock %}

@@ -4,6 +4,10 @@ See specs/005-roles-authorization/contracts/auth-services.md#appservicessessions
 D3, D9. The database stores only the SHA-256 of the token; the token itself travels in the signed
 cookie. Each session row also carries the role that browser is currently using, so two browsers
 of one person can use different roles (FR-011). Nothing here logs a token or a hash.
+
+Since milestone 9, a role is offered and kept only while it is **usable**
+(`app.services.availability`, research D3): a blocked student's student role counts as not held,
+so the role choice, the header switch and the access rule never offer it.
 """
 
 from dataclasses import dataclass
@@ -15,7 +19,7 @@ from sqlmodel import Session, col, select
 from app.core.db import utc_now
 from app.core.security import SESSION_TTL, hash_token, new_session_token
 from app.models import Role, User, UserRole, UserSession
-from app.services.users import get_roles
+from app.services.availability import is_student_blocked, usable_roles
 
 
 @dataclass(frozen=True)
@@ -57,9 +61,10 @@ def start_session(
     session: Session, user: User, now: datetime | None = None
 ) -> tuple[str, Role | None]:
     """What a correct code starts: the token, and the initial current role, which is the single
-    role held, or `None` when several are held and the person must choose (FR-012, FR-013)."""
+    usable role, or `None` when several are usable and the person must choose (FR-012, FR-013;
+    milestone 9 research D3)."""
     assert user.id is not None
-    roles = get_roles(session, user.id)
+    roles = usable_roles(session, user.id)
     current_role = roles[0] if len(roles) == 1 else None
     return create_session(session, user, current_role, now), current_role
 
@@ -68,13 +73,16 @@ def get_session_identity(
     session: Session, token: str, now: datetime | None = None
 ) -> SessionIdentity | None:
     """Who the token belongs to, if the session is unexpired, the user active, and its current
-    role, if set, still held.
+    role, if set, still held and usable.
 
     One indexed query returns one row per role held (at most three); a user with no roles matches
-    nothing. Then (rows G1–G6 of the contract): a current role that is not held, or not a role at
-    all, **deletes this session** and resolves to nobody (FR-017); no current role and exactly one
-    role held **stores** that role, which upgrades a session from before milestone 5 (SC-010);
-    otherwise the stored state is returned as is. Correct whether or not cleanup has run yet.
+    nothing. When the student role is among them, one more query checks the enrolment chain, and a
+    blocked student's role counts as not held (milestone 9 research D3); with no usable role left,
+    **this session is deleted** and resolves to nobody. Then (rows G1–G6 of the contract): a
+    current role that is not held (or not usable), or not a role at all, **deletes this session**
+    and resolves to nobody (FR-017); no current role and exactly one role held **stores** that
+    role, which upgrades a session from before milestone 5 (SC-010); otherwise the stored state is
+    returned as is. Correct whether or not cleanup has run yet.
     """
     now = now or utc_now()
     statement = (
@@ -92,9 +100,17 @@ def get_session_identity(
         return None
     user, session_id, stored_role, _ = rows[0]
     held = {role for *_, role in rows}
+    assert user.id is not None
+    if Role.STUDENT in held and is_student_blocked(session, user.id):
+        held.discard(Role.STUDENT)
     roles = tuple(role for role in Role if role in held)
     # Detached before any commit below, so its loaded attributes outlive this database session.
     session.expunge(user)
+
+    if not held:
+        session.execute(delete(UserSession).where(col(UserSession.id) == session_id))
+        session.commit()
+        return None
 
     if stored_role is None:
         if len(roles) != 1:

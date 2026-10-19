@@ -7,9 +7,12 @@ nothing about the invited person is in the database until they press **I agree**
 The flow is the same for every invitable role (FR-005). It knows a role only through an
 `InvitableRole` definition: who may invite, which role details are acceptable, how they are
 described, granted and revoked. `invitable_roles()` is the registry, the `INVITABLE_ROLES` of the
-plan: this milestone registers the teacher (`app.services.teachers.TEACHER_INVITATION`), and
-milestone 9 adds the student without changing anything here. The registry imports
-`app.services.teachers` lazily, because that module imports this one.
+plan: milestone 8 registered the teacher (`app.services.teachers.TEACHER_INVITATION`), and
+milestone 9 adds the student (`app.services.students.STUDENT_INVITATION`). The registry imports
+both modules lazily, because they import this one.
+
+The flow changed in one place only for milestone 9: the names rule of `accept_invitation`
+(specs/009-classes-students-management/research.md D10).
 
 These functions enforce no route authorization: the invitation form is administrator-only, and
 the link pages are public because the sealed token is their authority (FR-055). They log ids,
@@ -93,10 +96,11 @@ class InvitableRole(Protocol):
 
 
 def invitable_roles() -> dict[Role, InvitableRole]:
-    """The registry of invitable roles (`INVITABLE_ROLES`): this milestone, the teacher only."""
+    """The registry of invitable roles (`INVITABLE_ROLES`): the teacher and the student."""
+    from app.services.students import STUDENT_INVITATION
     from app.services.teachers import TEACHER_INVITATION
 
-    return {Role.TEACHER: TEACHER_INVITATION}
+    return {Role.TEACHER: TEACHER_INVITATION, Role.STUDENT: STUDENT_INVITATION}
 
 
 def invitable_role(role: Role) -> InvitableRole:
@@ -212,10 +216,11 @@ def issue_invitation(
     )
     sender.send(message)
     logger.info(
-        "Invitation sent: inviter_id=%s role=%s institutions=%s",
+        "Invitation sent: inviter_id=%s role=%s institutions=%s class_id=%s",
         inviter.id,
         role.value,
         len(getattr(details, "institutions", ())),
+        getattr(details, "class_id", "-"),
     )
 
 
@@ -304,6 +309,15 @@ def _accept_once(
         session.rollback()
         return ConsentChanged(read)
 
+    # The names rule (milestone 9 FR-036, FR-037, research D10): a person who already holds the
+    # teacher or the student role keeps their names; anyone else gets the invitation's.
+    keep_names = (
+        user is not None
+        and user.id is not None
+        and user.is_active
+        and user.first_name is not None
+        and bool({Role.TEACHER, Role.STUDENT} & set(get_roles(session, user.id)))
+    )
     if user is None:
         user = User(email=read.email, is_active=True, created_at=now, updated_at=now)
         change = "created"
@@ -312,8 +326,9 @@ def _accept_once(
         change = "reactivated"
     else:
         change = "added"
-    user.first_name = read.first_name
-    user.last_name = read.last_name
+    if not keep_names:
+        user.first_name = read.first_name
+        user.last_name = read.last_name
     user.updated_at = now
     session.add(user)
     session.flush()
@@ -344,7 +359,11 @@ def accept_invitation(
     (research D6, FR-028–FR-031).
 
     The person is created, or the role is added, or an inactive person is reactivated; the names,
-    the role, its details and a consent record are written together. Sessions are never touched:
+    the role, its details and a consent record are written together. A person who already holds
+    the teacher or the student role keeps their current names, and the invitation's are not used
+    (milestone 9 FR-036, a deliberate change to milestone 8 for teacher invitations too); a new
+    person, an inactive person and an administrator with neither role get the invitation's names
+    (FR-037). Sessions are never touched:
     nobody is signed in or out (FR-032). If a concurrent acceptance wins a unique constraint, the
     transaction is rolled back and run once more, which then finds the role held.
     """

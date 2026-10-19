@@ -1,9 +1,12 @@
 """Sliding-window rate limits: a request is allowed while every bucket it counts against has had
 fewer than its limit of hits in the last hour.
 
-See specs/004-email-otp-auth/research.md#d5 and data-model §4, and, for the invitation and
-data-deletion buckets, specs/008-teacher-management-consent/research.md#d12. The hits live in the
-application database, so the limits survive restarts and are shared by every instance (FR-019).
+See specs/004-email-otp-auth/research.md#d5 and data-model §4, for the invitation and
+data-deletion buckets specs/008-teacher-management-consent/research.md#d12, and for the student
+invitations specs/009-classes-students-management/research.md#d11: a teacher's student
+invitations count in their own bucket, and `invite_email` is shared by both roles. The hits live
+in the application database, so the limits survive restarts and are shared by every instance
+(FR-019).
 Every submitted key counts, registered address or not, so reaching a limit reveals nothing
 (FR-017). Keys are stored only as keyed hashes. Wrong code attempts are limited on the code
 itself, not here.
@@ -12,6 +15,7 @@ itself, not here.
 |---|---|---|
 | `code_email`, `code_client` | address, client | 5, 20 |
 | `invite_inviter`, `invite_email` | inviter's user id, invited address | 20, 5 |
+| `invite_student_inviter` | teacher's user id | 100 |
 | `deletion_email`, `deletion_client` | address, client | 5, 20 |
 """
 
@@ -30,6 +34,7 @@ BUCKET_CODE_EMAIL = "code_email"
 BUCKET_CODE_CLIENT = "code_client"
 BUCKET_INVITE_INVITER = "invite_inviter"
 BUCKET_INVITE_EMAIL = "invite_email"
+BUCKET_INVITE_STUDENT_INVITER = "invite_student_inviter"
 BUCKET_DELETION_EMAIL = "deletion_email"
 BUCKET_DELETION_CLIENT = "deletion_client"
 
@@ -37,6 +42,7 @@ EMAIL_CODE_LIMIT = 5
 CLIENT_CODE_LIMIT = 20
 INVITER_INVITE_LIMIT = 20
 EMAIL_INVITE_LIMIT = 5
+STUDENT_INVITER_INVITE_LIMIT = 100
 EMAIL_DELETION_LIMIT = 5
 CLIENT_DELETION_LIMIT = 20
 

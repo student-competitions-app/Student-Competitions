@@ -8,6 +8,12 @@ specs/005-roles-authorization/contracts/http-routes.md#access-rule-applies-to-ev
 
 `app.routes` holds each included router as a wrapper with no path or methods of its own, so
 `iter_routes` descends into it and prefixes its routes, as FastAPI does when it matches a request.
+
+The teacher pages that name an object (`TEACHER_SCOPED_PATHS`) answer "access denied" to a teacher
+for an id they cannot reach, unknown ids included (milestone 9 FR-021), so the sweep below cannot
+tell an allowed teacher from a denied one with every id set to `1`. For those pages it checks the
+denied roles only; `test_teacher_access.py` sweeps the same route table with real, reachable ids
+(milestone 9 research D17).
 """
 
 import re
@@ -28,6 +34,7 @@ from tests.conftest import ADMIN_EMAIL, STUDENT_EMAIL, TEACHER_EMAIL, ClientAs
 READ_ONLY_METHODS = {"GET", "HEAD"}
 
 INSTITUTION = "/admin/institutions/regions/{region_id:int}/institutions/{institution_id:int}"
+TEACHER_CLASS = "/teacher/students/classes/{class_id:int}"
 
 
 def iter_routes(
@@ -60,7 +67,7 @@ def test_the_route_table_is_not_empty() -> None:
 
 def test_the_write_routes_are_exact() -> None:
     """Signing in and out, choosing a role, the administrator's subject, region, institution and
-    teacher actions, and accepting an invitation."""
+    teacher actions, accepting an invitation, and the teacher's class and student actions."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -89,6 +96,14 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/profile/withdraw"),
         ("POST", "/data-deletion"),
         ("POST", "/data-deletion/confirm/{token}"),
+        ("POST", "/teacher/students/institutions/{institution_id:int}/classes"),
+        ("POST", f"{TEACHER_CLASS}/edit"),
+        ("POST", f"{TEACHER_CLASS}/deactivate"),
+        ("POST", f"{TEACHER_CLASS}/activate"),
+        ("POST", f"{TEACHER_CLASS}/delete"),
+        ("POST", f"{TEACHER_CLASS}/invite"),
+        ("POST", "/teacher/students/{user_id:int}"),
+        ("POST", "/teacher/students/{user_id:int}/remove"),
     }
 
 
@@ -220,8 +235,22 @@ def declared_get_routes() -> list[tuple[str, frozenset[Role]]]:
     return found
 
 
+TEACHER_SCOPED_PATHS = frozenset(
+    path
+    for path, _ in declared_get_routes()
+    if path.startswith("/teacher/students/") and "{" in path
+)
+"""The teacher pages whose path names an object (milestone 9 research D17)."""
+
+
 def test_there_are_declared_pages_to_sweep() -> None:
     assert len(declared_get_routes()) >= 5
+
+
+def test_the_teacher_scoped_pages_are_found() -> None:
+    """Guard the skip below from hiding nothing, or everything."""
+    assert "/teacher/students/classes/{class_id:int}/edit" in TEACHER_SCOPED_PATHS
+    assert "/teacher/students" not in TEACHER_SCOPED_PATHS
 
 
 @pytest.mark.parametrize(("path", "allowed"), declared_get_routes())
@@ -233,10 +262,15 @@ def test_every_declared_page_admits_exactly_its_roles(
     An allowed role is "not denied" rather than "200" (specs/006-admin-area/research.md D9):
     `/admin` answers with a 303 to its first tab, and `/admin/subjects/1/rename` with a 404 when
     there is no subject 1. Both prove access was granted; each page's own status is pinned by its
-    own tests."""
+    own tests.
+
+    For `TEACHER_SCOPED_PATHS` the allowed teacher is not checked here: id `1` is out of reach, so
+    the page answers "access denied" (see the module docstring)."""
     for role, email in SINGLE_ROLE.items():
         status = client_as(email).get(_concrete(path), follow_redirects=False).status_code
         if role in allowed:
+            if path in TEACHER_SCOPED_PATHS:
+                continue
             assert status != 403, f"{role.value} GET {path}: {status}"
         else:
             assert status == 403, f"{role.value} GET {path}: {status}"

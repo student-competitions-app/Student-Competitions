@@ -1,0 +1,14 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Deactivate region “{{ region.name }}” — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+<section>
+  <h1>Deactivate region “{{ region.name }}”?</h1>
+  <p>Its students will be signed out and hidden until it is activated again.</p>
+  <form method="post" action="/admin/institutions/regions/{{ region.id }}/deactivate">
+    <button type="submit">Deactivate</button>
+    <a href="/admin/institutions/regions/{{ region.id }}">Cancel</a>
+  </form>
+</section>
+{% endblock %}

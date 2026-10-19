@@ -4,8 +4,10 @@ See specs/005-roles-authorization/data-model.md#2-user--table-users-changed and
 specs/008-teacher-management-consent/data-model.md §1. The sources of each role:
 
 - administrator: `reconcile_users`, from `ADMIN_EMAILS`;
-- teacher: an accepted invitation (`app.services.invitations`), which also creates the user;
-- student: nobody until milestone 9.
+- teacher: an accepted teacher invitation (`app.services.invitations`), which also creates the
+  user;
+- student: an accepted student invitation (`STUDENT_INVITATION.grant`, milestone 9), sent by a
+  teacher; removed by student removal, withdrawal and data deletion.
 
 Rows are never hard-deleted: a person who loses every role is deactivated, so later records can
 still refer to them. Invariant: active ⇔ at least one role.
@@ -60,8 +62,9 @@ class User(SQLModel, table=True):
     first_name: str | None = Field(
         default=None, sa_column=Column(String(PERSON_NAME_MAX_LENGTH), nullable=True)
     )
-    """Written only by acceptance and by an administrator's edit. `NULL` = no data stored on
-    consent, or erased. Set and cleared together with `last_name`."""
+    """Written only by acceptance, by an administrator's teacher edit and by a teacher's student
+    edit. `NULL` = no data stored on consent, or erased. Set and cleared together with
+    `last_name`."""
     last_name: str | None = Field(
         default=None, sa_column=Column(String(PERSON_NAME_MAX_LENGTH), nullable=True)
     )

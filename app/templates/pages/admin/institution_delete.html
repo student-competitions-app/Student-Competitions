@@ -11,12 +11,11 @@
   {% if in_use %}
   <p>“{{ institution.name }}” is in use and cannot be deleted. You can deactivate it instead.</p>
   {% if institution.is_active %}
-  <form method="post" action="{{ path }}/deactivate">
-    <button type="submit">Deactivate</button>
-  </form>
+  <p><a href="{{ path }}/deactivate" role="button">Deactivate</a></p>
   {% endif %}
   <p><a href="{{ region_path }}">Back to “{{ region.name }}”</a></p>
   {% else %}
+  {% if classes == 1 %}<p>Its class will be deleted too.</p>{% elif classes > 1 %}<p>Its {{ classes }} classes will be deleted too.</p>{% endif %}
   <p>Deleting an educational institution cannot be undone.</p>
   <form method="post" action="{{ path }}/delete">
     <button type="submit">Delete</button>

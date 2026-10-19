@@ -18,9 +18,7 @@
         <div class="row-actions">
           <a href="/admin/institutions/regions/{{ r.id }}/rename">Rename</a>
           {% if r.is_active %}
-          <form method="post" action="/admin/institutions/regions/{{ r.id }}/deactivate">
-            <button type="submit" class="secondary outline">Deactivate</button>
-          </form>
+          <a href="/admin/institutions/regions/{{ r.id }}/deactivate">Deactivate</a>
           {% else %}
           <form method="post" action="/admin/institutions/regions/{{ r.id }}/activate">
             <button type="submit" class="secondary outline">Activate</button>
@@ -63,9 +61,7 @@
             <td class="row-actions">
               <a href="{{ path }}/rename">Rename</a>
               {% if i.is_active %}
-              <form method="post" action="{{ path }}/deactivate">
-                <button type="submit" class="secondary outline">Deactivate</button>
-              </form>
+              <a href="{{ path }}/deactivate">Deactivate</a>
               {% else %}
               <form method="post" action="{{ path }}/activate">
                 <button type="submit" class="secondary outline">Activate</button>

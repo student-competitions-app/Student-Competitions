@@ -174,7 +174,8 @@ app/
 │   └── institution.py                 # CHANGED: docstring (classes, in-use count)
 ├── schemas/
 │   ├── classes.py                     # NEW: parse_year_of_study
-│   └── students.py                    # NEW: StudentDetails
+│   ├── students.py                    # NEW: StudentDetails
+│   └── people.py                      # CHANGED: + clean_person_names (moved from admin_teachers._clean_names)
 ├── services/
 │   ├── availability.py                # NEW: chain rule, usable roles, signable user, sign-out below
 │   ├── teacher_access.py              # NEW: reachable institutions/classes/students, Read/Write
@@ -191,6 +192,7 @@ app/
 │   ├── teacher_students.py            # NEW: the Students tab, classes, invite, student edit/remove
 │   ├── areas.py                       # CHANGED: teacher placeholder handler removed (declaration kept)
 │   ├── admin_institutions.py          # CHANGED: two deactivate confirmations; delete page class count
+│   ├── admin_teachers.py              # CHANGED: uses clean_person_names; shares the "Invitation sent" reader
 │   └── profile.py                     # CHANGED: enrolment view, student correction note
 ├── main.py                            # CHANGED: include the two teacher routers
 ├── static/css/app.css                 # CHANGED: .area-tabs shared with admin; .class-picker row/stack

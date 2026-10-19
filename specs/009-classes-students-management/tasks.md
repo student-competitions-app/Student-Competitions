@@ -252,7 +252,7 @@ everything with no actions.
   - **Access**: each write with a Read link raises `WriteRequired`; with no link, `NotReachable`.
 - [ ] T019 [P] [US1] Create `tests/integration/test_teacher_classes.py` (HTTP; the teacher made with `make_teacher`, Write to "Kyiv Polytechnic Institute" in Kyiv, Read to "Lviv Academy" in Lviv), covering US1-1 to US1-16:
   - **The shell**: `/teacher` → `303 /teacher/students`. The tabs "Students" and "Competitions" are links, with the current one marked `aria-current="page"`. `/teacher/competitions` shows the placeholder sentence.
-  - **The empty states**: with nothing selected, Region is enabled, the other two lists are `disabled`, and "Select a region to continue" is shown. A cast teacher with no links sees "You are not linked to any educational institution" and three disabled lists.
+  - **The empty states**: with nothing selected, Region is enabled, the other two lists are `disabled`, and "Select a region to continue" is shown. A cast teacher with no links sees "You are not linked to any educational institution" and three disabled lists. So does a teacher whose only links are to a deactivated institution and to an active institution in a deactivated region (spec Edge Cases).
   - **Region list**: active regions holding an active linked institution only, sorted ignoring case. It leaves out a region whose only linked institution is deactivated, and a deactivated region.
   - **Institution list**: "Kyiv Polytechnic Institute — Write" and "Select an educational institution to continue".
   - **Class list**:

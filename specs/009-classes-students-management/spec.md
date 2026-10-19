@@ -652,7 +652,8 @@ and form values, and check the outcome.
 
 - **FR-048**: The **Students** tab MUST show three drop-down lists in a row: **Region**,
   **Educational institution** and **Class**, stacked in that order on narrow screens. Each MUST be
-  disabled until the previous one is selected. All MUST be sorted by name ignoring case.
+  disabled until the previous one is selected. All MUST be sorted by name ignoring case. Choosing an
+  entry MUST open it at once, with no **Show** button.
   - **Region**: active regions that hold at least one active institution the teacher is linked to.
   - **Educational institution**: the teacher's active institutions of the selected region, each
     marked "Read" or "Write".

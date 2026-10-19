@@ -197,16 +197,17 @@ bookmarkable, with the current tab highlighted.
 **Decision**: the canonical address of the tab is
 `/teacher/students?region=<id>&institution=<id>&class=<id>` (FR-050).
 
-- **Three small `GET` forms in a row**, each with its own **Show** button. CSS stacks them on
-  narrow screens.
+- **Three small `GET` forms in a row**, with no buttons. CSS stacks them on narrow screens.
   - The Region form submits `region`.
   - The Institution form submits a hidden `region` and `institution`.
   - The Class form submits hidden `region` and `institution`, and `class`.
   - Changing a higher list therefore never submits a stale lower one.
-- A list that is not yet enabled is rendered `disabled` with its **Show** button disabled.
-- **No script.** Milestones 6–8 have none, and an auto-submit `onchange` handler would be the first
-  inline script, with no CSP in place to review it against. Principle II allows minimal JavaScript,
-  but nothing here needs it.
+- A list that is not yet enabled is rendered `disabled`.
+- **Submit on change.** Each list carries `data-auto-submit`. One small external script,
+  `app/static/js/auto-submit.js`, listens for `change` and calls `requestSubmit()` on that list's own
+  form, so choosing an entry opens it at once. It is the application's first script. It is a
+  static file with no inline handler and no build step, which keeps it within Principle II's
+  "minimal JavaScript" and lets a later CSP allow it with `script-src 'self'`.
 - **Reading the address**:
   - The parameters are read as strings, so a bad value never produces FastAPI's 422 JSON.
   - An empty value counts as absent.
@@ -237,7 +238,7 @@ bookmarkable, with the current tab highlighted.
 - One form with all three lists: changing the region would submit the old institution, and the
   page would answer "access denied".
 - Path segments (`/teacher/students/regions/{r}/institutions/{i}/classes/{c}`), as milestone 7
-  does: a `GET` form can only produce a query string, so every **Show** would need a redirect.
+  does: a `GET` form can only produce a query string, so every submit would need a redirect.
 - HTMX partials: the full page is small, and HTMX is not yet in the codebase. It can arrive when a
   feature needs it.
 

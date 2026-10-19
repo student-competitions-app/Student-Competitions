@@ -198,7 +198,7 @@ the redirect. If it is missing or out of reach, the redirect uses the student's 
 | GET | `/admin/institutions/regions/{region_id:int}/deactivate` | NEW. `200` confirmation: "Deactivate region “Odesa”? Its students will be signed out and hidden until it is activated again." **Deactivate** posts to the existing `POST`; **Cancel** returns to the region. `404` region-not-found page as elsewhere. |
 | GET | `/admin/institutions/regions/{region_id:int}/institutions/{institution_id:int}/deactivate` | NEW. The same for an institution, naming it and its region. `404` pages as elsewhere. |
 | POST | the same two paths | Unchanged answers. The services now also sign out the students below (research D4). |
-| GET | `…/institutions/{institution_id:int}/delete` | CHANGED. When the institution has classes: "Its N classes will be deleted too." (FR-007). In the "in use" state, the **Deactivate** offer is a link to the confirmation. |
+| GET | `…/institutions/{institution_id:int}/delete` | CHANGED. When the institution has classes: "Its class will be deleted too." for one, "Its N classes will be deleted too." for more (FR-007). In the "in use" state, the **Deactivate** offer is a link to the confirmation. |
 | POST | `…/institutions/{institution_id:int}/delete` | CHANGED. The in-use check counts enrolled students, blocked ones included, and the institution's classes are deleted with it (research D14). Refusal stays `409` "in use". |
 
 In `institutions.html`, the **Deactivate** of regions and institutions becomes a link to the
@@ -253,9 +253,9 @@ D3).
 |---|---|
 | `200` | A page or form |
 | `303` | After every successful `POST`; `/teacher` → `/teacher/students`; `class=new` → the new-class form |
-| `400` | A form with invalid values, a duplicate class name, or an address that is already a student's |
+| `400` | A form with invalid values, a duplicate class name, an address that is already a student's, or a student edit that moves them into a deactivated class (a form value, like an invalid name) |
 | `403` | Wrong role, or a teacher reaching beyond their links or access level (including unknown ids) |
 | `404` | Admin pages only: region or institution not found (milestone 7) |
-| `409` | A class that holds students cannot be deleted; a deactivated class takes no students; an institution in use |
+| `409` | A class that holds students cannot be deleted; the invite form of a deactivated class; an institution in use |
 | `429` | An invitation limit was reached |
 | `503` | The invitation email could not be sent |

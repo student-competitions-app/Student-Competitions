@@ -430,8 +430,8 @@ constraints), so no constraint changes. The consent record stores no institution
     are the backstop. An enrolment or link created at the same moment makes the commit fail, and
     the failure is reported as "in use".
   - On SQLite, writers are serialised.
-- **The confirmation page** (`institution_delete.html`) says "Its N classes will be deleted too."
-  when the institution has classes. The new `classes.count_institution_classes` supplies N.
+- **The confirmation page** (`institution_delete.html`) says "Its class will be deleted too." for
+  one class, and "Its N classes will be deleted too." for more. The new `classes.count_institution_classes` supplies N.
 
 ---
 

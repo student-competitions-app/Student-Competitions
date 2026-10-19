@@ -225,6 +225,9 @@ tests/
 │   ├── test_class_schemas.py          # NEW
 │   └── test_consent_texts.py          # CHANGED: student v1 pinned
 └── integration/
+    ├── test_availability_service.py   # NEW (chain rule, usable roles, sign-out below)
+    ├── test_teacher_access_service.py # NEW (teacher reach)
+    ├── test_classes_service.py        # NEW (class service, US1)
     ├── test_availability.py           # NEW (US5)
     ├── test_teacher_classes.py        # NEW (US1)
     ├── test_student_invitation.py     # NEW (US2)
@@ -233,6 +236,7 @@ tests/
     ├── test_names_on_acceptance.py    # NEW (US6)
     ├── test_teacher_access.py         # NEW (US9)
     ├── test_profile.py                # CHANGED (US7)
+    ├── test_data_deletion.py          # CHANGED (US7: a student deletes their data)
     ├── test_login_flow.py             # CHANGED (blocked sign-in)
     ├── test_admin_institutions.py     # CHANGED (confirmations, US8)
     ├── test_institution_service.py    # CHANGED (enrolments in use, classes deleted)
@@ -267,7 +271,7 @@ top-level directories.
 | `test_admin_institutions.py` | Assertions that the list holds a direct `<form … /deactivate>` now expect a link to the confirmation. The in-use refusal's **Deactivate** is a link too. Direct `POST`s are unchanged. | FR-017 (clarified), research D15. |
 | `test_institution_service.py` | Added: an enrolled student makes the institution in use; empty classes are deleted with it. | FR-007, research D14. |
 | `test_consent_texts.py` | Student v1 pinned. | Research D13. |
-| `test_login_flow.py`, `test_profile.py`, `test_consent_privacy.py`, `test_cross_site.py` | Cases added; existing ones unchanged. | Stories 5 and 7; SC-002, SC-008; FR-055. |
+| `test_login_flow.py`, `test_profile.py`, `test_data_deletion.py`, `test_consent_privacy.py`, `test_cross_site.py` | Cases added; existing ones unchanged. | Stories 5 and 7; SC-002, SC-008; FR-055. |
 | `test_migrations.py` | `APPLICATION_TABLES` += `classes`, `enrolments`. | Research D18. |
 
 ## Implementation Order (for /speckit-tasks)

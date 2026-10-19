@@ -208,20 +208,20 @@ suite (milestones 1–8) must be green at its end (SC-010).
   - **On refusal**: every function rolls back before raising when `lock` is set, so no lock outlives a refusal (the `teachers._current_teacher` pattern).
   - **Docstring**: the module says reach is the only authority for teacher scope (Constitution IV, FR-021, FR-022), and that unknown and unreachable are deliberately indistinguishable.
   - Depends on T004, T005, T010.
-- [ ] T015 [P] Create `tests/integration/test_teacher_access_service.py`, with a teacher made through the real invitation services (Write to A in Kyiv, Read to B in Lviv) and rows seeded directly for classes and enrolments:
+
+### 2d. Test helpers and the teacher reach tests
+
+- [ ] T015 Extend `tests/conftest.py` (keep the cast unchanged; research D2):
+  - **`make_class(engine, institution_id, name="KN-21", year=2, active=True) -> int`**: inserts a `SchoolClass` row directly (test-only; classes are not personal data), computing `name_key` with `app.schemas.names.name_key`, and returns its id.
+  - **`make_teacher(engine, settings, *, email, institutions: Mapping[int, AccessLevel], first="Olena", last="Kovalenko") -> int`**: a thin wrapper over `invite_and_accept`.
+  - **`accept`** gains `role: Role = Role.TEACHER` and uses `current_consent_text(db_session, role)`. Existing callers are unchanged.
+- [ ] T016 Create `tests/integration/test_teacher_access_service.py`, with a teacher made with `make_teacher` (Write to A in Kyiv, Read to B in Lviv) and rows seeded directly for classes and enrolments:
   - **Listing**: `list_reachable_institutions` lists A and B with their levels and leaves out C (not linked); A disappears when A or Kyiv is deactivated.
   - **`reach_institution`**: refuses B with `write=True` (`WriteRequired`), C, unknown ids, and A with the wrong `region_id` (`NotReachable`).
   - **`reach_class`**: accepts a deactivated class of A, and refuses a class of C or a mismatched `institution_id`.
   - **`reach_student`**: refuses a student of a deactivated class, someone without the student role, and an unknown id.
 
-  Depends on T014 and T016.
-
-### 2d. Test helpers
-
-- [ ] T016 Extend `tests/conftest.py` (keep the cast unchanged; research D2):
-  - **`make_class(engine, institution_id, name="KN-21", year=2, active=True) -> int`**: inserts a `SchoolClass` row directly (test-only; classes are not personal data), computing `name_key` with `app.schemas.names.name_key`, and returns its id.
-  - **`make_teacher(engine, settings, *, email, institutions: Mapping[int, AccessLevel], first="Olena", last="Kovalenko") -> int`**: a thin wrapper over `invite_and_accept`.
-  - **`accept`** gains `role: Role = Role.TEACHER` and uses `current_consent_text(db_session, role)`. Existing callers are unchanged.
+  Depends on T014 and T015.
 - [ ] T017 Run the whole suite: `uv run ruff check .` and `uv run pytest`. Every milestone 1–8 test must pass before Phase 3 (SC-010). Usable roles (T011, T012) must not change any existing sign-in, role-choice or session test, because the cast's directly seeded student roles have no enrolment and stay usable (research D2). Depends on T006–T016.
 
 **Checkpoint**: the foundation is ready. Usable roles are in effect everywhere, and the suite is
@@ -384,6 +384,7 @@ shows the enrolment.
     - redirects to `/login?prefill=…`;
     - the consent record row has no institution or class column.
   - **Sign-in**: the real code flow (outbox code) starts the session with the student role, and `/profile` shows the email, names, "Student", "Kyiv Polytechnic Institute (Kyiv)", "KN-21", year "2", and the student consent text.
+  - **Reload safety** (SC-009, FR-056): following the invite's 303 target again sends no second email (the outbox still holds one), and reloading the page after **I agree** leaves one user, one student role, one enrolment and one consent record.
 
 ### Implementation for User Story 2
 
@@ -457,8 +458,8 @@ that must still succeed.
   - **The inviter**: deactivated, removed as a teacher, unlinked from the institution, or lowered to Read.
   - **The class**: deleted, deactivated, its institution deactivated, or its region deactivated.
   - **Still valid**: the class renamed and its year changed → the page shows the new values, and **I agree** succeeds.
-  - **The cut-off**:
-    - a link issued before the person was removed as a student (via `remove_student`, T035) or withdrew → refused, whether or not they are still active;
+  - **The cut-off** (withdrawal; the removal case is in T034, because `remove_student` arrives with US4):
+    - a link issued before the person withdrew → refused;
     - a link issued after → succeeds.
   - **Already a student**:
     - accepted twice → "You are already a student.", with one enrolment and one record;
@@ -470,6 +471,8 @@ that must still succeed.
 ### Implementation for User Story 3
 
 - [ ] T033 [US3] Verify `STUDENT_INVITATION.inviter_may_invite` and `details_acceptable` cover every T032 case with no further code. If a case fails, fix it in `app/services/students.py`, never in `app/services/invitations.py`; the generic order of checks is unchanged (FR-024, FR-030). Confirm that `_accept_once` passes `lock=True`, so the class, institution and region are read `FOR SHARE` (FR-035).
+
+  Add a PostgreSQL-only test to `tests/integration/test_student_invitation_refusals.py` (skipped on SQLite, where locks are a no-op and writers are serialised): run `accept_invitation` and `delete_class` for the same empty class at the same time, in two threads, each with its own database session, lined up with a `threading.Barrier`. When both have finished, assert that either the class exists with one enrolment, or it is gone and `enrolments` has no row. There is never an enrolment without its class (spec Edge Cases, FR-035).
 
 **Checkpoint**: US1–US3 work. Old or forged student links cannot enrol anyone.
 
@@ -501,7 +504,8 @@ removes a student.
     - the confirmation names the student, the class and the institution;
     - a student-only person → enrolment gone, no student role, cut-off set, `is_active` false, all sessions deleted, email/names/consent records kept;
     - a teacher-and-student keeps the teacher role, stays active, and is signed out everywhere.
-  - **Re-invite**: a removed student re-invited with a newer link → a new enrolment and a second consent record.
+  - **Re-invite**: a removed student re-invited with a newer link → a new enrolment and a second consent record. A link issued before the removal → refused with the neutral message, whether or not the person is still active (US3-5, moved here from T032 because it needs `remove_student`).
+  - **Reload safety** (SC-009, FR-056): following the 303 target of an edit or a remove again changes nothing (`updated_at`, roles, sessions and consent records unchanged).
   - **Stale edit**: a student removed while the Edit is open → saving gives 403.
   - **Self-invite**: a teacher inviting their own address → after acceptance they appear in the list and can be edited and removed like anyone.
 
@@ -663,7 +667,7 @@ student, and with a teacher link, and check each outcome.
 ### Tests for User Story 8
 
 - [ ] T046 [P] [US8] Extend `tests/integration/test_institution_service.py` and `tests/integration/test_admin_institutions.py`, covering US8-1 to US8-3:
-  - **Empty classes**: an institution with two empty classes and no links → the confirmation page says "Its 2 classes will be deleted too."; after `POST`, the institution and both class rows are gone.
+  - **Empty classes**: an institution with two empty classes and no links → the confirmation page says "Its 2 classes will be deleted too."; after `POST`, the institution and both class rows are gone. With one empty class, the page says "Its class will be deleted too." With no classes, neither sentence appears.
   - **Enrolled student**: one enrolled student, also when the class is deactivated (a blocked student) → 409 "in use", and nothing deleted.
   - **Teacher link**: still refused.
   - **`count_institution_uses`**: counts links plus enrolments.
@@ -673,7 +677,7 @@ student, and with a teacher link, and check each outcome.
 - [ ] T047 [US8] Update `app/services/institutions.py` per research D14:
   - **`count_institution_uses`**: adds `select(func.count()).select_from(Enrolment).join(SchoolClass, …).where(SchoolClass.institution_id == institution_id)`; update its docstring, since milestone 9's count is now here.
   - **`delete_institution`**: after the zero-uses check, `session.execute(delete(SchoolClass).where(col(SchoolClass.institution_id) == institution_id))`, then delete the institution, in one commit. The existing `IntegrityError` → `InstitutionInUse` mapping stays.
-  - **The confirmation**: `app/routers/admin_institutions.py` passes `classes=count_institution_classes(...)` to `institution_delete.html`, which shows "Its N classes will be deleted too." when N > 0 (FR-007).
+  - **The confirmation**: `app/routers/admin_institutions.py` passes `classes=count_institution_classes(...)` to `institution_delete.html`, which shows "Its class will be deleted too." when N = 1 and "Its N classes will be deleted too." when N > 1 (FR-007).
 
 **Checkpoint**: institution deletion follows the new in-use rule.
 
@@ -741,7 +745,7 @@ to an institution:
 - **Foundational (Phase 2)**: can start at once (it does not need Phase 1). It blocks every story. T017 ends with the full suite green.
 - **US1 (Phase 3)**: depends on Phase 2.
 - **US2 (Phase 4)**: depends on Phase 2. It also needs US1's `teacher_students.py` page, the `selection_path` helper and `classes.py` (T021, T022), because the invite form lives on the Students tab. Its service work (T027, T028) can start in parallel with US1.
-- **US3 (Phase 5)**: depends on US2 (T027, T028). Its cut-off case needs `remove_student` (T035, US4); write that test last, or mark it until T035 is done.
+- **US3 (Phase 5)**: depends on US2 (T027, T028). The cut-off after a removal is tested in T034 (US4), where `remove_student` exists.
 - **US4 (Phase 6)**: depends on US2: real students come only from acceptance.
 - **US5 (Phase 7)**: depends on US1 (class deactivation route) and US2 (students exist). T039–T041 are independent of US3 and US4.
 - **US6 (Phase 8)**: depends on US2 (a student invitation exists).
@@ -768,8 +772,8 @@ US1 → US2 → (US3 ∥ US4) → (US5 ∥ US6 ∥ US8) → US7 → US9 → Poli
   - T004 ∥ T005 (models);
   - T008 ∥ T009 after T007;
   - T013 ∥ T014 after T010 and T011;
-  - T015 after T014 and T016;
-  - T016 ∥ T010–T014 (a different file).
+  - T015 ∥ T010–T014 (a different file);
+  - T016 after T014 and T015.
 - **US1**: T018 ∥ T019 (tests) while T020 is written; T021 ∥ T020, which are different files.
 - **US2**: T026 (tests) ∥ T027 (service).
 - **Across stories**, once US2 is done:

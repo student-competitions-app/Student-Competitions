@@ -3,7 +3,12 @@
 See specs/008-teacher-management-consent/contracts/http-routes.md §4 (FR-043–FR-047). Every route
 is open to every role and acts only on `request.state.user`, the person the session belongs to:
 there is no id in any address here. The profile is read-only; corrections to teacher data are
-made by an administrator.
+made by an administrator, and to student data by a teacher of the student's institution.
+
+Since milestone 9 a student's profile also shows the enrolment (research D16). It is loaded
+whenever the person **holds** the student role, blocked or not, and marked "(deactivated)" while
+the class is not available (FR-045); the roles line shows only the usable roles, as the header
+does.
 
 Withdrawal erases the data stored on consent (`app.services.consent.erase_personal_data`), signs
 the person out everywhere, clears this browser's cookie, and redirects to `/data-erased`.
@@ -23,7 +28,9 @@ from app.services.consent import (
     has_consent_data,
     list_consent_records,
 )
+from app.services.students import get_enrolment_view
 from app.services.teachers import TeacherNotFound, get_teacher
+from app.services.users import get_roles
 
 router = APIRouter()
 
@@ -48,6 +55,9 @@ def profile_page(request: Request, session: SessionDep) -> HTMLResponse:
             teacher = get_teacher(session, person.id)
         except TeacherNotFound:
             teacher = None
+    enrolment = None
+    if Role.STUDENT in get_roles(session, person.id):
+        enrolment = get_enrolment_view(session, person.id)
     return templates.TemplateResponse(
         request,
         "pages/profile.html",
@@ -56,6 +66,7 @@ def profile_page(request: Request, session: SessionDep) -> HTMLResponse:
             "person": person,
             "roles": request.state.roles,
             "teacher": teacher,
+            "enrolment": enrolment,
             "records": list_consent_records(session, person.id),
             "can_withdraw": has_consent_data(person),
         },

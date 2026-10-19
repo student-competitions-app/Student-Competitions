@@ -4,6 +4,9 @@ See specs/004-email-otp-auth/contracts/auth-services.md#appservicesloginpy and r
 A code is six digits, stored only as a keyed hash bound to the address, valid for 20 minutes,
 usable once, and dead after 5 wrong attempts. Issuing a code deletes the user's older unused
 ones, so the newest code wins. Nothing here logs an address, a code or an email body.
+
+A person can sign in only with a usable role (`app.services.availability`): a blocked student with
+no other role is treated as an unknown address (milestone 9 research D3).
 """
 
 import hmac
@@ -17,8 +20,8 @@ from app.core.config import AuthSettings
 from app.core.db import utc_now
 from app.core.security import generate_code, hash_code
 from app.models import LoginCode, RateLimitHit, User, UserSession
+from app.services.availability import get_signable_user_by_email
 from app.services.email import EmailDeliveryError, EmailSender, login_code_message
-from app.services.users import get_active_user_by_email
 
 CODE_TTL = timedelta(minutes=20)
 CODE_MAX_ATTEMPTS = 5
@@ -63,14 +66,16 @@ def _live(now: datetime) -> tuple[ColumnElement[bool], ...]:
 def verify_code(
     session: Session, secret_key: str, email: str, code: str, now: datetime | None = None
 ) -> User | None:
-    """The user, if `code` is the live code of the active user `email`; otherwise `None`.
+    """The user, if `code` is the live code of the active user `email` who has a usable role;
+    otherwise `None`. A blocked student with no other role is treated as an unknown address
+    (milestone 9 research D3), so a code issued before the block no longer verifies.
 
     A match is consumed with one conditional `UPDATE`, so of two simultaneous submissions only
     the one that changes the row signs in. A wrong code against a live one counts an attempt.
     Every other case (no user, inactive, no live code) changes nothing. Commits.
     """
     now = now or utc_now()
-    user = get_active_user_by_email(session, email)
+    user = get_signable_user_by_email(session, email)
     if user is None:
         return None
     live = session.exec(
@@ -120,7 +125,9 @@ def deliver_login_code(
 ) -> None:
     """The background task behind `POST /login`, run after the response is sent (research D10).
 
-    For an active user it issues a code and emails it; for anyone else it does nothing. Because
+    For an active user with a usable role it issues a code and emails it; for anyone else,
+    including a blocked student with no other role (milestone 9 research D3), it does nothing.
+    Because
     all of that happens after the response, the response and its timing are the same for every
     address (FR-010). It cleans up on every run, for known and unknown addresses alike. Every
     exception is caught and logged by type, or for a delivery failure by its status, and never
@@ -128,7 +135,7 @@ def deliver_login_code(
     """
     try:
         with Session(engine) as session:
-            user = get_active_user_by_email(session, email)
+            user = get_signable_user_by_email(session, email)
             code = issue_code(session, settings.secret_key, user) if user is not None else None
             purge_expired(session)
         if code is not None:

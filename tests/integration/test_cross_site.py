@@ -14,7 +14,7 @@ import app.core.auth as auth
 from app.core.sealing import seal
 from app.core.security import SESSION_COOKIE_NAME, hash_token
 from app.main import app
-from app.models import AccessLevel, ConsentRecord, Role, User, UserRole, UserSession
+from app.models import AccessLevel, ConsentRecord, Role, SchoolClass, User, UserRole, UserSession
 from app.services.consent import current_consent_text
 from app.services.email import EmailMessage
 from app.services.institutions import create_institution, list_institutions
@@ -26,7 +26,9 @@ from tests.conftest import (
     ClientAs,
     invite,
     invite_and_accept,
+    make_class,
     make_institution,
+    make_teacher,
     sign_in_directly,
 )
 
@@ -217,4 +219,38 @@ def test_cross_site_consent_writes_change_nothing(
         assert response.status_code == 403, path
         assert REFUSED in response.text
     assert consent_state(session) == before
+    assert len(outbox) == sent
+
+
+@pytest.mark.parametrize("forged", CROSS_SITE_HEADERS)
+def test_cross_site_teacher_actions_change_nothing(
+    client_as: ClientAs, session: Session, outbox: list[EmailMessage], forged: dict[str, str]
+) -> None:
+    """Milestone 9 FR-055: a class create and a student invitation from another site."""
+    school = make_institution(app.state.engine, "Kyiv Polytechnic Institute", "Kyiv")
+    make_teacher(
+        app.state.engine,
+        app.state.settings,
+        email="olena@example.org",
+        institutions={school: AccessLevel.WRITE},
+    )
+    class_id = make_class(app.state.engine, school, "KN-21")
+    teacher = client_as("olena@example.org")
+    sent = len(outbox)
+    attempts = [
+        (
+            f"/teacher/students/institutions/{school}/classes",
+            {"name": "KN-99", "year_of_study": "1"},
+        ),
+        (
+            f"/teacher/students/classes/{class_id}/invite",
+            {"email": "taras@example.org", "first_name": "Taras", "last_name": "Shevchenko"},
+        ),
+    ]
+    for path, data in attempts:
+        response = teacher.post(path, data=data, headers=forged, follow_redirects=False)
+        assert response.status_code == 403, path
+        assert REFUSED in response.text
+    session.expire_all()
+    assert [row.name for row in session.exec(select(SchoolClass))] == ["KN-21"]
     assert len(outbox) == sent

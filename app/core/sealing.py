@@ -10,7 +10,8 @@ The purposes and their lifetimes; each constant lives beside the code that uses 
 
 - `invitation`: 7 days (`app.services.invitations`);
 - `data-deletion`: 1 hour (`app.services.data_deletion`);
-- `invitation-sent`: 10 minutes (`app.routers.admin_teachers`, the "Invitation sent" banner);
+- `invitation-sent`: 10 minutes (`app.routers.admin_teachers`, the "Invitation sent" banner,
+  shared with `app.routers.teacher_students`);
 - `login-prefill`: 10 minutes (`app.routers.invitations` and `app.routers.auth`).
 
 Pure functions, no I/O, nothing logged. Exception messages never contain the token or the payload.

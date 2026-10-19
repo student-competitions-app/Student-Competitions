@@ -15,6 +15,7 @@ from app.core.migrations import alembic_config
 
 PUBLISHED = {
     ("teacher", 1): "e1f6621d7c569720cc1571325528eee4b755b36248e2b36621639311a79b9950",
+    ("student", 1): "0a518ef06fe972985ec55b131ceac238cd61c755404f47a7acb6dab758f06040",
 }
 """`(role, version)` → SHA-256 of the published text."""
 
@@ -60,3 +61,30 @@ def test_the_teacher_text_covers_every_required_topic() -> None:
         "Delete my data",
     ):
         assert topic in text
+
+
+def test_the_student_text_covers_every_required_topic() -> None:
+    """Milestone 9 FR-039, research D13: the class and the year of study are stored, who sees
+    them, the email service, and how to withdraw."""
+    text = published_texts()[("student", 1)]
+    for topic in (
+        "email address",
+        "first and last name",
+        "class",
+        "year of study",
+        "educational institution",
+        "so that",
+        "teachers",
+        "Resend",
+        "Withdraw consent",
+        "Delete my data",
+    ):
+        assert topic in text
+
+
+def test_the_student_text_names_no_institution_or_class() -> None:
+    """FR-039: a fixed text, the same for every institution and class, with no placeholder."""
+    text = published_texts()[("student", 1)]
+    assert "Kyiv" not in text
+    assert "{" not in text
+    assert "}" not in text

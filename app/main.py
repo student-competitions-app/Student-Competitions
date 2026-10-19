@@ -69,6 +69,8 @@ from app.routers import (
     pages,
     profile,
     roles,
+    teacher,
+    teacher_students,
 )
 from app.services.database_status import record_boot
 from app.services.email import build_email_sender
@@ -169,6 +171,8 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(roles.router)
 app.include_router(areas.router)
+app.include_router(teacher.router)
+app.include_router(teacher_students.router)
 app.include_router(admin.router)
 app.include_router(admin_teachers.router)
 app.include_router(admin_institutions.router)

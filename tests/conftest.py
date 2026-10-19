@@ -48,8 +48,9 @@ from app.core.db import create_db_engine, utc_now
 from app.core.migrations import alembic_config
 from app.core.security import SESSION_COOKIE_NAME, sign_cookie_value
 from app.main import app
-from app.models import AccessLevel, Region, Role, User, UserRole
+from app.models import AccessLevel, Region, Role, SchoolClass, User, UserRole
 from app.schemas.names import name_key
+from app.schemas.students import StudentDetails
 from app.schemas.teachers import TeacherDetails
 from app.services.consent import current_consent_text
 from app.services.email import EmailMessage, MemoryEmailSender
@@ -477,10 +478,17 @@ def invite(
     return token_from(message)
 
 
-def accept(engine: Engine, settings: AuthSettings, token: str, now: datetime | None = None) -> int:
-    """Accept `token` with the current consent text through the real service; the user id."""
+def accept(
+    engine: Engine,
+    settings: AuthSettings,
+    token: str,
+    now: datetime | None = None,
+    role: Role = Role.TEACHER,
+) -> int:
+    """Accept `token` with the current consent text of `role` through the real service; the user
+    id."""
     with Session(engine) as db_session:
-        consent_text_id = current_consent_text(db_session, Role.TEACHER).id
+        consent_text_id = current_consent_text(db_session, role).id
         assert consent_text_id is not None
         outcome = accept_invitation(db_session, settings, token, consent_text_id, now=now)
     assert isinstance(outcome, Accepted), outcome
@@ -513,3 +521,111 @@ def invite_and_accept(
         now=now,
     )
     return accept(engine, settings, token, now=now)
+
+
+def make_teacher(
+    engine: Engine,
+    settings: AuthSettings,
+    *,
+    email: str,
+    institutions: Mapping[int, AccessLevel],
+    first: str = "Olena",
+    last: str = "Kovalenko",
+) -> int:
+    """A real teacher linked to `institutions` with the given levels: `invite_and_accept`, invited
+    by the cast administrator. Returns the teacher's user id."""
+    return invite_and_accept(
+        engine, settings, email=email, first=first, last=last, institutions=institutions
+    )
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 9: classes and students
+# ---------------------------------------------------------------------------------------------
+
+
+def make_class(
+    engine: Engine, institution_id: int, name: str = "KN-21", year: int = 2, active: bool = True
+) -> int:
+    """A class of the institution, inserted directly; returns its id.
+
+    **Test-only**, but harmless: a class is not personal data and carries no access rule of its
+    own, so seeding it skips nothing a teacher's create would check beyond the teacher's reach.
+    """
+    now = utc_now()
+    with Session(engine) as db_session:
+        school_class = SchoolClass(
+            institution_id=institution_id,
+            name=name,
+            name_key=name_key(name),
+            year_of_study=year,
+            is_active=active,
+            created_at=now,
+            updated_at=now,
+        )
+        db_session.add(school_class)
+        db_session.commit()
+        assert school_class.id is not None
+        return school_class.id
+
+
+def invite_student(
+    engine: Engine,
+    settings: AuthSettings,
+    *,
+    email: str,
+    class_id: int,
+    inviter_email: str,
+    first: str = "Taras",
+    last: str = "Shevchenko",
+    now: datetime | None = None,
+) -> str:
+    """Issue a student invitation into `class_id` through the real service, as the teacher
+    `inviter_email`, and return its token."""
+    sender = MemoryEmailSender()
+    with Session(engine) as db_session:
+        inviter = get_user_by_email(db_session, inviter_email)
+        assert inviter is not None, "the inviter must exist"
+        school_class = db_session.get(SchoolClass, class_id)
+        assert school_class is not None, "the class must exist"
+        issue_invitation(
+            db_session,
+            settings,
+            sender,
+            "http://testserver",
+            inviter,
+            Role.STUDENT,
+            email,
+            first,
+            last,
+            StudentDetails(institution_id=school_class.institution_id, class_id=class_id),
+            now=now,
+        )
+    [message] = sender.outbox
+    return token_from(message)
+
+
+def enrol_student(
+    engine: Engine,
+    settings: AuthSettings,
+    *,
+    email: str,
+    class_id: int,
+    inviter_email: str,
+    first: str = "Taras",
+    last: str = "Shevchenko",
+    now: datetime | None = None,
+) -> int:
+    """A real student: invited into `class_id` by the teacher `inviter_email` and accepted,
+    through the real services. Returns the student's user id."""
+    token = invite_student(
+        engine,
+        settings,
+        email=email,
+        class_id=class_id,
+        inviter_email=inviter_email,
+        first=first,
+        last=last,
+        now=now,
+    )
+    return accept(engine, settings, token, now=now, role=Role.STUDENT)

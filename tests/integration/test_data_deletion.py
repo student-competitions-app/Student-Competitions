@@ -16,7 +16,7 @@ from app.core.db import utc_now
 from app.core.sealing import seal
 from app.core.security import SESSION_COOKIE_NAME
 from app.main import app
-from app.models import AccessLevel, ConsentRecord, Role, User
+from app.models import AccessLevel, ConsentRecord, Enrolment, Role, User
 from app.routers.data_deletion import LINK_EXPIRED, LINK_INVALID
 from app.services.consent import erase_personal_data
 from app.services.email import EmailMessage
@@ -27,9 +27,12 @@ from tests.conftest import (
     ADMIN_STUDENT_EMAIL,
     ClientAs,
     accept,
+    enrol_student,
     invite,
     invite_and_accept,
+    make_class,
     make_institution,
+    make_teacher,
     token_from,
 )
 
@@ -259,3 +262,30 @@ def test_the_erased_page_can_be_reloaded(client: TestClient) -> None:
     first = client.get("/data-erased")
     assert first.status_code == 200
     assert first.text == client.get("/data-erased").text
+
+
+def test_a_student_deletes_their_data_and_their_enrolment(
+    client: TestClient, outbox: list[EmailMessage], school: int
+) -> None:
+    """Milestone 9 US7-3, FR-044: the enrolment is erased with the rest, as on withdrawal."""
+    engine, settings = app.state.engine, app.state.settings
+    make_teacher(engine, settings, email=OLENA, institutions={school: AccessLevel.WRITE})
+    class_id = make_class(engine, school, "KN-21")
+    user_id = enrol_student(
+        engine, settings, email="taras@example.org", class_id=class_id, inviter_email=OLENA
+    )
+    request_link(client, "taras@example.org")
+    link = f"/data-deletion/confirm/{token_from(outbox[-1])}"
+    assert "These roles are removed: Student." in client.get(link).text
+    assert client.post(link, follow_redirects=False).status_code == 303
+    erased = person(user_id)
+    assert (erased.first_name, erased.email, erased.is_active) == (
+        None,
+        f"erased-{user_id}",
+        False,
+    )
+    with Session(engine) as session:
+        assert session.get(Enrolment, user_id) is None
+        assert get_roles(session, user_id) == ()
+        records = session.exec(select(ConsentRecord).where(ConsentRecord.user_id == user_id))
+        assert len(records.all()) == 1

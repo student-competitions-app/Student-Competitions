@@ -1,5 +1,5 @@
 """Institution operations: what the `/admin/institutions` routes call for the right-hand list,
-and what the teacher picker of milestone 8 (and the students of milestone 9) build on.
+and what the teacher picker of milestone 8 and the teacher area of milestone 9 build on.
 
 See specs/007-region-and-institutions-management/contracts/institution-service.md and research
 D3–D5, D7, D9. These functions enforce no authorization: every route that calls them is
@@ -23,13 +23,14 @@ import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from sqlalchemy import func
+from sqlalchemy import delete, func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
-from app.models import Institution, Region, TeacherInstitution
+from app.models import Enrolment, Institution, Region, SchoolClass, TeacherInstitution
 from app.schemas.names import clean_name, name_key
+from app.services.availability import sign_out_students_below
 from app.services.regions import RegionNotFound, get_region
 
 logger = logging.getLogger("uvicorn.error")
@@ -251,13 +252,18 @@ def set_institution_active(
     session: Session, region_id: int, institution_id: int, active: bool
 ) -> Institution:
     """Activate or deactivate the institution, whatever the region's status. Already in that
-    status: nothing changes (FR-032)."""
+    status: nothing changes (FR-032).
+
+    Deactivation signs out every student of the institution's classes, in the same transaction
+    (milestone 9 FR-015, research D4); the classes keep their own statuses.
+    """
     institution = get_institution(session, region_id, institution_id)
     if institution.is_active == active:
         return institution
     institution.is_active = active
     institution.updated_at = utc_now()
     session.add(institution)
+    signed_out = 0 if active else sign_out_students_below(session, institution_id=institution_id)
     session.commit()
     session.refresh(institution)
     logger.info(
@@ -266,32 +272,47 @@ def set_institution_active(
         institution.id,
         region_id,
     )
+    if signed_out:
+        logger.info(
+            "Students signed out: institution_id=%d sessions=%d", institution_id, signed_out
+        )
     return institution
 
 
 def count_institution_uses(session: Session, institution_id: int) -> int:
-    """How many records refer to the institution: its teacher links (milestone 8 FR-012).
+    """How many records refer to the institution: its teacher links (milestone 8 FR-012), plus
+    the enrolments in its classes, blocked students included (milestone 9 FR-007, research D14).
 
-    Milestone 9 (students) adds its count here when it adds an `institution_id` reference: this
-    is the single place that decides whether an institution may be deleted (FR-038). Do not rely
-    on the foreign key alone: SQLite does not enforce foreign keys in this application, so without
+    Classes alone do not count: a class with no student is deleted with its institution. This is
+    the single place that decides whether an institution may be deleted (FR-038). Do not rely on
+    the foreign keys alone: SQLite does not enforce foreign keys in this application, so without
     a count here an institution in use could be deleted.
     """
-    statement = (
+    links = session.exec(
         select(func.count())
         .select_from(TeacherInstitution)
         .where(col(TeacherInstitution.institution_id) == institution_id)
-    )
-    return session.exec(statement).one()
+    ).one()
+    enrolments = session.exec(
+        select(func.count())
+        .select_from(Enrolment)
+        .join(SchoolClass, col(SchoolClass.id) == col(Enrolment.class_id))
+        .where(col(SchoolClass.institution_id) == institution_id)
+    ).one()
+    return links + enrolments
 
 
 def delete_institution(session: Session, region_id: int, institution_id: int) -> None:
     """Delete the institution permanently, freeing its name in the region, whatever the region's
-    status; refused while anything refers to it."""
+    status; refused while anything refers to it. Its classes, which then hold no student, are
+    deleted with it in the same transaction (milestone 9 FR-007, research D14). On PostgreSQL the
+    foreign keys are the backstop: an enrolment, class or link added at the same moment makes the
+    commit fail, reported as "in use"."""
     institution = get_institution(session, region_id, institution_id)
     uses = count_institution_uses(session, institution_id)
     if uses > 0:
         raise InstitutionInUse(institution, uses)
+    session.execute(delete(SchoolClass).where(col(SchoolClass.institution_id) == institution_id))
     session.delete(institution)
     try:
         session.commit()

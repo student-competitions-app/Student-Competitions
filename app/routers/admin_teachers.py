@@ -30,7 +30,7 @@ from app.core.db import SessionDep
 from app.core.sealing import SealExpired, SealInvalid, seal, unseal
 from app.models import AccessLevel, Role, User
 from app.routers.admin import render_admin
-from app.schemas.people import InvalidEmail, InvalidPersonName, clean_email, clean_person_name
+from app.schemas.people import InvalidEmail, clean_email, clean_person_names
 from app.schemas.teachers import (
     NOT_SELECTABLE,
     InvalidChoice,
@@ -141,20 +141,6 @@ def _picker_rows(
     return sorted(rows, key=lambda row: (row.label.casefold(), row.id))
 
 
-def _clean_names(first_name: str, last_name: str, errors: dict[str, str]) -> tuple[str, str]:
-    cleaned = []
-    for field, raw, label in (
-        ("first_name", first_name, "first name"),
-        ("last_name", last_name, "last name"),
-    ):
-        try:
-            cleaned.append(clean_person_name(raw, label))
-        except InvalidPersonName as refused:
-            errors[field] = refused.message
-            cleaned.append("")
-    return cleaned[0], cleaned[1]
-
-
 def _not_found(request: Request) -> HTMLResponse:
     return render_admin(request, "pages/admin/teacher_not_found.html", TAB, status_code=404)
 
@@ -164,8 +150,9 @@ def _not_found(request: Request) -> HTMLResponse:
 # ---------------------------------------------------------------------------------------------
 
 
-def _sent_to(settings: AuthSettings, sent: str | None) -> str | None:
-    """The address in a valid, fresh `sent` value; `None` for anything else."""
+def sent_notice_email(settings: AuthSettings, sent: str | None) -> str | None:
+    """The address in a valid, fresh `sent` value; `None` for anything else. Shared with the
+    teacher's student invitations (`app.routers.teacher_students`)."""
     if not sent:
         return None
     try:
@@ -188,7 +175,7 @@ def teachers_page(
         TAB,
         {
             "teachers": list_teachers(session),
-            "sent_to": _sent_to(_settings(request), sent),
+            "sent_to": sent_notice_email(_settings(request), sent),
         },
     )
 
@@ -268,7 +255,7 @@ def invite_action(
     except InvalidEmail as invalid:
         errors["email"] = invalid.message
         address = ""
-    first, last = _clean_names(first_name, last_name, errors)
+    first, last = clean_person_names(first_name, last_name, errors)
     choices: dict[int, AccessLevel] = {}
     try:
         choices = parse_institution_choices(institution, access)
@@ -397,7 +384,7 @@ def update_teacher_action(
     }
     picked, levels = _submitted(institution, access)
     errors: dict[str, str] = {}
-    first, last = _clean_names(first_name, last_name, errors)
+    first, last = clean_person_names(first_name, last_name, errors)
     choices: dict[int, AccessLevel] = {}
     try:
         choices = parse_institution_choices(institution, access, _kept_levels(teacher))

@@ -31,8 +31,7 @@ A web application for running online competitions among students, testing their 
    - first name
    - last name
    - educational institution
-   - group code (text) within the educational institution
-   - the student's year of study at the educational institution
+   - the class within the educational institution; the student's year of study is the year of their class
 2. **Managing the question bank.** Edit the global list of questions used in competitions. Questions can be reused across different competitions. Each question belongs to one subject, selected from the list of subjects. For each question, the teacher adds the correct answer as text.
 3. **Running a competition.** The teacher selects:
    - the subject of the competition; only questions of that subject can be added to it
@@ -51,6 +50,8 @@ A web application for running online competitions among students, testing their 
 - A teacher is linked to one or more educational institutions.
 - A teacher only has access to the list of students from their own educational institutions.
 - Each link has an access level: **Read** (see the institution's students and their results) or **Write** (also add, edit and delete them).
+- The students of an educational institution are divided into classes (for example "KN-21"). Each class has a year of study, shared by all its students. A student belongs to exactly one educational institution and exactly one class in it. A teacher with Write access keeps the list of classes of that institution.
+- A teacher sees a student's data only for their own institutions, never anything about an institution the student belonged to before.
 - Only an administrator can link a teacher to an educational institution and set the access level.
 - Only a teacher whom an administrator allowed to create competitions can create them.
 
@@ -64,7 +65,7 @@ A web application for running online competitions among students, testing their 
 
 ## Personal data
 
-- Email, first name and last name are personal data for every role. A student's educational institution, group code and year of study are personal data too.
+- Email, first name and last name are personal data for every role. A student's educational institution and class (and so their year of study) are personal data too. A student agrees again each time they join an educational institution.
 - Personal data is stored only after the person has agreed to it. An administrator or teacher who adds someone sends an invitation. The person's data is saved only when that person opens the invitation and accepts the consent text. Until then, nothing about them is kept.
 - Every person can see the personal data stored about them and can withdraw consent at any time, even after being removed. Withdrawing erases their personal data and ends their access.
 - Administrators are the exception: they are set by deployment configuration, not invited. Withdrawing consent does not remove an administrator's role or email.

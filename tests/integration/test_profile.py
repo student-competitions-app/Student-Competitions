@@ -10,8 +10,18 @@ from sqlmodel import Session, select
 
 from app.core.security import SESSION_COOKIE_NAME
 from app.main import app
-from app.models import AccessLevel, ConsentRecord, Institution, Role, User, UserSession
+from app.models import (
+    AccessLevel,
+    ConsentRecord,
+    Enrolment,
+    Institution,
+    Role,
+    User,
+    UserSession,
+)
 from app.routers.profile import NOTHING_TO_WITHDRAW
+from app.services.classes import set_class_active
+from app.services.consent import get_cutoff
 from app.services.email import EmailMessage
 from app.services.teachers import remove_teacher
 from app.services.users import get_roles
@@ -21,8 +31,11 @@ from tests.conftest import (
     STUDENT_EMAIL,
     TEACHER_EMAIL,
     ClientAs,
+    enrol_student,
     invite_and_accept,
+    make_class,
     make_institution,
+    make_teacher,
     sign_in_directly,
 )
 
@@ -198,7 +211,9 @@ def test_an_administrator_who_teaches_withdraws(
     assert after.is_active is True
     assert after.first_name is None
     with Session(app.state.engine) as session:
-        assert get_roles(session, user_id) == (Role.ADMIN, Role.STUDENT)
+        # The cast seeds this person's student role directly. Since milestone 9 the student is an
+        # invitable role too, so withdrawal removes it with the teacher role (milestone 9 FR-044).
+        assert get_roles(session, user_id) == (Role.ADMIN,)
     assert "No teachers yet" in admin_client.get("/admin/teachers").text
     assert browser.get("/", follow_redirects=False).status_code == 303
 
@@ -214,3 +229,127 @@ def test_a_removed_teacher_who_is_still_an_administrator_can_withdraw(
     assert '<a href="/profile/withdraw"' in body
     assert "<dd>Administrator</dd>" in body
     assert "Kyiv Lyceum" not in body
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 9: a student's profile and withdrawal (US7, US5-3)
+# ---------------------------------------------------------------------------------------------
+
+TARAS = "taras@example.org"
+STUDENT_NOTE = "Corrections to student data are made by a teacher of your educational institution."
+TEACHER_NOTE = "Corrections to teacher data are made by an administrator."
+
+
+def a_student(places: dict[str, int], email: str = TARAS) -> tuple[int, int, int]:
+    """A real student of "KN-21" (year 2) of "Kyiv Lyceum", invited by a real Write teacher; the
+    student's, the teacher's and the class's ids."""
+    engine, settings = app.state.engine, app.state.settings
+    teacher_id = make_teacher(
+        engine,
+        settings,
+        email="petro@example.org",
+        institutions={places["kyiv"]: AccessLevel.WRITE},
+        first="Petro",
+        last="Bondar",
+    )
+    class_id = make_class(engine, places["kyiv"], "KN-21", 2)
+    student_id = enrol_student(
+        engine, settings, email=email, class_id=class_id, inviter_email="petro@example.org"
+    )
+    return student_id, teacher_id, class_id
+
+
+def test_a_student_sees_their_enrolment_and_record(
+    places: dict[str, int], client: TestClient
+) -> None:
+    """US7-1, US7-2, FR-045, FR-046."""
+    a_student(places)
+    body = signed_in(TARAS).get("/profile").text
+    for shown in (
+        TARAS,
+        "Taras",
+        "Shevchenko",
+        "<dd>Student</dd>",
+        "<dt>Educational institution</dt>\n    <dd>Kyiv Lyceum (Kyiv)</dd>",
+        "<dt>Class</dt>\n    <dd>KN-21</dd>",
+        "<dt>Year of study</dt>\n    <dd>2</dd>",
+        " UTC</strong> · Student · version 1",
+        "and your class, which also records",
+        STUDENT_NOTE,
+        '<a href="/profile/withdraw"',
+    ):
+        assert shown in body
+    assert TEACHER_NOTE not in body
+
+
+def test_a_teacher_and_student_sees_both_notes(places: dict[str, int], client: TestClient) -> None:
+    """US7-2."""
+    a_teacher(places, email=TARAS)
+    a_student(places)
+    body = signed_in(TARAS, Role.TEACHER).get("/profile").text
+    assert STUDENT_NOTE in body
+    assert TEACHER_NOTE in body
+    assert "<dd>Teacher, Student</dd>" in body
+
+
+def test_a_blocked_teacher_and_student_sees_the_enrolment_marked(
+    places: dict[str, int], client: TestClient
+) -> None:
+    """US5-3, FR-045: the enrolment is shown, marked; the student role is not offered."""
+    a_teacher(places, email=TARAS)
+    _, teacher_id, class_id = a_student(places)
+    with Session(app.state.engine) as session:
+        set_class_active(session, teacher_id, class_id, False)
+    body = signed_in(TARAS, Role.TEACHER).get("/profile").text
+    assert 'KN-21 <small class="status-deactivated">(deactivated)</small>' in body
+    assert "<dd>Teacher</dd>" in body
+    assert STUDENT_NOTE in body
+
+
+def test_a_student_withdraws(places: dict[str, int], client: TestClient) -> None:
+    """US7-3, FR-044: the enrolment goes with the milestone 8 erasure."""
+    student_id, _, class_id = a_student(places)
+    browser, other = signed_in(TARAS), signed_in(TARAS)
+    confirmation = browser.get("/profile/withdraw").text
+    assert "These roles are removed: Student." in confirmation
+    assert browser.post("/profile/withdraw", follow_redirects=False).status_code == 303
+    assert other.get("/", follow_redirects=False).status_code == 303
+    erased = person(student_id)
+    assert (erased.first_name, erased.last_name, erased.email, erased.is_active) == (
+        None,
+        None,
+        f"erased-{student_id}",
+        False,
+    )
+    with Session(app.state.engine) as session:
+        assert get_roles(session, student_id) == ()
+        assert session.get(Enrolment, student_id) is None
+        assert (
+            session.exec(select(UserSession).where(UserSession.user_id == student_id)).all() == []
+        )
+        records = session.exec(select(ConsentRecord).where(ConsentRecord.user_id == student_id))
+        assert len(records.all()) == 1
+        secret = app.state.settings.secret_key
+        assert get_cutoff(session, secret, TARAS, Role.STUDENT) is not None
+        region = session.get(Institution, places["kyiv"]).region_id  # type: ignore[union-attr]
+    teacher = signed_in("petro@example.org")
+    page = teacher.get(
+        f"/teacher/students?region={region}&institution={places['kyiv']}&class={class_id}"
+    ).text
+    assert "Shevchenko" not in page
+    assert "No students in this class yet" in page
+
+
+def test_a_teacher_and_student_withdraws_both_roles(
+    places: dict[str, int], client: TestClient
+) -> None:
+    """US7-4."""
+    a_teacher(places, email=TARAS)
+    student_id, _, _ = a_student(places)
+    browser = signed_in(TARAS, Role.STUDENT)
+    assert "These roles are removed: Teacher, Student." in browser.get("/profile/withdraw").text
+    assert browser.post("/profile/withdraw", follow_redirects=False).status_code == 303
+    with Session(app.state.engine) as session:
+        assert get_roles(session, student_id) == ()
+        assert session.get(Enrolment, student_id) is None
+    assert person(student_id).is_active is False

@@ -24,6 +24,7 @@ from sqlmodel import Session, select
 from app.core.db import utc_now
 from app.models import Institution, Region
 from app.schemas.names import clean_name, name_key
+from app.services.availability import sign_out_students_below
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -129,8 +130,10 @@ def rename_region(session: Session, region_id: int, raw_name: str) -> Region:
 def set_region_active(session: Session, region_id: int, active: bool) -> Region:
     """Activate or deactivate the region. Already in that status: nothing changes (FR-032).
 
-    Only the region row changes: its institutions keep their own statuses (FR-033), so activating
-    it again gives back exactly the statuses they had.
+    Only the region row changes: its institutions keep their own statuses (FR-033), and so do
+    their classes, so activating it again gives back exactly the statuses they had. Deactivation
+    signs out every student below the region, in the same transaction (milestone 9 FR-015,
+    research D4); the statuses below are untouched.
     """
     region = get_region(session, region_id)
     if region.is_active == active:
@@ -138,9 +141,12 @@ def set_region_active(session: Session, region_id: int, active: bool) -> Region:
     region.is_active = active
     region.updated_at = utc_now()
     session.add(region)
+    signed_out = 0 if active else sign_out_students_below(session, region_id=region_id)
     session.commit()
     session.refresh(region)
     logger.info("Region %s: id=%d", "activated" if active else "deactivated", region.id)
+    if signed_out:
+        logger.info("Students signed out: region_id=%d sessions=%d", region_id, signed_out)
     return region
 
 

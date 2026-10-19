@@ -12,6 +12,10 @@ The selected region is part of the address (`/admin/institutions/regions/{region
 region and institution page lives under it, so the selection survives reloads, bookmarks and the
 sign-in redirect, and every redirect knows its region (research D7, D8).
 
+Since milestone 9, **Deactivate** of a region or an institution first opens a confirmation page,
+because deactivation signs out and hides the students below (FR-017, research D15); the `POST`
+routes are unchanged. **Activate** needs no confirmation.
+
 Every route is `@allow_roles(Role.ADMIN)`, and every page is rendered with the Educational
 institutions tab current. Ids are declared `{region_id:int}` and `{institution_id:int}`, so a
 non-integer id matches no route and gets the application's friendly 404 rather than a JSON
@@ -26,6 +30,7 @@ from app.core.db import SessionDep
 from app.models import Institution, Region, Role
 from app.routers.admin import render_admin
 from app.schemas.names import InvalidName
+from app.services.classes import count_institution_classes
 from app.services.institutions import (
     DuplicateInstitutionName,
     InstitutionInUse,
@@ -218,6 +223,18 @@ def _set_region_active(
     except RegionNotFound:
         return _region_not_found(request)
     return _redirect(region_path(region_id))
+
+
+@router.get("/regions/{region_id:int}/deactivate", response_class=HTMLResponse)
+@allow_roles(Role.ADMIN)
+def deactivate_region_page(request: Request, session: SessionDep, region_id: int) -> HTMLResponse:
+    """The confirmation step, since deactivation signs out and hides every student below the
+    region: opening it changes nothing (milestone 9 FR-017, research D15)."""
+    try:
+        region = get_region(session, region_id)
+    except RegionNotFound:
+        return _region_not_found(request)
+    return render_admin(request, "pages/admin/region_deactivate.html", TAB, {"region": region})
 
 
 @router.post("/regions/{region_id:int}/deactivate", response_class=HTMLResponse)
@@ -433,6 +450,30 @@ def _set_institution_active(
     return _redirect(region_path(region_id))
 
 
+@router.get(
+    "/regions/{region_id:int}/institutions/{institution_id:int}/deactivate",
+    response_class=HTMLResponse,
+)
+@allow_roles(Role.ADMIN)
+def deactivate_institution_page(
+    request: Request, session: SessionDep, region_id: int, institution_id: int
+) -> HTMLResponse:
+    """The confirmation step, naming the institution and its region: opening it changes nothing
+    (milestone 9 FR-017, research D15)."""
+    try:
+        institution = get_institution(session, region_id, institution_id)
+    except RegionNotFound:
+        return _region_not_found(request)
+    except InstitutionNotFound:
+        return _institution_not_found(request)
+    return render_admin(
+        request,
+        "pages/admin/institution_deactivate.html",
+        TAB,
+        {"institution": institution, "region": get_region(session, region_id)},
+    )
+
+
 @router.post(
     "/regions/{region_id:int}/institutions/{institution_id:int}/deactivate",
     response_class=HTMLResponse,
@@ -457,16 +498,25 @@ def activate_institution_action(
 
 def _institution_delete_page(
     request: Request,
+    session: SessionDep,
     institution: Institution,
     region: Region,
     in_use: bool,
     status_code: int = 200,
 ) -> HTMLResponse:
+    """The confirmation, saying how many classes are deleted with the institution (milestone 9
+    FR-007), or the "in use" refusal."""
+    assert institution.id is not None
     return render_admin(
         request,
         "pages/admin/institution_delete.html",
         TAB,
-        {"institution": institution, "region": region, "in_use": in_use},
+        {
+            "institution": institution,
+            "region": region,
+            "in_use": in_use,
+            "classes": count_institution_classes(session, institution.id),
+        },
         status_code=status_code,
     )
 
@@ -488,7 +538,7 @@ def delete_institution_page(
     except InstitutionNotFound:
         return _institution_not_found(request)
     return _institution_delete_page(
-        request, institution, get_region(session, region_id), in_use=False
+        request, session, institution, get_region(session, region_id), in_use=False
     )
 
 
@@ -510,6 +560,7 @@ def delete_institution_action(
     except InstitutionInUse as refused:
         return _institution_delete_page(
             request,
+            session,
             refused.institution,
             get_region(session, region_id),
             in_use=True,

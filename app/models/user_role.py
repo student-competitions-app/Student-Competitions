@@ -9,7 +9,9 @@ insert (research D8). The writers, per role:
 - `admin`: only `reconcile_users`, from `ADMIN_EMAILS`;
 - `teacher`: granted only by an accepted invitation (`TEACHER_INVITATION.grant`), removed by
   removing the teacher, withdrawal and data deletion;
-- `student`: nobody until milestone 9 (the test cast seeds it directly).
+- `student`: granted only by an accepted student invitation (`STUDENT_INVITATION.grant`, together
+  with the enrolment), removed by removing the student, withdrawal and data deletion (the test
+  cast seeds it directly, with no enrolment).
 """
 
 from datetime import datetime

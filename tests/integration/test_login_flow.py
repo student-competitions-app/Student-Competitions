@@ -19,9 +19,18 @@ import app.routers.auth as auth_router
 from app.core.db import utc_now
 from app.core.security import SESSION_COOKIE_NAME
 from app.main import app
-from app.models import LoginCode, UserSession
+from app.models import AccessLevel, LoginCode, UserSession
+from app.services.classes import set_class_active
 from app.services.email import EmailMessage
-from tests.conftest import ADMIN_EMAIL, STUDENT_EMAIL, TEACHER_EMAIL
+from tests.conftest import (
+    ADMIN_EMAIL,
+    STUDENT_EMAIL,
+    TEACHER_EMAIL,
+    enrol_student,
+    make_class,
+    make_institution,
+    make_teacher,
+)
 
 SENT_NOTICE = (
     "If this address belongs to an account, we have sent a code to it. "
@@ -368,3 +377,86 @@ def test_a_person_with_no_role_left_gets_no_code(
         response = submit_code(after, old_code, email=STUDENT_EMAIL)
         assert response.status_code == 400
         assert INVALID_CODE in response.text
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 9: a blocked student (US5-2, US5-3, research D3)
+# ---------------------------------------------------------------------------------------------
+
+TARAS = "taras@example.org"
+OLENA = "olena@example.org"
+
+
+def blocked_class(client: TestClient, also_teacher: bool = False) -> tuple[int, int]:
+    """Taras, a real student of "KN-21", whose class is then deactivated by its teacher; with
+    `also_teacher`, Taras is a teacher of another institution too. The teacher's and the class's
+    ids."""
+    engine, settings = app.state.engine, app.state.settings
+    school = make_institution(engine, "Kyiv Polytechnic Institute", "Kyiv")
+    teacher_id = make_teacher(
+        engine, settings, email=OLENA, institutions={school: AccessLevel.WRITE}
+    )
+    if also_teacher:
+        other = make_institution(engine, "Lviv Academy", "Lviv")
+        make_teacher(engine, settings, email=TARAS, institutions={other: AccessLevel.READ})
+    class_id = make_class(engine, school, "KN-21")
+    enrol_student(engine, settings, email=TARAS, class_id=class_id, inviter_email=OLENA)
+    return teacher_id, class_id
+
+
+def set_class(teacher_id: int, class_id: int, active: bool) -> None:
+    with Session(app.state.engine) as session:
+        set_class_active(session, teacher_id, class_id, active)
+
+
+def test_a_blocked_student_is_answered_like_an_unknown_address(
+    client: TestClient, outbox: list[EmailMessage]
+) -> None:
+    """US5-2, FR-015: no code is sent, and one issued before the block stops working."""
+    teacher_id, class_id = blocked_class(client)
+    request_code(client, email=TARAS)
+    old_code = code_from(outbox[-1])
+    sent = len(outbox)
+    set_class(teacher_id, class_id, False)
+    blocked = request_code(client, email=TARAS)
+    unknown = request_code(client, email="nobody@example.org")
+    assert blocked.status_code == unknown.status_code == 200
+    assert blocked.text.replace(TARAS, "X") == unknown.text.replace("nobody@example.org", "X")
+    assert len(outbox) == sent
+    response = submit_code(client, old_code, email=TARAS)
+    assert response.status_code == 400
+    assert INVALID_CODE in response.text
+
+
+def test_a_blocked_student_who_teaches_signs_in_as_a_teacher_only(
+    client: TestClient, outbox: list[EmailMessage], session: Session
+) -> None:
+    """US5-3: no role choice, and no switch to the student role."""
+    teacher_id, class_id = blocked_class(client, also_teacher=True)
+    set_class(teacher_id, class_id, False)
+    request_code(client, email=TARAS)
+    response = submit_code(client, code_from(outbox[-1]), email=TARAS)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+    [row] = session.exec(select(UserSession)).all()
+    assert row.current_role == "teacher"
+    home = client.get("/")
+    assert '<span class="site-role">· Teacher</span>' in home.text
+    assert 'value="student"' not in home.text
+    profile = client.get("/profile").text
+    assert "<dd>Teacher</dd>" in profile
+    assert 'KN-21 <small class="status-deactivated">(deactivated)</small>' in profile
+
+
+def test_a_student_signs_in_again_once_the_class_is_reactivated(
+    client: TestClient, outbox: list[EmailMessage], session: Session
+) -> None:
+    """FR-016."""
+    teacher_id, class_id = blocked_class(client)
+    set_class(teacher_id, class_id, False)
+    set_class(teacher_id, class_id, True)
+    request_code(client, email=TARAS)
+    response = submit_code(client, code_from(outbox[-1]), email=TARAS)
+    assert response.status_code == 303
+    [row] = session.exec(select(UserSession)).all()
+    assert row.current_role == "student"

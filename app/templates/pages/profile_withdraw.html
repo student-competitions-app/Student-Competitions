@@ -22,8 +22,10 @@
   {% if plan.will_deactivate %}<p>You will no longer be able to sign in.</p>{% endif %}
   <p>The record that you agreed is kept as proof of your consent.</p>
   <form method="post" action="/profile/withdraw">
-    <button type="submit">Withdraw consent</button>
-    <a href="/profile">Cancel</a>
+    <div class="form-actions">
+      <button type="submit">Withdraw consent</button>
+      <a href="/profile" role="button" class="secondary outline">Cancel</a>
+    </div>
   </form>
   {% endif %}
 </section>

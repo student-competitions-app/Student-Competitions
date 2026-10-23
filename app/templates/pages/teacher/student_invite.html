@@ -22,8 +22,10 @@
     <input type="email" id="email" name="email" maxlength="254" required value="{{ values.email }}"{% if errors.email %} aria-invalid="true" aria-describedby="email-error"{% endif %}>
     {% if errors.email %}<small id="email-error">{{ errors.email }}</small>{% endif %}
     {% include "pages/admin/_person_names.html" %}
-    <button type="submit">Send invitation</button>
-    <a href="{{ cancel }}">Cancel</a>
+    <div class="form-actions">
+      <button type="submit">Send invitation</button>
+      <a href="{{ cancel }}" role="button" class="secondary outline">Cancel</a>
+    </div>
   </form>
   {% endif %}
 </section>

@@ -23,8 +23,10 @@
       {% endfor %}
     </select>
     {% if errors.class_id %}<small id="class-error">{{ errors.class_id }}</small>{% endif %}
-    <button type="submit">Save</button>
-    <a href="{{ cancel }}">Cancel</a>
+    <div class="form-actions">
+      <button type="submit">Save</button>
+      <a href="{{ cancel }}" role="button" class="secondary outline">Cancel</a>
+    </div>
   </form>
 </section>
 {% endblock %}

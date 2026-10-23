@@ -13,9 +13,11 @@
       <input type="checkbox" id="can_create_competitions" name="can_create_competitions"{% if values.can_create_competitions %} checked{% endif %}>
       Can create competitions
     </label>
-    <button type="submit">Save</button>
-    <a href="/admin/teachers">Cancel</a>
+    <div class="form-actions">
+      <button type="submit">Save</button>
+      <a href="/admin/teachers" role="button" class="secondary outline">Cancel</a>
+    </div>
   </form>
-  <p><a href="/admin/teachers/{{ teacher.user_id }}/remove">Remove teacher</a></p>
+  <p><a href="/admin/teachers/{{ teacher.user_id }}/remove" role="button" class="secondary outline">Remove teacher</a></p>
 </section>
 {% endblock %}

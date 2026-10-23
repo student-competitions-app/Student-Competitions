@@ -79,7 +79,7 @@ def test_the_create_form(admin_client: TestClient) -> None:
     assert "required" in field.group(0)
     assert 'value=""' in field.group(0)
     assert ">Save</button>" in body
-    assert '<a href="/admin/subjects">Cancel</a>' in body
+    assert '<a href="/admin/subjects" role="button" class="secondary outline">Cancel</a>' in body
     assert "aria-invalid" not in body
     assert current_tabs(body) == ["/admin/subjects"]
 
@@ -207,8 +207,8 @@ def test_each_row_offers_its_actions(admin_client: TestClient, session: Session)
     set_subject_active(session, biology, False)
     body = admin_client.get("/admin/subjects").text
     for sid in (physics, biology):
-        assert f'<a href="/admin/subjects/{sid}/rename">Rename</a>' in body
-        assert f'<a href="/admin/subjects/{sid}/delete">Delete</a>' in body
+        assert f'<a href="/admin/subjects/{sid}/rename" role="button" class="secondary outline">Rename</a>' in body
+        assert f'<a href="/admin/subjects/{sid}/delete" role="button" class="secondary outline">Delete</a>' in body
     assert f'<form method="post" action="/admin/subjects/{physics}/deactivate">' in body
     assert f'<form method="post" action="/admin/subjects/{biology}/activate">' in body
     assert f"/admin/subjects/{physics}/activate" not in body
@@ -226,7 +226,7 @@ def test_the_rename_form_is_filled_in(admin_client: TestClient, session: Session
     assert "<h1>Rename subject</h1>" in body
     assert f'<form method="post" action="/admin/subjects/{sid}/rename">' in body
     assert 'value="Mathmatics"' in body
-    assert '<a href="/admin/subjects">Cancel</a>' in body
+    assert '<a href="/admin/subjects" role="button" class="secondary outline">Cancel</a>' in body
     assert current_tabs(body) == ["/admin/subjects"]
 
 
@@ -346,7 +346,7 @@ def test_the_delete_confirmation_deletes_nothing(
     assert "Deleting a subject cannot be undone." in body
     assert f'<form method="post" action="/admin/subjects/{sid}/delete">' in body
     assert ">Delete</button>" in body
-    assert '<a href="/admin/subjects">Cancel</a>' in body
+    assert '<a href="/admin/subjects" role="button" class="secondary outline">Cancel</a>' in body
     assert current_tabs(body) == ["/admin/subjects"]
     assert snapshot(session) == before
 

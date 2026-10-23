@@ -18,8 +18,10 @@
   {% if classes == 1 %}<p>Its class will be deleted too.</p>{% elif classes > 1 %}<p>Its {{ classes }} classes will be deleted too.</p>{% endif %}
   <p>Deleting an educational institution cannot be undone.</p>
   <form method="post" action="{{ path }}/delete">
-    <button type="submit">Delete</button>
-    <a href="{{ region_path }}">Cancel</a>
+    <div class="form-actions">
+      <button type="submit">Delete</button>
+      <a href="{{ region_path }}" role="button" class="secondary outline">Cancel</a>
+    </div>
   </form>
   {% endif %}
 </section>

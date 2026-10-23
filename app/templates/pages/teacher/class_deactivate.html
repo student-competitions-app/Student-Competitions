@@ -8,8 +8,10 @@
   <p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
   <p>Its students will be signed out and hidden until the class is activated again.</p>
   <form method="post" action="/teacher/students/classes/{{ school_class.id }}/deactivate">
-    <button type="submit">Deactivate</button>
-    <a href="{{ cancel }}">Cancel</a>
+    <div class="form-actions">
+      <button type="submit">Deactivate</button>
+      <a href="{{ cancel }}" role="button" class="secondary outline">Cancel</a>
+    </div>
   </form>
 </section>
 {% endblock %}

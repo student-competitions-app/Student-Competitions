@@ -137,7 +137,7 @@ def snapshot(engine: Engine) -> dict[str, list[tuple[Any, ...]]]:
 def test_the_sweeps_have_routes() -> None:
     """Guard the parametrized sweeps from passing vacuously."""
     assert len(TEACHER_GETS) >= 9
-    assert len(TEACHER_POSTS) == 10
+    assert len(TEACHER_POSTS) == 8
 
 
 # ---------------------------------------------------------------------------------------------
@@ -240,8 +240,8 @@ def olena_id() -> int:
 def test_a_student_of_a_deactivated_class_cannot_be_opened(scene: Scene) -> None:
     """US9-2: "a student of a deactivated class"."""
     scene.writer.post(f"/teacher/students/classes/{scene.school_class}/deactivate")
-    for action in ("", "/deactivate", "/remove"):
-        assert scene.writer.get(f"/teacher/students/{scene.student}{action}").status_code == 403
+    for url in (f"/teacher/students/{scene.student}", f"/teacher/students/{scene.student}/remove"):
+        assert scene.writer.get(url).status_code == 403
 
 
 def test_a_class_of_another_institution_in_a_student_form_is_access_denied(

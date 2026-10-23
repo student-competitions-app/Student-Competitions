@@ -27,10 +27,6 @@
     </dd>
     <dt>Can create competitions</dt>
     <dd>{% if teacher.can_create_competitions %}Yes{% else %}No{% endif %}</dd>
-    {% if not teacher.is_active %}
-    <dt>Teacher status</dt>
-    <dd class="status-deactivated">Deactivated</dd>
-    {% endif %}
     {% endif %}
     {% if enrolment %}
     <dt>Educational institution</dt>
@@ -39,10 +35,6 @@
     <dd>{{ enrolment.class_name }}{% if not enrolment.is_available %} <small class="status-deactivated">(deactivated)</small>{% endif %}</dd>
     <dt>Year of study</dt>
     <dd>{{ enrolment.year_of_study }}</dd>
-    {% if not enrolment.is_active %}
-    <dt>Student status</dt>
-    <dd class="status-deactivated">Deactivated</dd>
-    {% endif %}
     {% endif %}
   </dl>
   {% if enrolment %}<p>Corrections to student data are made by a teacher of your educational institution.</p>{% endif %}

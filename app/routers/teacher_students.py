@@ -1,5 +1,5 @@
 """The Students tab of the teacher area: choosing a class, managing classes, inviting students,
-and editing, deactivating and removing them.
+and editing and removing them.
 
 See specs/009-classes-students-management/contracts/http-routes.md §2 and research D5, D7. Thin
 handlers only: each reads its values as plain strings, calls `app.services.teacher_access`,
@@ -69,7 +69,6 @@ from app.services.students import (
     is_student_address,
     list_students,
     remove_student,
-    set_student_active,
     update_student,
 )
 from app.services.teacher_access import (
@@ -778,93 +777,6 @@ def update_student_action(
     return _redirect(
         _viewing(session, teacher_id, region, institution, class_, (institution_view, moved_to))
     )
-
-
-@router.get("/{user_id:int}/deactivate", response_class=HTMLResponse)
-@allow_roles(Role.TEACHER)
-def deactivate_student_page(
-    request: Request,
-    session: SessionDep,
-    user_id: int,
-    region: str | None = Query(None),
-    institution: str | None = Query(None),
-    class_: str | None = Query(None, alias="class"),
-) -> HTMLResponse:
-    """The confirmation step, since deactivation signs the student out: opening it changes
-    nothing."""
-    teacher_id = _teacher(request)
-    found = _get_student(session, teacher_id, user_id)
-    institution_view, school_class, student = found
-    carried = {"region": region or "", "institution": institution or "", "class": class_ or ""}
-    return render_teacher(
-        request,
-        "pages/teacher/student_deactivate.html",
-        TAB,
-        {
-            "student": student,
-            "school_class": school_class,
-            "institution": institution_view,
-            "carried": carried,
-            "cancel": _viewing(
-                session,
-                teacher_id,
-                region,
-                institution,
-                class_,
-                (institution_view, school_class.id),
-            ),
-        },
-    )
-
-
-def _set_student_active(
-    request: Request,
-    session: SessionDep,
-    user_id: int,
-    active: bool,
-    region: str,
-    institution: str,
-    class_: str,
-) -> Response:
-    """Already in that status: nothing changes, and it is not an error."""
-    teacher_id = _teacher(request)
-    institution_view, school_class, _ = _get_student(session, teacher_id, user_id)
-    try:
-        set_student_active(session, teacher_id, user_id, active)
-    except (NotReachable, WriteRequired):
-        raise _denied() from None
-    return _redirect(
-        _viewing(
-            session, teacher_id, region, institution, class_, (institution_view, school_class.id)
-        )
-    )
-
-
-@router.post("/{user_id:int}/deactivate", response_class=HTMLResponse)
-@allow_roles(Role.TEACHER)
-def deactivate_student_action(
-    request: Request,
-    session: SessionDep,
-    user_id: int,
-    region: str = Form(""),
-    institution: str = Form(""),
-    class_: str = Form("", alias="class"),
-) -> Response:
-    """The student is signed out everywhere at once; the role and the enrolment stay."""
-    return _set_student_active(request, session, user_id, False, region, institution, class_)
-
-
-@router.post("/{user_id:int}/activate", response_class=HTMLResponse)
-@allow_roles(Role.TEACHER)
-def activate_student_action(
-    request: Request,
-    session: SessionDep,
-    user_id: int,
-    region: str = Form(""),
-    institution: str = Form(""),
-    class_: str = Form("", alias="class"),
-) -> Response:
-    return _set_student_active(request, session, user_id, True, region, institution, class_)
 
 
 @router.get("/{user_id:int}/remove", response_class=HTMLResponse)

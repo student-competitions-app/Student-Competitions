@@ -75,7 +75,6 @@
         <tr>
           <th scope="col">Name</th>
           <th scope="col">Email</th>
-          <th scope="col">Status</th>
           {% if can_write %}<th scope="col">Actions</th>{% endif %}
         </tr>
       </thead>
@@ -84,20 +83,9 @@
         <tr>
           <td>{{ s.last_name }} {{ s.first_name }}</td>
           <td>{{ s.email }}</td>
-          <td>{% if s.is_active %}Active{% else %}Deactivated{% endif %}</td>
           {% if can_write %}
           <td class="row-actions">
             <a href="/teacher/students/{{ s.user_id }}{{ selection }}" role="button" class="secondary outline">Edit</a>
-            {% if s.is_active %}
-            <a href="/teacher/students/{{ s.user_id }}/deactivate{{ selection }}" role="button" class="secondary outline">Deactivate</a>
-            {% else %}
-            <form method="post" action="/teacher/students/{{ s.user_id }}/activate">
-              <input type="hidden" name="region" value="{{ selected_region }}">
-              <input type="hidden" name="institution" value="{{ selected_institution.id }}">
-              <input type="hidden" name="class" value="{{ selected_class.id }}">
-              <button type="submit" class="secondary outline">Activate</button>
-            </form>
-            {% endif %}
             <a href="/teacher/students/{{ s.user_id }}/remove{{ selection }}" role="button" class="secondary outline">Remove</a>
           </td>
           {% endif %}

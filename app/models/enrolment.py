@@ -13,9 +13,8 @@ Invariant: a person holds the `student` role ⇔ an enrolment row exists; `grant
 write both together. The one exception is the test cast's directly seeded student roles, which
 have no row and count as usable (research D2).
 
-A student is **blocked** ⇔ the row exists and either the student's own status (`is_active`, set by
-a teacher) is off or its class is not available, computed by `app.services.availability`, never
-stored (FR-015).
+A student is **blocked** ⇔ the row exists and its class is not available, computed by
+`app.services.availability`, never stored (FR-015).
 """
 
 from datetime import datetime
@@ -35,8 +34,5 @@ class Enrolment(SQLModel, table=True):
     student list and for `delete_class`'s count."""
     created_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
     """The acceptance time."""
-    is_active: bool = Field(default=True, nullable=False)
-    """The student's own status, set by a teacher with Write access, independent of the class's.
-    Kept on a move to another class."""
     updated_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
-    """Changed by a move to another class or a status change only (FR-041)."""
+    """Changed by a move to another class only (FR-041)."""

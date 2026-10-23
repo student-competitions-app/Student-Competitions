@@ -38,7 +38,7 @@ def switch_form(body: str) -> str | None:
 def area_links(body: str) -> list[str]:
     section = re.search(r'<section id="areas".*?</section>', body, re.DOTALL)
     assert section is not None
-    return re.findall(r'<a href="([^"]+)">', section.group(0))
+    return re.findall(r'<a href="([^"]+)" role="button">', section.group(0))
 
 
 def admin_student(client_as: ClientAs) -> TestClient:

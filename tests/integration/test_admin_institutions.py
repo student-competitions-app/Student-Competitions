@@ -140,6 +140,10 @@ def institution_path(rid: int, iid: int) -> str:
     return f"{region_path(rid)}/institutions/{iid}"
 
 
+def button_link(href: str, label: str) -> str:
+    return f'<a href="{href}" role="button" class="secondary outline">{label}</a>'
+
+
 def current_tabs(body: str) -> list[str]:
     nav = re.search(r'<nav class="admin-tabs".*?</nav>', body, re.DOTALL)
     assert nav is not None, "the page has no admin tab row"
@@ -162,19 +166,21 @@ def right(body: str) -> str:
 
 def listed_regions(body: str) -> list[str]:
     """The region names in the order the left list shows them."""
-    return re.findall(r'<a href="/admin/institutions/regions/\d+"[^>]*>([^<]*)</a>', left(body))
+    return re.findall(
+        r'<td class="region-name">\s*<a href="/admin/institutions/regions/\d+"[^>]*>([^<]*)</a>',
+        left(body),
+    )
 
 
 def selected_regions(body: str) -> list[str]:
-    return re.findall(r'<a href="([^"]+)" aria-current="true">', body)
+    return re.findall(r'<a href="([^"]+)" aria-current="true"', body)
 
 
 def region_item(body: str, rid: int) -> str:
-    match = re.search(
-        rf'<li[^>]*>\s*<a href="/admin/institutions/regions/{rid}"[^>]*>.*?</li>', body, re.DOTALL
-    )
-    assert match is not None, f"region {rid} is not listed"
-    return match.group(0)
+    rows = re.findall(r"<tr[^>]*>.*?</tr>", left(body), re.DOTALL)
+    found = [row for row in rows if f'href="/admin/institutions/regions/{rid}"' in row]
+    assert len(found) == 1, f"region {rid} is not listed"
+    return found[0]
 
 
 def listed_institutions(body: str) -> list[str]:
@@ -350,7 +356,7 @@ def test_the_region_create_form(admin_client: TestClient) -> None:
     assert "required" in field.group(0)
     assert 'value=""' in field.group(0)
     assert ">Save</button>" in body
-    assert '<a href="/admin/institutions">Cancel</a>' in body
+    assert button_link("/admin/institutions", "Cancel") in body
     assert "aria-invalid" not in body
     assert current_tabs(body) == [TAB]
 
@@ -442,7 +448,7 @@ def test_the_institution_create_form(admin_client: TestClient, session: Session)
     assert re.findall(r"<input[^>]*name=\"([^\"]+)\"", body) == ["name"]
     assert "<select" not in body
     assert ">Save</button>" in body
-    assert f'<a href="{region_path(kyiv)}">Cancel</a>' in body
+    assert button_link(region_path(kyiv), "Cancel") in body
     assert current_tabs(body) == [TAB]
 
 
@@ -552,9 +558,9 @@ def test_each_region_offers_its_actions(admin_client: TestClient, session: Sessi
     body = admin_client.get(TAB).text
     for rid in (kyiv, odesa):
         item = region_item(body, rid)
-        assert f'<a href="{region_path(rid)}/rename">Rename</a>' in item
-        assert f'<a href="{region_path(rid)}/delete">Delete</a>' in item
-    assert f'<a href="{region_path(kyiv)}/deactivate">Deactivate</a>' in body
+        assert button_link(f"{region_path(rid)}/rename", "Rename") in item
+        assert button_link(f"{region_path(rid)}/delete", "Delete") in item
+    assert button_link(f"{region_path(kyiv)}/deactivate", "Deactivate") in body
     assert f'<form method="post" action="{region_path(odesa)}/activate">' in body
     assert f"{region_path(kyiv)}/activate" not in body
     assert f"{region_path(odesa)}/deactivate" not in body
@@ -569,7 +575,7 @@ def test_the_region_rename_form_is_filled_in(admin_client: TestClient, session: 
     assert "<h1>Rename region</h1>" in body
     assert f'<form method="post" action="{region_path(lvov)}/rename">' in body
     assert 'value="Lvov"' in body
-    assert f'<a href="{region_path(lvov)}">Cancel</a>' in body
+    assert button_link(region_path(lvov), "Cancel") in body
     assert current_tabs(body) == [TAB]
 
 
@@ -632,7 +638,7 @@ def test_deactivate_and_activate_a_region(admin_client: TestClient, session: Ses
     assert region_names(session) == [("Kyiv", True)]
     body = admin_client.get(region_path(kyiv)).text
     assert f"{region_path(kyiv)}/institutions/new" in right(body)
-    assert f'<a href="{region_path(kyiv)}/deactivate">Deactivate</a>' in body
+    assert button_link(f"{region_path(kyiv)}/deactivate", "Deactivate") in body
 
 
 def test_a_region_status_never_changes_its_institutions(
@@ -676,7 +682,7 @@ def test_the_region_delete_confirmation_deletes_nothing(
     assert "Deleting a region cannot be undone." in body
     assert f'<form method="post" action="{region_path(test)}/delete">' in body
     assert ">Delete</button>" in body
-    assert f'<a href="{region_path(test)}">Cancel</a>' in body
+    assert button_link(region_path(test), "Cancel") in body
     assert current_tabs(body) == [TAB]
     assert regions(session) == before
 
@@ -749,11 +755,13 @@ def test_each_institution_offers_its_actions(
     body = admin_client.get(region_path(kyiv)).text
     for iid in (academy, college):
         row = institution_row(body, iid)
-        assert f'<a href="{institution_path(kyiv, iid)}/rename">Rename</a>' in row
-        assert f'<a href="{institution_path(kyiv, iid)}/delete">Delete</a>' in row
+        assert button_link(f"{institution_path(kyiv, iid)}/rename", "Rename") in row
+        assert button_link(f"{institution_path(kyiv, iid)}/delete", "Delete") in row
     academy_row = institution_row(body, academy)
     college_row = institution_row(body, college)
-    assert f'<a href="{institution_path(kyiv, academy)}/deactivate">Deactivate</a>' in (academy_row)
+    assert button_link(f"{institution_path(kyiv, academy)}/deactivate", "Deactivate") in (
+        academy_row
+    )
     assert f'<form method="post" action="{institution_path(kyiv, college)}/activate">' in (
         college_row
     )
@@ -774,7 +782,7 @@ def test_the_institution_rename_form(admin_client: TestClient, session: Session)
     assert 'value="Acadmy"' in body
     assert re.findall(r"<input[^>]*name=\"([^\"]+)\"", body) == ["name"]
     assert "<select" not in body
-    assert f'<a href="{region_path(kyiv)}">Cancel</a>' in body
+    assert button_link(region_path(kyiv), "Cancel") in body
     assert current_tabs(body) == [TAB]
 
 
@@ -883,7 +891,7 @@ def test_the_institution_delete_confirmation_deletes_nothing(
     assert "Deleting an educational institution cannot be undone." in body
     assert f'<form method="post" action="{institution_path(kyiv, academy)}/delete">' in body
     assert ">Delete</button>" in body
-    assert f'<a href="{region_path(kyiv)}">Cancel</a>' in body
+    assert button_link(region_path(kyiv), "Cancel") in body
     assert current_tabs(body) == [TAB]
     assert institutions(session) == before
 
@@ -1074,7 +1082,7 @@ def test_the_region_confirmation_changes_nothing_and_posts_to_the_route(
     assert "<h1>Deactivate region “Kyiv”?</h1>" in body
     assert SIGNED_OUT in body
     assert f'<form method="post" action="{region_path(kyiv)}/deactivate">' in body
-    assert f'<a href="{region_path(kyiv)}">Cancel</a>' in body
+    assert button_link(region_path(kyiv), "Cancel") in body
     assert current_tabs(body) == [TAB]
     assert regions(session) == before
     assert_redirect(post(admin_client, f"{region_path(kyiv)}/deactivate"), region_path(kyiv))

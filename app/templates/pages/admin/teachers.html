@@ -16,12 +16,13 @@
         <th scope="col">Educational institutions</th>
         <th scope="col">Can create competitions</th>
         <th scope="col">Date of consent</th>
+        <th scope="col">Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for t in teachers %}
       <tr>
-        <td><a href="/admin/teachers/{{ t.user_id }}">{{ t.first_name }} {{ t.last_name }}</a></td>
+        <td>{{ t.first_name }} {{ t.last_name }}</td>
         <td>{{ t.email }}</td>
         <td>
           {% for link in t.links %}
@@ -30,6 +31,10 @@
         </td>
         <td>{% if t.can_create_competitions %}Yes{% else %}No{% endif %}</td>
         <td>{{ t.consented_at|utc("date") }}</td>
+        <td class="row-actions">
+          <a href="/admin/teachers/{{ t.user_id }}" role="button" class="secondary outline">Edit</a>
+          <a href="/admin/teachers/{{ t.user_id }}/remove" role="button" class="secondary outline">Remove</a>
+        </td>
       </tr>
       {% endfor %}
     </tbody>

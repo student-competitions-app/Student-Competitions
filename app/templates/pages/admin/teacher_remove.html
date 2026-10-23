@@ -7,8 +7,10 @@
   <h1>Remove {{ name }} as a teacher?</h1>
   <p>They lose the teacher role, their institutions and the competitions setting. If they have no other role, they can no longer sign in. Their email, names and consent records stay until they delete their data.</p>
   <form method="post" action="/admin/teachers/{{ user_id }}/remove">
-    <button type="submit">Remove</button>
-    <a href="/admin/teachers/{{ user_id }}">Cancel</a>
+    <div class="form-actions">
+      <button type="submit">Remove</button>
+      <a href="/admin/teachers/{{ user_id }}" role="button" class="secondary outline">Cancel</a>
+    </div>
   </form>
 </section>
 {% endblock %}

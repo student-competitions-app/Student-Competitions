@@ -9,26 +9,46 @@
     <h2 id="regions-heading">Regions</h2>
     <p><a href="/admin/institutions/regions/new" role="button">Create</a></p>
     {% if regions %}
-    <ul class="regions-list">
-      {% for r in regions %}
-      {% set is_selected = selected and r.id == selected.id %}
-      <li{% if is_selected %} class="selected"{% endif %}>
-        <a href="/admin/institutions/regions/{{ r.id }}"{% if is_selected %} aria-current="true"{% endif %}>{{ r.name }}</a>
-        {% if not r.is_active %}<small class="status-deactivated">Deactivated</small>{% endif %}
-        <div class="row-actions">
-          <a href="/admin/institutions/regions/{{ r.id }}/rename">Rename</a>
-          {% if r.is_active %}
-          <a href="/admin/institutions/regions/{{ r.id }}/deactivate">Deactivate</a>
-          {% else %}
-          <form method="post" action="/admin/institutions/regions/{{ r.id }}/activate">
-            <button type="submit" class="secondary outline">Activate</button>
-          </form>
-          {% endif %}
-          <a href="/admin/institutions/regions/{{ r.id }}/delete">Delete</a>
-        </div>
-      </li>
-      {% endfor %}
-    </ul>
+    <div class="overflow-auto">
+      <table class="regions-table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in regions %}
+          {% set is_selected = selected and r.id == selected.id %}
+          {% set path = "/admin/institutions/regions/" ~ r.id %}
+          <tr{% if is_selected %} class="selected"{% endif %}>
+            <td class="region-name">
+              {% if is_selected %}
+              <a href="{{ path }}" aria-current="true" role="button">{{ r.name }}</a>
+              {% else %}
+              <a href="{{ path }}" role="button" class="secondary outline">{{ r.name }}</a>
+              {% endif %}
+            </td>
+            <td>{% if r.is_active %}Active{% else %}Deactivated{% endif %}</td>
+            <td>
+              <div class="row-actions">
+                <a href="{{ path }}/rename" role="button" class="secondary outline">Rename</a>
+                {% if r.is_active %}
+                <a href="{{ path }}/deactivate" role="button" class="secondary outline">Deactivate</a>
+                {% else %}
+                <form method="post" action="{{ path }}/activate">
+                  <button type="submit" class="secondary outline">Activate</button>
+                </form>
+                {% endif %}
+                <a href="{{ path }}/delete" role="button" class="secondary outline">Delete</a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% else %}
     <p class="list-empty">No regions yet</p>
     {% endif %}
@@ -58,16 +78,18 @@
           <tr>
             <td class="institution-name">{{ i.name }}</td>
             <td>{% if i.is_active %}Active{% else %}Deactivated{% endif %}</td>
-            <td class="row-actions">
-              <a href="{{ path }}/rename">Rename</a>
-              {% if i.is_active %}
-              <a href="{{ path }}/deactivate">Deactivate</a>
-              {% else %}
-              <form method="post" action="{{ path }}/activate">
-                <button type="submit" class="secondary outline">Activate</button>
-              </form>
-              {% endif %}
-              <a href="{{ path }}/delete">Delete</a>
+            <td>
+              <div class="row-actions">
+                <a href="{{ path }}/rename" role="button" class="secondary outline">Rename</a>
+                {% if i.is_active %}
+                <a href="{{ path }}/deactivate" role="button" class="secondary outline">Deactivate</a>
+                {% else %}
+                <form method="post" action="{{ path }}/activate">
+                  <button type="submit" class="secondary outline">Activate</button>
+                </form>
+                {% endif %}
+                <a href="{{ path }}/delete" role="button" class="secondary outline">Delete</a>
+              </div>
             </td>
           </tr>
           {% endfor %}

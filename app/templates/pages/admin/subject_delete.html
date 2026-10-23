@@ -16,8 +16,10 @@
   {% else %}
   <p>Deleting a subject cannot be undone.</p>
   <form method="post" action="/admin/subjects/{{ subject.id }}/delete">
-    <button type="submit">Delete</button>
-    <a href="/admin/subjects">Cancel</a>
+    <div class="form-actions">
+      <button type="submit">Delete</button>
+      <a href="/admin/subjects" role="button" class="secondary outline">Cancel</a>
+    </div>
   </form>
   {% endif %}
 </section>

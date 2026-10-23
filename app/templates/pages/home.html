@@ -10,9 +10,9 @@
 </section>
 <section id="areas" aria-labelledby="areas-heading">
   <h2 id="areas-heading">Your areas</h2>
-  <ul>
+  <ul class="area-links">
     {% for area in areas %}
-    <li><a href="{{ area.path }}">{{ area.title }}</a></li>
+    <li><a href="{{ area.path }}" role="button">{{ area.title }}</a></li>
     {% endfor %}
   </ul>
 </section>

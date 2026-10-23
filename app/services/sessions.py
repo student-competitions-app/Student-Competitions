@@ -6,8 +6,9 @@ cookie. Each session row also carries the role that browser is currently using, 
 of one person can use different roles (FR-011). Nothing here logs a token or a hash.
 
 Since milestone 9, a role is offered and kept only while it is **usable**
-(`app.services.availability`, research D3): a blocked student's student role counts as not held,
-so the role choice, the header switch and the access rule never offer it.
+(`app.services.availability`, research D3): a blocked student's student role, and a deactivated
+teacher's teacher role, count as not held, so the role choice, the header switch and the access
+rule never offer it.
 """
 
 from dataclasses import dataclass
@@ -19,7 +20,7 @@ from sqlmodel import Session, col, select
 from app.core.db import utc_now
 from app.core.security import SESSION_TTL, hash_token, new_session_token
 from app.models import Role, User, UserRole, UserSession
-from app.services.availability import is_student_blocked, usable_roles
+from app.services.availability import blocked_roles, usable_roles
 
 
 @dataclass(frozen=True)
@@ -76,13 +77,13 @@ def get_session_identity(
     role, if set, still held and usable.
 
     One indexed query returns one row per role held (at most three); a user with no roles matches
-    nothing. When the student role is among them, one more query checks the enrolment chain, and a
-    blocked student's role counts as not held (milestone 9 research D3); with no usable role left,
-    **this session is deleted** and resolves to nobody. Then (rows G1–G6 of the contract): a
-    current role that is not held (or not usable), or not a role at all, **deletes this session**
-    and resolves to nobody (FR-017); no current role and exactly one role held **stores** that
-    role, which upgrades a session from before milestone 5 (SC-010); otherwise the stored state is
-    returned as is. Correct whether or not cleanup has run yet.
+    nothing. When the teacher or student role is among them, one more query each checks the
+    teacher's status or the enrolment chain, and a blocked role counts as not held (milestone 9
+    research D3); with no usable role left, **this session is deleted** and resolves to nobody. Then
+    (rows G1–G6 of the contract): a current role that is not held (or not usable), or not a role at
+    all, **deletes this session** and resolves to nobody (FR-017); no current role and exactly one
+    role held **stores** that role, which upgrades a session from before milestone 5 (SC-010);
+    otherwise the stored state is returned as is. Correct whether or not cleanup has run yet.
     """
     now = now or utc_now()
     statement = (
@@ -101,8 +102,7 @@ def get_session_identity(
     user, session_id, stored_role, _ = rows[0]
     held = {role for *_, role in rows}
     assert user.id is not None
-    if Role.STUDENT in held and is_student_blocked(session, user.id):
-        held.discard(Role.STUDENT)
+    held -= blocked_roles(session, user.id, held)
     roles = tuple(role for role in Role if role in held)
     # Detached before any commit below, so its loaded attributes outlive this database session.
     session.expunge(user)

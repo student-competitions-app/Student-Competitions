@@ -39,9 +39,13 @@ class TeacherProfile(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id", primary_key=True)
     can_create_competitions: bool = Field(default=False, nullable=False)
     """FR-007. Only stored and shown in this milestone (FR-013)."""
+    is_active: bool = Field(default=True, nullable=False)
+    """The teacher's own status, set by an administrator. While `False` the teacher role is held
+    but not usable: it is never offered at sign-in or kept in a session
+    (`app.services.availability`). The profile, the links and the setting stay as they are."""
     created_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
     updated_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
-    """Changed only when the setting changes."""
+    """Changed only when the setting or the status changes."""
 
 
 class TeacherInstitution(SQLModel, table=True):

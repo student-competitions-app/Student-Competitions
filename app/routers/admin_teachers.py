@@ -1,5 +1,5 @@
 """The Teachers tab of the administrator area: the list of teachers, the invitation form, the
-teacher page (edit) and removal.
+teacher page (edit), deactivation and removal.
 
 See specs/008-teacher-management-consent/contracts/http-routes.md §1. Thin handlers only: each
 parses the form, calls `app.services.invitations` or `app.services.teachers`, maps their outcomes
@@ -22,7 +22,7 @@ from datetime import timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.core.auth import allow_roles
 from app.core.config import AuthSettings
@@ -60,6 +60,7 @@ from app.services.teachers import (
     get_teacher,
     list_teachers,
     remove_teacher,
+    set_teacher_active,
     update_teacher,
 )
 
@@ -400,6 +401,50 @@ def update_teacher_action(
         else:
             return _redirect(TAB_PATH)
     return _teacher_form(request, session, teacher, values, picked, levels, errors, 400)
+
+
+# ---------------------------------------------------------------------------------------------
+# Deactivate / activate
+# ---------------------------------------------------------------------------------------------
+
+
+@router.get("/{user_id:int}/deactivate", response_class=HTMLResponse)
+@allow_roles(Role.ADMIN)
+def deactivate_page(request: Request, session: SessionDep, user_id: int) -> HTMLResponse:
+    """The confirmation step, since deactivation signs the teacher out: opening it changes
+    nothing."""
+    try:
+        teacher = get_teacher(session, user_id)
+    except TeacherNotFound:
+        return _not_found(request)
+    return render_admin(
+        request,
+        "pages/admin/teacher_deactivate.html",
+        TAB,
+        {"name": f"{teacher.first_name} {teacher.last_name}", "user_id": user_id},
+    )
+
+
+def _set_active(request: Request, session: SessionDep, user_id: int, active: bool) -> Response:
+    """Already in that status: nothing changes, and it is not an error."""
+    try:
+        set_teacher_active(session, user_id, active)
+    except TeacherNotFound:
+        return _not_found(request)
+    return _redirect(TAB_PATH)
+
+
+@router.post("/{user_id:int}/deactivate", response_class=HTMLResponse)
+@allow_roles(Role.ADMIN)
+def deactivate_action(request: Request, session: SessionDep, user_id: int) -> Response:
+    """The teacher is signed out everywhere at once; the role, links and setting stay."""
+    return _set_active(request, session, user_id, False)
+
+
+@router.post("/{user_id:int}/activate", response_class=HTMLResponse)
+@allow_roles(Role.ADMIN)
+def activate_action(request: Request, session: SessionDep, user_id: int) -> Response:
+    return _set_active(request, session, user_id, True)
 
 
 # ---------------------------------------------------------------------------------------------

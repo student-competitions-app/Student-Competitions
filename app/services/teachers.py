@@ -1,5 +1,4 @@
-"""Teachers: the teacher's invitable-role definition, and listing, editing, deactivating and
-removing teachers.
+"""Teachers: the teacher's invitable-role definition, and listing, editing and removing teachers.
 
 See specs/008-teacher-management-consent/contracts/services.md §teachers and research D3, D9. A
 teacher has three things, always written and deleted together (`TEACHER_INVITATION.grant` and
@@ -185,8 +184,6 @@ class TeacherView:
     can_create_competitions: bool
     consented_at: datetime | None
     """The latest teacher consent record."""
-    is_active: bool
-    """The teacher's own status: `False` while an administrator has deactivated them."""
 
 
 def _current_teacher(session: Session, user_id: int, lock: bool = False) -> User:
@@ -235,7 +232,6 @@ def _view(session: Session, user: User) -> TeacherView:
         links=links,
         can_create_competitions=profile.can_create_competitions,
         consented_at=latest_consent_at(session, user.id, Role.TEACHER),
-        is_active=profile.is_active,
     )
 
 
@@ -333,36 +329,6 @@ def update_teacher(
         len(removed),
         changed,
     )
-    return get_teacher(session, user_id)
-
-
-def set_teacher_active(
-    session: Session, user_id: int, active: bool, now: datetime | None = None
-) -> TeacherView:
-    """Activate or deactivate the teacher; already in that status, nothing changes.
-
-    Deactivating keeps the role, the links and the setting, but the teacher role stops being
-    usable (`app.services.availability`), and the person is signed out everywhere in the same
-    transaction, as on removal. They stay active as a user, so another role (administrator,
-    student) still signs in.
-    """
-    now = now or utc_now()
-    _current_teacher(session, user_id, lock=True)
-    profile = session.get(TeacherProfile, user_id, populate_existing=True)
-    assert profile is not None
-    if profile.is_active == active:
-        session.rollback()
-        return get_teacher(session, user_id)
-    profile.is_active = active
-    profile.updated_at = now
-    session.add(profile)
-    if not active:
-        end_all_sessions(session, user_id)
-    session.commit()
-    if active:
-        logger.info("Teacher activated: user_id=%s", user_id)
-    else:
-        logger.info("Teacher deactivated: user_id=%s", user_id)
     return get_teacher(session, user_id)
 
 

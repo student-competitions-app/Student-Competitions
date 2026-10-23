@@ -16,7 +16,6 @@
         <th scope="col">Educational institutions</th>
         <th scope="col">Can create competitions</th>
         <th scope="col">Date of consent</th>
-        <th scope="col">Status</th>
         <th scope="col">Actions</th>
       </tr>
     </thead>
@@ -32,16 +31,8 @@
         </td>
         <td>{% if t.can_create_competitions %}Yes{% else %}No{% endif %}</td>
         <td>{{ t.consented_at|utc("date") }}</td>
-        <td class="status">{% if t.is_active %}Active{% else %}Deactivated{% endif %}</td>
         <td class="row-actions">
           <a href="/admin/teachers/{{ t.user_id }}" role="button" class="secondary outline">Edit</a>
-          {% if t.is_active %}
-          <a href="/admin/teachers/{{ t.user_id }}/deactivate" role="button" class="secondary outline">Deactivate</a>
-          {% else %}
-          <form method="post" action="/admin/teachers/{{ t.user_id }}/activate">
-            <button type="submit" class="secondary outline">Activate</button>
-          </form>
-          {% endif %}
           <a href="/admin/teachers/{{ t.user_id }}/remove" role="button" class="secondary outline">Remove</a>
         </td>
       </tr>

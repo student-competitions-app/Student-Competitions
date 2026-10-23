@@ -1,5 +1,5 @@
-"""Students: the student's invitable-role definition, and listing, viewing, editing, deactivating
-and removing students.
+"""Students: the student's invitable-role definition, and listing, viewing, editing and removing
+students.
 
 See specs/009-classes-students-management/contracts/services.md §`app/services/students.py` and
 research D9, D12, D16. A student has two things, always written and deleted together
@@ -33,7 +33,7 @@ from app.models import (
 )
 from app.schemas.students import StudentDetails
 from app.schemas.teachers import MAX_ID
-from app.services.availability import class_is_available, usable_roles
+from app.services.availability import class_is_available
 from app.services.classes import ClassView
 from app.services.consent import set_cutoff
 from app.services.institutions import describe_institutions
@@ -68,10 +68,10 @@ class _StudentInvitation:
         return StudentDetails(institution_id=institution_id, class_id=class_id)
 
     def inviter_may_invite(self, session: Session, inviter: User, details: StudentDetails) -> bool:
-        """An active teacher, not deactivated, with Write access to the institution (FR-032).
-        Administrator status plays no part (US3-9)."""
+        """An active teacher with Write access to the institution (FR-032). Administrator status
+        plays no part (US3-9)."""
         assert inviter.id is not None
-        if not inviter.is_active or Role.TEACHER not in usable_roles(session, inviter.id):
+        if not inviter.is_active or Role.TEACHER not in get_roles(session, inviter.id):
             return False
         link = session.get(TeacherInstitution, (inviter.id, details.institution_id))
         return link is not None and link.access_level == AccessLevel.WRITE
@@ -138,8 +138,6 @@ class StudentRow:
     last_name: str
     email: str
     class_id: int
-    is_active: bool
-    """The student's own status: `False` while a teacher has deactivated them."""
 
 
 def _row(user: User, enrolment: Enrolment) -> StudentRow:
@@ -150,7 +148,6 @@ def _row(user: User, enrolment: Enrolment) -> StudentRow:
         last_name=user.last_name or "",
         email=user.email,
         class_id=enrolment.class_id,
-        is_active=enrolment.is_active,
     )
 
 
@@ -249,34 +246,6 @@ def update_student(
     return target_id
 
 
-def set_student_active(
-    session: Session, teacher_id: int, user_id: int, active: bool, now: datetime | None = None
-) -> None:
-    """Activate or deactivate the student; already in that status, nothing changes.
-
-    The student's row is locked and checked to be reachable with Write. Deactivating keeps the
-    role and the enrolment, but the student is blocked (`app.services.availability`) and signed
-    out everywhere in the same transaction, as when their class is deactivated.
-    """
-    now = now or utc_now()
-    reach_student(session, teacher_id, user_id, write=True, lock=True)
-    enrolment = session.get(Enrolment, user_id)
-    assert enrolment is not None
-    if enrolment.is_active == active:
-        session.rollback()
-        return
-    enrolment.is_active = active
-    enrolment.updated_at = now
-    session.add(enrolment)
-    if not active:
-        end_all_sessions(session, user_id)
-    session.commit()
-    if active:
-        logger.info("Student activated: user_id=%d", user_id)
-    else:
-        logger.info("Student deactivated: user_id=%d", user_id)
-
-
 def remove_student(
     session: Session,
     settings: AuthSettings,
@@ -320,9 +289,7 @@ class EnrolmentView:
     class_name: str
     year_of_study: int
     is_available: bool
-    """`False` while the class is not available: shown, marked "(deactivated)"."""
-    is_active: bool
-    """The student's own status: `False` while a teacher has deactivated them."""
+    """`False` while the student is blocked: shown, marked "(deactivated)"."""
 
 
 def get_enrolment_view(session: Session, user_id: int) -> EnrolmentView | None:
@@ -338,5 +305,4 @@ def get_enrolment_view(session: Session, user_id: int) -> EnrolmentView | None:
         class_name=school_class.name,
         year_of_study=school_class.year_of_study,
         is_available=class_is_available(session, school_class.id or 0),
-        is_active=enrolment.is_active,
     )

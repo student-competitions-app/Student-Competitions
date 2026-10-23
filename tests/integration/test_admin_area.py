@@ -101,7 +101,7 @@ def test_an_unknown_admin_page_is_the_normal_not_found(admin_client: TestClient)
 
 def test_the_home_page_still_links_to_admin(admin_client: TestClient) -> None:
     """FR-008."""
-    assert '<a href="/admin" role="button">Administrator area</a>' in admin_client.get("/").text
+    assert '<a href="/admin">Administrator area</a>' in admin_client.get("/").text
 
 
 def test_every_subject_page_marks_the_subjects_tab(

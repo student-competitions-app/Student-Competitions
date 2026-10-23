@@ -54,15 +54,15 @@
   <h2 id="class-heading">{{ selected_class.label }}{% if not selected_class.is_active %} <small class="status-deactivated">Deactivated</small>{% endif %}</h2>
   {% if can_write %}
   <div class="row-actions">
-    <a href="{{ class_path }}/edit" role="button" class="secondary outline">Edit</a>
+    <a href="{{ class_path }}/edit">Edit</a>
     {% if selected_class.is_active %}
-    <a href="{{ class_path }}/deactivate" role="button" class="secondary outline">Deactivate</a>
+    <a href="{{ class_path }}/deactivate">Deactivate</a>
     {% else %}
     <form method="post" action="{{ class_path }}/activate">
       <button type="submit" class="secondary outline">Activate</button>
     </form>
     {% endif %}
-    <a href="{{ class_path }}/delete" role="button" class="secondary outline">Delete</a>
+    <a href="{{ class_path }}/delete">Delete</a>
     {% if selected_class.is_active %}<a href="{{ class_path }}/invite" role="button">Add student</a>{% endif %}
   </div>
   {% endif %}
@@ -85,8 +85,8 @@
           <td>{{ s.email }}</td>
           {% if can_write %}
           <td class="row-actions">
-            <a href="/teacher/students/{{ s.user_id }}{{ selection }}" role="button" class="secondary outline">Edit</a>
-            <a href="/teacher/students/{{ s.user_id }}/remove{{ selection }}" role="button" class="secondary outline">Remove</a>
+            <a href="/teacher/students/{{ s.user_id }}{{ selection }}">Edit</a>
+            <a href="/teacher/students/{{ s.user_id }}/remove{{ selection }}">Remove</a>
           </td>
           {% endif %}
         </tr>

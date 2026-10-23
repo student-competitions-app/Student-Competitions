@@ -11,10 +11,8 @@
   {% else %}
   <p>Deleting a region cannot be undone.</p>
   <form method="post" action="/admin/institutions/regions/{{ region.id }}/delete">
-    <div class="form-actions">
-      <button type="submit">Delete</button>
-      <a href="/admin/institutions/regions/{{ region.id }}" role="button" class="secondary outline">Cancel</a>
-    </div>
+    <button type="submit">Delete</button>
+    <a href="/admin/institutions/regions/{{ region.id }}">Cancel</a>
   </form>
   {% endif %}
 </section>

@@ -236,8 +236,7 @@ that query.
 
 ## D11. Region selection is marked with `aria-current="true"`
 
-**Decision**: each region's name is a button (a link) that selects it. The selected region's
-name button carries `aria-current="true"` and is filled, and its row has a CSS highlight
+**Decision**: the selected region's link carries `aria-current="true"` and a CSS highlight
 (FR-002). The tab row keeps `aria-current="page"` on the current tab.
 
 **Rationale**: `aria-current="page"` already marks the current tab, and the milestone 6 tests
@@ -249,15 +248,12 @@ technologies and for the tests.
 
 **Decision**: the tab content is a `<div class="institutions-layout">` with two `<section>`s:
 regions, then institutions. Custom CSS in `app/static/css/app.css` places them in two columns
-(`grid-template-columns: 1fr 1fr`) from 1024 px wide. Below that, it uses one column with regions
-first (FR-006). Both lists are tables with the same columns: name, status and actions. A region's
-name is a button that selects it. Actions wrap onto further lines when a column
-is narrow.
+(`grid-template-columns: minmax(14rem, 1fr) 2fr`) from 768 px wide. Below that, it uses one column
+with regions first (FR-006). The left list is a `<ul>`. The right list is a table like the
+subjects table.
 
-**Rationale**: the region list and the institution list look and work alike, and every action is
-a button. Two tables need equal columns, and below 1024 px they are too narrow side by side, so
-the layout stacks there. A few lines of override CSS are allowed (constitution, Styling). There is
-no script.
+**Rationale**: Pico.css's own `.grid` gives equal columns, which wastes space on the short region
+names. A few lines of override CSS are allowed (constitution, Styling). There is no script.
 
 ## D13. Deleting the Educational institutions placeholder
 

@@ -16,10 +16,8 @@
     <input type="hidden" name="region" value="{{ carried.region }}">
     <input type="hidden" name="institution" value="{{ carried.institution }}">
     <input type="hidden" name="class" value="{{ carried.class }}">
-    <div class="form-actions">
-      <button type="submit">Remove</button>
-      <a href="{{ cancel }}" role="button" class="secondary outline">Cancel</a>
-    </div>
+    <button type="submit">Remove</button>
+    <a href="{{ cancel }}">Cancel</a>
   </form>
 </section>
 {% endblock %}

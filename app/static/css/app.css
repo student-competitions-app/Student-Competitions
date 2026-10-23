@@ -167,36 +167,8 @@
   font-weight: bold;
 }
 
-/* The home page's areas: one button each, side by side, wrapping on narrow screens. */
-.area-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  padding: 0;
-}
-
-.area-links li {
-  list-style: none;
-  margin: 0;
-}
-
-/* A form's submit button with its Cancel beside it, wrapping on narrow screens. */
-.form-actions {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  margin-bottom: var(--pico-spacing);
-}
-
-.form-actions > button,
-.form-actions > [role="button"] {
-  margin: 0;
-  width: auto;
-}
-
 /* The subject list: names wrap rather than widen the page; the one-button forms sit inline with
-   the link buttons in the actions column. */
+   the links in the actions column. */
 .subjects-table td {
   overflow-wrap: anywhere;
 }
@@ -210,8 +182,7 @@
   margin: 0;
 }
 
-.subjects-actions button,
-.subjects-actions [role="button"] {
+.subjects-actions button {
   margin: 0;
   padding: 0.125rem 0.5rem;
   width: auto;
@@ -222,7 +193,7 @@
 }
 
 /* The Educational institutions tab (specs/007-region-and-institutions-management FR-002, FR-006,
-   research D12): regions beside the institutions of the selected region from 1024 px, stacked with
+   research D12): regions beside the institutions of the selected region from 768 px, stacked with
    regions first below that. Names wrap rather than widen the page. */
 .institutions-layout {
   display: grid;
@@ -230,53 +201,35 @@
   grid-template-columns: 1fr;
 }
 
-/* Lets the institutions table scroll inside its column rather than widen the page. */
-.institutions-layout > * {
-  min-width: 0;
-}
-
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   .institutions-layout {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(14rem, 1fr) 2fr;
   }
 }
 
-/* The region and institution tables: actions wrap onto further lines when the column is narrow,
-   and only names may break mid-word. */
-.regions-table .row-actions,
-.institutions-table .row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
-/* Actions get most of the region table, and both tables have narrower cell padding, so the
-   buttons rarely need more than one line. */
-.regions-table th:last-child {
-  width: 60%;
-}
-
-.regions-table :is(th, td),
-.institutions-table :is(th, td) {
-  padding-inline: 0.5rem;
-}
-
-/* A region's name is the button that selects it; long names wrap inside it. */
-.region-name [role="button"] {
+.regions-list {
   margin: 0;
-  padding: 0.125rem 0.5rem;
-  text-align: left;
-  width: auto;
+  padding: 0;
 }
 
-/* The selected region: a tinted row with an accent edge, and its name button filled and marked
-   `aria-current="true"` for assistive technologies (research D11). */
-.regions-table tr.selected td {
-  background-color: color-mix(in srgb, var(--pico-primary) 10%, var(--pico-background-color));
+.regions-list li {
+  border-left: 0.2rem solid transparent;
+  list-style: none;
+  overflow-wrap: anywhere;
+  padding: 0.25rem 0.5rem;
 }
 
-.regions-table tr.selected td:first-child {
-  box-shadow: inset 0.2rem 0 0 var(--pico-primary);
+/* The selected region: highlighted, and marked `aria-current="true"` for assistive technologies
+   (research D11). */
+.regions-list li.selected {
+  background: var(--pico-primary-background);
+  border-left-color: var(--pico-primary);
+}
+
+.regions-list li.selected > a,
+.regions-list a[aria-current="true"] {
+  color: var(--pico-primary-inverse);
+  font-weight: bold;
 }
 
 .status-deactivated,
@@ -284,24 +237,29 @@
   color: var(--pico-muted-color);
 }
 
-.region-name,
-.institution-name {
-  overflow-wrap: break-word;
+.institutions-table td {
+  overflow-wrap: anywhere;
 }
 
-/* Rename, Deactivate/Activate and Delete: the one-button forms sit inline with the link buttons,
-   as in the subject list. */
+/* Rename, Deactivate/Activate and Delete: the one-button forms sit inline with the links, as in
+   the subject list. */
 .row-actions form {
   display: inline;
   margin: 0;
 }
 
-.row-actions button,
-.row-actions [role="button"] {
+.row-actions button {
   margin: 0;
   padding: 0.125rem 0.5rem;
-  white-space: nowrap;
   width: auto;
+}
+
+.institutions-table .row-actions {
+  white-space: nowrap;
+}
+
+.regions-list li.selected .row-actions a {
+  color: var(--pico-primary-inverse);
 }
 
 /* Teachers (specs/008-teacher-management-consent): the list and the institution picker wrap
@@ -309,10 +267,6 @@
 .teachers-table td,
 .picker-table td {
   overflow-wrap: anywhere;
-}
-
-.teachers-table .row-actions {
-  white-space: nowrap;
 }
 
 .picker-table select {

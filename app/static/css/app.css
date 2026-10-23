@@ -190,9 +190,15 @@
 }
 
 .form-actions > button,
-.form-actions > [role="button"] {
+.form-actions > [role="button"],
+.form-actions > form > button {
   margin: 0;
   width: auto;
+}
+
+/* A one-button form (Activate) among the link buttons of a page's actions. */
+.form-actions > form {
+  margin: 0;
 }
 
 /* The subject list: names wrap rather than widen the page; the one-button forms sit inline with
@@ -235,9 +241,20 @@
   min-width: 0;
 }
 
+/* Side by side, the two columns share three rows (heading, Create or notice, table) through a
+   subgrid, so when one heading wraps onto more lines, such as "Educational institutions in
+   “…”", both tables still start at the same height. */
 @media (min-width: 1024px) {
   .institutions-layout {
     grid-template-columns: 1fr 1fr;
+    row-gap: 0;
+  }
+
+  .institutions-layout > section {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    align-content: start;
   }
 }
 
@@ -311,7 +328,9 @@
   overflow-wrap: anywhere;
 }
 
-.teachers-table .row-actions {
+.teachers-table .row-actions,
+.teachers-table .status {
+  overflow-wrap: normal;
   white-space: nowrap;
 }
 

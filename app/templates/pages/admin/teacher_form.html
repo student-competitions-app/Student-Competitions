@@ -4,7 +4,7 @@
 
 {% block admin_content %}
 <section>
-  <h1>{{ heading }}</h1>
+  <h1>{{ heading }}{% if not teacher.is_active %} <small class="status-deactivated">Deactivated</small>{% endif %}</h1>
   <p>Email: {{ teacher.email }}</p>
   <form method="post" action="/admin/teachers/{{ teacher.user_id }}">
     {% include "pages/admin/_person_names.html" %}
@@ -18,6 +18,15 @@
       <a href="/admin/teachers" role="button" class="secondary outline">Cancel</a>
     </div>
   </form>
-  <p><a href="/admin/teachers/{{ teacher.user_id }}/remove" role="button" class="secondary outline">Remove teacher</a></p>
+  <div class="form-actions">
+    {% if teacher.is_active %}
+    <a href="/admin/teachers/{{ teacher.user_id }}/deactivate" role="button" class="secondary outline">Deactivate teacher</a>
+    {% else %}
+    <form method="post" action="/admin/teachers/{{ teacher.user_id }}/activate">
+      <button type="submit" class="secondary outline">Activate teacher</button>
+    </form>
+    {% endif %}
+    <a href="/admin/teachers/{{ teacher.user_id }}/remove" role="button" class="secondary outline">Remove teacher</a>
+  </div>
 </section>
 {% endblock %}

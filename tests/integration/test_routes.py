@@ -91,6 +91,8 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", f"{INSTITUTION}/delete"),
         ("POST", "/admin/teachers/invite"),
         ("POST", "/admin/teachers/{user_id:int}"),
+        ("POST", "/admin/teachers/{user_id:int}/deactivate"),
+        ("POST", "/admin/teachers/{user_id:int}/activate"),
         ("POST", "/admin/teachers/{user_id:int}/remove"),
         ("POST", "/invitations/{token}"),
         ("POST", "/profile/withdraw"),
@@ -103,6 +105,8 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", f"{TEACHER_CLASS}/delete"),
         ("POST", f"{TEACHER_CLASS}/invite"),
         ("POST", "/teacher/students/{user_id:int}"),
+        ("POST", "/teacher/students/{user_id:int}/deactivate"),
+        ("POST", "/teacher/students/{user_id:int}/activate"),
         ("POST", "/teacher/students/{user_id:int}/remove"),
     }
 

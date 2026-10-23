@@ -22,7 +22,7 @@
           <td class="subject-name">{{ s.name }}</td>
           <td>{% if s.is_active %}Active{% else %}Inactive{% endif %}</td>
           <td class="subjects-actions">
-            <a href="/admin/subjects/{{ s.id }}/rename" role="button" class="secondary outline">Rename</a>
+            <a href="/admin/subjects/{{ s.id }}/rename">Rename</a>
             {% if s.is_active %}
             <form method="post" action="/admin/subjects/{{ s.id }}/deactivate">
               <button type="submit" class="secondary outline">Deactivate</button>
@@ -32,7 +32,7 @@
               <button type="submit" class="secondary outline">Activate</button>
             </form>
             {% endif %}
-            <a href="/admin/subjects/{{ s.id }}/delete" role="button" class="secondary outline">Delete</a>
+            <a href="/admin/subjects/{{ s.id }}/delete">Delete</a>
           </td>
         </tr>
         {% endfor %}

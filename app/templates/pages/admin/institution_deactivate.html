@@ -9,10 +9,8 @@
   <p>Region: {{ region.name }}</p>
   <p>Its students will be signed out and hidden until it is activated again.</p>
   <form method="post" action="{{ region_path }}/institutions/{{ institution.id }}/deactivate">
-    <div class="form-actions">
-      <button type="submit">Deactivate</button>
-      <a href="{{ region_path }}" role="button" class="secondary outline">Cancel</a>
-    </div>
+    <button type="submit">Deactivate</button>
+    <a href="{{ region_path }}">Cancel</a>
   </form>
 </section>
 {% endblock %}

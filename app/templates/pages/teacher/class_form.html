@@ -13,10 +13,8 @@
     <label for="year_of_study">Year of study</label>
     <input type="number" name="year_of_study" id="year_of_study" min="1" max="12" step="1" required value="{{ values.year_of_study }}"{% if errors.year_of_study %} aria-invalid="true" aria-describedby="year-error"{% endif %}>
     {% if errors.year_of_study %}<small id="year-error">{{ errors.year_of_study }}</small>{% endif %}
-    <div class="form-actions">
-      <button type="submit">Save</button>
-      <a href="{{ cancel }}" role="button" class="secondary outline">Cancel</a>
-    </div>
+    <button type="submit">Save</button>
+    <a href="{{ cancel }}">Cancel</a>
   </form>
 </section>
 {% endblock %}

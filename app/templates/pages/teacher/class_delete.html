@@ -14,10 +14,8 @@
   {% else %}
   <p>Deleting a class cannot be undone.</p>
   <form method="post" action="{{ class_path }}/delete">
-    <div class="form-actions">
-      <button type="submit">Delete</button>
-      <a href="{{ cancel }}" role="button" class="secondary outline">Cancel</a>
-    </div>
+    <button type="submit">Delete</button>
+    <a href="{{ cancel }}">Cancel</a>
   </form>
   {% endif %}
 </section>

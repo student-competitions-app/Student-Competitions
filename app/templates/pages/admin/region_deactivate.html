@@ -7,10 +7,8 @@
   <h1>Deactivate region “{{ region.name }}”?</h1>
   <p>Its students will be signed out and hidden until it is activated again.</p>
   <form method="post" action="/admin/institutions/regions/{{ region.id }}/deactivate">
-    <div class="form-actions">
-      <button type="submit">Deactivate</button>
-      <a href="/admin/institutions/regions/{{ region.id }}" role="button" class="secondary outline">Cancel</a>
-    </div>
+    <button type="submit">Deactivate</button>
+    <a href="/admin/institutions/regions/{{ region.id }}">Cancel</a>
   </form>
 </section>
 {% endblock %}

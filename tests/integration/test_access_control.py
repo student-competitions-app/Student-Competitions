@@ -131,7 +131,7 @@ def test_the_home_page_lists_exactly_the_allowed_areas(client_as: ClientAs, role
     section = re.search(r'<section id="areas".*?</section>', body, re.DOTALL)
     assert section is not None, "the home page has no areas section"
     assert '<h2 id="areas-heading">Your areas</h2>' in section.group(0)
-    links = re.findall(r'<a href="([^"]+)" role="button">([^<]+)</a>', section.group(0))
+    links = re.findall(r'<a href="([^"]+)">([^<]+)</a>', section.group(0))
     assert links == HOME_LINKS[role]
 
 
@@ -438,7 +438,7 @@ def test_signing_in_returns_to_the_selected_region(
     assert response.headers["location"] == path
     page = client.get(path)
     assert page.status_code == 200
-    assert f'<a href="{path}" aria-current="true" role="button">Kyiv</a>' in page.text
+    assert f'<a href="{path}" aria-current="true">Kyiv</a>' in page.text
 
 
 # ---------------------------------------------------------------------------------------------

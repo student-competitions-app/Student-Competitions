@@ -108,8 +108,10 @@ discarded with the timer still pending, so nothing is ever shown (FR-002, SC-001
 form while one is pending restarts the timer: the latest load is the one shown.
 
 On `pageshow` with `event.persisted` (the page came back from the back/forward cache), the script
-clears the timer, hides the bar, removes `aria-busy` from the button it marked, and forgets the
-sending form (FR-011). A page that comes back *without* the cache is loaded fresh, so it is clean
+clears the timer and hides the bar. It removes `aria-busy` from **every** button it marked, and
+forgets **every** sending form, not only the latest ones (FR-011). A person may send a form and then
+follow a link before the form's page arrives; the link replaces the pending state, but the form
+and its button must still be usable after Back. A page that comes back *without* the cache is loaded fresh, so it is clean
 already.
 
 **Rationale**: the back/forward cache restores a page exactly as it was frozen, bar and busy
@@ -140,10 +142,12 @@ take the cache snapshot after `pagehide` and some before, while `pageshow` is re
   That is an indeterminate bar, because the application does not know how long the server will take.
   Under `prefers-reduced-motion: reduce`, the whole track is shown filled and still (FR-005). Pico's
   own reduced-motion rule is not relied on: it shortens animations instead of stopping them.
-- **Frame out of view** (a screen less than 600 px tall, scrolled down; FR-006): when `show` runs and
-  the frame's bottom edge is above the screen, the script sets `data-detached` on the bar. CSS then
-  fixes it to the top edge of the screen. If the person scrolls during the wait, the bar does not
-  follow; the wait is short.
+- **Frame out of view** (a screen less than 600 px tall, scrolled down; FR-006): when the frame's
+  bottom edge is above the screen, the script sets `data-detached` on the bar, and CSS fixes it to
+  the top edge of the screen. The script checks this when the bar appears and again on every
+  `scroll` while it shows, through a passive listener that is added in `show` and removed on a
+  restore. So the bar stays visible even if the person scrolls during the wait. Nothing runs on
+  scroll before a page load is pending.
 - **Assistive technology**: it is `aria-hidden`, as the spec assumes; the busy button carries the
   state.
 

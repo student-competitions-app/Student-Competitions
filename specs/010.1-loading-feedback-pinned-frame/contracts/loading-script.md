@@ -21,7 +21,9 @@ forms work as before (FR-021).
 | Name | Value |
 |---|---|
 | Delay | `200` ms (FR-002) |
-| Pending state | the timer, the `<form>` being sent (POST only) and the button to mark busy. Nothing else is kept. |
+| Pending state | the timer, the `<form>` being sent (POST only) and the button to mark busy, for the latest page load |
+| `sending` | a `WeakSet` of every POST form sent from this page and not yet followed by a new page. A restore replaces it. |
+| `busy` | a `Set` of every button the script marked `aria-busy`, so a restore can clear them all |
 
 ---
 
@@ -62,10 +64,15 @@ A form the browser refuses as invalid fires no `submit` event, so nothing starts
 
 ## 4. Showing (the timer fires)
 
-1. Measure the frame (`body > .frame`): if its `getBoundingClientRect().bottom` is at most `0`, set
-   `data-detached` on the bar; otherwise remove it (FR-006).
+1. **Place the bar** (`place()`): measure the frame (`body > .frame`). If its
+   `getBoundingClientRect().bottom` is at most `0`, set `data-detached` on the bar; otherwise remove
+   it (FR-006).
 2. Remove `hidden` from the bar (`body > .frame > .loading-bar`) (FR-001).
-3. Set `aria-busy="true"` on the remembered submitter (§3).
+3. **Follow scrolling**: add `place` as a passive `scroll` listener on `window`, so the bar stays
+   visible if the person scrolls while it shows (FR-006). This matters only on screens under 600 px
+   tall, where the frame can scroll away; on taller screens the frame is pinned and `place()` never
+   detaches it. Nothing runs on scroll before the bar shows.
+4. Set `aria-busy="true"` on the remembered submitter (§3) and add it to `busy`.
 
 This happens at most once per pending load. A newer pending load restarts the timer. If the bar is
 already shown, it stays shown.
@@ -74,12 +81,17 @@ already shown, it stays shown.
 
 ## 5. Back and Forward (`pageshow` on `window`)
 
-When `event.persisted` is true (FR-011):
+When `event.persisted` is true, `reset()` runs (FR-011):
 
-- clear the timer;
+- clear the timer and the pending state;
+- remove the `scroll` listener;
 - set `hidden` on the bar and remove `data-detached`;
-- remove `aria-busy` from the button the script marked;
-- forget the *sending* form.
+- remove `aria-busy` from **every** button in `busy`, then clear `busy`;
+- replace `sending` with a new, empty `WeakSet`.
+
+**Why everything is cleared**: a person can send a POST form, then follow a link before the form's
+page arrives. The link replaces the pending state. Clearing only the current form and button would
+leave the first form blocked and its button busy after Back.
 
 A page that is not restored from the cache was loaded fresh, so the script does nothing.
 

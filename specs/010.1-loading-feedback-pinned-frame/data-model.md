@@ -42,7 +42,7 @@ block's existing media blocks, as milestone 10 does for the body text size.
 |---|---|---|---|
 | **Idle** | page load; Back or Forward restore (`pageshow`, `persisted`) | none | a qualifying link click or form submit (contract §2) |
 | **Waiting** | a qualifying link click or form submit; a POST form is marked *sending* at once | none (the 200 ms timer runs); a second submit of a *sending* form is cancelled | 200 ms pass → **Showing**; the next page arrives → page discarded; another qualifying click or submit → **Waiting** again, with the timer restarted |
-| **Showing** | the timer fires | the bar shows (detached to the screen's top edge if the frame is out of view); the form's submitter gets `aria-busy="true"` | the next page arrives → page discarded; another qualifying click or submit → **Waiting**, and the bar stays until that load shows or arrives; Back or Forward restore → **Idle** |
+| **Showing** | the timer fires | the bar shows, detached to the screen's top edge whenever the frame is out of view (re-checked on scroll); the form's submitter gets `aria-busy="true"` | the next page arrives → page discarded; another qualifying click or submit → **Waiting**, and the bar stays until that load shows or arrives; Back or Forward restore → **Idle** |
 
 There is no time-out (FR-009). A stopped load (the Stop button or Esc) stays in **Showing** until
 the next page or a reload (spec assumption).
@@ -59,7 +59,7 @@ the next page or a reload (spec assumption).
 
 | Marker | Set | Effect | Cleared |
 |---|---|---|---|
-| *sending* (held by the script, not in the markup) | on submit of a POST form | later `submit` events for that form are cancelled | the next page; Back or Forward restore |
-| `aria-busy="true"` on the submitter | when **Showing** begins | Pico's spinner (redrawn in `currentColor`) and `pointer-events: none`; announced as busy | the next page; Back or Forward restore |
+| *sending* (held by the script in a `WeakSet`, not in the markup) | on submit of a POST form | later `submit` events for that form are cancelled | the next page; Back or Forward restore, which forgets **every** sending form |
+| `aria-busy="true"` on the submitter (the script keeps every marked button in a set) | when **Showing** begins | Pico's spinner (redrawn in `currentColor`) and `pointer-events: none`; announced as busy | the next page; Back or Forward restore, which clears **every** marked button |
 
 GET forms are never *sending*: a newer choice sends again (spec FR-007).

@@ -84,8 +84,9 @@ build step.
 
 - **No extra request cost**: one extra static request per page, a few kilobytes and cacheable,
   loaded with `defer`, so it never blocks rendering.
-- **Cheap to run**: no work runs while scrolling. Sticky positioning and a `transform` animation
-  run on the browser's compositor.
+- **Cheap to run**: no work runs while scrolling, except one passive listener that runs only while
+  the bar shows (research R5). Sticky positioning and a `transform` animation run on the browser's
+  compositor.
 
 **Constraints**:
 
@@ -118,7 +119,7 @@ build step.
 |---|---|---|
 | I. Walking skeleton | Milestone 10 is merged into `main` (PR #39). This is the next step of the ladder (10.1 in `milestones.md`). It is one user-visible slice: every page gets the feedback and the pinned frame, end to end. It ends in a demonstrable result (quickstart §2–§3). Nothing from milestone 11 or later is built. The out-of-scope items (prefetching, transitions, hide-on-scroll) stay out (FR-024). | ✅ |
 | II. Server-rendered simplicity | Pages stay server-rendered. The new script is about 80 lines of plain JavaScript, with no build step, no framework, no dependency and no HTMX. The pinned frame and the target clearance are CSS only. **UI guidelines** (required from milestone 11, applied now): both new patterns go into the component library (`loading_bar`, `button(busy=True)`), the gallery (`#loading`) and `ui-guidelines.md` before the layout uses them. Every value is a token, and no page builds anything by hand (FR-017–FR-019). | ✅ |
-| III. Test-backed delivery | The milestone's _Test:_ line is covered. Automated: every page loads the script and has the one pinned block; the gallery shows both components; the token and component check passes. Manual: the real-browser part of the _Test:_ line, in quickstart §2–§3 (research R11 explains why it cannot be automated before milestone 16). No route changes, so no new role-access tests are needed; the existing sweeps still run. The milestone 1–10 suite stays green on both engines. | ✅ |
+| III. Test-backed delivery | **Deviation, recorded in Complexity Tracking.** The server-side half of the milestone's _Test:_ line is automated: every page loads the script and has the one pinned block; the gallery shows both components; the token and component check passes. The real-browser half ("a slow page shows the bar…", "Back shows no leftover…", "the frame stays in view…") is **not** automated by pytest, which this principle requires. It is checked by hand from quickstart §2–§4 and recorded in `pr-notes.md` (research R11). Text checks on the script and the stylesheet guard what can be read without a browser. No route changes, so no new role-access tests are needed; the existing sweeps still run. The milestone 1–10 suite stays green on both engines. | ⚠️ justified |
 | IV. Role-based access & data scoping | No route, no permission and no data change. The gallery section is inside the existing administrator-only, development-only `/admin/components`. | ✅ |
 | V. Secure authentication & secrets | No change to sessions, CSRF or secrets. The script sends nothing, reads no cookie and stores nothing. It cannot bypass the cross-site check: it never re-sends a form, it only cancels a duplicate. Nothing new is logged. | ✅ |
 | VI. LLM evaluation | Not touched. | n/a |
@@ -129,7 +130,7 @@ build step.
 | Governance | No constitution amendment is needed (research R12). | ✅ |
 | Workflow gates | The README and the UI guidelines are updated in this PR. `milestones.md` moves 10.1 to Delivered on delivery. No migration is needed. | ✅ |
 
-**Post-design re-check (after Phase 1)**: still all ✅.
+**Post-design re-check (after Phase 1)**: all ✅, except the recorded Principle III deviation.
 
 - **Only the planned markup changes**: the contracts add one wrapper element, one macro and one
   macro parameter.
@@ -194,5 +195,9 @@ Layout defines.
 
 ## Complexity Tracking
 
-No violations to justify. The only new mechanism, the script, is what Principle II already allows:
-minimal custom JavaScript with no build step.
+The script is not a deviation: Principle II already allows minimal custom JavaScript with no
+build step. One deviation is recorded:
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|---|---|---|
+| **Principle III**: the real-browser half of the milestone's _Test:_ line is checked by hand (quickstart §2–§4, results in `pr-notes.md`), not by automated pytest tests. | The behaviour exists only in a browser: a delayed bar while the old page waits for a slow response, a busy button, the back/forward cache, sticky positioning, and scroll padding for focus. pytest with the `TestClient` has no browser. The automated part covers everything the server sends, plus text-level guards on the script and the stylesheet, including the one regression with a silent, serious effect (a `disabled` button dropping its value). | **Introducing Playwright now** (`tests/e2e/`, justified in this plan as the stack rules allow) was rejected for this milestone. The constitution and milestone 10 research D1 place it in milestone 16. It would add a development dependency, browser binaries in CI and a CI job for one small milestone. An ad hoc headless check also showed that a Playwright screenshot waits for the pending navigation to finish, so the in-between state needs extra tooling (research R11). **When milestone 16 adds Playwright**, quickstart §2–§3 should become its first end-to-end tests. |

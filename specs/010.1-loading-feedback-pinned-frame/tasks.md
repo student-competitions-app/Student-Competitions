@@ -95,7 +95,34 @@ page uses a new pattern.
   - **`.loading-bar[data-detached]`**: `position: fixed; top: 0`.
   - **`@media (prefers-reduced-motion: reduce)`**: `.loading-bar::before { animation: none; width: 100%; transform: none; }` (FR-005).
   - **`@media print`**: `.loading-bar { display: none; }`.
-  - **The busy spinner**: `:is(button, [type="submit"])[aria-busy="true"]::before { background-image: none; background-color: currentColor; -webkit-mask: var(--pico-icon-loading) center / 1em no-repeat; mask: var(--pico-icon-loading) center / 1em no-repeat; filter: none; }`. The selector must be at least as specific as Pico's `[aria-busy=true]:not(input,select,textarea):is(button,…):not(.outline)::before` rule. Increase specificity with `:not(.outline, .contrast)` or similar if needed, so the white `filter` never wins (research R6). Check it in light and dark on a primary, a secondary (`.secondary`) and a destructive (`.destructive`) button.
+  - **The busy spinner** (research R6): two rules with these **exact** selectors.
+    1. **The shape and colour**:
+
+       ```css
+       :is(button, [type="submit"], [role="button"])[aria-busy="true"]::before {
+         background-image: none;
+         background-color: currentColor;
+         -webkit-mask: var(--pico-icon-loading) center / 1em no-repeat;
+         mask: var(--pico-icon-loading) center / 1em no-repeat;
+       }
+       ```
+
+       Its specificity (0,2,1) beats Pico's `[aria-busy=true]:not(input,select,textarea,html,form)::before` (0,1,2), which sets the icon as a background image.
+    2. **Cancelling Pico's white filter**:
+
+       ```css
+       html [aria-busy="true"]:not(input, select, textarea):is(button, [type="submit"], [type="button"], [type="reset"], [role="button"]):not(.outline)::before {
+         filter: none;
+       }
+       ```
+
+       This is Pico's own selector (0,3,2), which sets `filter: brightness(0) invert(1)`, with `html ` in front: (0,3,3). It wins regardless of the order the stylesheets load in.
+    - **Do not use `.contrast`** in either selector: no template uses it, so `test_every_app_css_class_is_used` would fail. Outline buttons need no filter rule, because Pico gives them none.
+    - **Check by hand** in Light and Dark on a primary, a secondary (`.secondary`) and a destructive (`.destructive`) button, in the gallery after T006.
+  - **A stylesheet test for the spinner**: add `test_the_busy_spinner_takes_the_button_colour` to `tests/unit/test_stylesheet.py`, using that module's `selectors()` and `without_values()` helpers.
+    - **The colour rule**: a rule whose selector contains `[aria-busy="true"]` and `::before` sets `background-color: currentColor` and a `mask` naming `var(--pico-icon-loading)`.
+    - **The filter rule**: the rule whose selector starts with `html [aria-busy="true"]` and ends with `:not(.outline)::before` sets `filter: none`.
+    - **Docstring**: it names specs/010.1 research R6. The test guards against the white spinner coming back on secondary buttons.
   - **Check**: `uv run pytest tests/unit/test_stylesheet.py` passes. `.frame` and `.loading-bar` must be used in a template by T006 and T007, so run it after them if `test_every_app_css_class_is_used` fails in between.
 - [ ] T006 Add the gallery section to `app/templates/pages/admin/components.html`, per [contracts/components.md §5](./contracts/components.md#5-gallery-pagesadmincomponentshtml-new-section):
   - **Imports**: add `loading_bar` to the existing `components/frame.html` import.
@@ -103,16 +130,17 @@ page uses a new pattern.
   - **"Loading bar"**: `<h3>Loading bar</h3>`, then `<div class="frame">{{ top_bar(one_role_user, teacher_role, [teacher_role]) }}{{ loading_bar(active=True) }}</div>`.
   - **"Busy button"**: `<h3>Busy button</h3>`, then `<div class="button-row">` holding `button("Send invitation", busy=True)`, `button("Dark", kind="secondary", small=True, busy=True)` and `button("Delete", kind="destructive", busy=True)`. These are **not** inside any `<form>`.
   - **Section text**: one short sentence under the heading, in the plain style of the other sections: these appear only while the next page is on its way; pages never draw them.
-- [ ] T007 Wrap the frame in `app/templates/layouts/base.html`, per [contracts/components.md §1](./contracts/components.md#1-layout-skeleton-layoutsbasehtml-replacing-milestone-10-12):
+- [ ] T007 Wrap the frame in `app/templates/layouts/base.html`, per [contracts/components.md §1](./contracts/components.md#1-layout-skeleton-layoutsbasehtml-replacing-milestone-10-12). **Do this only after T006 (gallery) and T008 (guidelines) are done**: Principle II and FR-017 require a new pattern to be in the library, the gallery and the guidelines before the layout uses it.
   - **Import**: change it to `{% from "components/frame.html" import top_bar, loading_bar with context -%}`.
   - **Wrapper**: replace the two lines `{{ top_bar() }}` and `{% block tabs %}{% endblock %}` with `<div class="frame">`, holding `{{ top_bar() }}`, `{% block tabs %}{% endblock %}` and `{{ loading_bar() }}`, then `</div>`.
   - **No script yet**: the `<script>` tag is added in T013.
   - **Remove** from `app/static/css/app.css` the rule `body > header.top-bar { padding-block: 0; }`. The top bar is no longer a child of `body`, so Pico's `body > header` padding no longer applies. Fix its comment block so that the following `.top-bar` rule keeps its FR-018 comment.
   - **Check**: `uv run pytest` passes. `tests/html.py` already finds the `header` and the `nav` at any depth.
-- [ ] T008 [P] Add the two components to `docs/requirements/ui-guidelines.md`:
+- [ ] T008 [P] Add the two components to `docs/requirements/ui-guidelines.md`. This must be done before T007:
   - **In §5 "Frame (`components/frame.html`)"**: a bullet for **`loading_bar(active=False)`**. It is rendered by the layout as the frame's last child and never called by a page. It is a thin primary line hanging under the frame, shown by the script 200 ms after a link to another page or a form submit, and still under reduced motion. The gallery shows it active.
   - **In §5 "Buttons"**: a bullet for **`button(…, busy=True)`**. It renders `aria-busy="true"` and Pico's spinner, redrawn in the button's text colour. Pages never pass it; the script marks the button that sent a form. A busy button is never `disabled`, so its value is still sent.
   - **Gallery links**: link both entries to `/admin/components#loading`, in the style of the existing `_Gallery_:` lines.
+  - **In §2 "Calm and focused"**: after "Nothing moves or blinks", add the one exception. The loading bar moves while the next page is on its way, and stands still with reduced motion (milestone 10.1, FR-018). This comes now, before US1 makes the bar move on real pages.
 
 **Checkpoint**: the gallery shows both components. Every page renders the `.frame` wrapper with a
 hidden bar, and nothing behaves differently yet.
@@ -134,9 +162,9 @@ rows 2.1–2.5 and 2.8–2.11, plus the automated checks below.
   - **Docstring**: in the style of `tests/unit/test_stylesheet.py`, naming specs/010.1 FR-001–FR-011, FR-020 and research R1–R4. It says that the script is read as text, because the suite has no browser before milestone 16.
   - **`SCRIPT`**: `(APP / "static" / "js" / "loading-feedback.js").read_text()`.
   - **`test_it_is_a_plain_script`**: no `import ` or `export ` statement, and no `fetch(`, `XMLHttpRequest`, `sendBeacon`, `localStorage`, `sessionStorage` or `document.cookie`.
-  - **`test_it_names_no_other_site`**: no `http://`, `https://` or `//` URL in a string literal.
+  - **`test_it_names_no_other_site`**: ``re.search(r"[\"'`](?:https?:)?//", SCRIPT)`` is `None`. A quote or backtick directly followed by `//`, `http://` or `https://` means a URL in a string literal. Ordinary `//` comments do not match.
   - **`test_it_listens_for_links_forms_and_restores`**: `addEventListener("click"`, `addEventListener("submit"` and `addEventListener("pageshow"` each appear, and `persisted` appears.
-  - **`test_the_delay_is_200_ms`**: the source contains `200`.
+  - **`test_the_delay_is_200_ms`**: `re.search(r"\bconst\s+DELAY\s*=\s*200\s*;", SCRIPT)` matches, and `DELAY` is passed to `setTimeout` (`re.search(r"setTimeout\(\s*\w+\s*,\s*DELAY\s*\)", SCRIPT)`) (FR-002).
   - **`test_it_never_disables_anything`**: there is no `disabled`, `readonly` or `inert` as an assignment target, a `setAttribute` argument or a `toggleAttribute` argument. Use a regex on `\.(disabled|readOnly|inert)\s*=` and `(set|toggle)Attribute\(\s*["'](disabled|readonly|inert)`.
   - **`test_it_stays_small`**: at most 120 non-blank lines (contract: about 80).
   - **Expect**: these fail until T012.
@@ -152,7 +180,7 @@ rows 2.1–2.5 and 2.8–2.11, plus the automated checks below.
   - **`test_every_page_loads_the_script_once`**: for each kind, the `script` elements whose `src` is `/static/js/loading-feedback.js` are exactly one, with `defer` and inside `<head>`. Use `html.parse(body)`, find `head`, then `find_all("script")`. Also `client.get("/static/js/loading-feedback.js")` returns 200 with a JavaScript content type.
   - **`test_every_page_has_one_frame_with_a_hidden_bar`**: for each kind there is exactly one element with class `frame` that is a direct child of `body`. Its children, in order, are the `header` with class `top-bar`, then a `nav` with class `area-tabs` on `/admin/subjects` and `/teacher/students` only, then a `div` with class `loading-bar`. The bar has `hidden` and `aria-hidden="true"`.
   - **Expect**: the frame test passes after T007; the script test fails until T013.
-- [ ] T011 [US1] Update `tests/integration/test_admin_area.py::test_tabs_are_plain_links`. Milestone 6 FR-003 asserted that the page has no script at all; milestone 10.1 adds the base layout's `loading-feedback.js` to every page (FR-020).
+- [ ] T011 [US1] Update `tests/integration/test_admin_area.py::test_tabs_are_plain_links`. This is the one change to an earlier test that spec FR-023 allows. The test's docstring cites milestone 6 FR-003 and asserts that the page has no script at all; FR-003 itself requires only plain-link tabs. Milestone 10.1 adds the base layout's `loading-feedback.js` to every page (FR-020).
   - **Keep**: the tab row has no `form` and no `hx-*` attribute.
   - **Replace** `html.parse(body).find_all("script") == []` with: the page's only `script` is `{"src": "/static/js/loading-feedback.js", "defer": ""}`.
   - **Docstring**: add one line saying that the tabs still work without the script (FR-021).
@@ -165,9 +193,10 @@ rows 2.1–2.5 and 2.8–2.11, plus the automated checks below.
   - **State**: `const DELAY = 200;`, and one `let pending = null;` holding `{ timer, form, button }`.
   - **`bar()`**: returns `document.querySelector("body > .frame > .loading-bar")`. It may be `null`; every use must tolerate that.
   - **`start(form, button)`**: clears any existing `pending.timer`, then sets `pending = { form, button, timer: setTimeout(show, DELAY) }`.
+  - **`place()`**: if the bar exists: if `document.querySelector("body > .frame").getBoundingClientRect().bottom <= 0`, set `data-detached` on the bar, otherwise remove it (FR-006).
   - **`show()`**:
-    - if the bar exists: if `document.querySelector("body > .frame").getBoundingClientRect().bottom <= 0`, set `data-detached`, otherwise remove it; then `bar.hidden = false`;
-    - for the form case (T016): `if (pending.button) pending.button.setAttribute("aria-busy", "true")`.
+    - if the bar exists: call `place()`, then `bar.hidden = false`, then `window.addEventListener("scroll", place, { passive: true })`. While the bar shows, it moves between the frame's bottom edge and the screen's top edge as the person scrolls. This matters only on screens under 600 px tall, where the frame scrolls away (FR-006, contract §4);
+    - for the form case (T016): mark `pending.button` busy.
   - **`click` listener on `document`**: start only when every condition of contract §2 holds:
     1. `!event.defaultPrevented`;
     2. `event.button === 0` and none of `ctrlKey`, `metaKey`, `shiftKey` or `altKey`;
@@ -177,10 +206,10 @@ rows 2.1–2.5 and 2.8–2.11, plus the automated checks below.
 
     Then call `start(null, null)`.
   - **`submit` listener on `document`**: for now, if `!event.defaultPrevented`, and the effective target (`event.submitter?.formTarget || event.target.target`) is empty or `_self`, call `start(event.target, null)`. T016 completes it.
-  - **`pageshow` listener on `window`**: if `event.persisted`, clear `pending.timer` and set `pending = null`; then, if the bar exists, set `hidden = true` and remove `data-detached`. T016 adds the busy reset.
-  - **Check**: T009's tests pass, except `test_it_never_disables_anything` and the others that must already pass.
+  - **`pageshow` listener on `window`**: if `event.persisted`, call `reset()`. **`reset()`**: clears `pending.timer` if there is one and sets `pending = null`; calls `window.removeEventListener("scroll", place)`; and, if the bar exists, sets `hidden = true` and removes `data-detached`. T016 extends `reset()` with the forms and the busy buttons.
+  - **Check**: every T009 test passes.
 - [ ] T013 [US1] In `app/templates/layouts/base.html`, add `<script src="/static/js/loading-feedback.js" defer></script>` inside `<head>`, after `<link rel="stylesheet" href="/static/css/app.css">` and before `{% block scripts %}{% endblock %}` (contract §1). The teacher students page's own `auto-submit.js` stays in its `scripts` block. Then T010 and T011 pass, and `tests/integration/test_teacher_classes.py::test_choosing_from_a_list_opens_the_selection_at_once` still passes, since it checks membership, not equality.
-- [ ] T014 [US1] Check User Story 1 by hand from [quickstart.md §2](./quickstart.md#2-loading-bar-and-busy-button-us1-us2), rows 2.1, 2.2, 2.3, 2.4, 2.5 (no bar), 2.8, 2.9 (bar part), 2.10 and 2.11, in Chrome with DevTools throttling. Also confirm the R1 assumption: the old page keeps painting the moving bar until the next page arrives. Then repeat 2.1 and 2.9 in Firefox and Safari. Record the results, browser by browser, under a heading "US1 manual checks" in `specs/010.1-loading-feedback-pinned-frame/pr-notes.md`.
+- [ ] T014 [US1] Check User Story 1 by hand from [quickstart.md §2](./quickstart.md#2-loading-bar-and-busy-button-us1-us2), rows 2.1, 2.2, 2.3, 2.4, 2.5 (no bar), 2.8, 2.9 (bar part), 2.9b, 2.10 and 2.11, in Chrome with DevTools throttling. Also confirm the R1 assumption: the old page keeps painting the moving bar until the next page arrives. Then repeat 2.1 and 2.9 in Firefox and Safari. Record the results, browser by browser, under a heading "US1 manual checks" in `specs/010.1-loading-feedback-pinned-frame/pr-notes.md`.
 
 **Checkpoint**: on a slow page, every link and form shows the bar after 200 ms; fast pages and the
 excluded cases show nothing.
@@ -199,28 +228,31 @@ rows 2.6, 2.7, 2.8 and 2.9, plus `tests/unit/test_loading_script.py`.
 ### Tests for User Story 2
 
 - [ ] T015 [P] [US2] Extend `tests/unit/test_loading_script.py`:
-  - **`test_a_sending_post_form_cancels_a_second_submit`**: the source mentions `submitter`, `formMethod` and `preventDefault()`. This is a text-level guard of contract §3; the behaviour itself is checked by hand.
+  - **`test_a_sending_post_form_cancels_a_second_submit`**: the source mentions `submitter`, `formmethod` and `preventDefault()`. This is a text-level guard of contract §3; the behaviour itself is checked by hand.
   - **`test_the_busy_state_is_aria_busy`**: the source contains `"aria-busy"` both in a `setAttribute` and in a `removeAttribute` (the reset).
+  - **`test_a_restore_forgets_every_form_and_button`**: the source reassigns the sending set on restore (`sending = new WeakSet()`), and clears the set of marked buttons (`busy.clear()`). This is a text-level guard of FR-011 and contract §5.
   - **Existing test**: confirm that `test_it_never_disables_anything` from T009 covers the button-value guarantee (FR-010).
   - **Expect**: these fail until T016.
 
 ### Implementation for User Story 2
 
 - [ ] T016 [US2] Complete `app/static/js/loading-feedback.js`, per [contracts/loading-script.md §3–§5](./contracts/loading-script.md#3-forms):
-  - **Sending forms**: add `const sending = new WeakSet();` for the forms being sent.
+  - **Sending forms**: add `let sending = new WeakSet();` for the POST forms being sent. It is `let` because a restore replaces it.
+  - **Busy buttons**: add `const busy = new Set();` for every button the script has marked busy, not only the current one.
   - **The `submit` listener**, in order:
     1. ignore the event if `event.defaultPrevented`, or if the effective target is set and is not `_self`;
-    2. `const method = (event.submitter?.getAttribute("formmethod") || event.target.method).toLowerCase()`. Use `getAttribute`, because `submitter.formMethod` reflects the form's method when the attribute is absent, which also works; choose one and comment it;
+    2. `const method = (event.submitter?.getAttribute("formmethod") || event.target.method).toLowerCase()`. `event.target.method` is always the lower-case `"get"` or `"post"`;
     3. if `method === "post"` and `sending.has(form)`, call `event.preventDefault()` and return (FR-007);
     4. if `method === "post"`, call `sending.add(form)`;
     5. call `start(form, event.submitter)`. `event.submitter` is the default button when Enter was pressed, and `null` for `requestSubmit()` from `auto-submit.js`.
   - **GET forms are never added to `sending`**: a newer choice in a self-submitting list sends again (spec FR-007, research R3).
-  - **`show()`**: sets `aria-busy="true"` on `pending.button` when there is one (FR-008).
-  - **`pageshow` with `persisted`**: also `pending?.button?.removeAttribute("aria-busy")`, and forget the sending form (`if (pending?.form) sending.delete(pending.form)`). Read `pending` before resetting it to `null` (FR-011).
+  - **`show()`**: when `pending.button` is set, sets `aria-busy="true"` on it and adds it to `busy` (FR-008).
+  - **`reset()`**, used on `pageshow` with `persisted`: also removes `aria-busy` from **every** button in `busy` and calls `busy.clear()`, and replaces `sending = new WeakSet()`.
+    - **Why every one**: a person can send a POST form, then follow a link before the form's page arrives. The link replaces `pending`, so clearing only `pending.form` and `pending.button` would leave the first form blocked and its button busy after Back (FR-011, contract §5).
   - **Never** `disabled`, `readonly` or `inert` (FR-010).
   - **Comments**: one short comment on why `aria-busy` and not `disabled` (the form data is built after the `submit` event, and a disabled button's value would be left out). One on why GET forms may be sent again.
   - **Check**: `uv run pytest tests/unit/test_loading_script.py` passes.
-- [ ] T017 [US2] Check User Story 2 by hand from [quickstart.md §2](./quickstart.md#2-loading-bar-and-busy-button-us1-us2), rows 2.6, 2.7, 2.8 and 2.9, in Chrome with throttling:
+- [ ] T017 [US2] Check User Story 2 by hand from [quickstart.md §2](./quickstart.md#2-loading-bar-and-busy-button-us1-us2), rows 2.6, 2.7, 2.8, 2.9 and 2.9a, in Chrome with throttling:
   - **2.6**: the uvicorn log shows exactly one `POST` for the invitation after 5 presses and an Enter.
   - **2.7**: the role switch and the theme switch apply the pressed value, and their secondary buttons show a visible spinner in Light and in Dark.
   - **2.8**: the newer list choice wins.
@@ -260,20 +292,29 @@ a 375 × 667 screen.
     - a `@media print` block sets `display: none` on `.loading-bar`.
   - **`test_the_user_menu_scrolls_inside_itself`**: the `.user-menu-panel` rule has `max-height` using `var(--sc-frame-clearance)` and `dvh`, plus `overflow-y: auto`.
   - **`test_phone_tabs_are_touch_target_high`**: the base `nav.area-tabs li a` rule has `min-height: var(--sc-touch-target)`, and a `@media (min-width: 768px)` block sets `min-height: 3rem` on it.
-  - **Expect**: these fail until T019–T021.
+  - **Expect**: these fail until T020–T022.
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] In `app/static/css/app.css`, add the pinned frame (research R7, contract §1):
+- [ ] T019 [US3] **Before any CSS of US3 or US4**, describe the pinned frame in `docs/requirements/ui-guidelines.md`. Principle II says guidelines first, and US3 and US4 ship together, so this task covers both. Use the planned values; T023 and T026 correct them if the measurements differ.
+  - **§3 Tokens, "Space and shape"**: add `--sc-frame-clearance` (5.5 rem), `--sc-frame-clearance-tabs` (11 rem below 768 px, 8 rem from 768 px) and `--sc-field-clearance` (5 rem), with what each is for.
+  - **§4 Layout**:
+    - items 2 and 3: the top bar, the area tabs and the loading bar sit in one `<div class="frame">`, pinned to the top on screens at least 600 px tall, and scrolling away on shorter screens and in print; the page still scrolls as a whole;
+    - add `(min-height: 600px)` to **Breakpoints**, which become three;
+    - say that the base layout loads the script `loading-feedback.js` on every page.
+  - **§4, new paragraph "Keeping targets in view"**: scroll padding from the clearance tokens, and the field margin, keep skip-link targets, error-summary targets and focused elements below the frame (WCAG 2.2 2.4.11). A new tab, a longer tab label or a taller top bar must be re-measured at 360 px and 375 px width against the tokens (research R8).
+  - **§8 Phone behaviour**: below 768 px the area tabs are 44 px tall (the touch target) and wrap; a phone held sideways (under 600 px tall) does not pin the frame.
+  - **Style**: keep the document's existing tone and structure.
+- [ ] T020 [US3] In `app/static/css/app.css`, add the pinned frame (research R7, contract §1). Do this only after T019:
   - **The rule**: `@media screen and (min-height: 600px) { body > .frame { position: sticky; top: 0; z-index: 3; } }`.
   - **Comment**: it names FR-012–FR-014. The page still scrolls as a whole, and nothing here may add `overflow` or a fixed height. Below 600 px tall and in print the frame scrolls away as before. The skip link (`z-index: 10`) stays above it, and the user menu panel lives inside its stacking context.
   - **Check**: nothing between `body` and `.frame` sets `overflow`, which would stop the sticky rule from working.
-- [ ] T020 [US3] In `app/static/css/app.css`, change the area tabs' height (research R9):
+- [ ] T021 [US3] In `app/static/css/app.css`, change the area tabs' height (research R9):
   - **`nav.area-tabs li a`**: `min-height: 3rem` becomes `min-height: var(--sc-touch-target)`.
   - **From 768 px**: `@media (min-width: 768px) { nav.area-tabs li a { min-height: 3rem; } }`. Reuse the existing `768px` block after `nav.area-tabs ul` if it fits.
   - **Comment**: wrapped phone tabs stay at the 44 px touch target, so the pinned frame fits within a quarter of a 375 × 667 screen (SC-007).
-- [ ] T021 [US3] In `app/static/css/app.css`, let the user menu scroll inside itself (research R10, FR-016). Add `max-height: calc(100dvh - var(--sc-frame-clearance)); overflow-y: auto; overscroll-behavior: contain;` to `.user-menu-panel`, with a one-line comment.
-- [ ] T022 [US3] Check User Story 3 by hand from [quickstart.md §3](./quickstart.md#3-pinned-frame-us3-us4) rows 3.1–3.7 and 3.10, at 1280 × 800 and 375 × 667, in Chrome and on a real phone, or Safari's responsive mode for 3.3:
+- [ ] T022 [US3] In `app/static/css/app.css`, let the user menu scroll inside itself (research R10, FR-016). Add `max-height: calc(100dvh - var(--sc-frame-clearance)); overflow-y: auto; overscroll-behavior: contain;` to `.user-menu-panel`, with a one-line comment.
+- [ ] T023 [US3] Check User Story 3 by hand from [quickstart.md §3](./quickstart.md#3-pinned-frame-us3-us4) rows 3.1–3.7 and 3.10, at 1280 × 800 and 375 × 667, in Chrome and on a real phone, or Safari's responsive mode for 3.3:
   - **Long list**: add enough subjects locally to make `/admin/subjects` scroll.
   - **Measurements**: take [quickstart.md §4](./quickstart.md#4-measurements) with the DevTools computed height of `body > .frame` on `/admin/teachers` at 375 × 667 and 360 × 640, and on `/`. Expect at most 166 px (about 158.5 px) and below the clearance tokens.
   - **Record**: results and measurements go under "US3 manual checks" in `specs/010.1-loading-feedback-pinned-frame/pr-notes.md`.
@@ -296,7 +337,7 @@ shows above the frame. None of this depends on JavaScript.
 
 ### Tests for User Story 4
 
-- [ ] T023 [P] [US4] Extend `tests/unit/test_frame_stylesheet.py`. Each test fails until T024.
+- [ ] T024 [P] [US4] Extend `tests/unit/test_frame_stylesheet.py`. Each test fails until T025.
   - **`test_targets_clear_the_frame`**: inside `@media screen and (min-height: 600px)`:
     - an `html` rule sets `scroll-padding-top: var(--sc-frame-clearance)`;
     - an `html:has(body > .frame .area-tabs)` rule sets `scroll-padding-top: var(--sc-frame-clearance-tabs)`.
@@ -305,12 +346,12 @@ shows above the frame. None of this depends on JavaScript.
 
 ### Implementation for User Story 4
 
-- [ ] T024 [US4] In `app/static/css/app.css` (research R8, FR-015):
-  - **The scroll padding**: inside the same `@media screen and (min-height: 600px)` block as T019, add `html { scroll-padding-top: var(--sc-frame-clearance); }` and `html:has(body > .frame .area-tabs) { scroll-padding-top: var(--sc-frame-clearance-tabs); }`.
+- [ ] T025 [US4] In `app/static/css/app.css` (research R8, FR-015):
+  - **The scroll padding**: inside the same `@media screen and (min-height: 600px)` block as T020, add `html { scroll-padding-top: var(--sc-frame-clearance); }` and `html:has(body > .frame .area-tabs) { scroll-padding-top: var(--sc-frame-clearance-tabs); }`.
   - **The field margin**: outside any media query, near the form styles, add `input, select, textarea { scroll-margin-top: var(--sc-field-clearance); }`.
   - **Comment**: it names WCAG 2.2 2.4.11 "Focus Not Obscured (Minimum)". It says that the browser keeps this space above every `#fragment` target and every element that receives focus, and that a form control also keeps its label and error message above it in view.
   - **Check**: `test_stylesheet.py` and `test_frame_stylesheet.py` pass.
-- [ ] T025 [US4] Check User Story 4 by hand:
+- [ ] T026 [US4] Check User Story 4 by hand:
   - **Rows**: [quickstart.md §3](./quickstart.md#3-pinned-frame-us3-us4) rows 3.8 and 3.9, and [§2](./quickstart.md#2-loading-bar-and-busy-button-us1-us2) row 2.5. Use the teacher invitation form with two server-side errors on `/admin/teachers/invite`: follow each error-summary link.
   - **Sizes**: at 1280 × 800 and 375 × 667 (wrapped tabs) in Chrome, then row 3.11 in Firefox and Safari.
   - **Without JavaScript**: repeat 3.8 with JavaScript disabled.
@@ -332,7 +373,7 @@ the new checks.
 
 ### Tests for User Story 5
 
-- [ ] T026 [P] [US5] Extend `tests/integration/test_component_gallery.py`:
+- [ ] T027 [P] [US5] Extend `tests/integration/test_component_gallery.py`:
   - **`SECTIONS`**: insert `"loading": ["Loading bar", "Busy button", "Send invitation"]` right after `"frame"`. Dicts keep insertion order, so rebuild the literal in order. Update the docstring reference to name specs/010.1 contracts/components.md §5.
   - **`test_the_loading_section_shows_both_components_in_their_loading_state`**, signed in as an administrator, in `section#loading`:
     - exactly one element with class `loading-bar`, without `hidden`, with `aria-hidden="true"`, inside an element with class `frame`;
@@ -341,16 +382,9 @@ the new checks.
 
 ### Implementation for User Story 5
 
-- [ ] T027 [US5] Update `docs/requirements/ui-guidelines.md`:
-  - **§2 "Calm and focused"**: after "Nothing moves or blinks", add the one exception. The loading bar moves while the next page is on its way, and stands still with reduced motion (milestone 10.1, FR-018).
-  - **§3 Tokens, "Space and shape"**: add `--sc-frame-clearance`, `--sc-frame-clearance-tabs` (11 rem below 768 px, 8 rem from 768 px) and `--sc-field-clearance`, with what each is for.
-  - **§4 Layout**:
-    - item 2/3: the top bar, the area tabs and the loading bar sit in one `<div class="frame">`, pinned to the top on screens at least 600 px tall, scrolling away on shorter screens and in print; the page still scrolls as a whole;
-    - add `(min-height: 600px)` to **Breakpoints**, which become three;
-    - say that the script `loading-feedback.js` is loaded by the base layout on every page.
-  - **§4, new paragraph "Keeping targets in view"**: scroll padding from the clearance tokens and the field margin keep skip-link targets, error-summary targets and focused elements below the frame (WCAG 2.2 2.4.11). A new tab, a longer tab label or a taller top bar must be re-measured at 360 px and 375 px width against the tokens (research R8).
-  - **§8 Phone behaviour**: the area tabs are 44 px tall (the touch target) below 768 px and wrap; a phone held sideways (under 600 px tall) does not pin the frame.
-  - **§10 Checks**: add `tests/unit/test_frame_stylesheet.py` and `tests/unit/test_loading_script.py`, and what each enforces.
+- [ ] T028 [US5] Finish `docs/requirements/ui-guidelines.md`. The component entries and the "Calm and focused" exception were written in T008, and the pinned frame in T019.
+  - **§10 Checks**: add `tests/unit/test_frame_stylesheet.py` and `tests/unit/test_loading_script.py`, and the new spinner test in `tests/unit/test_stylesheet.py`, with what each enforces.
+  - **Final pass**: read §2–§8 against the final `app.css` and the measurements recorded by T023 and T026. Correct any token value, height or breakpoint that changed during implementation.
   - **Style**: keep the document's existing tone and structure.
 
 **Checkpoint**: the component library, the gallery and the guidelines are complete for later
@@ -360,23 +394,23 @@ milestones.
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T028 [P] In `README.md`, section "Design system and UI guidelines", add one bullet after **Component gallery**:
+- [ ] T029 [P] In `README.md`, section "Design system and UI guidelines", add one bullet after **Component gallery**:
   - **Loading feedback and pinned frame**: a thin bar under the top bar shows that a slow page is on its way, and the button that sent a form shows a spinner and cannot send it twice. Both come from `app/static/js/loading-feedback.js`, which the base layout loads on every page; without JavaScript, links and forms work as before.
   - The top bar and the area tabs stay at the top of the screen on screens at least 600 px tall.
   - Pages get all of this from the base layout.
-- [ ] T029 Run `uv run ruff check . && uv run ruff format --check . && uv run pytest`, then the same with `TEST_POSTGRES_URL` set. Everything must pass on both engines (FR-023, SC-010).
-- [ ] T030 Take review screenshots with headless Playwright, following the memory recipe (`uv run --no-project --with playwright -- python -I <script>`, port 8765, a database copy). Never add Playwright to the project.
+- [ ] T030 Run `uv run ruff check . && uv run ruff format --check . && uv run pytest`, then the same with `TEST_POSTGRES_URL` set. Everything must pass on both engines (FR-023, SC-010).
+- [ ] T031 Take review screenshots with headless Playwright, following the memory recipe (`uv run --no-project --with playwright -- python -I <script>`, port 8765, a database copy). Never add Playwright to the project.
   - **Pages and sizes**: `/admin/teachers`, `/admin/subjects`, `/` and `/admin/components#loading`, at 1280 × 800 and 375 × 667, in Light and Dark.
   - **Scroll state**: on the list pages, scroll part-way so the pinned frame shows over the content.
   - **Where**: save to the git-ignored `screenshots/` folder.
   - **Review**: the frame, the hanging bar in the gallery, and the busy spinners on all three button kinds.
-- [ ] T031 Go through every row of [quickstart.md](./quickstart.md) §2–§5 not already recorded by T014, T017, T022 and T025. Complete `specs/010.1-loading-feedback-pinned-frame/pr-notes.md` with a summary for the PR description:
+- [ ] T032 Go through every row of [quickstart.md](./quickstart.md) §2–§5 not already recorded by T014, T017, T023 and T026. Complete `specs/010.1-loading-feedback-pinned-frame/pr-notes.md` with a summary for the PR description:
   - what changed;
   - the manual check results by browser;
   - the measured frame heights;
   - the one visible change to the milestone 10 look (phone tab height, research R9);
   - the updated test `test_tabs_are_plain_links` (T011), with its reason.
-- [ ] T032 On delivery, update `docs/requirements/milestones.md`:
+- [ ] T033 On delivery, update `docs/requirements/milestones.md`:
   - move 10.1 from **Upcoming** to **Delivered**, as a short summary in the style of the other delivered milestones, with `_Spec:_ [010.1-loading-feedback-pinned-frame](../../specs/010.1-loading-feedback-pinned-frame/spec.md)`;
   - keep the delivered summary for milestone 10 unchanged, except for one added note that the frame is pinned and pages show loading feedback from 10.1, if the summary would otherwise be wrong.
 
@@ -390,15 +424,19 @@ milestones.
 - **Foundational (Phase 2)**: after Setup. It blocks every story.
   - T002 comes before T005.
   - T003 and T004 come before T005 and T006.
-  - T006 and T007 come after T003 and T004.
-  - T008 can run alongside T005–T007.
+  - T006 comes after T003 and T004.
+  - T008 can run alongside T005 and T006.
+  - **T007 comes last in the phase**, after T005, T006 and T008: the layout uses `loading_bar()` only
+    once it is in the library, the gallery and the guidelines (Principle II, FR-017).
 - **US1 (Phase 3)**: after Foundational.
 - **US2 (Phase 4)**: after US1. It completes the same script file (T016 extends T012).
 - **US3 (Phase 5)**: after Foundational. It is independent of US1 and US2, which are script only,
   and can run in parallel with them.
 - **US4 (Phase 6)**: after US3, in the same media block. It must be merged together with US3.
-- **US5 (Phase 7)**: after Foundational. T027 describes US3 and US4, so finish its §4 and §8 text
-  after them.
+- **Inside US3**: T019 (guidelines for the pinned frame) comes before T020, T021, T022 and T025,
+  which are the CSS of US3 and US4 (Principle II).
+- **US5 (Phase 7)**: T027 after Foundational. T028 (§10 and the final pass over the guidelines)
+  after US3 and US4, because it checks the guidelines against their measured values.
 - **Polish (Phase 8)**: after every story.
 
 ### User Story Dependencies
@@ -407,7 +445,8 @@ milestones.
 - **US2 (P1)**: US1 (same file, `loading-feedback.js`).
 - **US3 (P2)**: Foundational only.
 - **US4 (P2)**: US3; they ship together.
-- **US5 (P3)**: Foundational (the gallery); the guidelines text needs US3 and US4's final values.
+- **US5 (P3)**: Foundational (the gallery); its final guidelines pass (T028) needs US3 and US4's
+  measured values.
 
 ### Within Each User Story
 
@@ -419,10 +458,10 @@ milestones.
 ### Parallel Opportunities
 
 - **Phase 2**: T003, T004 and T008 touch different files.
-- **Test modules**: T009 and T010 (US1), T015 (US2), T018 (US3), T023 (US4) and T026 (US5) are
-  separate modules. T015 and T009 share a file, so write T015 after T009, and T023 after T018.
+- **Test modules**: T009 and T010 (US1), T015 (US2), T018 (US3), T024 (US4) and T027 (US5) are
+  separate modules. T015 and T009 share a file, so write T015 after T009, and T024 after T018.
 - **Two parallel streams**: after Foundational, US1→US2 (the script) and US3→US4 (the stylesheet)
-  can run side by side, with US5's test (T026) alongside both.
+  can run side by side, with US5's test (T027) alongside both.
 
 ---
 
@@ -435,10 +474,11 @@ Task: "T012 Create app/static/js/loading-feedback.js"
 
 # Stream B, the stylesheet (US3 → US4):
 Task: "T018 Create tests/unit/test_frame_stylesheet.py"
-Task: "T019 Add the pinned frame rule to app/static/css/app.css"
+Task: "T019 Describe the pinned frame in docs/requirements/ui-guidelines.md (before any frame CSS)"
+Task: "T020 Add the pinned frame rule to app/static/css/app.css"
 
 # Stream C, the gallery test (US5):
-Task: "T026 Extend tests/integration/test_component_gallery.py"
+Task: "T027 Extend tests/integration/test_component_gallery.py"
 ```
 
 ---
@@ -466,5 +506,5 @@ Task: "T026 Extend tests/integration/test_component_gallery.py"
 - [P] tasks touch different files and depend on no incomplete task.
 - Commit after each task or logical group. Each story phase ends at a checkpoint that can be
   validated on its own.
-- The manual checks (T014, T017, T022, T025, T031) are part of the milestone's _Test:_ line. They
+- The manual checks (T014, T017, T023, T026, T032) are part of the milestone's _Test:_ line. They
   are not optional, because the suite has no browser before milestone 16.

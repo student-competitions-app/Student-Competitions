@@ -312,7 +312,9 @@ and component check and check that it passes.
 
 - **FR-022**: Addresses, form fields, messages, access rules and stored data MUST NOT change.
 - **FR-023**: The automated token and component check of milestone 10 MUST pass, and every test of
-  milestones 1–10 MUST keep passing.
+  milestones 1–10 MUST keep passing. The only allowed change is to an assertion that a page loads
+  no script at all: it MAY now accept the base layout's script, and MUST keep every other check
+  (plain-link tabs, no partial-update attributes).
 - **FR-024**: Making pages load faster (prefetching, boosted links, keeping the hosting awake),
   animated page transitions and hiding the frame while scrolling down MUST NOT be part of this
   milestone.

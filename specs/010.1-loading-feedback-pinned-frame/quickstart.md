@@ -50,6 +50,8 @@ Safari, use the Network Link Conditioner, or test against the deployed site afte
 | 2.7 | With throttling, switch role from the user menu, then switch theme | the busy spinner shows on the pressed button, visible in both themes; the role and the theme that were pressed are applied (SC-004) |
 | 2.8 | With throttling, in the teacher **Students** tab, pick a region, then quickly another | the bar shows; the page that arrives reflects the **last** choice |
 | 2.9 | With throttling, open a page, then press Back while the bar shows; press Forward | neither page shows a leftover bar or busy button (SC-005) |
+| 2.9a | With throttling, send a POST form (for example the subject form), then click a tab before the form's page arrives; when the tab's page shows, press Back | the form page shows no busy button, and its form can be sent again (FR-011) |
+| 2.9b | With throttling, at 667 × 375, scroll to the top and follow a link; while the bar shows, scroll down past the frame | the bar moves to the top edge of the screen and stays visible (FR-006) |
 | 2.10 | Turn on reduced motion in the OS; repeat 2.1 | the bar shows as a still, full-width line (FR-005) |
 | 2.11 | Disable JavaScript; follow links and submit forms, the role and theme switches included | everything works as before, with no bar and no spinner (SC-011) |
 

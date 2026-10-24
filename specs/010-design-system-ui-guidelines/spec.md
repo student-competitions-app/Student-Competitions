@@ -141,7 +141,8 @@ and button kinds against the guidelines.
    its field, each error is also shown next to its field, and every entered value is kept.
 4. **Given** a destructive action (Delete, Remove, Deactivate, Withdraw consent), **When** it is
    chosen, **Then** a confirmation page names the item in its question, states the consequence, offers
-   a destructive button that repeats the verb, then **Cancel**.
+   a destructive button that repeats the verb, then **Cancel**. The one exemption is **Deactivate**
+   on the **Subjects** list, which stays direct (FR-032a).
 5. **Given** a deletion is refused because the item is in use, **When** the confirmation opens,
    **Then** it explains why and offers the alternative (deactivate) where the existing behaviour offers
    it.
@@ -335,6 +336,8 @@ styling rule references them; run the automated stylesheet checks.
   student shows "access denied" naming the current role, as for any administrator page (milestone 5).
   In production the gallery does not exist, so every person, signed in or not and in any role, gets
   "not found"; the response does not reveal that the address exists elsewhere.
+- **Deactivating a subject** from the **Subjects** list happens at once, without a confirmation page,
+  as today (FR-032a); the button is destructive, and **Activate** on the same row undoes it.
 - **A page that shows the same status for many rows** (for example many "Deactivated" badges) uses the
   same badge on every row; colour is never the only signal.
 
@@ -364,7 +367,7 @@ styling rule references them; run the automated stylesheet checks.
   sentence or two, placed where they are needed.
 - **FR-007**: **Forgiving**: every form error MUST be shown next to its field and in an error summary
   at the top of the page; entered values MUST be kept; destructive actions MUST always ask for
-  confirmation and say what will happen.
+  confirmation and say what will happen, with the one exemption of FR-032a.
 
 #### Visual identity and tokens
 
@@ -451,6 +454,11 @@ styling rule references them; run the automated stylesheet checks.
   consequence, offer a destructive button that repeats the verb, then **Cancel**. Its refusal variant
   MUST explain why the action is refused ("is in use") and offer the alternative (deactivate) where the
   existing behaviour offers it.
+- **FR-032a** (exemption): **Deactivate** on the **Subjects** list stays a direct action with no
+  confirmation page, as it works today. A confirmation would need a new page and route, which this
+  look-only milestone rules out (FR-040, FR-050), and the action is reversible with **Activate** on
+  the same row. It MUST still be shown as a destructive button. Adding the confirmation is recorded
+  in `docs/issues-to-fix.md` for a later milestone.
 - **FR-033**: **Details list** MUST show label and value pairs, as on the profile and invitation pages.
 - **FR-034**: **Selectors** MUST include the list-and-detail pair (regions → institutions) and the
   chained lists (region → institution → class), ready for reuse in milestones 11 and 12.
@@ -550,8 +558,9 @@ styling rule references them; run the automated stylesheet checks.
   follow the device.
 - **SC-006**: 100% of forms shown with errors display each field error both next to its field and in
   the error summary, and keep 100% of the entered values.
-- **SC-007**: 100% of destructive actions go through a confirmation page that names the item, states
-  the consequence and repeats the verb on the destructive button.
+- **SC-007**: 100% of destructive actions, except the subject **Deactivate** exemption (FR-032a), go
+  through a confirmation page that names the item, states the consequence and repeats the verb on the
+  destructive button.
 - **SC-008**: On every page, body text is at least 16 px at phone width and at least 18 px at desktop
   width, with line height at least 1.5.
 - **SC-009**: On a local run, the gallery shows 100% of the components and variants listed in FR-024

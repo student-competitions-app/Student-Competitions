@@ -26,7 +26,7 @@ The UI is server-rendered with Jinja2, made interactive with HTMX and styled wit
 - Pages MUST be rendered on the server; interactivity MUST use HTMX partials
   (`app/templates/partials/`) returning HTML fragments, not JSON consumed by client code.
 - Custom JavaScript MUST be minimal and MUST NOT require a build step (no bundlers, no SPA
-  framework). The optional React migration in milestone 12 requires a constitution amendment.
+  framework). The optional React migration in milestone 16 requires a constitution amendment.
 - Every feature MUST use the stack defined in Technology & Architecture Constraints →
   Technology Stack. Adding a new runtime dependency MUST be justified in the feature's `plan.md`.
 - Prefer the simplest design that satisfies the spec (YAGNI); abstractions MUST have at least
@@ -42,7 +42,7 @@ SPA complexity; SSR + HTMX keeps one language, one codebase and one deployment u
   acceptance scenarios.
 - Tests live in `tests/unit/` (pure logic, services), `tests/integration/` (HTTP routes via
   the FastAPI test client, database, auth flows) and `tests/e2e/` (Playwright, from
-  milestone 12).
+  milestone 16).
 - Every protected route MUST have tests proving both allowed and denied access per role.
 - Tests MUST NOT call real external services: the LLM provider and the email sender MUST be
   replaced by fakes/stubs in the test suite.
@@ -149,8 +149,8 @@ column shows when each component enters the codebase.
 | Database | SQLite (local development, tests) → PostgreSQL (production) | The same code and migrations run on both engines. | 3 |
 | Authentication | Email one-time code (OTP) + server-side sessions in a signed cookie | No passwords, no third-party identity provider (Principle V). | 4 |
 | Authorization | Roles: student / teacher / administrator; administrator list from deploy-time configuration | Enforced server-side, deny-by-default (Principle IV). | 5 |
-| Answer evaluation | LLM API (Claude or OpenAI) with structured output | Behind one provider-agnostic service; provider chosen by configuration (Principle VI). | 10 |
-| End-to-end tests | Playwright | Added "later", as part of polish and hardening; lives in `tests/e2e/`. | 12 |
+| Answer evaluation | LLM API (Claude or OpenAI) with structured output | Behind one provider-agnostic service; provider chosen by configuration (Principle VI). | 14 |
+| End-to-end tests | Playwright | Added "later", as part of polish and hardening; lives in `tests/e2e/`. | 16 |
 | Development process | GitHub Spec Kit | Every feature goes through the Spec Kit flow (see Development Workflow). | all |
 
 **Stack rules**:
@@ -162,7 +162,7 @@ column shows when each component enters the codebase.
   application. External brokers or workers (e.g. Redis, Celery) are not part of the stack.
 - Server-side session and OTP state MUST be stored in the application database, not in new
   infrastructure.
-- The milestone-12 stretch goal of moving part of the UI to React is **not** approved. Adopting
+- The milestone-16 stretch goal of moving part of the UI to React is **not** approved. Adopting
   it requires a constitution amendment (Principle II).
 - Choosing between alternatives the table already lists (Render / Railway / Fly.io;
   Claude / OpenAI) needs no amendment, but the choice MUST be recorded in the relevant
@@ -177,7 +177,7 @@ decided and recorded in the `plan.md` of the named milestone, within the rules a
 | Python version (pinned via `.python-version` / `requires-python`) | 1 |
 | Hosting provider (Render unless justified) and managed PostgreSQL offering | 2 |
 | Email delivery service (SMTP or transactional-email API) for sending OTP codes | 4 |
-| LLM provider and model for answer evaluation | 10 |
+| LLM provider and model for answer evaluation | 14 |
 
 ### Application Layout
 
@@ -237,4 +237,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 1.0.1 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-10-14
+**Version**: 1.0.2 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-10-24

@@ -93,8 +93,11 @@ already has a "Back to …" link, its text and target are reused, and that link 
 5. **Badges**: every status (Active or Deactivated, Read or Write) is a badge with text. The old
    inline "(deactivated)" `small` text becomes `status_badge(False)`.
 6. **Destructive actions**: every destructive action goes through a confirmation page that already
-   exists (SC-007). No new direct destructive `POST` is added. The direct **Activate** forms stay
-   direct, because activating is not destructive.
+   exists (SC-007), except **Deactivate** on the **Subjects** list. That one is a direct
+   `POST /admin/subjects/{id}/deactivate` today, with no confirmation page, and stays direct as a
+   destructive `post_button` (spec FR-032a; the confirmation is deferred in
+   `docs/issues-to-fix.md`). No new direct destructive `POST` is added. The direct **Activate** forms
+   stay direct, because activating is not destructive.
 
 ---
 

@@ -41,7 +41,7 @@ considered**.
 **Rationale**: The spec makes approval the gate for the whole milestone. A static page is the
 cheapest thing to change between review rounds and needs no server. Keeping the screenshots out of
 git avoids roughly 170 PNGs that would be out of date after the next milestone. The script is a
-review aid, not a test: Playwright as a test framework still arrives in milestone 12 (Constitution,
+review aid, not a test: Playwright as a test framework still arrives in milestone 16 (Constitution,
 Technology Stack).
 
 **Alternatives considered**:
@@ -707,7 +707,7 @@ file makes the review mechanical.
 **Decision**:
 
 - **How**: the constitution is amended by `/speckit-constitution`, in a dedicated pull request as
-  Governance requires. The version goes from 1.0.1 to 1.1.0, a MINOR change for materially expanded
+  Governance requires. The version goes from 1.0.2 to 1.1.0, a MINOR change for materially expanded
   guidance.
 - **What changes**:
   - **Principle II** gains a bullet. Every page MUST be built from the component library in

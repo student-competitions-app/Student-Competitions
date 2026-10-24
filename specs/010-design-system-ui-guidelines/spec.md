@@ -242,18 +242,23 @@ area with its description, the sample questions, and the database status line in
 
 ---
 
-### User Story 7 - An administrator reviews every component in the gallery (Priority: P3)
+### User Story 7 - An administrator reviews every component in the gallery during development (Priority: P3)
 
-An administrator opens `/admin/components`, which is not linked from the tabs. It shows every
-component in every variant with sample data: the three button kinds, cards, a data table (with wide
-and phone layouts), badges, empty states, the three notice kinds, form fields with hints and errors,
-an error summary, a confirmation and its refusal variant, a details list and both selectors. Teachers
-and students who open the address get "access denied".
+The gallery is a development tool: it exists only when the application runs locally, never in the
+production deployment. On a local run, an administrator opens `/admin/components`, which is not
+linked from the tabs. It shows every component in every variant with sample data: the three button
+kinds, cards, a data table (with wide and phone layouts), badges, empty states, the three notice
+kinds, form fields with hints and errors, an error summary, a confirmation and its refusal variant, a
+details list and both selectors. Teachers and students who open the address get "access denied". In
+production, the address does not exist and everyone gets "not found".
 
-**Why this priority**: The gallery makes review and later reuse easy, but no user task depends on it.
+**Why this priority**: The gallery makes review and later reuse easy, but no user task depends on it,
+so it has no place in the production deployment.
 
-**Independent Test**: Open the gallery as an administrator and check that every component and variant
-listed in the requirements appears; open it as a teacher and as a student and check "access denied".
+**Independent Test**: On a local run, open the gallery as an administrator and check that every
+component and variant listed in the requirements appears; open it as a teacher and as a student and
+check "access denied". With the application configured as production, open the address as an
+administrator and check "not found".
 
 **Acceptance Scenarios**:
 
@@ -265,6 +270,8 @@ listed in the requirements appears; open it as a teacher and as a student and ch
    **Then** they get "access denied" naming their current role.
 4. **Given** the gallery's sample data, **When** the gallery is shown, **Then** nothing is read from
    or written to the database for it.
+5. **Given** the production deployment, **When** anyone, an administrator included, opens
+   `/admin/components`, **Then** they get "not found", the same as for any other unknown address.
 
 ---
 
@@ -326,6 +333,8 @@ styling rule references them; run the automated stylesheet checks.
 - **Very wide screens** keep the one content width; content does not stretch across the screen.
 - **The gallery** opened by someone who is an administrator but currently acting as a teacher or
   student shows "access denied" naming the current role, as for any administrator page (milestone 5).
+  In production the gallery does not exist, so every person, signed in or not and in any role, gets
+  "not found"; the response does not reveal that the address exists elsewhere.
 - **A page that shows the same status for many rows** (for example many "Deactivated" badges) uses the
   same badge on every row; colour is never the only signal.
 
@@ -460,6 +469,9 @@ styling rule references them; run the automated stylesheet checks.
   neither read from nor written to the database.
 - **FR-038**: The gallery MUST be open only to the administrator role and MUST NOT be linked from the
   area tabs. Every other role MUST get "access denied".
+- **FR-038a**: The gallery MUST exist only when the application runs outside production. On the
+  production platform, detected the same way as the production guards of milestones 3 and 4,
+  `/admin/components` MUST respond with "not found" to everyone, exactly as an unknown address does.
 
 #### Existing pages
 
@@ -507,7 +519,8 @@ styling rule references them; run the automated stylesheet checks.
 - **FR-050**: This milestone MUST NOT change any product behaviour beyond the look, the theme switch,
   the home page cards and the gallery. It MUST NOT add accessibility conformance work (WCAG
   conformance, screen-reader or keyboard-only testing), new pages other than the gallery, or new data
-  stored in the database.
+  stored in the database. The production deployment MUST gain no new page: the gallery is local only
+  (FR-038a).
 
 ### Key Entities *(include if feature involves data)*
 
@@ -541,8 +554,9 @@ styling rule references them; run the automated stylesheet checks.
   the consequence and repeats the verb on the destructive button.
 - **SC-008**: On every page, body text is at least 16 px at phone width and at least 18 px at desktop
   width, with line height at least 1.5.
-- **SC-009**: The gallery shows 100% of the components and variants listed in FR-024 to FR-034, and
-  100% of attempts by the teacher and student roles get "access denied".
+- **SC-009**: On a local run, the gallery shows 100% of the components and variants listed in FR-024
+  to FR-034, and 100% of attempts by the teacher and student roles get "access denied"; in production,
+  100% of requests to `/admin/components` get "not found".
 - **SC-010**: A year-5 student can sign in, open their profile and return to the home page on a phone
   in under 2 minutes, not counting the wait for the emailed code, without using the browser's back
   button.
@@ -553,6 +567,11 @@ styling rule references them; run the automated stylesheet checks.
 
 - **The product owner** is the person who refined the milestone; they approve the mockup and the
   screenshots. The mockup and the record of approval are kept with the feature's documents.
+- **The gallery is a development tool**: it is used by developers and by the product owner on a
+  local run, to review the components and to reuse them in later milestones. Production users have
+  no task that needs it, so it is left out of the production deployment; the product owner's
+  approval of the look is based on the mockup (User Story 1) and the screenshots, not on a deployed
+  gallery.
 - **The mockup covers** the identity and the five key pages named in the milestone; other pages follow
   the approved patterns and are checked in the screenshot review before merge.
 - **The theme cookie** holds only the choice, has no identifier, and lasts one year. As a preference

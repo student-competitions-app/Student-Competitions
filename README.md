@@ -132,7 +132,15 @@ def question_bank(request: Request) -> HTMLResponse: ...
 
 A route without `@allow_roles(...)` answers 403 to everyone. Test each role on it with `client_as(...)`: allowed roles get 200, the others 403, and `client` is redirected to sign in.
 
-Making a route public is a deliberate, one-line change to `PUBLIC_ROUTES` in the same file. Today the list is `GET`/`POST /login`, `POST /login/code`, `POST /logout` and `GET /healthz`; `GET`/`POST /role` (`ROLE_CHOICE_ROUTES`) are open to anyone signed in. The route-table sweep in [`tests/integration/test_routes.py`](tests/integration/test_routes.py) walks every route and fails the build, naming the route, if one is neither public, nor the role choice, nor declared; if a declared page admits a role it should not; if one outside the list answers an anonymous request; or if a list names a route that does not exist.
+Making a route public is a deliberate, one-line change to `PUBLIC_ROUTES` in the same file. Today the list is `GET`/`POST /login`, `POST /login/code`, `POST /logout`, `GET /healthz`, the emailed-link pages (invitations and data deletion) and `POST /theme`; `GET`/`POST /role` (`ROLE_CHOICE_ROUTES`) are open to anyone signed in. The route-table sweep in [`tests/integration/test_routes.py`](tests/integration/test_routes.py) walks every route and fails the build, naming the route, if one is neither public, nor the role choice, nor declared; if a declared page admits a role it should not; if one outside the list answers an anonymous request; or if a list names a route that does not exist.
+
+### Design system and UI guidelines
+
+Every page is built from the component library in [`app/templates/components/`](app/templates/components/) and follows [`docs/requirements/ui-guidelines.md`](docs/requirements/ui-guidelines.md): the principles, the design tokens, when to use each component, the wording patterns and the phone behaviour. Colours and sizes are the `--sc-*` tokens at the top of [`app/static/css/app.css`](app/static/css/app.css), mapped onto Pico's own variables; Pico's stylesheet is never edited. A new pattern goes into the library, the gallery and the guidelines first, then onto a page. [`tests/unit/test_stylesheet.py`](tests/unit/test_stylesheet.py) fails the build on an undefined or unused class, an inline `style`, a literal colour or pixel length outside the tokens, or anything loaded from another site.
+
+- **Component gallery**: [`/admin/components`](http://127.0.0.1:8000/admin/components) shows every component in every variant, with sample data. It is for administrators, not linked from the tabs, and exists only outside production: with `RENDER` set it is the same "not found" page as any unknown address.
+- **Light, Dark, Device**: the theme switch in the user menu and on the sign-in page keeps the choice in the browser's `sc_theme` cookie (`light` or `dark`; **Device**, the default, deletes it and follows the operating system). The server renders the chosen theme, so there is no flash and no script. The cookie holds only the choice, is not linked to the account and follows no one to another browser.
+- **Fonts**: Open Sans is self-hosted in [`app/static/fonts/`](app/static/fonts/) as four variable `woff2` subsets (Latin, Latin Extended, Cyrillic, Cyrillic Extended), under the SIL Open Font License ([`OFL.txt`](app/static/fonts/OFL.txt)). No page loads a font, a script or a stylesheet from another site.
 
 ### Adding a migration
 
@@ -287,6 +295,7 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 - Product requirements: [`docs/requirements/product-requirements.md`](docs/requirements/product-requirements.md)
 - Technical requirements: [`docs/requirements/technical-requirements.md`](docs/requirements/technical-requirements.md)
 - Milestones: [`docs/requirements/milestones.md`](docs/requirements/milestones.md)
+- UI guidelines: [`docs/requirements/ui-guidelines.md`](docs/requirements/ui-guidelines.md)
 
 ## Tech stack
 
@@ -332,7 +341,8 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 │   │   ├── auth.py          # PUBLIC_ROUTES, ROLE_CHOICE_ROUTES, @allow_roles, the access dependency, CurrentUser/CurrentRole, the session cookie
 │   │   ├── db.py            # Engine, per-request session, UTC timestamp column type
 │   │   ├── migrations.py    # Expected (head) and current schema revision; startup guard
-│   │   └── templates.py     # Shared Jinja2Templates instance (+ `current_user`, `current_role`, `user_roles` for every page, the `utc` filter)
+│   │   ├── theme.py         # The theme choice: Theme, the sc_theme cookie, read_theme, apply_theme
+│   │   └── templates.py     # Shared Jinja2Templates instance (+ `current_user`, `current_role`, `user_roles`, `theme`, `theme_return` for every page, the `utc` filter, `template_error`)
 │   ├── models/              # SQLModel tables: Question, BootCounter, User, UserRole, UserSession, LoginCode, RateLimitHit, Subject, Region, Institution, TeacherProfile and TeacherInstitution (teacher.py), ConsentText, ConsentRecord and InvitationCutoff (consent.py), SchoolClass (school_class.py, table `classes`), Enrolment
 │   ├── schemas/             # Validation and view schemas: questions, login form input, names.py (shared name rules), people.py (person names, addresses), teachers.py (role details, the institution picker), classes.py (year of study), students.py (role details)
 │   ├── routers/             # Route handlers grouped by area/role
@@ -349,19 +359,22 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 │   │   ├── data_deletion.py # /data-deletion…, /data-erased (public)
 │   │   ├── admin_institutions.py  # /admin/institutions: regions and the selected region's institutions; create, rename, deactivate/activate, delete
 │   │   ├── admin_subjects.py  # /admin/subjects: list, create, rename, deactivate/activate, delete
+│   │   ├── admin_components.py  # GET /admin/components: the component gallery, outside production only (DevelopmentOnlyRoute)
+│   │   ├── theme.py         # POST /theme: choose Light, Dark or Device (public)
 │   │   └── health.py        # GET /healthz → status, version, commit
 │   ├── services/            # Business logic: questions, subjects, regions, institutions, database_status, users, sessions, login, rate_limits, email; invitations (the generic invite/accept flow and the role registry), teachers, students (the student role, edit, move, remove), consent (texts, records, cut-offs, erasure), data_deletion; availability (the deactivation chain and usable roles), teacher_access (what a teacher may reach, Read or Write), classes
-│   ├── templates/           # Jinja2: layouts/, partials/ (HTMX fragments), pages/
-│   │   ├── layouts/base.html  # Header with the current role, the signed-in address (a link to the profile), the role switch and Log out
+│   ├── templates/           # Jinja2: components/, layouts/, partials/ (HTMX fragments), pages/
+│   │   ├── components/      # The component library: frame, button, card, table, badge, feedback, form, confirmation, details, selectors, icons, palette
+│   │   ├── layouts/base.html  # The frame: skip link, top bar with the user menu (profile link, role switch, theme switch, Log out), main, footer
 │   │   ├── layouts/admin.html # The administrator area's tab row, current tab marked
 │   │   ├── layouts/teacher.html # The teacher area's tab row, current tab marked
 │   │   └── pages/           # home, login, login_code, role_choice, area, error; invitation and invitation_status; profile, profile_withdraw; data_deletion_request, _requested, _confirm, link_status, data_erased; admin/ (placeholder; subjects; institutions and regions; teachers, teacher_invite, teacher_form, teacher_remove, teacher_not_found, _institution_picker, _person_names; region and institution deactivation confirmations); teacher/ (students, class_form, class_deactivate, class_delete, student_invite, student_form, student_remove, placeholder)
-│   └── static/              # css/ (vendored pico.min.css + app.css), js/, img/
+│   └── static/              # css/ (vendored pico.min.css + app.css: tokens, Pico mapping, components), fonts/ (Open Sans, OFL), js/, img/ (favicons)
 ├── migrations/              # Alembic migrations
 │   ├── env.py               # Uses resolve_database_url; one locked transaction on PostgreSQL
 │   └── versions/            # Revisions: tables + boot counter, the sample questions, the sign-in tables, user roles, drop the unused users.role, subjects, regions and institutions, consent and teachers (+ the teacher consent text v1), the one-time retirement of the role lists, classes and enrolments (+ the student consent text v1)
 ├── data/                    # Local SQLite database (git-ignored, created by the first migration)
-├── tests/                   # unit/, integration/, e2e/ (Playwright)
+├── tests/                   # unit/, integration/, e2e/ (Playwright); html.py queries rendered pages by meaning
 │   ├── conftest.py          # Both-engine database fixtures (template + clone), the cast (`seed_roles_directly`), `client`, `client_as`, `admin_client`, `outbox`; `make_institution`, `invite`, `invite_and_accept`, `make_teacher`, `token_from`; `make_class`, `invite_student`, `enrol_student`
 │   ├── unit/                # config, database and auth settings, security helpers, sealing, log redaction, safe return paths, the cross-site rule, email, templates, schemas (names, people, teachers, classes), pinned consent texts
 │   └── integration/         # teacher area classes and students, student invitation and refusals, names on acceptance, availability (chain and service), teacher access (service and route sweeps), classes service, teacher invitation, refusals, cut-offs and edge cases, admin teachers, profile, data deletion, self-invitation, consent privacy and service, admin area, subjects and institutions, subject, region and institution services, access control, role choice and switch, cross-site, login flow and privacy, sessions, user reconcile, auth services, home, health, routes, startup, migrations, boot counter, question service

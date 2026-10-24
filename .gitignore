@@ -11,3 +11,6 @@ data/
 # Local environment files may hold secrets (SECRET_KEY, RESEND_API_KEY, ...)
 .env
 .env.*
+
+# Review screenshots of milestone 10 (research D1): a throw-away aid, never committed
+screenshots/

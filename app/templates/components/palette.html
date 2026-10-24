@@ -1,0 +1,32 @@
+{#- Palette swatches (contracts/components.md §12, the gallery's identity section): one chip per
+    colour token, its colour from a class, never from an inline style. Gallery only. -#}
+
+{% macro swatch(token) -%}
+{%- set swatch_class = {
+  "page": "swatch-chip swatch-page",
+  "surface": "swatch-chip swatch-surface",
+  "text": "swatch-chip swatch-text",
+  "muted": "swatch-chip swatch-muted",
+  "border": "swatch-chip swatch-border",
+  "top-bar": "swatch-chip swatch-top-bar",
+  "primary": "swatch-chip swatch-primary",
+  "on-primary": "swatch-chip swatch-on-primary",
+  "primary-tint": "swatch-chip swatch-primary-tint",
+  "accent": "swatch-chip swatch-accent",
+  "success": "swatch-chip swatch-success",
+  "success-tint": "swatch-chip swatch-success-tint",
+  "danger": "swatch-chip swatch-danger",
+  "danger-tint": "swatch-chip swatch-danger-tint",
+  "primary-hover": "swatch-chip swatch-primary-hover",
+  "focus-ring": "swatch-chip swatch-focus-ring",
+  "danger-hover": "swatch-chip swatch-danger-hover",
+  "on-danger": "swatch-chip swatch-on-danger",
+  "on-success": "swatch-chip swatch-on-success",
+  "on-accent": "swatch-chip swatch-on-accent",
+  "on-top-bar": "swatch-chip swatch-on-top-bar",
+  "on-top-bar-muted": "swatch-chip swatch-on-top-bar-muted",
+  "neutral-tint": "swatch-chip swatch-neutral-tint"
+}.get(token) -%}
+{%- if not swatch_class %}{{ template_error("swatch: unknown token " ~ token) }}{% endif -%}
+<div class="swatch"><div class="{{ swatch_class }}"></div><p class="swatch-label"><code>--sc-{{ token }}</code></p></div>
+{%- endmacro %}

@@ -1,19 +1,20 @@
 {#- The page frame (contracts/components.md §1, FR-018–FR-021, FR-024, research D7). Import it
     `with context`: `top_bar` and `user_menu` read the signed-in person from the template context
-    (`current_user`, `current_role`, `user_roles`, set by `app.core.templates`). -#}
+    (`current_user`, `current_role`, `user_roles`, set by `app.core.templates`) unless they are
+    given one, as the component gallery does to show each variant. -#}
 
 {% from "components/icons.html" import logo_mark, icon %}
 {% from "components/button.html" import button, link_button %}
 
-{% macro top_bar() -%}
+{% macro top_bar(user=current_user, role=current_role, roles=user_roles) -%}
 <header class="top-bar">
   <div class="container">
     <a href="/" class="brand">{{ logo_mark() }}<span class="brand-name">{{ app_name }}</span></a>
-    {%- if current_user %}
-    {%- if current_role %}
-    <span class="brand-role">{{ current_role.label }}</span>
+    {%- if user %}
+    {%- if role %}
+    <span class="brand-role">{{ role.label }}</span>
     {%- endif %}
-    {{ user_menu() }}
+    {{ user_menu(user, role, roles) }}
     {%- endif %}
   </div>
 </header>
@@ -22,17 +23,17 @@
 {#- The user menu (FR-019): a native <details>, so it opens and closes without JavaScript. The
     role switch shows only for a person with several roles who has chosen one, exactly as the
     milestone 5 header did, so it never shows on the role-choice page itself. -#}
-{% macro user_menu() -%}
+{% macro user_menu(user=current_user, role=current_role, roles=user_roles) -%}
 <details class="user-menu">
-  <summary>{{ icon("account") }}<span class="user-menu-email">{{ current_user.email }}</span><span class="visually-hidden">Account menu</span></summary>
+  <summary>{{ icon("account") }}<span class="user-menu-email">{{ user.email }}</span><span class="visually-hidden">Account menu</span></summary>
   <div class="user-menu-panel">
-    <a href="/profile" class="user-menu-profile">{{ current_user.email }}</a>
-    {%- if current_role and user_roles | length > 1 %}
+    <a href="/profile" class="user-menu-profile">{{ user.email }}</a>
+    {%- if role and roles | length > 1 %}
     <form method="post" action="/role">
       <span class="menu-label">Switch to</span>
       <div class="button-row">
-        {%- for role in user_roles if role != current_role %}
-        <button type="submit" name="role" value="{{ role.value }}" class="secondary small">{{ role.label }}</button>
+        {%- for other in roles if other != role %}
+        <button type="submit" name="role" value="{{ other.value }}" class="secondary small">{{ other.label }}</button>
         {%- endfor %}
       </div>
     </form>

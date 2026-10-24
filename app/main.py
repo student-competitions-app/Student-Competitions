@@ -58,6 +58,7 @@ from app.core.migrations import ensure_at_head
 from app.core.templates import templates
 from app.routers import (
     admin,
+    admin_components,
     admin_institutions,
     admin_subjects,
     admin_teachers,
@@ -178,6 +179,7 @@ app.include_router(admin.router)
 app.include_router(admin_teachers.router)
 app.include_router(admin_institutions.router)
 app.include_router(admin_subjects.router)
+app.include_router(admin_components.router)
 app.include_router(invitations.router)
 app.include_router(profile.router)
 app.include_router(data_deletion.router)

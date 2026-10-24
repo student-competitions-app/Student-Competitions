@@ -1,0 +1,173 @@
+{% extends "layouts/admin.html" %}
+{#- The component gallery (specs/010-design-system-ui-guidelines contracts/components.md §12):
+    one section per component family, every variant, from the sample data of
+    app/routers/admin_components.py. A new component or variant is added here, to the library
+    and to docs/requirements/ui-guidelines.md in the same change (FR-045). -#}
+{% from "components/frame.html" import top_bar, user_menu, theme_switch, area_tabs, back_link, page_heading with context %}
+{% from "components/icons.html" import logo_mark, icon %}
+{% from "components/palette.html" import swatch %}
+{% from "components/button.html" import button, link_button, post_button %}
+{% from "components/card.html" import card %}
+{% from "components/table.html" import data_table, cell, actions_cell %}
+{% from "components/badge.html" import badge, status_badge, access_badge %}
+{% from "components/feedback.html" import notice, empty_state %}
+{% from "components/form.html" import error_summary, field, select_field, checkbox_field, form_actions %}
+{% from "components/confirmation.html" import confirmation, refusal %}
+{% from "components/details.html" import details_list %}
+{% from "components/selectors.html" import list_detail, chained_lists %}
+
+{% block title %}Components — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+{{ page_heading("Components") }}
+<p class="lead">Every component and variant of the design system, in the current theme. This page exists only outside production.</p>
+
+<section id="identity" aria-labelledby="identity-heading">
+  <h2 id="identity-heading">Identity</h2>
+  <div class="button-row">{{ logo_mark("lg") }}{{ logo_mark("md") }}{{ logo_mark("sm") }}</div>
+  <p><strong>{{ app_name }}</strong>: the wordmark, set in Open Sans 700 beside the mark.</p>
+  <h3>Palette</h3>
+  <div class="swatches">
+    {% for token in tokens %}{{ swatch(token) }}{% endfor %}
+  </div>
+  <h3>Type scale</h3>
+  <h1>Heading 1</h1>
+  <h2>Heading 2</h2>
+  <h3>Heading 3</h3>
+  <h4>Heading 4</h4>
+  <p>Body text: 16 px on a phone, 18 px from 1024 px, line height 1.5. Emphasis is <strong>bold</strong>.</p>
+  <p><small>Small text: the footer, hints and badges only.</small></p>
+</section>
+
+<section id="frame" aria-labelledby="frame-heading">
+  <h2 id="frame-heading">Frame</h2>
+  <h3>Top bar, signed out</h3>
+  {{ top_bar(none, none, ()) }}
+  <h3>Top bar, signed in with one role</h3>
+  {{ top_bar(one_role_user, teacher_role, [teacher_role]) }}
+  <h3>User menu, one role</h3>
+  <div class="top-bar"><div class="container">{{ user_menu(one_role_user, teacher_role, [teacher_role]) }}</div></div>
+  <h3>User menu, several roles</h3>
+  <div class="top-bar"><div class="container">{{ user_menu(two_role_user, teacher_role, two_roles) }}</div></div>
+  <h3>Theme switch</h3>
+  {% for current in ("light", "dark", "device") %}{{ theme_switch(current, "/admin/components") }}{% endfor %}
+  <h3>Area tabs</h3>
+  {{ area_tabs(sample_tabs, "first", "Sample tabs") }}
+  <h3>Back link</h3>
+  {{ back_link("/admin/components#frame", "Back to the frame") }}
+  <h3>Page heading, with and without an action</h3>
+  <div class="page-heading"><h2>Subjects</h2>{{ link_button("Create subject", "/admin/components#frame") }}</div>
+  <div class="page-heading"><h2>Educational institutions</h2></div>
+</section>
+
+<section id="buttons" aria-labelledby="buttons-heading">
+  <h2 id="buttons-heading">Buttons</h2>
+  {% for kind, label in (("primary", "Primary"), ("secondary", "Secondary"), ("destructive", "Destructive")) %}
+  <h3>{{ label }}</h3>
+  <div class="button-row">
+    {{ button(label ~ " button", kind=kind) }}
+    {{ link_button(label ~ " link", "/admin/components#buttons", kind=kind) }}
+    {{ post_button("/admin/components", label ~ " form", kind=kind) }}
+    {% if kind != "primary" %}{{ button(label ~ " outline", kind=kind, outline=True) }}{% endif %}
+    {{ button(label ~ " small", kind=kind, small=True) }}
+  </div>
+  {% endfor %}
+</section>
+
+<section id="cards" aria-labelledby="cards-heading">
+  <h2 id="cards-heading">Cards</h2>
+  <ul class="card-grid">
+    <li>{{ card("Card with a link", href="/admin/components#cards", description="The whole card is the link.") }}</li>
+    <li>{{ card("Card without a link", description="A title and a description.") }}</li>
+    <li>{% call card("Card with a body") %}<p>Any content, passed through the call block.</p>{% endcall %}</li>
+  </ul>
+</section>
+
+<section id="table" aria-labelledby="table-heading">
+  <h2 id="table-heading">Data table</h2>
+  {% call data_table(["Name", "Status", "Actions"]) %}
+  {% for s in subjects %}
+  <tr>
+    {{ cell("Name", s.name) }}
+    {% call cell("Status") %}{{ status_badge(s.is_active) }}{% endcall %}
+    {% call actions_cell() %}
+    {{- link_button("Rename", "/admin/components#table", kind="secondary", outline=True, small=True) -}}
+    {%- if s.is_active -%}
+    {{- post_button("/admin/components", "Deactivate", kind="destructive", outline=True, small=True) -}}
+    {%- else -%}
+    {{- post_button("/admin/components", "Activate", kind="secondary", outline=True, small=True) -}}
+    {%- endif -%}
+    {{- link_button("Delete", "/admin/components#table", kind="destructive", outline=True, small=True) -}}
+    {% endcall %}
+  </tr>
+  {% endfor %}
+  {% endcall %}
+  <p>Narrow the window below 768 px to see each row as a card of labelled values.</p>
+  <h3>An empty list</h3>
+  {{ empty_state("No subjects yet", "Create the first subject with Create subject.") }}
+</section>
+
+<section id="badges" aria-labelledby="badges-heading">
+  <h2 id="badges-heading">Badges</h2>
+  <div class="button-row">
+    {{ status_badge(True) }} {{ status_badge(False) }}
+    {% for level in access_levels %}{{ access_badge(level) }} {% endfor %}
+  </div>
+</section>
+
+<section id="empty-states" aria-labelledby="empty-states-heading">
+  <h2 id="empty-states-heading">Empty states</h2>
+  {{ empty_state("No subjects yet", "Create the first subject with Create subject.") }}
+  {{ empty_state("Select a region", "Choose a region from the list to see its educational institutions.") }}
+</section>
+
+<section id="notices" aria-labelledby="notices-heading">
+  <h2 id="notices-heading">Notices</h2>
+  {{ notice("Invitation sent to olena.kovalenko@school.example", "success") }}
+  {{ notice("This link is no longer valid.", "error") }}
+  {{ notice("Question data is temporarily unavailable. Please try again in a moment.", "info") }}
+</section>
+
+<section id="forms" aria-labelledby="forms-heading">
+  <h2 id="forms-heading">Forms</h2>
+  {{ error_summary(field_errors, form_error, order=["gallery-name", "gallery-year"]) }}
+  {{ field("gallery-email", "Email address", type="email", hint="We send the sign-in code here.") }}
+  {{ field("gallery-name", "Name", value="", error=field_errors["gallery-name"]) }}
+  {{ field("gallery-year", "Year of study", value="two", error=field_errors["gallery-year"]) }}
+  {{ select_field("gallery-class-field", "Class", classes, selected=1) }}
+  {{ checkbox_field("gallery-check", "Can create competitions", checked=True) }}
+  {{ form_actions("Save", cancel_href="/admin/components#forms") }}
+</section>
+
+<section id="confirmations" aria-labelledby="confirmations-heading">
+  <h2 id="confirmations-heading">Confirmations</h2>
+  {{ confirmation("Delete “Physics”?", "Deleting a subject cannot be undone.", "/admin/components", "Delete", "/admin/components#confirmations") }}
+  {% call refusal("Delete “Mathematics”?", "“Mathematics” is in use and cannot be deleted. You can deactivate it instead.", "/admin/components#confirmations", "Back to the subjects") %}
+  {{ post_button("/admin/components", "Deactivate", kind="destructive") }}
+  {% endcall %}
+</section>
+
+<section id="details" aria-labelledby="details-heading">
+  <h2 id="details-heading">Details list</h2>
+  {{ details_list(details) }}
+</section>
+
+<section id="selectors" aria-labelledby="selectors-heading">
+  <h2 id="selectors-heading">Selectors</h2>
+  <h3>List and detail</h3>
+  {% call(part, item) list_detail("Regions", regions, 1, "/admin/components?region=", heading_id="gallery-regions") %}
+  {% if part == "detail" %}
+  <h2 id="gallery-regions-detail">Educational institutions in “Kyiv”</h2>
+  {% call data_table(["Name", "Status"]) %}
+  {% for i in institutions %}<tr>{{ cell("Name", i.name) }}{% call cell("Status") %}{{ status_badge(i.is_active) }}{% endcall %}</tr>{% endfor %}
+  {% endcall %}
+  {% endif %}
+  {% endcall %}
+  <h3>Chained lists</h3>
+  {{ chained_lists([
+    {"id": "gallery-region", "name": "region", "label": "Region", "placeholder": "Select a region", "options": [(1, "Kyiv"), (2, "Lviv")], "selected": 1, "disabled": false, "carry": []},
+    {"id": "gallery-institution", "name": "institution", "label": "Educational institution", "placeholder": "Select an educational institution", "options": [(1, "Kyiv Polytechnic Institute — Write")], "selected": 1, "disabled": false, "carry": [("region", 1)]},
+    {"id": "gallery-class", "name": "class", "label": "Class", "placeholder": "Select a class", "options": classes, "selected": none, "disabled": false, "carry": [("region", 1), ("institution", 1)], "extra_options": [("new", "+ Add class")]},
+  ], "/admin/components") }}
+</section>
+{% endblock %}

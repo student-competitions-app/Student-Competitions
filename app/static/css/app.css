@@ -1440,4 +1440,123 @@ fieldset > legend {
   max-width: 20rem;
 }
 
+/* Palette swatches (components/palette.html): the gallery's view of every colour token. */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--sc-space-2);
+  margin-bottom: var(--sc-space-3);
+}
+
+.swatch {
+  overflow: hidden;
+  background: var(--sc-surface);
+  border: var(--sc-border-width) solid var(--sc-border);
+  border-radius: var(--sc-radius-control);
+}
+
+.swatch-chip {
+  height: var(--sc-space-6);
+  border-bottom: var(--sc-border-width) solid var(--sc-border);
+}
+
+.swatch-label {
+  margin: 0;
+  padding: var(--sc-space-1);
+  font-size: var(--sc-text-small);
+  overflow-wrap: anywhere;
+}
+
+.swatch-page {
+  background: var(--sc-page);
+}
+
+.swatch-surface {
+  background: var(--sc-surface);
+}
+
+.swatch-text {
+  background: var(--sc-text);
+}
+
+.swatch-muted {
+  background: var(--sc-muted);
+}
+
+.swatch-border {
+  background: var(--sc-border);
+}
+
+.swatch-top-bar {
+  background: var(--sc-top-bar);
+}
+
+.swatch-primary {
+  background: var(--sc-primary);
+}
+
+.swatch-on-primary {
+  background: var(--sc-on-primary);
+}
+
+.swatch-primary-tint {
+  background: var(--sc-primary-tint);
+}
+
+.swatch-accent {
+  background: var(--sc-accent);
+}
+
+.swatch-success {
+  background: var(--sc-success);
+}
+
+.swatch-success-tint {
+  background: var(--sc-success-tint);
+}
+
+.swatch-danger {
+  background: var(--sc-danger);
+}
+
+.swatch-danger-tint {
+  background: var(--sc-danger-tint);
+}
+
+.swatch-primary-hover {
+  background: var(--sc-primary-hover);
+}
+
+.swatch-focus-ring {
+  background: var(--sc-focus-ring);
+}
+
+.swatch-danger-hover {
+  background: var(--sc-danger-hover);
+}
+
+.swatch-on-danger {
+  background: var(--sc-on-danger);
+}
+
+.swatch-on-success {
+  background: var(--sc-on-success);
+}
+
+.swatch-on-accent {
+  background: var(--sc-on-accent);
+}
+
+.swatch-on-top-bar {
+  background: var(--sc-on-top-bar);
+}
+
+.swatch-on-top-bar-muted {
+  background: var(--sc-on-top-bar-muted);
+}
+
+.swatch-neutral-tint {
+  background: var(--sc-neutral-tint);
+}
+
 /* == End of components == */

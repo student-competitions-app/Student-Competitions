@@ -344,7 +344,7 @@ unknown address (quickstart §3.2 step 6, §3.5).
 
 ### Tests for User Story 7
 
-- [ ] T078 [P] [US7] Create `tests/integration/test_component_gallery.py` per contracts/http-routes.md §2 and quickstart §1:
+- [X] T078 [P] [US7] Create `tests/integration/test_component_gallery.py` per contracts/http-routes.md §2 and quickstart §1:
   - an administrator gets 200 with a section for every `id` of [components.md §12](./contracts/components.md#12-gallery-coverage-checklist-sc-009), in order, each with its variants' texts (for example **Active**, **Deactivated**, **Read**, **Write**, "There is a problem", "No subjects yet", **Light**, **Dark**, **Device**);
   - no tab in `nav(body, "Administrator area")` links to `/admin/components` and none carries `aria-current`;
   - a teacher, a student, and an administrator acting as teacher or student get 403 "Access denied" naming the current role; anonymous visitors get 303 to `/login?next=%2Fadmin%2Fcomponents`;
@@ -353,9 +353,9 @@ unknown address (quickstart §3.2 step 6, §3.5).
 
 ### Implementation for User Story 7
 
-- [ ] T079 [US7] Change `render_admin` in `app/routers/admin.py` to accept `active_tab: str | None` (no tab marked current when `None`); the docstring says so. Existing callers are unchanged.
-- [ ] T080 [US7] Create `app/routers/admin_components.py` per research D15: `class DevelopmentOnlyRoute(APIRoute)` overriding `matches(scope)` to return `(Match.NONE, {})` when `scope["app"].state` has no `settings` or `settings.production` is true; `router = APIRouter(route_class=DevelopmentOnlyRoute)`; module-level frozen dataclasses and tuples of sample data (subjects with a long name, regions, institutions, classes, students, a details list, field errors and a form error, confirmation and refusal texts), never from the database; `GET /admin/components` with `@allow_roles(Role.ADMIN)`, no session dependency, rendered by `render_admin(request, "pages/admin/components.html", None, {...})`. Include the router in `app/main.py`. The route-table sweep in `test_routes.py` covers it automatically; check it does.
-- [ ] T081 [US7] Create `app/templates/pages/admin/components.html` (extends `layouts/admin.html`): `page_heading("Components")`, then one `<section id="…" aria-labelledby="…">` with an `h2` per row of components.md §12, in that order, rendering every macro and variant listed there from the sample data, with the palette swatches built from component classes only (no inline style; add a `.swatch` component class to `app.css` and to the guidelines if needed). `test_stylesheet.py` stays green.
+- [X] T079 [US7] Change `render_admin` in `app/routers/admin.py` to accept `active_tab: str | None` (no tab marked current when `None`); the docstring says so. Existing callers are unchanged.
+- [X] T080 [US7] Create `app/routers/admin_components.py` per research D15: `class DevelopmentOnlyRoute(APIRoute)` overriding `matches(scope)` to return `(Match.NONE, {})` when `scope["app"].state` has no `settings` or `settings.production` is true; `router = APIRouter(route_class=DevelopmentOnlyRoute)`; module-level frozen dataclasses and tuples of sample data (subjects with a long name, regions, institutions, classes, students, a details list, field errors and a form error, confirmation and refusal texts), never from the database; `GET /admin/components` with `@allow_roles(Role.ADMIN)`, no session dependency, rendered by `render_admin(request, "pages/admin/components.html", None, {...})`. Include the router in `app/main.py`. The route-table sweep in `test_routes.py` covers it automatically; check it does.
+- [X] T081 [US7] Create `app/templates/pages/admin/components.html` (extends `layouts/admin.html`): `page_heading("Components")`, then one `<section id="…" aria-labelledby="…">` with an `h2` per row of components.md §12, in that order, rendering every macro and variant listed there from the sample data, with the palette swatches built from component classes only (no inline style; add a `.swatch` component class to `app.css` and to the guidelines if needed). `test_stylesheet.py` stays green.
 
 **Checkpoint**: the gallery covers every component; T078 passes.
 

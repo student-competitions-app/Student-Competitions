@@ -198,6 +198,20 @@ The **Students** tab uses `chained_lists`.
 
 `app/static/img/favicon.svg` is the same mark, drawn with fixed colours.
 
+### 11.1 Palette (`components/palette.html`), gallery only
+
+| Macro | Parameters | Emits |
+|---|---|---|
+| `swatch(token)` | a colour token's name without `--sc-`, such as `"primary"` | `<div class="swatch"><div class="swatch-chip swatch-{token}"></div><p class="swatch-label"><code>--sc-{token}</code></p></div>`. Each `swatch-{token}` class sets its background from the token, since inline styles are not allowed. An unknown token is a template error. |
+
+Added in implementation for the `identity` section of the gallery (T081).
+
+### 11.2 Frame macros in the gallery
+
+`top_bar(user, role, roles)` and `user_menu(user, role, roles)` take the signed-in person as
+optional arguments, which default to the template context. Pages never pass them; the gallery
+does, to show each variant on one page.
+
 ---
 
 ## 12. Gallery coverage checklist (SC-009)

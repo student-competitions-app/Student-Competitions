@@ -411,7 +411,7 @@ milestones.
   - the measured frame heights;
   - the one visible change to the milestone 10 look (phone tab height, research R9);
   - the updated test `test_tabs_are_plain_links` (T011), with its reason.
-- [ ] T033 On delivery, update `docs/requirements/milestones.md`:
+- [X] T033 On delivery, update `docs/requirements/milestones.md`:
   - move 10.1 from **Upcoming** to **Delivered**, as a short summary in the style of the other delivered milestones, with `_Spec:_ [010.1-loading-feedback-pinned-frame](../../specs/010.1-loading-feedback-pinned-frame/spec.md)`;
   - keep the delivered summary for milestone 10 unchanged, except for one added note that the frame is pinned and pages show loading feedback from 10.1, if the summary would otherwise be wrong.
 

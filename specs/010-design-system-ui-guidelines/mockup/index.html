@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Student Competitions: design mockup (milestone 10)</title>
+<link rel="icon" href="../../../app/static/img/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../../../app/static/img/favicon-32.png" sizes="32x32" type="image/png">
+<style>
+/* == Tokens (draft of the app.css token block, data-model §2) == */
+@font-face {
+  font-family: "Open Sans";
+  src: url("../../../app/static/fonts/open-sans-latin.woff2") format("woff2");
+  font-weight: 300 800;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Open Sans";
+  src: url("../../../app/static/fonts/open-sans-latin-ext.woff2") format("woff2");
+  font-weight: 300 800;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Open Sans";
+  src: url("../../../app/static/fonts/open-sans-cyrillic.woff2") format("woff2");
+  font-weight: 300 800;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: "Open Sans";
+  src: url("../../../app/static/fonts/open-sans-cyrillic-ext.woff2") format("woff2");
+  font-weight: 300 800;
+  font-display: swap;
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+:root,
+[data-theme="light"] {
+  --sc-page: #f4f6fb;
+  --sc-surface: #ffffff;
+  --sc-text: #172033;
+  --sc-muted: #556070;
+  --sc-border: #dde3ee;
+  --sc-top-bar: #16337a;
+  --sc-primary: #1f56d6;
+  --sc-on-primary: #ffffff;
+  --sc-primary-tint: #e7eefc;
+  --sc-accent: #f2a516;
+  --sc-success: #17803d;
+  --sc-success-tint: #e5f5ea;
+  --sc-danger: #c0392b;
+  --sc-danger-tint: #fdf0ee;
+  --sc-primary-hover: #1a47b3;
+  --sc-focus-ring: rgb(31 86 214 / 0.4);
+  --sc-danger-hover: #a02f23;
+  --sc-on-danger: #ffffff;
+  --sc-on-success: #ffffff;
+  --sc-on-accent: #172033;
+  --sc-on-top-bar: #ffffff;
+  --sc-on-top-bar-muted: #c3cfee;
+  --sc-neutral-tint: #eef1f6;
+  --sc-shadow-card: 0 1px 2px rgb(23 32 51 / 0.06);
+  --sc-font-family: "Open Sans", system-ui, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
+    Helvetica, Arial, sans-serif;
+  --sc-weight-regular: 400;
+  --sc-weight-semibold: 600;
+  --sc-weight-bold: 700;
+  --sc-text-body: 1rem;
+  --sc-text-small: 0.875rem;
+  --sc-line-height: 1.5;
+  --sc-line-height-heading: 1.25;
+  --sc-text-h1: 1.75rem;
+  --sc-text-h2: 1.375rem;
+  --sc-text-h3: 1.25rem;
+  --sc-text-h4: 1.125rem;
+  --sc-measure: 70ch;
+  --sc-space-1: 0.5rem;
+  --sc-space-2: 1rem;
+  --sc-space-3: 1.5rem;
+  --sc-space-4: 2rem;
+  --sc-space-5: 3rem;
+  --sc-space-6: 4rem;
+  --sc-radius-control: 0.5rem;
+  --sc-radius-card: 0.75rem;
+  --sc-content-width: 72rem;
+  --sc-touch-target: 2.75rem;
+}
+
+[data-theme="dark"] {
+  --sc-page: #0d1424;
+  --sc-surface: #151f35;
+  --sc-text: #e6eaf2;
+  --sc-muted: #9aa6bd;
+  --sc-border: #26324d;
+  --sc-top-bar: #111a2e;
+  --sc-primary: #6c9cff;
+  --sc-on-primary: #0d1424;
+  --sc-primary-tint: #1d2c4f;
+  --sc-accent: #f5b83d;
+  --sc-success: #5fcf86;
+  --sc-success-tint: #13291c;
+  --sc-danger: #ff8a7a;
+  --sc-danger-tint: #341b19;
+  --sc-primary-hover: #8fb3ff;
+  --sc-focus-ring: rgb(108 156 255 / 0.45);
+  --sc-danger-hover: #ffa597;
+  --sc-on-danger: #0d1424;
+  --sc-on-success: #0d1424;
+  --sc-on-accent: #0d1424;
+  --sc-on-top-bar: #e6eaf2;
+  --sc-on-top-bar-muted: #9aa6bd;
+  --sc-neutral-tint: #1b253b;
+  --sc-shadow-card: none;
+}
+
+/* In the application these two are media queries (1024px, 768px). A frame cannot trigger a
+   media query, so the mockup scopes them to the desktop frames. */
+.frame-desktop {
+  --sc-text-body: 1.125rem;
+  --sc-text-h1: 2rem;
+  --sc-text-h2: 1.5rem;
+}
+
+/* == The mockup page itself (not part of the design) == */
+html { background: #d9dde5; }
+body.mockup {
+  margin: 0;
+  padding: 32px;
+  font-family: var(--sc-font-family);
+  color: #172033;
+  background: #d9dde5;
+}
+.mockup > header, .mockup > section > h2, .mockup > section > p.mockup-note { max-width: 1280px; }
+.mockup h1.mockup-title { font-size: 2rem; margin: 0 0 8px; }
+.mockup > section { margin-top: 64px; }
+.mockup > section > h2 { font-size: 1.5rem; margin: 0 0 8px; border-bottom: 2px solid #9aa3b2; padding-bottom: 8px; }
+.mockup-note { margin: 0 0 24px; color: #3b4556; max-width: 80ch; line-height: 1.5; }
+.frames { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.frame-caption { font: 600 0.875rem/1.5 var(--sc-font-family); color: #3b4556; margin: 0 0 8px; }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+.swatch { border-radius: var(--sc-radius-control); border: 1px solid var(--sc-border); overflow: hidden; background: var(--sc-surface); }
+.swatch-chip { height: 56px; border-bottom: 1px solid var(--sc-border); }
+.swatch-label { padding: 8px; font-size: 0.8125rem; line-height: 1.4; color: var(--sc-text); }
+.swatch-label code { display: block; font-weight: 600; }
+.identity-row { display: flex; flex-wrap: wrap; gap: 48px; align-items: center; margin-bottom: 48px; }
+.favicons img { vertical-align: middle; margin-right: 16px; image-rendering: auto; }
+.type-scale > * { margin: 0 0 16px; }
+
+/* == Frame == */
+.frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 720px;
+  overflow: hidden;
+  border-radius: 12px;
+  outline: 1px solid #9aa3b2;
+  background: var(--sc-page);
+  color: var(--sc-text);
+  font-family: var(--sc-font-family);
+  font-size: var(--sc-text-body);
+  font-weight: var(--sc-weight-regular);
+  line-height: var(--sc-line-height);
+  text-align: left;
+}
+.frame-phone { width: 375px; }
+.frame-desktop { width: 1280px; }
+.frame *, .frame *::before, .frame *::after { box-sizing: border-box; }
+
+/* == Base == */
+.frame h1, .frame h2, .frame h3, .frame h4 {
+  margin: 0 0 var(--sc-space-2);
+  color: var(--sc-text);
+  line-height: var(--sc-line-height-heading);
+}
+.frame h1 { font-size: var(--sc-text-h1); font-weight: var(--sc-weight-bold); }
+.frame h2 { font-size: var(--sc-text-h2); font-weight: var(--sc-weight-bold); }
+.frame h3 { font-size: var(--sc-text-h3); font-weight: var(--sc-weight-semibold); }
+.frame h4 { font-size: var(--sc-text-h4); font-weight: var(--sc-weight-semibold); }
+.frame p { margin: 0 0 var(--sc-space-2); max-width: var(--sc-measure); }
+.frame a { color: var(--sc-primary); text-underline-offset: 0.15em; }
+.frame a:hover { color: var(--sc-primary-hover); }
+.frame strong, .frame b, .frame em { font-style: normal; font-weight: var(--sc-weight-bold); }
+.frame code { font-size: 0.875em; }
+.visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* == Layout == */
+.frame .container {
+  width: 100%;
+  max-width: var(--sc-content-width);
+  margin-inline: auto;
+  padding-inline: var(--sc-space-2);
+}
+.frame-desktop .container { padding-inline: var(--sc-space-4); }
+.frame main { padding-block: var(--sc-space-4) var(--sc-space-5); flex: 1; }
+.frame-desktop main { padding-block: var(--sc-space-5) var(--sc-space-6); }
+.narrow { max-width: 30rem; margin-inline: auto; }
+
+.top-bar { background: var(--sc-top-bar); color: var(--sc-on-top-bar); }
+.top-bar > .container {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: var(--sc-space-2);
+  min-height: 4rem;
+  padding-block: var(--sc-space-1);
+}
+.frame-desktop .top-bar > .container { display: flex; gap: var(--sc-space-2); }
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  color: var(--sc-on-top-bar) !important;
+  font-weight: var(--sc-weight-bold);
+  font-size: var(--sc-text-h4);
+  line-height: var(--sc-line-height-heading);
+  text-decoration: none;
+  min-height: var(--sc-touch-target);
+}
+.brand-role {
+  grid-column: 1;
+  grid-row: 2;
+  padding-left: 2.5rem;
+  color: var(--sc-on-top-bar-muted);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+  line-height: var(--sc-line-height-heading);
+}
+.frame-phone .brand-role { margin-top: -0.5rem; }
+.frame-desktop .brand-role {
+  padding: 0 var(--sc-space-1);
+  border: 1px solid var(--sc-on-top-bar-muted);
+  border-radius: var(--sc-radius-control);
+  line-height: 1.5rem;
+}
+.frame-desktop .user-menu { margin-left: auto; }
+
+.logo-mark { display: block; flex: none; }
+.logo-mark-sm { width: 1.5rem; height: 1.5rem; }
+.logo-mark-md { width: 2rem; height: 2rem; }
+.logo-mark-lg { width: 4rem; height: 4rem; }
+.logo-mark-tile { fill: var(--sc-top-bar); }
+.logo-mark-spark { fill: var(--sc-accent); }
+.icon { width: 1.25rem; height: 1.25rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.user-menu { position: relative; grid-column: 2; grid-row: 1 / span 2; }
+.user-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sc-space-1);
+  min-width: var(--sc-touch-target);
+  min-height: var(--sc-touch-target);
+  padding-inline: var(--sc-space-1);
+  border: 1px solid var(--sc-on-top-bar-muted);
+  border-radius: var(--sc-radius-control);
+  color: var(--sc-on-top-bar);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+  list-style: none;
+  cursor: pointer;
+}
+.frame-desktop .user-menu > summary { padding-inline: var(--sc-space-2); }
+.user-menu > summary::-webkit-details-marker { display: none; }
+.user-menu > summary::after {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 0.125rem solid currentColor;
+  border-bottom: 0.125rem solid currentColor;
+  transform: translateY(-0.125rem) rotate(45deg);
+}
+.user-menu[open] > summary::after { transform: translateY(0.125rem) rotate(-135deg); }
+.frame-phone .user-menu > summary::after { display: none; }
+.frame-phone .user-menu-email { display: none; }
+.user-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--sc-space-1));
+  z-index: 2;
+  width: 24rem;
+  padding: var(--sc-space-1) 0;
+  background: var(--sc-surface);
+  color: var(--sc-text);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-card);
+  box-shadow: 0 8px 24px rgb(13 20 36 / 0.18);
+  font-size: var(--sc-text-body);
+}
+.frame-phone .user-menu-panel { width: calc(375px - 2 * var(--sc-space-2)); }
+.user-menu-panel > * { margin: 0; padding: var(--sc-space-2); }
+.user-menu-panel > * + * { border-top: 1px solid var(--sc-border); }
+.user-menu-profile { display: block; font-weight: var(--sc-weight-semibold); overflow-wrap: anywhere; }
+.menu-label, .theme-switch legend {
+  display: block;
+  margin: 0 0 var(--sc-space-1);
+  padding: 0;
+  color: var(--sc-muted);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+}
+.button-row { display: flex; flex-wrap: wrap; gap: var(--sc-space-1); }
+.user-menu-panel .logout button { width: 100%; }
+
+.area-tabs { background: var(--sc-surface); border-bottom: 1px solid var(--sc-border); }
+.area-tabs ul { display: flex; flex-wrap: wrap; gap: 0 var(--sc-space-3); margin: 0; padding: 0; list-style: none; }
+.frame-desktop .area-tabs ul { gap: 0 var(--sc-space-4); }
+.area-tabs a {
+  display: flex;
+  align-items: center;
+  min-height: 3rem;
+  border-bottom: 0.25rem solid transparent;
+  padding-top: 0.25rem;
+  color: var(--sc-muted);
+  font-weight: var(--sc-weight-semibold);
+  text-decoration: none;
+}
+.area-tabs a:hover { color: var(--sc-text); }
+.area-tabs a[aria-current="page"] { color: var(--sc-text); font-weight: var(--sc-weight-bold); border-bottom-color: var(--sc-primary); }
+
+.site-footer {
+  border-top: 1px solid var(--sc-border);
+  padding-block: var(--sc-space-3);
+  color: var(--sc-muted);
+  font-size: var(--sc-text-small);
+}
+.site-footer p { margin: 0; overflow-wrap: anywhere; }
+.site-footer p + p { margin-top: var(--sc-space-1); }
+
+/* == Components == */
+.frame button, .frame [role="button"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sc-space-1);
+  min-height: var(--sc-touch-target);
+  margin: 0;
+  padding: 0 var(--sc-space-3);
+  border: 1px solid var(--sc-primary);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-primary);
+  color: var(--sc-on-primary);
+  font: inherit;
+  font-weight: var(--sc-weight-semibold);
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.frame button:hover, .frame [role="button"]:hover { background: var(--sc-primary-hover); border-color: var(--sc-primary-hover); color: var(--sc-on-primary); }
+.frame button:focus-visible, .frame [role="button"]:focus-visible, .frame a:focus-visible, .frame summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 0.25rem var(--sc-focus-ring);
+}
+.frame .secondary { background: var(--sc-surface); border-color: var(--sc-border); color: var(--sc-text); }
+.frame .secondary:hover { background: var(--sc-neutral-tint); border-color: var(--sc-muted); color: var(--sc-text); }
+.frame .destructive { background: var(--sc-danger); border-color: var(--sc-danger); color: var(--sc-on-danger); }
+.frame .destructive:hover { background: var(--sc-danger-hover); border-color: var(--sc-danger-hover); color: var(--sc-on-danger); }
+.frame .secondary.outline { background: transparent; }
+.frame .destructive.outline { background: transparent; color: var(--sc-danger); border-color: var(--sc-danger); }
+.frame .destructive.outline:hover { background: var(--sc-danger-tint); color: var(--sc-danger); }
+.frame .small { padding-inline: var(--sc-space-2); font-size: var(--sc-text-small); }
+.inline-form { display: inline-block; margin: 0; }
+
+.page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-space-2);
+  margin-bottom: var(--sc-space-3);
+}
+.page-heading h1 { margin: 0; }
+.lead { color: var(--sc-muted); font-size: var(--sc-text-h4); }
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  min-height: var(--sc-touch-target);
+  margin-bottom: var(--sc-space-1);
+  font-weight: var(--sc-weight-semibold);
+}
+
+.frame label { display: block; margin-bottom: var(--sc-space-1); font-weight: var(--sc-weight-semibold); }
+.frame input[type="email"], .frame input[type="text"] {
+  display: block;
+  width: 100%;
+  max-width: 30rem;
+  min-height: var(--sc-touch-target);
+  margin: 0 0 var(--sc-space-3);
+  padding: 0 var(--sc-space-2);
+  border: 1px solid var(--sc-muted);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-surface);
+  color: var(--sc-text);
+  font: inherit;
+}
+.frame input:focus { outline: none; border-color: var(--sc-primary); box-shadow: 0 0 0 0.25rem var(--sc-focus-ring); }
+.frame input[aria-invalid="true"] { border: 0.125rem solid var(--sc-danger); }
+.field-hint { display: block; margin: -0.25rem 0 var(--sc-space-1); color: var(--sc-muted); }
+.field-error { display: block; margin: 0 0 var(--sc-space-1); color: var(--sc-danger); font-size: var(--sc-text-body); font-weight: var(--sc-weight-bold); }
+.form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sc-space-2) var(--sc-space-3); margin-top: var(--sc-space-1); }
+.form-actions a { font-weight: var(--sc-weight-semibold); }
+
+.error-summary {
+  max-width: var(--sc-measure);
+  margin-bottom: var(--sc-space-4);
+  padding: var(--sc-space-2) var(--sc-space-3);
+  border: 0.125rem solid var(--sc-danger);
+  border-left-width: 0.5rem;
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-danger-tint);
+}
+.error-summary h2 { font-size: var(--sc-text-h4); margin-bottom: var(--sc-space-1); }
+.error-summary ul { margin: 0; padding-left: var(--sc-space-3); }
+.error-summary a { color: var(--sc-danger); font-weight: var(--sc-weight-bold); }
+
+.notice {
+  max-width: var(--sc-measure);
+  margin-bottom: var(--sc-space-3);
+  padding: var(--sc-space-2);
+  border-left: 0.25rem solid var(--sc-primary);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-primary-tint);
+}
+.notice p { margin: 0; }
+.notice-success { border-left-color: var(--sc-success); background: var(--sc-success-tint); }
+.notice-error { border-left-color: var(--sc-danger); background: var(--sc-danger-tint); }
+
+.card {
+  position: relative;
+  margin: 0;
+  padding: var(--sc-space-3);
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-card);
+  box-shadow: var(--sc-shadow-card);
+}
+.card h3 { margin-bottom: var(--sc-space-1); }
+.card-link { text-decoration: none; }
+.card-link::after { content: ""; position: absolute; inset: 0; border-radius: var(--sc-radius-card); }
+.card:hover { border-color: var(--sc-primary); }
+.card:hover .card-link { text-decoration: underline; }
+.card-description { margin: 0; color: var(--sc-muted); }
+.card-grid { display: grid; gap: var(--sc-space-2); margin-bottom: var(--sc-space-5); padding: 0; list-style: none; }
+.frame-desktop .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sc-space-3); }
+
+.question-list { margin: 0; padding-left: var(--sc-space-3); }
+.question-list li { margin-bottom: var(--sc-space-1); max-width: var(--sc-measure); }
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-card);
+  overflow: hidden;
+}
+.data-table th {
+  padding: var(--sc-space-1) var(--sc-space-2);
+  background: var(--sc-neutral-tint);
+  border-bottom: 1px solid var(--sc-border);
+  color: var(--sc-muted);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+  text-align: left;
+}
+.data-table td { padding: var(--sc-space-2); border-bottom: 1px solid var(--sc-border); vertical-align: middle; overflow-wrap: anywhere; }
+.data-table tbody tr:last-child td { border-bottom: 0; }
+.data-table tbody tr:hover td { background: var(--sc-page); }
+.row-actions { white-space: nowrap; width: 1%; }
+.row-actions > * + * { margin-left: var(--sc-space-1); }
+
+.frame-phone .data-table, .frame-phone .data-table tbody, .frame-phone .data-table tr, .frame-phone .data-table td { display: block; }
+.frame-phone .data-table { background: none; border: 0; border-radius: 0; overflow: visible; }
+.frame-phone .data-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.frame-phone .data-table tr {
+  margin-bottom: var(--sc-space-2);
+  padding: var(--sc-space-2);
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-card);
+  box-shadow: var(--sc-shadow-card);
+}
+.frame-phone .data-table td { padding: 0; border: 0; width: auto; }
+.frame-phone .data-table tbody tr:hover td { background: none; }
+.frame-phone .data-table td + td { margin-top: var(--sc-space-1); }
+.frame-phone .data-table td::before {
+  content: attr(data-label);
+  display: block;
+  color: var(--sc-muted);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+}
+.frame-phone .data-table td.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-space-1);
+  margin-top: var(--sc-space-2);
+  padding-top: var(--sc-space-2);
+  border-top: 1px solid var(--sc-border);
+  white-space: normal;
+}
+.frame-phone .data-table td.row-actions::before { display: none; }
+.frame-phone .row-actions > * + * { margin-left: 0; }
+
+.badge {
+  display: inline-block;
+  padding: 0 var(--sc-space-1);
+  border-radius: var(--sc-radius-control);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+  line-height: 1.5rem;
+  white-space: nowrap;
+}
+.badge-success { background: var(--sc-success-tint); color: var(--sc-success); }
+.badge-muted { background: var(--sc-neutral-tint); color: var(--sc-muted); }
+.badge-neutral { background: var(--sc-neutral-tint); color: var(--sc-text); }
+.badge-info { background: var(--sc-primary-tint); color: var(--sc-primary); }
+
+.empty-state {
+  max-width: var(--sc-measure);
+  padding: var(--sc-space-4) var(--sc-space-3);
+  background: var(--sc-surface);
+  border: 1px dashed var(--sc-border);
+  border-radius: var(--sc-radius-card);
+}
+.empty-state-message { margin: 0; font-weight: var(--sc-weight-semibold); }
+.empty-state-hint { margin: var(--sc-space-1) 0 0; color: var(--sc-muted); }
+
+.confirmation { max-width: var(--sc-measure); }
+.confirmation .notice { margin-bottom: var(--sc-space-3); }
+.confirmation-refused .form-actions { margin-top: 0; }
+
+.theme-switch { margin: 0; }
+.theme-switch fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.theme-switch .button-row { flex-wrap: nowrap; }
+.theme-switch button { flex: 1; padding-inline: var(--sc-space-1); }
+.theme-switch [aria-pressed="true"] {
+  background: var(--sc-primary-tint) !important;
+  border: 0.125rem solid var(--sc-primary) !important;
+  color: var(--sc-text) !important;
+  font-weight: var(--sc-weight-bold);
+}
+.signin-theme { margin-top: var(--sc-space-5); padding-top: var(--sc-space-3); border-top: 1px solid var(--sc-border); max-width: 20rem; }
+.frame .signin-alternatives { margin-top: var(--sc-space-3); }
+</style>
+</head>
+<body class="mockup">
+<header>
+<h1 class="mockup-title">Student Competitions: design mockup</h1>
+<p class="mockup-note">Milestone 10, for the product owner's approval (spec User Story 1). Static and self-contained:
+open it from the file system, no server, no script, nothing loaded from another site. Each page is
+shown at 375 px and 1280 px, light and dark. Best viewed in a window at least 1360 px wide.
+The look of buttons and form controls is drafted here; in the application it comes from Pico.css,
+restyled through its variables with the same tokens.</p>
+</header>
+<section id="identity">
+<h2>0. Identity</h2>
+<p class="mockup-note">The wordmark is text, set in Open Sans 700 beside the mark. The favicon is the same mark with fixed colours.</p>
+<div class="frames">
+<div>
+<p class="frame-caption">Top bar · light and dark</p>
+<div class="frame frame-desktop" data-theme="light" style="min-height: 0"><header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a></div></header></div>
+<div class="frame frame-desktop" data-theme="dark" style="min-height: 0; margin-top: 16px"><header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a></div></header></div>
+</div>
+<div class="frame frame-desktop" data-theme="light" style="min-height: 0"><main class="container">
+<div class="identity-row">
+  <div><svg class="logo-mark logo-mark-lg" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg></div><div><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg></div><div><svg class="logo-mark logo-mark-sm" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg></div>
+  <div class="favicons"><p class="frame-caption">Favicon at 16 and 32 px (PNG and SVG files)</p>
+    <img src="../../../app/static/img/favicon-32.png" width="16" height="16" alt="Favicon at 16 px">
+    <img src="../../../app/static/img/favicon-32.png" width="32" height="32" alt="Favicon at 32 px">
+    <img src="../../../app/static/img/favicon.svg" width="16" height="16" alt="SVG favicon at 16 px">
+    <img src="../../../app/static/img/favicon.svg" width="32" height="32" alt="SVG favicon at 32 px">
+    <img src="../../../app/static/img/apple-touch-icon.png" width="60" height="60" alt="Apple touch icon">
+  </div>
+</div>
+<div class="type-scale">
+<h1>Heading 1 · 28 px phone, 32 px from 768 px, bold</h1>
+<h2>Heading 2 · 22 px phone, 24 px from 768 px, bold</h2>
+<h3>Heading 3 · 20 px, semibold</h3>
+<h4>Heading 4 · 18 px, semibold</h4>
+<p>Body text · 16 px on a phone, 18 px from 1024 px, line height 1.5. Ukrainian: Учні змагаються онлайн. Emphasis is <strong>bold</strong>, never italic.</p>
+<p><small>Small · 14 px, for the footer, hints and badges only.</small></p>
+</div>
+</main></div>
+<div>
+<p class="frame-caption">Palette · light</p>
+<div class="frame frame-desktop" data-theme="light" style="min-height: 0">
+<main class="container">
+  <h3>Given (spec FR-010)</h3><div class="swatches"><div class="swatch"><div class="swatch-chip" style="background: var(--sc-page)"></div><div class="swatch-label"><code>--sc-page</code>#f4f6fb</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-surface)"></div><div class="swatch-label"><code>--sc-surface</code>#ffffff</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-text)"></div><div class="swatch-label"><code>--sc-text</code>#172033</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-muted)"></div><div class="swatch-label"><code>--sc-muted</code>#556070</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-border)"></div><div class="swatch-label"><code>--sc-border</code>#dde3ee</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-top-bar)"></div><div class="swatch-label"><code>--sc-top-bar</code>#16337a</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-primary)"></div><div class="swatch-label"><code>--sc-primary</code>#1f56d6</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-primary)"></div><div class="swatch-label"><code>--sc-on-primary</code>#ffffff</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-primary-tint)"></div><div class="swatch-label"><code>--sc-primary-tint</code>#e7eefc</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-accent)"></div><div class="swatch-label"><code>--sc-accent</code>#f2a516</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-success)"></div><div class="swatch-label"><code>--sc-success</code>#17803d</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-success-tint)"></div><div class="swatch-label"><code>--sc-success-tint</code>#e5f5ea</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-danger)"></div><div class="swatch-label"><code>--sc-danger</code>#c0392b</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-danger-tint)"></div><div class="swatch-label"><code>--sc-danger-tint</code>#fdf0ee</div></div></div>
+  <h3 style="margin-top: 32px">Derived (data-model §2.2)</h3><div class="swatches"><div class="swatch"><div class="swatch-chip" style="background: var(--sc-primary-hover)"></div><div class="swatch-label"><code>--sc-primary-hover</code>#1a47b3</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-focus-ring)"></div><div class="swatch-label"><code>--sc-focus-ring</code>rgb(31 86 214 / 0.4)</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-danger-hover)"></div><div class="swatch-label"><code>--sc-danger-hover</code>#a02f23</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-danger)"></div><div class="swatch-label"><code>--sc-on-danger</code>#ffffff</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-success)"></div><div class="swatch-label"><code>--sc-on-success</code>#ffffff</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-accent)"></div><div class="swatch-label"><code>--sc-on-accent</code>#172033</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-top-bar)"></div><div class="swatch-label"><code>--sc-on-top-bar</code>#ffffff</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-top-bar-muted)"></div><div class="swatch-label"><code>--sc-on-top-bar-muted</code>#c3cfee</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-neutral-tint)"></div><div class="swatch-label"><code>--sc-neutral-tint</code>#eef1f6</div></div></div>
+</main></div></div><div>
+<p class="frame-caption">Palette · dark</p>
+<div class="frame frame-desktop" data-theme="dark" style="min-height: 0">
+<main class="container">
+  <h3>Given (spec FR-010)</h3><div class="swatches"><div class="swatch"><div class="swatch-chip" style="background: var(--sc-page)"></div><div class="swatch-label"><code>--sc-page</code>#0d1424</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-surface)"></div><div class="swatch-label"><code>--sc-surface</code>#151f35</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-text)"></div><div class="swatch-label"><code>--sc-text</code>#e6eaf2</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-muted)"></div><div class="swatch-label"><code>--sc-muted</code>#9aa6bd</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-border)"></div><div class="swatch-label"><code>--sc-border</code>#26324d</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-top-bar)"></div><div class="swatch-label"><code>--sc-top-bar</code>#111a2e</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-primary)"></div><div class="swatch-label"><code>--sc-primary</code>#6c9cff</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-primary)"></div><div class="swatch-label"><code>--sc-on-primary</code>#0d1424</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-primary-tint)"></div><div class="swatch-label"><code>--sc-primary-tint</code>#1d2c4f</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-accent)"></div><div class="swatch-label"><code>--sc-accent</code>#f5b83d</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-success)"></div><div class="swatch-label"><code>--sc-success</code>#5fcf86</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-success-tint)"></div><div class="swatch-label"><code>--sc-success-tint</code>#13291c</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-danger)"></div><div class="swatch-label"><code>--sc-danger</code>#ff8a7a</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-danger-tint)"></div><div class="swatch-label"><code>--sc-danger-tint</code>#341b19</div></div></div>
+  <h3 style="margin-top: 32px">Derived (data-model §2.2)</h3><div class="swatches"><div class="swatch"><div class="swatch-chip" style="background: var(--sc-primary-hover)"></div><div class="swatch-label"><code>--sc-primary-hover</code>#8fb3ff</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-focus-ring)"></div><div class="swatch-label"><code>--sc-focus-ring</code>rgb(108 156 255 / 0.45)</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-danger-hover)"></div><div class="swatch-label"><code>--sc-danger-hover</code>#ffa597</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-danger)"></div><div class="swatch-label"><code>--sc-on-danger</code>#0d1424</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-success)"></div><div class="swatch-label"><code>--sc-on-success</code>#0d1424</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-accent)"></div><div class="swatch-label"><code>--sc-on-accent</code>#0d1424</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-top-bar)"></div><div class="swatch-label"><code>--sc-on-top-bar</code>#e6eaf2</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-on-top-bar-muted)"></div><div class="swatch-label"><code>--sc-on-top-bar-muted</code>#9aa6bd</div></div><div class="swatch"><div class="swatch-chip" style="background: var(--sc-neutral-tint)"></div><div class="swatch-label"><code>--sc-neutral-tint</code>#1b253b</div></div></div>
+</main></div></div>
+</div>
+</section><section id="page-signin"><h2>1. Sign in</h2><p class="mockup-note">Signed out. The theme switch sits under the form; its pressed button is the frame's theme.</p><div class="frames"><div>
+<p class="frame-caption">375 px · light</p>
+<div class="frame frame-phone" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a></div></header>
+
+<main class="container"><div class="narrow">
+  <div class="page-heading"><h1>Sign in</h1></div>
+  <p>Enter your email address and we will send you a sign-in code.</p>
+  <form method="post" action="/login">
+    <label for="email-light-375">Email address</label>
+    <input type="email" id="email-light-375" name="email" autocomplete="email" value="">
+    <div class="form-actions"><button type="submit">Send code</button></div>
+  </form>
+  <p class="signin-alternatives"><a href="/data-deletion">Delete my data</a></p>
+  <div class="signin-theme"><form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form></div>
+</div></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">375 px · dark</p>
+<div class="frame frame-phone" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a></div></header>
+
+<main class="container"><div class="narrow">
+  <div class="page-heading"><h1>Sign in</h1></div>
+  <p>Enter your email address and we will send you a sign-in code.</p>
+  <form method="post" action="/login">
+    <label for="email-dark-375">Email address</label>
+    <input type="email" id="email-dark-375" name="email" autocomplete="email" value="">
+    <div class="form-actions"><button type="submit">Send code</button></div>
+  </form>
+  <p class="signin-alternatives"><a href="/data-deletion">Delete my data</a></p>
+  <div class="signin-theme"><form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form></div>
+</div></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · light</p>
+<div class="frame frame-desktop" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a></div></header>
+
+<main class="container"><div class="narrow">
+  <div class="page-heading"><h1>Sign in</h1></div>
+  <p>Enter your email address and we will send you a sign-in code.</p>
+  <form method="post" action="/login">
+    <label for="email-light-1280">Email address</label>
+    <input type="email" id="email-light-1280" name="email" autocomplete="email" value="">
+    <div class="form-actions"><button type="submit">Send code</button></div>
+  </form>
+  <p class="signin-alternatives"><a href="/data-deletion">Delete my data</a></p>
+  <div class="signin-theme"><form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form></div>
+</div></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · dark</p>
+<div class="frame frame-desktop" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a></div></header>
+
+<main class="container"><div class="narrow">
+  <div class="page-heading"><h1>Sign in</h1></div>
+  <p>Enter your email address and we will send you a sign-in code.</p>
+  <form method="post" action="/login">
+    <label for="email-dark-1280">Email address</label>
+    <input type="email" id="email-dark-1280" name="email" autocomplete="email" value="">
+    <div class="form-actions"><button type="submit">Send code</button></div>
+  </form>
+  <p class="signin-alternatives"><a href="/data-deletion">Delete my data</a></p>
+  <div class="signin-theme"><form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form></div>
+</div></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div></div></section><section id="page-home"><h2>2. Home</h2><p class="mockup-note">An administrator who is also a teacher, acting as administrator. The user menu is open in the 375 px light and the 1280 px dark frame; it opens and closes in every frame on click, with no script.</p><div class="frames"><div>
+<p class="frame-caption">375 px · light</p>
+<div class="frame frame-phone" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu" open>
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+
+<main class="container"><h1>Welcome to Student Competitions</h1>
+<p class="lead">Online knowledge competitions for students.</p>
+<section aria-labelledby="areas-light-375">
+  <h2 id="areas-light-375">Your areas</h2>
+  <ul class="card-grid"><li><article class="card"><h3><a href="/admin" class="card-link">Administrator area</a></h3><p class="card-description">Manage teachers, educational institutions and subjects.</p></article></li><li><article class="card"><h3><a href="/staff" class="card-link">Staff area</a></h3><p class="card-description">Pages shared by administrators and teachers.</p></article></li></ul>
+</section>
+<section aria-labelledby="questions-light-375">
+  <h2 id="questions-light-375">Sample questions</h2>
+  <ol class="question-list"><li>What is the capital of Ukraine?</li><li>How many sides does a hexagon have?</li><li>Name the process by which plants turn sunlight into energy.</li></ol>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p><p>Database: PostgreSQL · schema revision <code>0009_classes_students</code> · boot #12</p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">375 px · dark</p>
+<div class="frame frame-phone" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+
+<main class="container"><h1>Welcome to Student Competitions</h1>
+<p class="lead">Online knowledge competitions for students.</p>
+<section aria-labelledby="areas-dark-375">
+  <h2 id="areas-dark-375">Your areas</h2>
+  <ul class="card-grid"><li><article class="card"><h3><a href="/admin" class="card-link">Administrator area</a></h3><p class="card-description">Manage teachers, educational institutions and subjects.</p></article></li><li><article class="card"><h3><a href="/staff" class="card-link">Staff area</a></h3><p class="card-description">Pages shared by administrators and teachers.</p></article></li></ul>
+</section>
+<section aria-labelledby="questions-dark-375">
+  <h2 id="questions-dark-375">Sample questions</h2>
+  <ol class="question-list"><li>What is the capital of Ukraine?</li><li>How many sides does a hexagon have?</li><li>Name the process by which plants turn sunlight into energy.</li></ol>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p><p>Database: PostgreSQL · schema revision <code>0009_classes_students</code> · boot #12</p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · light</p>
+<div class="frame frame-desktop" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+
+<main class="container"><h1>Welcome to Student Competitions</h1>
+<p class="lead">Online knowledge competitions for students.</p>
+<section aria-labelledby="areas-light-1280">
+  <h2 id="areas-light-1280">Your areas</h2>
+  <ul class="card-grid"><li><article class="card"><h3><a href="/admin" class="card-link">Administrator area</a></h3><p class="card-description">Manage teachers, educational institutions and subjects.</p></article></li><li><article class="card"><h3><a href="/staff" class="card-link">Staff area</a></h3><p class="card-description">Pages shared by administrators and teachers.</p></article></li></ul>
+</section>
+<section aria-labelledby="questions-light-1280">
+  <h2 id="questions-light-1280">Sample questions</h2>
+  <ol class="question-list"><li>What is the capital of Ukraine?</li><li>How many sides does a hexagon have?</li><li>Name the process by which plants turn sunlight into energy.</li></ol>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p><p>Database: PostgreSQL · schema revision <code>0009_classes_students</code> · boot #12</p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · dark</p>
+<div class="frame frame-desktop" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu" open>
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+
+<main class="container"><h1>Welcome to Student Competitions</h1>
+<p class="lead">Online knowledge competitions for students.</p>
+<section aria-labelledby="areas-dark-1280">
+  <h2 id="areas-dark-1280">Your areas</h2>
+  <ul class="card-grid"><li><article class="card"><h3><a href="/admin" class="card-link">Administrator area</a></h3><p class="card-description">Manage teachers, educational institutions and subjects.</p></article></li><li><article class="card"><h3><a href="/staff" class="card-link">Staff area</a></h3><p class="card-description">Pages shared by administrators and teachers.</p></article></li></ul>
+</section>
+<section aria-labelledby="questions-dark-1280">
+  <h2 id="questions-dark-1280">Sample questions</h2>
+  <ol class="question-list"><li>What is the capital of Ukraine?</li><li>How many sides does a hexagon have?</li><li>Name the process by which plants turn sunlight into energy.</li></ol>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p><p>Database: PostgreSQL · schema revision <code>0009_classes_students</code> · boot #12</p></div></footer>
+</div>
+</div></div></section><section id="page-subjects"><h2>3. Subjects list</h2><p class="mockup-note">Row actions are the same size and sit together at the end of the row. Below 768 px each row becomes a card of labelled values. Activate is secondary; Deactivate and Delete are destructive.</p><div class="frames"><div>
+<p class="frame-caption">375 px · light</p>
+<div class="frame frame-phone" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><div class="page-heading"><h1>Subjects</h1><a href="/admin/subjects/new" role="button">Create subject</a></div>
+<table class="data-table">
+  <thead><tr><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+  <tbody><tr><td data-label="Name">Physics</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/1/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/1/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/1/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">Mathematics</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/2/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/2/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/2/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">Ukrainian language and literature</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/3/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/3/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/3/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">History of science and technology in the twentieth century, an interdisciplinary elective</td><td data-label="Status"><span class="badge badge-muted">Deactivated</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/4/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/4/activate" class="inline-form"><button type="submit" class="secondary outline small">Activate</button></form><a href="/admin/subjects/4/delete" role="button" class="destructive outline small">Delete</a></td></tr></tbody>
+</table></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">375 px · dark</p>
+<div class="frame frame-phone" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><div class="page-heading"><h1>Subjects</h1><a href="/admin/subjects/new" role="button">Create subject</a></div>
+<table class="data-table">
+  <thead><tr><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+  <tbody><tr><td data-label="Name">Physics</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/1/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/1/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/1/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">Mathematics</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/2/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/2/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/2/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">Ukrainian language and literature</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/3/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/3/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/3/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">History of science and technology in the twentieth century, an interdisciplinary elective</td><td data-label="Status"><span class="badge badge-muted">Deactivated</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/4/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/4/activate" class="inline-form"><button type="submit" class="secondary outline small">Activate</button></form><a href="/admin/subjects/4/delete" role="button" class="destructive outline small">Delete</a></td></tr></tbody>
+</table></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · light</p>
+<div class="frame frame-desktop" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><div class="page-heading"><h1>Subjects</h1><a href="/admin/subjects/new" role="button">Create subject</a></div>
+<table class="data-table">
+  <thead><tr><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+  <tbody><tr><td data-label="Name">Physics</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/1/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/1/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/1/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">Mathematics</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/2/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/2/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/2/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">Ukrainian language and literature</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/3/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/3/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/3/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">History of science and technology in the twentieth century, an interdisciplinary elective</td><td data-label="Status"><span class="badge badge-muted">Deactivated</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/4/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/4/activate" class="inline-form"><button type="submit" class="secondary outline small">Activate</button></form><a href="/admin/subjects/4/delete" role="button" class="destructive outline small">Delete</a></td></tr></tbody>
+</table></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · dark</p>
+<div class="frame frame-desktop" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><div class="page-heading"><h1>Subjects</h1><a href="/admin/subjects/new" role="button">Create subject</a></div>
+<table class="data-table">
+  <thead><tr><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+  <tbody><tr><td data-label="Name">Physics</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/1/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/1/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/1/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">Mathematics</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/2/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/2/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/2/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">Ukrainian language and literature</td><td data-label="Status"><span class="badge badge-success">Active</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/3/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/3/deactivate" class="inline-form"><button type="submit" class="destructive outline small">Deactivate</button></form><a href="/admin/subjects/3/delete" role="button" class="destructive outline small">Delete</a></td></tr><tr><td data-label="Name">History of science and technology in the twentieth century, an interdisciplinary elective</td><td data-label="Status"><span class="badge badge-muted">Deactivated</span></td><td class="row-actions" data-label=""><a href="/admin/subjects/4/rename" role="button" class="secondary outline small">Rename</a><form method="post" action="/admin/subjects/4/activate" class="inline-form"><button type="submit" class="secondary outline small">Activate</button></form><a href="/admin/subjects/4/delete" role="button" class="destructive outline small">Delete</a></td></tr></tbody>
+</table></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div></div></section><section id="page-subject-form"><h2>4. New subject, with the duplicate-name error</h2><p class="mockup-note">Reached from Create subject. The page heading keeps today's text, “New subject”. The summary link moves focus to the field.</p><div class="frames"><div>
+<p class="frame-caption">375 px · light</p>
+<div class="frame frame-phone" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<div class="page-heading"><h1>New subject</h1></div>
+<div class="error-summary" role="alert" aria-labelledby="es-name-light-375" tabindex="-1">
+  <h2 id="es-name-light-375">There is a problem</h2>
+  <ul><li><a href="#name-light-375">A subject named “Physics” already exists.</a></li></ul>
+</div>
+<form method="post" action="/admin/subjects">
+  <label for="name-light-375">Name</label>
+  <small id="name-light-375-error" class="field-error">A subject named “Physics” already exists.</small>
+  <input type="text" id="name-light-375" name="name" maxlength="200" value="Physics" aria-invalid="true" aria-describedby="name-light-375-error">
+  <div class="form-actions"><button type="submit">Save</button><a href="/admin/subjects">Cancel</a></div>
+</form></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">375 px · dark</p>
+<div class="frame frame-phone" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<div class="page-heading"><h1>New subject</h1></div>
+<div class="error-summary" role="alert" aria-labelledby="es-name-dark-375" tabindex="-1">
+  <h2 id="es-name-dark-375">There is a problem</h2>
+  <ul><li><a href="#name-dark-375">A subject named “Physics” already exists.</a></li></ul>
+</div>
+<form method="post" action="/admin/subjects">
+  <label for="name-dark-375">Name</label>
+  <small id="name-dark-375-error" class="field-error">A subject named “Physics” already exists.</small>
+  <input type="text" id="name-dark-375" name="name" maxlength="200" value="Physics" aria-invalid="true" aria-describedby="name-dark-375-error">
+  <div class="form-actions"><button type="submit">Save</button><a href="/admin/subjects">Cancel</a></div>
+</form></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · light</p>
+<div class="frame frame-desktop" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<div class="page-heading"><h1>New subject</h1></div>
+<div class="error-summary" role="alert" aria-labelledby="es-name-light-1280" tabindex="-1">
+  <h2 id="es-name-light-1280">There is a problem</h2>
+  <ul><li><a href="#name-light-1280">A subject named “Physics” already exists.</a></li></ul>
+</div>
+<form method="post" action="/admin/subjects">
+  <label for="name-light-1280">Name</label>
+  <small id="name-light-1280-error" class="field-error">A subject named “Physics” already exists.</small>
+  <input type="text" id="name-light-1280" name="name" maxlength="200" value="Physics" aria-invalid="true" aria-describedby="name-light-1280-error">
+  <div class="form-actions"><button type="submit">Save</button><a href="/admin/subjects">Cancel</a></div>
+</form></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · dark</p>
+<div class="frame frame-desktop" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<div class="page-heading"><h1>New subject</h1></div>
+<div class="error-summary" role="alert" aria-labelledby="es-name-dark-1280" tabindex="-1">
+  <h2 id="es-name-dark-1280">There is a problem</h2>
+  <ul><li><a href="#name-dark-1280">A subject named “Physics” already exists.</a></li></ul>
+</div>
+<form method="post" action="/admin/subjects">
+  <label for="name-dark-1280">Name</label>
+  <small id="name-dark-1280-error" class="field-error">A subject named “Physics” already exists.</small>
+  <input type="text" id="name-dark-1280" name="name" maxlength="200" value="Physics" aria-invalid="true" aria-describedby="name-dark-1280-error">
+  <div class="form-actions"><button type="submit">Save</button><a href="/admin/subjects">Cancel</a></div>
+</form></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div></div></section><section id="page-delete"><h2>5a. Delete “Physics”? (not in use)</h2><div class="frames"><div>
+<p class="frame-caption">375 px · light</p>
+<div class="frame frame-phone" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<section class="confirmation">
+  <h1>Delete “Physics”?</h1>
+  <p>Deleting a subject cannot be undone.</p>
+  <div class="form-actions">
+    <form method="post" action="/admin/subjects/1/delete" class="inline-form"><button type="submit" class="destructive">Delete</button></form>
+    <a href="/admin/subjects">Cancel</a>
+  </div>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">375 px · dark</p>
+<div class="frame frame-phone" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<section class="confirmation">
+  <h1>Delete “Physics”?</h1>
+  <p>Deleting a subject cannot be undone.</p>
+  <div class="form-actions">
+    <form method="post" action="/admin/subjects/1/delete" class="inline-form"><button type="submit" class="destructive">Delete</button></form>
+    <a href="/admin/subjects">Cancel</a>
+  </div>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · light</p>
+<div class="frame frame-desktop" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<section class="confirmation">
+  <h1>Delete “Physics”?</h1>
+  <p>Deleting a subject cannot be undone.</p>
+  <div class="form-actions">
+    <form method="post" action="/admin/subjects/1/delete" class="inline-form"><button type="submit" class="destructive">Delete</button></form>
+    <a href="/admin/subjects">Cancel</a>
+  </div>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · dark</p>
+<div class="frame frame-desktop" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<section class="confirmation">
+  <h1>Delete “Physics”?</h1>
+  <p>Deleting a subject cannot be undone.</p>
+  <div class="form-actions">
+    <form method="post" action="/admin/subjects/1/delete" class="inline-form"><button type="submit" class="destructive">Delete</button></form>
+    <a href="/admin/subjects">Cancel</a>
+  </div>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div></div></section><section id="page-refusal"><h2>5b. Delete “Physics”? (in use: the refusal offers Deactivate)</h2><div class="frames"><div>
+<p class="frame-caption">375 px · light</p>
+<div class="frame frame-phone" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<section class="confirmation confirmation-refused">
+  <h1>Delete “Physics”?</h1>
+  <div class="notice notice-info" role="status"><p>“Physics” is in use and cannot be deleted. You can deactivate it instead.</p></div>
+  <div class="form-actions">
+    <form method="post" action="/admin/subjects/1/deactivate" class="inline-form"><button type="submit" class="destructive">Deactivate</button></form>
+    <a href="/admin/subjects">Back to the subjects</a>
+  </div>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">375 px · dark</p>
+<div class="frame frame-phone" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<section class="confirmation confirmation-refused">
+  <h1>Delete “Physics”?</h1>
+  <div class="notice notice-info" role="status"><p>“Physics” is in use and cannot be deleted. You can deactivate it instead.</p></div>
+  <div class="form-actions">
+    <form method="post" action="/admin/subjects/1/deactivate" class="inline-form"><button type="submit" class="destructive">Deactivate</button></form>
+    <a href="/admin/subjects">Back to the subjects</a>
+  </div>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · light</p>
+<div class="frame frame-desktop" data-theme="light">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="true">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="false">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<section class="confirmation confirmation-refused">
+  <h1>Delete “Physics”?</h1>
+  <div class="notice notice-info" role="status"><p>“Physics” is in use and cannot be deleted. You can deactivate it instead.</p></div>
+  <div class="form-actions">
+    <form method="post" action="/admin/subjects/1/deactivate" class="inline-form"><button type="submit" class="destructive">Deactivate</button></form>
+    <a href="/admin/subjects">Back to the subjects</a>
+  </div>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div><div>
+<p class="frame-caption">1280 px · dark</p>
+<div class="frame frame-desktop" data-theme="dark">
+<header class="top-bar"><div class="container"><a href="/" class="brand"><svg class="logo-mark logo-mark-md" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg><span class="brand-name">Student Competitions</span></a>
+<span class="brand-role">Administrator</span>
+<details class="user-menu">
+  <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span class="user-menu-email">olena.kovalenko@school.example</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">olena.kovalenko@school.example</a>
+    <form method="post" action="/role"><span class="menu-label">Switch to</span>
+      <div class="button-row"><button type="submit" name="role" value="teacher" class="secondary small">Teacher</button></div></form>
+    <form method="post" action="/theme" class="theme-switch"><fieldset><legend>Theme</legend><input type="hidden" name="next" value="/"><div class="button-row"><button type="submit" name="theme" value="light" class="secondary small" aria-pressed="false">Light</button><button type="submit" name="theme" value="dark" class="secondary small" aria-pressed="true">Dark</button><button type="submit" name="theme" value="device" class="secondary small" aria-pressed="false">Device</button></div></fieldset></form>
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details></div></header>
+<nav class="area-tabs" aria-label="Administrator area"><div class="container"><ul><li><a href="/admin/teachers">Teachers</a></li><li><a href="/admin/institutions">Educational institutions</a></li><li><a href="/admin/subjects" aria-current="page">Subjects</a></li></ul></div></nav>
+<main class="container"><a href="/admin/subjects" class="back-link">← Back to the subjects</a>
+<section class="confirmation confirmation-refused">
+  <h1>Delete “Physics”?</h1>
+  <div class="notice notice-info" role="status"><p>“Physics” is in use and cannot be deleted. You can deactivate it instead.</p></div>
+  <div class="form-actions">
+    <form method="post" action="/admin/subjects/1/deactivate" class="inline-form"><button type="submit" class="destructive">Deactivate</button></form>
+    <a href="/admin/subjects">Back to the subjects</a>
+  </div>
+</section></main>
+<footer class="site-footer"><div class="container"><p>Student Competitions v0.1.0 · build <code title="3f9c2e1">3f9c2e1</code></p></div></footer>
+</div>
+</div></div></section>
+</body>
+</html>

@@ -28,7 +28,9 @@ Each principle is followed by its rules and the sources it rests on.
 ### Calm and focused
 
 - Content comes first. No decoration competes with it, and there is no advertising or promotion.
-- Nothing moves or blinks. Transitions, where there are any, are subtle.
+- Nothing moves or blinks. Transitions, where there are any, are subtle. The one exception is the
+  loading bar: it moves while the next page is on its way, so a slow page never looks broken, and
+  it stands still when the device asks for reduced motion (milestone 10.1).
 - One primary action per page or section, so the next step is obvious.
 
 _Sources_: Nielsen Norman Group on visual hierarchy and on how children use websites (they are
@@ -137,6 +139,9 @@ the mapping sets from a token). The only literal `px` values outside the token b
 | `--sc-touch-target` | 44 px, the minimum height of a button or menu entry |
 | `--sc-action-width` | 7.5 rem, the minimum width of a row action |
 | `--sc-border-width` / `-strong` / `-accent` | 1 px, 2 px and 4 px borders |
+| `--sc-frame-clearance` | 5.5 rem, the room kept above a scroll or focus target on a page without area tabs, so the pinned frame never covers it |
+| `--sc-frame-clearance-tabs` | the same on an area page: 11 rem below 768 px (the tabs may wrap), 8 rem from 768 px |
+| `--sc-field-clearance` | 5 rem kept above a form control, so its label and error stay in view too |
 
 The root font size stays at 16 px at every width, so every `rem` stays on the grid; only the body
 text grows from 1024 px.
@@ -145,25 +150,46 @@ text grows from 1024 px.
 
 Every page renders the same frame from `layouts/base.html`:
 
-1. a **skip link**, "Skip to main content", visible when it has focus;
-2. the **top bar** ([gallery: frame](/admin/components#frame)): the logo mark and the wordmark
-   linking home, the current role's label, and the **user menu**;
-3. the **area tabs** of the administrator or teacher area, if the page is in one;
+1. a **skip link**, "Skip to main content", visible when it has focus, shown above the frame;
+2. the **frame**, `<div class="frame">`, which holds:
+   1. the **top bar** ([gallery: frame](/admin/components#frame)): the logo mark and the wordmark
+      linking home, the current role's label, and the **user menu**;
+   2. the **area tabs** of the administrator or teacher area, if the page is in one;
+   3. the **loading bar**, hidden until a page load is pending;
 4. `<main>`, at the one content width;
 5. the **footer**: the version and build, and on the home page the database line.
 
 The user menu is a native `<details>`, so it opens without JavaScript. It holds, in order, the
 email linking to the profile, the role switch (for a person with several roles), the theme switch
-and **Log out**.
+and **Log out**. When it is taller than the space below the top bar, it scrolls inside itself.
+
+**The pinned frame** (milestone 10.1): on a screen at least 600 px tall, the frame stays at the top
+while the page scrolls, so the tabs and the user menu are always in reach. The page still scrolls
+as a whole: nothing gets its own scroll area, so the address bar hides on a phone, pull-to-refresh
+works, Back returns to the same place, the keyboard scrolls the page and printing shows everything.
+On a shorter screen (a phone held sideways, or a page zoomed in far) and in print, the frame
+scrolls away with the page.
+
+**Keeping targets in view**: the pinned frame never covers what the page moves to. The page keeps
+`--sc-frame-clearance` (or `--sc-frame-clearance-tabs` on an area page) above every target of a
+`#` link, such as the skip link and the error summary, and above every element that gets keyboard
+focus; a form control keeps `--sc-field-clearance`, so its label and error stay in view (WCAG 2.2,
+2.4.11). The clearances are the tallest frames measured, plus room to spare: a new tab, a longer
+tab label or a taller top bar must be measured again at 360 px and 375 px width against them.
+
+**The loading feedback**: the base layout loads one script, `loading-feedback.js`, on every page.
+It shows the loading bar and the busy button (section 5) while the next page is on its way. Pages
+add nothing; without JavaScript, links and forms work as before.
 
 **Inside `<main>`**, in order: the back link (on every page below an area's main page), the page
 heading, the error summary or a notice, then the content. A page has one `h1`; sections are `h2`.
 One-form public pages (sign-in, code entry, role choice, data deletion) use the `.narrow` centred
 column.
 
-**Breakpoints**: two, written as literals. Below `768px`: tables become cards, the user menu folds
-to its icon, the selectors stack, and h1 and h2 step down a size. From `1024px`: body text is
-18 px.
+**Breakpoints**: three, written as literals. Below `768px`: tables become cards, the user menu
+folds to its icon, the selectors stack, the area tabs drop to the touch-target height, and h1 and
+h2 step down a size. From `1024px`: body text is 18 px. From a height of `600px` (on screen, not in
+print): the frame is pinned.
 
 ## 5. Components
 
@@ -185,8 +211,13 @@ The full contract, with parameters and emitted markup, is
   is "Back to {parent}": "Back to the subjects", "Back to “Kyiv”".
 - **`page_heading(title, action=None)`**: the page's `h1`, with at most one primary link button
   beside it, for example `page_heading("Subjects", ("Create subject", "/admin/subjects/new"))`.
+- **`loading_bar(active=False)`**: rendered by the layout as the frame's last child; never called
+  by a page. A thin primary line hanging just under the frame. `loading-feedback.js` shows it when
+  a link to another page of the application is followed or a form is sent, and the next page has
+  not arrived within 200 ms. It starts for nothing else: not for a link opened in a new tab, a link
+  to another site, a `#` link or a form the browser refuses. With reduced motion it stands still.
 
-_Gallery_: [frame](/admin/components#frame).
+_Gallery_: [frame](/admin/components#frame), [loading feedback](/admin/components#loading).
 
 ### Buttons (`components/button.html`)
 
@@ -198,6 +229,13 @@ _Gallery_: [frame](/admin/components#frame).
 
 `outline=True` and `small=True` give the row-action look. See section 6 for the kinds.
 _Gallery_: [buttons](/admin/components#buttons).
+
+**Busy button**: `button(…, busy=True)` renders `aria-busy="true"`, which shows Pico's spinner,
+redrawn in the button's own text colour. Pages never pass it: `loading-feedback.js` marks the
+button that sent a form once the next page has taken 200 ms, and a form that changes something
+cannot be sent again until that page arrives. A busy button is never `disabled`, so its value is
+still sent (the role switch and the theme switch rely on it).
+_Gallery_: [loading feedback](/admin/components#loading).
 
 ### Card (`components/card.html`)
 
@@ -336,6 +374,10 @@ Below 768 px:
 - **The selectors stack**: the list above its detail, the chained lists one under another.
 - **Everything wraps**: long names, tabs and buttons wrap rather than push the page wider. No page
   scrolls sideways at 375 px.
+- **The area tabs are 44 px tall** (the touch target) and may wrap onto two rows, which keeps the
+  pinned frame under a quarter of a 375 × 667 screen.
+- **Held sideways**, under 600 px tall, a phone does not pin the frame: it scrolls away, so the
+  content keeps the small screen.
 
 Check every new page at 375 px.
 
@@ -363,10 +405,25 @@ Light and dark are both complete; **Device**, the default, follows the operating
 - no inline `style`;
 - nothing loaded from another site: no absolute `src`, `href` or `action`, no `@import`, and
   `url()` only under `/static/`;
-- no literal colour or pixel length outside the token block, apart from the two breakpoints;
+- no literal colour or pixel length outside the token block, apart from the breakpoints;
 - body text and line-height tokens at the minimums of section 2;
 - emphasis in bold only: no `<i>` or `<u>`, no italic, capitalised or justified text;
-- no page-specific class from the milestone 9 stylesheet.
+- no page-specific class from the milestone 9 stylesheet;
+- the busy spinner drawn in the button's own colour, with Pico's white filter cancelled.
+
+`tests/unit/test_frame_stylesheet.py` enforces the pinned frame: `body > .frame` is the only sticky
+element, and only on a screen at least 600 px tall; the scroll padding and the field margin come
+from the clearance tokens; the skip link stays above the frame; the loading bar stands still under
+reduced motion and is hidden in print; the user menu scrolls inside itself; the phone tabs keep the
+touch-target height.
+
+`tests/unit/test_loading_script.py` reads `loading-feedback.js` as text. It checks that the script
+imports, fetches and stores nothing and names no other site; that it listens for links, forms and
+Back or Forward restores, with a 200 ms delay; that it never disables a control (a disabled button
+would drop its value from the form); and that it stays small. `tests/integration/test_layout.py`
+checks that every kind of page loads it once and has the one frame block with a hidden bar. How the
+bar, the busy button and the pinned frame behave in a browser is checked by hand from the
+milestone 10.1 quickstart, until end-to-end tests arrive in milestone 16.
 
 `tests/integration/test_page_patterns.py` checks the patterns page by page (error summaries,
 confirmations, back links, badges, link buttons), and `tests/html.py` lets tests query pages by

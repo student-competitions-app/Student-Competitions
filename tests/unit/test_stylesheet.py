@@ -222,9 +222,44 @@ def test_no_page_specific_classes_remain() -> None:
 
 def test_only_tokens_hold_literal_values() -> None:
     """FR-012: no hex colour, `rgb(`/`hsl(` or pixel length outside the token block; the
-    `768px` and `1024px` breakpoints are the only exception."""
+    `768px` and `1024px` breakpoints and the `600px` height of the pinned frame (milestone 10.1)
+    are the only exception."""
     css = without_values(outside_tokens())
     css = re.sub(r"@media[^{]*\{", " ", css)
     assert not re.findall(r"#[0-9a-fA-F]{3,8}\b", css)
     assert not re.findall(r"\b(?:rgb|rgba|hsl|hsla)\(", css)
     assert not re.findall(r"\b\d+(?:\.\d+)?px\b", css)
+
+
+def _rules(css: str) -> list[tuple[str, str]]:
+    """Every innermost rule as `(selector, body)`, comments removed and strings kept, so attribute
+    selectors such as `[aria-busy="true"]` survive."""
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.DOTALL)
+    return [
+        (" ".join(selector.split()), body)
+        for selector, body in re.findall(r"([^{};]+)\{([^{}]*)\}", css)
+    ]
+
+
+def test_the_busy_spinner_takes_the_button_colour() -> None:
+    """specs/010.1-loading-feedback-pinned-frame research R6: Pico draws its busy spinner white on
+    every non-outline button, which hides it on the white secondary buttons. `app.css` redraws it
+    as a mask in the button's text colour and cancels Pico's filter with a selector that outranks
+    Pico's own."""
+    shape = [
+        body
+        for selector, body in _rules(APP_CSS)
+        if '[aria-busy="true"]' in selector
+        and selector.endswith("::before")
+        and "background-color: currentColor" in body
+    ]
+    assert len(shape) == 1
+    assert re.search(r"(?<!-)mask:\s*var\(--pico-icon-loading\)", shape[0])
+    filters = [
+        body
+        for selector, body in _rules(APP_CSS)
+        if selector.startswith('html [aria-busy="true"]')
+        and selector.endswith(":not(.outline)::before")
+    ]
+    assert len(filters) == 1
+    assert re.search(r"filter:\s*none", filters[0])

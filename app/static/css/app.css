@@ -107,6 +107,13 @@
   --sc-border-width: 1px;
   --sc-border-strong: 0.125rem;
   --sc-border-accent: 0.25rem;
+
+  /* Room kept above a scroll or focus target, so the pinned frame never covers it (milestone
+     10.1 FR-015, research R8): each is the tallest frame measured at that breakpoint, plus
+     room to spare. The field clearance keeps a control's label and error in view too. */
+  --sc-frame-clearance: 5.5rem;
+  --sc-frame-clearance-tabs: 11rem;
+  --sc-field-clearance: 5rem;
 }
 
 [data-theme="dark"] {
@@ -171,6 +178,7 @@
   :root {
     --sc-text-h1: 2rem;
     --sc-text-h2: 1.5rem;
+    --sc-frame-clearance-tabs: 8rem;
   }
 }
 
@@ -429,10 +437,6 @@ body > main {
 
 /* The top bar (FR-018): the mark and the name link home; the current role sits under the name on
    a phone and beside it from 768 px; the user menu is last. */
-body > header.top-bar {
-  padding-block: 0;
-}
-
 .top-bar {
   background: var(--sc-top-bar);
   color: var(--sc-on-top-bar);
@@ -592,6 +596,11 @@ details.user-menu[open] > summary {
   border-radius: var(--sc-radius-card);
   box-shadow: var(--sc-shadow-menu);
   font-size: var(--sc-text-body);
+  /* Taller than the space below the pinned top bar, it scrolls inside itself (milestone 10.1
+     FR-016, research R10). */
+  max-height: calc(100dvh - var(--sc-frame-clearance));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .user-menu-panel > * {
@@ -665,10 +674,12 @@ nav.area-tabs li {
   list-style: none;
 }
 
+/* Below 768 px the tabs keep the 44 px touch target, so wrapped onto two rows they still leave the
+   pinned frame under a quarter of a 375 × 667 screen (milestone 10.1 SC-007, research R9). */
 nav.area-tabs li a {
   display: flex;
   align-items: center;
-  min-height: 3rem;
+  min-height: var(--sc-touch-target);
   margin: 0;
   padding: var(--sc-border-accent) 0 0;
   border-bottom: var(--sc-border-accent) solid transparent;
@@ -676,6 +687,12 @@ nav.area-tabs li a {
   color: var(--sc-muted);
   font-weight: var(--sc-weight-semibold);
   text-decoration: none;
+}
+
+@media (min-width: 768px) {
+  nav.area-tabs li a {
+    min-height: 3rem;
+  }
 }
 
 nav.area-tabs li a:hover {
@@ -686,6 +703,88 @@ nav.area-tabs li a[aria-current="page"] {
   border-bottom-color: var(--sc-primary);
   color: var(--sc-text);
   font-weight: var(--sc-weight-bold);
+}
+
+/* The frame (milestone 10.1, contracts/components.md §1): the top bar, the area tabs and the
+   loading bar in one block, which the bar hangs from. */
+.frame {
+  position: relative;
+}
+
+/* The pinned frame (milestone 10.1 FR-012–FR-014, research R7): on a screen at least 600 px tall
+   it stays at the top while the page scrolls as a whole, so nothing here may add `overflow` or a
+   fixed height. On a shorter screen and in print it scrolls away as before. The skip link
+   (z-index 10) stays above it; the user menu's panel lives inside its stacking context. */
+@media screen and (min-height: 600px) {
+  body > .frame {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  /* The pinned frame never covers what the page moves to (FR-015, WCAG 2.2 2.4.11 "Focus Not
+     Obscured (Minimum)"): the browser keeps this room above every `#` target, such as the skip
+     link's and the error summary's, and above every element that gets keyboard focus. An area
+     page's tabs make the frame taller. */
+  html {
+    scroll-padding-top: var(--sc-frame-clearance);
+  }
+
+  html:has(body > .frame .area-tabs) {
+    scroll-padding-top: var(--sc-frame-clearance-tabs);
+  }
+}
+
+/* The loading bar (components/frame.html, milestone 10.1 FR-001–FR-006, research R5): a primary
+   segment running along just under the frame while the next page is on its way. It is the one
+   moving element the "calm and focused" rule allows; with reduced motion it stands still, filling
+   the track. `data-detached` fixes it to the screen's top edge when the frame is out of view. */
+.loading-bar {
+  position: absolute;
+  inset-inline: 0;
+  top: 100%;
+  z-index: 1;
+  height: var(--sc-border-accent);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.loading-bar[data-detached] {
+  position: fixed;
+  top: 0;
+}
+
+.loading-bar::before {
+  content: "";
+  display: block;
+  width: 30%;
+  height: 100%;
+  background: var(--sc-primary);
+  animation: loading-bar 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-bar {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(340%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-bar::before {
+    width: 100%;
+    animation: none;
+    transform: none;
+  }
+}
+
+@media print {
+  .loading-bar {
+    display: none;
+  }
 }
 
 /* The footer (FR-036): the release, and on the home page the database line. Quiet and small. */
@@ -850,6 +949,23 @@ button[type="submit"] {
   --pico-form-element-spacing-vertical: var(--sc-space-1);
   --pico-form-element-spacing-horizontal: var(--sc-space-2);
   font-size: var(--sc-text-small);
+}
+
+/* The busy button (components/button.html, milestone 10.1 FR-008, research R6): Pico's spinner,
+   redrawn as a mask in the button's own text colour, so it shows on every kind in both themes.
+   Pico's white filter would hide it on the white secondary buttons; the second rule is Pico's own
+   selector with `html` in front, so it wins wherever the stylesheets load. The button's gap
+   already spaces the spinner from the label. */
+html :is(button, [type="submit"], [role="button"])[aria-busy="true"]::before {
+  margin-inline-end: 0;
+  background-image: none;
+  background-color: currentColor;
+  -webkit-mask: var(--pico-icon-loading) center / 1em no-repeat;
+  mask: var(--pico-icon-loading) center / 1em no-repeat;
+}
+
+html [aria-busy="true"]:not(input, select, textarea):is(button, [type="submit"], [type="button"], [type="reset"], [role="button"]):not(.outline)::before {
+  filter: none;
 }
 
 .inline-form {
@@ -1177,6 +1293,14 @@ div.row-actions > * + * {
 
 /* Forms (components/form.html, FR-031): the summary above the form, each message beside its
    field, the primary button first and Cancel as a link. */
+/* A control reached from the error summary or by the keyboard keeps its label and error message,
+   which sit above it, in view below the pinned frame too (milestone 10.1 FR-015, research R8). */
+input,
+select,
+textarea {
+  scroll-margin-top: var(--sc-field-clearance);
+}
+
 .error-summary {
   max-width: var(--sc-measure);
   margin-bottom: var(--sc-space-4);

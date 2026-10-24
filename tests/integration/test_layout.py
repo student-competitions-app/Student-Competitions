@@ -1,5 +1,7 @@
 """The page frame: the top bar and its user menu (specs/010-design-system-ui-guidelines FR-018,
-FR-019, US2-2, US2-3, US6; contracts/components.md §1).
+FR-019, US2-2, US2-3, US6; contracts/components.md §1), and from milestone 10.1 the one frame
+block and the loading script on every page (specs/010.1-loading-feedback-pinned-frame FR-001,
+FR-012, FR-019, FR-020; contracts/components.md §1).
 
 The user menu is a native `<details>`, so it opens without JavaScript. It holds, in order, the
 email linking to the profile, the role switch (only for a person with several roles who has
@@ -150,3 +152,62 @@ def test_the_database_line_is_in_the_footer_of_the_home_page_only(
     assert line.parent is not None and line.parent.tag == "footer"
     for path in ("/admin/subjects", "/profile"):
         assert database_lines(admin_client.get(path).text) == [], path
+
+
+SCRIPT_SRC = "/static/js/loading-feedback.js"
+
+PAGE_KINDS = [
+    (None, "/login"),
+    (None, "/no-such-page"),
+    (None, "/data-deletion"),
+    (ADMIN_EMAIL, "/"),
+    (ADMIN_EMAIL, "/admin/subjects"),
+    (ADMIN_EMAIL, "/profile"),
+    (TEACHER_EMAIL, "/teacher/students"),
+]
+"""Every kind of page: public, "not found", signed in, the administrator and the teacher areas."""
+
+AREA_PAGES = {"/admin/subjects", "/teacher/students"}
+
+
+def page(client: TestClient, client_as: ClientAs, email: str | None, path: str) -> str:
+    browser = client if email is None else client_as(email)
+    return browser.get(path).text
+
+
+@pytest.mark.parametrize(("email", "path"), PAGE_KINDS)
+def test_every_page_loads_the_script_once(
+    client: TestClient, client_as: ClientAs, email: str | None, path: str
+) -> None:
+    """FR-020: one deferred script from the base layout, in the head."""
+    (head,) = html.parse(page(client, client_as, email, path)).find_all("head")
+    scripts = [e.attrs for e in head.find_all("script") if e.attrs.get("src") == SCRIPT_SRC]
+    assert scripts == [{"src": SCRIPT_SRC, "defer": ""}]
+
+
+def test_the_script_is_served(client: TestClient) -> None:
+    response = client.get(SCRIPT_SRC)
+    assert response.status_code == 200
+    assert "javascript" in response.headers["content-type"]
+
+
+@pytest.mark.parametrize(("email", "path"), PAGE_KINDS)
+def test_every_page_has_one_frame_with_a_hidden_bar(
+    client: TestClient, client_as: ClientAs, email: str | None, path: str
+) -> None:
+    """FR-012, FR-019: the top bar, the area tabs on area pages and the loading bar, in one block
+    that is a direct child of `<body>`; the bar is hidden until the script shows it."""
+    (body,) = html.parse(page(client, client_as, email, path)).find_all("body")
+    frames = [e for e in body.find_all("div") if "frame" in e.classes()]
+    assert len(frames) == 1
+    (frame,) = frames
+    assert frame.parent is body
+    children = [c for c in frame.children if isinstance(c, html.Element)]
+    expected = [("header", "top-bar")]
+    if path in AREA_PAGES:
+        expected.append(("nav", "area-tabs"))
+    expected.append(("div", "loading-bar"))
+    assert [(c.tag, c.classes()[0]) for c in children] == expected
+    bar = children[-1]
+    assert "hidden" in bar.attrs
+    assert bar.attrs.get("aria-hidden") == "true"

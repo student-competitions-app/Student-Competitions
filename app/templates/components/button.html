@@ -10,9 +10,13 @@
 {{ button_classes }}
 {%- endmacro %}
 
-{% macro button(label, kind="primary", name=None, value=None, outline=False, small=False, attrs={}) -%}
+{#- `busy` renders the busy state, `aria-busy="true"` (milestone 10.1 FR-008, FR-010). Pages never
+    pass it: `loading-feedback.js` marks the button that sent a form while the next page is on its
+    way. It exists so the gallery can show the state. A busy button is never `disabled`, so its
+    value is still sent. -#}
+{% macro button(label, kind="primary", name=None, value=None, outline=False, small=False, attrs={}, busy=False) -%}
 {%- set classes = _classes(kind, outline, small) -%}
-<button type="submit"{% if classes %} class="{{ classes }}"{% endif %}{% if name %} name="{{ name }}"{% endif %}{% if value is not none %} value="{{ value }}"{% endif %}{% for key, val in attrs.items() %} {{ key }}="{{ val }}"{% endfor %}>{{ label }}</button>
+<button type="submit"{% if classes %} class="{{ classes }}"{% endif %}{% if name %} name="{{ name }}"{% endif %}{% if value is not none %} value="{{ value }}"{% endif %}{% for key, val in attrs.items() %} {{ key }}="{{ val }}"{% endfor %}{% if busy %} aria-busy="true"{% endif %}>{{ label }}</button>
 {%- endmacro %}
 
 {% macro link_button(label, href, kind="primary", outline=False, small=False) -%}

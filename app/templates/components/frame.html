@@ -1,4 +1,5 @@
-{#- The page frame (contracts/components.md §1, FR-018–FR-021, FR-024, research D7). Import it
+{#- The page frame (contracts/components.md §1, FR-018–FR-021, FR-024, research D7; the loading bar
+    from milestone 10.1, specs/010.1-loading-feedback-pinned-frame contracts/components.md §2). Import it
     `with context`: `top_bar` and `user_menu` read the signed-in person from the template context
     (`current_user`, `current_role`, `user_roles`, set by `app.core.templates`) unless they are
     given one, as the component gallery does to show each variant. -#}
@@ -60,6 +61,14 @@
     </div>
   </fieldset>
 </form>
+{%- endmacro %}
+
+{#- The loading bar (milestone 10.1 FR-001–FR-006, research R5): a thin primary line hanging under
+    the frame while the next page is on its way. The layout renders it as the frame's last child;
+    only the gallery passes `active=True`. Only `loading-feedback.js` changes `hidden` and
+    `data-detached`. It is hidden from assistive technology: the busy button carries the state. -#}
+{% macro loading_bar(active=False) -%}
+<div class="loading-bar" aria-hidden="true"{% if not active %} hidden{% endif %}></div>
 {%- endmacro %}
 
 {% macro area_tabs(tabs, active, label) -%}

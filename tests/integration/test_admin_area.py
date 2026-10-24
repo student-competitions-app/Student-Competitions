@@ -75,12 +75,15 @@ def test_every_tab_shows_the_row_with_itself_current(admin_client: TestClient, p
 
 @pytest.mark.parametrize("path", [path for path, _ in TABS])
 def test_tabs_are_plain_links(admin_client: TestClient, path: str) -> None:
-    """FR-003: no script, no HTMX; each tab has its own address."""
+    """FR-003: no HTMX; each tab has its own address. The page's only script is the base
+    layout's loading feedback (specs/010.1-loading-feedback-pinned-frame FR-020, FR-023); the
+    tabs are plain links and work without it (FR-021)."""
     body = admin_client.get(path).text
     (row,) = tab_navs(body)
     assert row.find_all("form") == []
     assert not any(name.startswith("hx-") for e in row.iter() for name in e.attrs)
-    assert html.parse(body).find_all("script") == []
+    scripts = [e.attrs for e in html.parse(body).find_all("script")]
+    assert scripts == [{"src": "/static/js/loading-feedback.js", "defer": ""}]
 
 
 @pytest.mark.parametrize("path", [path for path, _ in TABS])

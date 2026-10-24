@@ -1,46 +1,34 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import page_heading %}
+{% from "components/table.html" import data_table, cell, actions_cell %}
+{% from "components/badge.html" import status_badge %}
+{% from "components/button.html" import link_button, post_button %}
+{% from "components/feedback.html" import empty_state %}
 
 {% block title %}Subjects — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>Subjects</h1>
-  <p><a href="/admin/subjects/new" role="button">Create</a></p>
-  {% if subjects %}
-  <div class="overflow-auto">
-    <table class="subjects-table">
-      <thead>
-        <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Status</th>
-          <th scope="col">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for s in subjects %}
-        <tr>
-          <td class="subject-name">{{ s.name }}</td>
-          <td>{% if s.is_active %}Active{% else %}Inactive{% endif %}</td>
-          <td class="subjects-actions">
-            <a href="/admin/subjects/{{ s.id }}/rename">Rename</a>
-            {% if s.is_active %}
-            <form method="post" action="/admin/subjects/{{ s.id }}/deactivate">
-              <button type="submit" class="secondary outline">Deactivate</button>
-            </form>
-            {% else %}
-            <form method="post" action="/admin/subjects/{{ s.id }}/activate">
-              <button type="submit" class="secondary outline">Activate</button>
-            </form>
-            {% endif %}
-            <a href="/admin/subjects/{{ s.id }}/delete">Delete</a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <p class="subjects-empty">No subjects yet</p>
-  {% endif %}
-</section>
+{{ page_heading("Subjects", ("Create subject", "/admin/subjects/new")) }}
+{% if subjects %}
+{% call data_table(["Name", "Status", "Actions"]) %}
+{% for s in subjects %}
+{% set path = "/admin/subjects/" ~ s.id %}
+<tr>
+  {{ cell("Name", s.name) }}
+  {% call cell("Status") %}{{ status_badge(s.is_active) }}{% endcall %}
+  {% call actions_cell() %}
+  {{- link_button("Rename", path ~ "/rename", kind="secondary", outline=True, small=True) -}}
+  {%- if s.is_active -%}
+  {{- post_button(path ~ "/deactivate", "Deactivate", kind="destructive", outline=True, small=True) -}}
+  {%- else -%}
+  {{- post_button(path ~ "/activate", "Activate", kind="secondary", outline=True, small=True) -}}
+  {%- endif -%}
+  {{- link_button("Delete", path ~ "/delete", kind="destructive", outline=True, small=True) -}}
+  {% endcall %}
+</tr>
+{% endfor %}
+{% endcall %}
+{% else %}
+{{ empty_state("No subjects yet", "Create the first subject with Create subject.") }}
+{% endif %}
 {% endblock %}

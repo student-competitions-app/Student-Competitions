@@ -43,11 +43,13 @@ ADMIN_TABS = (
 def render_admin(
     request: Request,
     template: str,
-    active_tab: str,
+    active_tab: str | None,
     context: dict[str, Any] | None = None,
     status_code: int = 200,
 ) -> HTMLResponse:
-    """Render an administrator page with the tab row, `active_tab` marked current (FR-004)."""
+    """Render an administrator page with the tab row, `active_tab` marked current (FR-004). With
+    `None`, no tab is current: a page of the area that is not one of its tabs, such as the
+    component gallery (milestone 10 FR-038)."""
     return templates.TemplateResponse(
         request,
         template,

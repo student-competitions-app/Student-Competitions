@@ -27,6 +27,7 @@ from app.routers.invitations import CONSENT_CHANGED, EXPIRED, NEUTRAL
 from app.services.consent import current_consent_text
 from app.services.institutions import delete_institution, rename_institution
 from app.services.users import reconcile_users
+from tests import html
 from tests.conftest import ADMIN_EMAIL, ADMIN_STUDENT_EMAIL, invite, make_institution
 
 OLENA = "olena@example.org"
@@ -199,7 +200,7 @@ def test_a_changed_consent_text_is_shown_again_and_nothing_is_stored(
         assert changed.status_code == 409
         assert CONSENT_CHANGED in changed.text
         assert "Version two wording." in changed.text
-        assert f'name="consent_text_id" value="{new_id}"' in changed.text
+        assert html.control(changed.text, "consent_text_id")["value"] == str(new_id)
         assert_link_headers(changed)
         assert nothing_stored()
 

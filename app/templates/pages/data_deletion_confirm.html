@@ -1,26 +1,17 @@
 {% extends "layouts/base.html" %}
+{% from "components/confirmation.html" import confirmation %}
+{% from "components/details.html" import details_list %}
 
 {% block title %}Delete my data — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="auth">
-  <h1>Delete my data</h1>
-  <p>Pressing the button below erases this data:</p>
-  <dl class="details-list">
-    <dt>Email</dt>
-    <dd>{{ plan.email }}</dd>
-    <dt>First name</dt>
-    <dd>{{ plan.first_name }}</dd>
-    <dt>Last name</dt>
-    <dd>{{ plan.last_name }}</dd>
-  </dl>
-  {% if plan.roles_to_remove %}
-  <p>These roles are removed: {{ plan.roles_to_remove | map(attribute="label") | join(", ") }}.</p>
-  {% endif %}
-  {% if plan.email_kept %}<p>Your administrator role and email stay.</p>{% endif %}
-  <p>You will be signed out everywhere. The record that you agreed is kept as proof of consent.</p>
-  <form method="post">
-    <button type="submit">Delete my data</button>
-  </form>
-</section>
+{#- The form posts to this same address, so the action is the request's own path. -#}
+{% call confirmation("Delete my data", "Pressing the button below erases this data:", request.url.path, "Delete my data", "/") %}
+{{ details_list([("Email", plan.email), ("First name", plan.first_name), ("Last name", plan.last_name)]) }}
+{% if plan.roles_to_remove %}
+<p>These roles are removed: {{ plan.roles_to_remove | map(attribute="label") | join(", ") }}.</p>
+{% endif %}
+{% if plan.email_kept %}<p>Your administrator role and email stay.</p>{% endif %}
+<p>You will be signed out everywhere. The record that you agreed is kept as proof of consent.</p>
+{% endcall %}
 {% endblock %}

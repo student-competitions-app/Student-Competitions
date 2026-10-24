@@ -12,6 +12,7 @@ from app.models import ConsentRecord, Role, User
 from app.services.consent import current_consent_text
 from app.services.email import EmailMessage
 from app.services.users import get_roles
+from tests import html
 from tests.conftest import ADMIN_EMAIL, make_institution, token_from
 
 
@@ -55,7 +56,8 @@ def test_an_administrator_invites_accepts_and_withdraws_for_themselves(
     assert login.status_code == 303
     home = admin_client.get("/admin/teachers")
     assert home.status_code == 200
-    assert '<button type="submit" name="role" value="teacher"' in home.text
+    switch = [b for f in html.forms(home.text, "header") if f.action == "/role" for b in f.buttons]
+    assert ("role", "teacher") in [(b.name, b.value) for b in switch]
     assert "Iryna Admin" in home.text
 
     withdrawn = admin_client.post("/profile/withdraw", follow_redirects=False)

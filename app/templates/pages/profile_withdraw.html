@@ -1,30 +1,29 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/form.html" import error_summary %}
+{% from "components/confirmation.html" import confirmation %}
 
 {% block title %}Withdraw consent — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="auth">
-  <h1>Withdraw consent</h1>
-  {% if plan is none %}
-  <p>There is no data stored on your consent to withdraw.</p>
-  <p><a href="/profile">Back to your profile</a></p>
-  {% else %}
-  <p>Withdrawing your consent erases this data:</p>
-  <ul>
-    <li>Your first name ({{ plan.first_name }}) and last name ({{ plan.last_name }})</li>
-    {% if not plan.email_kept %}<li>Your email address ({{ plan.email }})</li>{% endif %}
-  </ul>
-  {% if plan.roles_to_remove %}
-  <p>These roles are removed: {{ plan.roles_to_remove | map(attribute="label") | join(", ") }}.</p>
-  {% endif %}
-  {% if plan.email_kept %}<p>Your administrator role and email stay: they come from the deployment configuration.</p>{% endif %}
-  <p>You will be signed out everywhere.</p>
-  {% if plan.will_deactivate %}<p>You will no longer be able to sign in.</p>{% endif %}
-  <p>The record that you agreed is kept as proof of your consent.</p>
-  <form method="post" action="/profile/withdraw">
-    <button type="submit">Withdraw consent</button>
-    <a href="/profile">Cancel</a>
-  </form>
-  {% endif %}
-</section>
+{{ back_link("/profile", "Back to your profile") }}
+{% if plan is none %}
+{{ page_heading("Withdraw consent") }}
+{{ error_summary({}, form_error="There is no data stored on your consent to withdraw.") }}
+{% else %}
+{% call confirmation("Withdraw consent", none, "/profile/withdraw", "Withdraw consent", "/profile") %}
+<p>Withdrawing your consent erases this data:</p>
+<ul>
+  <li>Your first name ({{ plan.first_name }}) and last name ({{ plan.last_name }})</li>
+  {% if not plan.email_kept %}<li>Your email address ({{ plan.email }})</li>{% endif %}
+</ul>
+{% if plan.roles_to_remove %}
+<p>These roles are removed: {{ plan.roles_to_remove | map(attribute="label") | join(", ") }}.</p>
+{% endif %}
+{% if plan.email_kept %}<p>Your administrator role and email stay: they come from the deployment configuration.</p>{% endif %}
+<p>You will be signed out everywhere.</p>
+{% if plan.will_deactivate %}<p>You will no longer be able to sign in.</p>{% endif %}
+<p>The record that you agreed is kept as proof of your consent.</p>
+{% endcall %}
+{% endif %}
 {% endblock %}

@@ -1,366 +1,1564 @@
-/* Project overrides on top of Pico.css. Kept deliberately minimal — Pico's container,
-   type scale and spacing already satisfy the readable-layout requirement. */
+/* The application's stylesheet, on top of Pico.css v2 (specs/010-design-system-ui-guidelines,
+   research D2–D4, data-model §2). Read docs/requirements/ui-guidelines.md before changing it.
 
-.hero {
-  padding-block: 2rem;
+   1. Tokens: every colour, size and length, defined once as `--sc-*`. Nothing below the token
+      block writes a literal colour or pixel length; the only `px` values outside it are the
+      `768px` and `1024px` breakpoints, which media queries cannot read from a custom property.
+   2. Pico mapping: Pico's own variables set from the tokens, so Pico restyles itself.
+   3. Base, 4. Layout (the page frame), 5. Components (one block per component in
+      `templates/components/`). Classes belong to components, never to pages. */
+
+/* == Tokens == */
+
+@font-face {
+  font-family: "Open Sans";
+  src: url("/static/fonts/open-sans-latin.woff2") format("woff2");
+  font-weight: 300 800;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-.hero > h1 {
-  margin-bottom: 0.25rem;
+@font-face {
+  font-family: "Open Sans";
+  src: url("/static/fonts/open-sans-latin-ext.woff2") format("woff2");
+  font-weight: 300 800;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
 }
 
-.hero > .tagline {
-  color: var(--pico-muted-color);
-  font-size: 1.125rem;
-  margin-bottom: 1.5rem;
+@font-face {
+  font-family: "Open Sans";
+  src: url("/static/fonts/open-sans-cyrillic.woff2") format("woff2");
+  font-weight: 300 800;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 
-/* Which release is serving this page, readable without opening /healthz (FR-025). */
-.release {
-  border-top: 1px solid var(--pico-muted-border-color);
-  color: var(--pico-muted-color);
-  margin-top: 2rem;
-  padding-block: 1rem;
+@font-face {
+  font-family: "Open Sans";
+  src: url("/static/fonts/open-sans-cyrillic-ext.woff2") format("woff2");
+  font-weight: 300 800;
+  font-display: swap;
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
 }
 
-.release code {
-  font-size: 0.875em;
+:root {
+  /* Colour: given by the spec (FR-010) */
+  --sc-page: #f4f6fb;
+  --sc-surface: #ffffff;
+  --sc-text: #172033;
+  --sc-muted: #556070;
+  --sc-border: #dde3ee;
+  --sc-top-bar: #16337a;
+  --sc-primary: #1f56d6;
+  --sc-on-primary: #ffffff;
+  --sc-primary-tint: #e7eefc;
+  --sc-accent: #f2a516;
+  --sc-success: #17803d;
+  --sc-success-tint: #e5f5ea;
+  --sc-danger: #c0392b;
+  --sc-danger-tint: #fdf0ee;
+
+  /* Colour: derived (data-model §2.2) */
+  --sc-primary-hover: #1a47b3;
+  --sc-focus-ring: rgb(31 86 214 / 0.4);
+  --sc-danger-hover: #a02f23;
+  --sc-on-danger: #ffffff;
+  --sc-on-success: #ffffff;
+  --sc-on-accent: #172033;
+  --sc-on-top-bar: #ffffff;
+  --sc-on-top-bar-muted: #c3cfee;
+  --sc-neutral-tint: #eef1f6;
+  --sc-shadow-card: 0 1px 2px rgb(23 32 51 / 0.06);
+  --sc-shadow-menu: 0 8px 24px rgb(13 20 36 / 0.18);
+
+  /* Typography (FR-004, FR-005) */
+  --sc-font-family: "Open Sans", system-ui, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
+    Helvetica, Arial, sans-serif;
+  --sc-weight-regular: 400;
+  --sc-weight-semibold: 600;
+  --sc-weight-bold: 700;
+  --sc-text-body: 1rem;
+  --sc-text-small: 0.875rem;
+  --sc-line-height: 1.5;
+  --sc-line-height-heading: 1.25;
+  --sc-text-h1: 1.75rem;
+  --sc-text-h2: 1.375rem;
+  --sc-text-h3: 1.25rem;
+  --sc-text-h4: 1.125rem;
+  --sc-measure: 70ch;
+
+  /* Spacing on the 8 px grid, radii and sizes (FR-011, FR-021) */
+  --sc-space-1: 0.5rem;
+  --sc-space-2: 1rem;
+  --sc-space-3: 1.5rem;
+  --sc-space-4: 2rem;
+  --sc-space-5: 3rem;
+  --sc-space-6: 4rem;
+  --sc-radius-control: 0.5rem;
+  --sc-radius-card: 0.75rem;
+  --sc-content-width: 72rem;
+  --sc-form-width: 30rem;
+  --sc-touch-target: 2.75rem;
+  --sc-action-width: 7.5rem;
+  --sc-border-width: 1px;
+  --sc-border-strong: 0.125rem;
+  --sc-border-accent: 0.25rem;
 }
 
-/* Question text keeps its line breaks, and long words wrap rather than push the page wider than
-   a phone screen (spec edge cases). */
-.question-list li {
+[data-theme="dark"] {
+  --sc-page: #0d1424;
+  --sc-surface: #151f35;
+  --sc-text: #e6eaf2;
+  --sc-muted: #9aa6bd;
+  --sc-border: #26324d;
+  --sc-top-bar: #111a2e;
+  --sc-primary: #6c9cff;
+  --sc-on-primary: #0d1424;
+  --sc-primary-tint: #1d2c4f;
+  --sc-accent: #f5b83d;
+  --sc-success: #5fcf86;
+  --sc-success-tint: #13291c;
+  --sc-danger: #ff8a7a;
+  --sc-danger-tint: #341b19;
+  --sc-primary-hover: #8fb3ff;
+  --sc-focus-ring: rgb(108 156 255 / 0.45);
+  --sc-danger-hover: #ffa597;
+  --sc-on-danger: #0d1424;
+  --sc-on-success: #0d1424;
+  --sc-on-accent: #0d1424;
+  --sc-on-top-bar: #e6eaf2;
+  --sc-on-top-bar-muted: #9aa6bd;
+  --sc-neutral-tint: #1b253b;
+  --sc-shadow-card: none;
+  --sc-shadow-menu: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sc-page: #0d1424;
+    --sc-surface: #151f35;
+    --sc-text: #e6eaf2;
+    --sc-muted: #9aa6bd;
+    --sc-border: #26324d;
+    --sc-top-bar: #111a2e;
+    --sc-primary: #6c9cff;
+    --sc-on-primary: #0d1424;
+    --sc-primary-tint: #1d2c4f;
+    --sc-accent: #f5b83d;
+    --sc-success: #5fcf86;
+    --sc-success-tint: #13291c;
+    --sc-danger: #ff8a7a;
+    --sc-danger-tint: #341b19;
+    --sc-primary-hover: #8fb3ff;
+    --sc-focus-ring: rgb(108 156 255 / 0.45);
+    --sc-danger-hover: #ffa597;
+    --sc-on-danger: #0d1424;
+    --sc-on-success: #0d1424;
+    --sc-on-accent: #0d1424;
+    --sc-on-top-bar: #e6eaf2;
+    --sc-on-top-bar-muted: #9aa6bd;
+    --sc-neutral-tint: #1b253b;
+    --sc-shadow-card: none;
+    --sc-shadow-menu: 0 8px 24px rgb(0 0 0 / 0.45);
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --sc-text-h1: 2rem;
+    --sc-text-h2: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --sc-text-body: 1.125rem;
+  }
+}
+
+/* == End of tokens == */
+
+/* == Pico mapping == */
+
+/* Pico declares its colour variables once per scheme. These selectors are Pico's own, so with
+   the same specificity and a later position the mapping wins in every scheme; it only reads
+   tokens, which already carry their dark values. `--pico-font-size` is fixed at 100 %: the
+   mapping's selectors outrank Pico's `:root` breakpoint blocks, so the root stays at 16 px at
+   every width and only the body text grows (research D3). */
+:root:not([data-theme="dark"]),
+[data-theme="light"],
+[data-theme="dark"] {
+  --pico-background-color: var(--sc-page);
+  --pico-color: var(--sc-text);
+  --pico-muted-color: var(--sc-muted);
+  --pico-muted-border-color: var(--sc-border);
+  --pico-h1-color: var(--sc-text);
+  --pico-h2-color: var(--sc-text);
+  --pico-h3-color: var(--sc-text);
+  --pico-h4-color: var(--sc-text);
+  --pico-h5-color: var(--sc-text);
+  --pico-h6-color: var(--sc-text);
+
+  --pico-primary: var(--sc-primary);
+  --pico-primary-background: var(--sc-primary);
+  --pico-primary-border: var(--sc-primary);
+  --pico-primary-underline: var(--sc-primary);
+  --pico-primary-hover: var(--sc-primary-hover);
+  --pico-primary-hover-background: var(--sc-primary-hover);
+  --pico-primary-hover-border: var(--sc-primary-hover);
+  --pico-primary-hover-underline: var(--sc-primary-hover);
+  --pico-primary-inverse: var(--sc-on-primary);
+  --pico-primary-focus: var(--sc-focus-ring);
+
+  --pico-secondary: var(--sc-text);
+  --pico-secondary-background: var(--sc-surface);
+  --pico-secondary-border: var(--sc-border);
+  --pico-secondary-underline: var(--sc-muted);
+  --pico-secondary-hover: var(--sc-text);
+  --pico-secondary-hover-background: var(--sc-neutral-tint);
+  --pico-secondary-hover-border: var(--sc-muted);
+  --pico-secondary-hover-underline: var(--sc-text);
+  --pico-secondary-inverse: var(--sc-text);
+  --pico-secondary-focus: var(--sc-focus-ring);
+
+  --pico-card-background-color: var(--sc-surface);
+  --pico-card-border-color: var(--sc-border);
+  --pico-card-box-shadow: var(--sc-shadow-card);
+  --pico-card-sectioning-background-color: var(--sc-neutral-tint);
+  --pico-table-border-color: var(--sc-border);
+  --pico-table-row-stripped-background-color: var(--sc-neutral-tint);
+  --pico-dropdown-background-color: var(--sc-surface);
+  --pico-dropdown-border-color: var(--sc-border);
+  --pico-code-background-color: var(--sc-neutral-tint);
+  --pico-code-color: var(--sc-text);
+
+  --pico-form-element-background-color: var(--sc-surface);
+  --pico-form-element-selected-background-color: var(--sc-primary-tint);
+  --pico-form-element-border-color: var(--sc-muted);
+  --pico-form-element-color: var(--sc-text);
+  --pico-form-element-placeholder-color: var(--sc-muted);
+  --pico-form-element-active-background-color: var(--sc-surface);
+  --pico-form-element-active-border-color: var(--sc-primary);
+  --pico-form-element-focus-color: var(--sc-focus-ring);
+  --pico-form-element-disabled-opacity: 0.6;
+  --pico-form-element-invalid-border-color: var(--sc-danger);
+  --pico-form-element-invalid-active-border-color: var(--sc-danger);
+  --pico-form-element-invalid-focus-color: var(--sc-focus-ring);
+  --pico-form-element-valid-border-color: var(--sc-muted);
+  --pico-form-element-valid-active-border-color: var(--sc-primary);
+  --pico-form-element-valid-focus-color: var(--sc-focus-ring);
+  --pico-switch-background-color: var(--sc-border);
+  --pico-switch-checked-background-color: var(--sc-primary);
+  --pico-switch-color: var(--sc-on-primary);
+
+  --pico-del-color: var(--sc-danger);
+  --pico-ins-color: var(--sc-success);
+  --pico-mark-background-color: var(--sc-primary-tint);
+  --pico-mark-color: var(--sc-text);
+
+  --pico-border-radius: var(--sc-radius-control);
+  --pico-border-width: var(--sc-border-width);
+  --pico-font-family: var(--sc-font-family);
+  --pico-font-family-sans-serif: var(--sc-font-family);
+  --pico-font-size: 100%;
+  --pico-font-weight: var(--sc-weight-regular);
+  --pico-line-height: var(--sc-line-height);
+  --pico-spacing: var(--sc-space-2);
+  --pico-typography-spacing-vertical: var(--sc-space-2);
+  --pico-block-spacing-vertical: var(--sc-space-4);
+  --pico-form-element-spacing-vertical: var(--sc-space-1);
+  --pico-form-element-spacing-horizontal: var(--sc-space-2);
+}
+
+/* == Base == */
+
+body {
+  background-color: var(--sc-page);
+  color: var(--sc-text);
+  font-family: var(--sc-font-family);
+  font-size: var(--sc-text-body);
+  font-weight: var(--sc-weight-regular);
+  line-height: var(--sc-line-height);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  --pico-line-height: var(--sc-line-height-heading);
+  --pico-typography-spacing-vertical: var(--sc-space-2);
+  margin-bottom: var(--sc-space-2);
+}
+
+h1 {
+  --pico-font-size: var(--sc-text-h1);
+  --pico-font-weight: var(--sc-weight-bold);
+}
+
+h2 {
+  --pico-font-size: var(--sc-text-h2);
+  --pico-font-weight: var(--sc-weight-bold);
+}
+
+h3 {
+  --pico-font-size: var(--sc-text-h3);
+  --pico-font-weight: var(--sc-weight-semibold);
+}
+
+h4 {
+  --pico-font-size: var(--sc-text-h4);
+  --pico-font-weight: var(--sc-weight-semibold);
+}
+
+/* A heading after content gets room above it, the way a section starts. */
+:where(p, ul, ol, dl, table, form, section, div) + :is(h2, h3) {
+  margin-top: var(--sc-space-4);
+}
+
+main p,
+main li {
+  max-width: var(--sc-measure);
+}
+
+/* Emphasis is bold, never italic or underlined (FR-004). */
+em,
+i {
+  font-style: normal;
+  font-weight: var(--sc-weight-bold);
+}
+
+strong,
+b {
+  font-weight: var(--sc-weight-bold);
+}
+
+small {
+  font-size: var(--sc-text-small);
+}
+
+:where(a:not([role="button"])) {
+  text-underline-offset: 0.15em;
+}
+
+input:not([type="checkbox"], [type="radio"]),
+select,
+textarea {
+  max-width: var(--sc-form-width);
+  min-height: var(--sc-touch-target);
+}
+
+label {
+  font-weight: var(--sc-weight-semibold);
+}
+
+/* Text entered by people (a question) keeps its line breaks, and a long word wraps rather than
+   push the page wider than a phone. */
+.keep-lines {
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
 
-.questions-empty {
-  color: var(--pico-muted-color);
+.visually-hidden {
+  position: absolute;
+  width: var(--sc-border-width);
+  height: var(--sc-border-width);
+  margin: calc(-1 * var(--sc-border-width));
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-/* Shown in place of the data when the database fails mid-request (FR-026): visible, not alarming. */
-.data-unavailable {
-  border-left: 0.25rem solid var(--pico-muted-border-color);
-  color: var(--pico-muted-color);
-  padding: 0.75rem 1rem;
-}
+/* == Layout == */
 
-/* Which database is serving, at which schema revision, and how many times the application has
-   started against it (FR-025). Quiet like the release footer; the revision wraps on a phone. */
-.db-status {
-  color: var(--pico-muted-color);
-  font-size: 0.875rem;
-  overflow-wrap: anywhere;
-}
-
-.db-status code {
-  font-size: 0.875em;
-}
-
-/* The header: the application name, and once signed in the address and the logout button
-   (FR-032). Wraps on a phone rather than scrolling sideways; a long address breaks anywhere. */
-.site-header {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  justify-content: space-between;
-  padding-block: 1rem;
-}
-
-/* The current role reads as part of the title line: "Student Competitions · Teacher" (FR-031). */
-.site-role {
-  color: var(--pico-muted-color);
-  font-weight: normal;
-}
-
-.site-session {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  min-width: 0;
-}
-
-.site-session-email {
-  color: var(--pico-muted-color);
-  overflow-wrap: anywhere;
-}
-
-.site-session form,
-.site-session button {
-  margin: 0;
-}
-
-.site-session button {
-  padding: 0.25rem 0.75rem;
-  width: auto;
-}
-
-/* The role switch for people with several roles: one inline button per other role, beside the
-   address, wrapping on a phone like the rest of the header (FR-018). */
-.role-switch {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
-}
-
-.role-switch-label {
-  color: var(--pico-muted-color);
-}
-
-/* The sign-in pages: a narrow column, and the messages visible without alarming. */
-.auth {
+/* The one content width (FR-021), with a 16 px gutter on a phone and 32 px from 768 px. */
+.container {
+  width: 100%;
+  max-width: var(--sc-content-width);
   margin-inline: auto;
-  max-width: 28rem;
-  padding-block: 2rem;
+  padding-inline: var(--sc-space-2);
 }
 
-.auth-message {
-  border-left: 0.25rem solid var(--pico-del-color);
-  padding: 0.75rem 1rem;
+@media (min-width: 768px) {
+  .container {
+    padding-inline: var(--sc-space-4);
+  }
 }
 
-.auth-alternatives {
-  margin-top: 1.5rem;
+body > main {
+  flex: 1;
+  padding-block: var(--sc-space-4) var(--sc-space-5);
 }
 
-/* The administrator area's tab row (specs/006-admin-area FR-002–FR-004), shared since milestone 9
-   with the teacher area's (`area-tabs`): plain links that wrap on a phone rather than scrolling
-   sideways, the current tab marked by a bold underline. */
-.admin-tabs,
-.area-tabs {
-  border-bottom: 1px solid var(--pico-muted-border-color);
-  margin-bottom: 1.5rem;
+@media (min-width: 768px) {
+  body > main {
+    padding-block: var(--sc-space-5) var(--sc-space-6);
+  }
 }
 
-.admin-tabs ul,
-.area-tabs ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 1.5rem;
-  margin: 0;
-  padding: 0;
+/* A narrow centred column, for the sign-in steps and the other one-form public pages. */
+.narrow {
+  max-width: var(--sc-form-width);
+  margin-inline: auto;
 }
 
-.admin-tabs li,
-.area-tabs li {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.skip-link {
+  position: absolute;
+  left: var(--sc-space-2);
+  top: calc(-1 * var(--sc-space-6));
+  z-index: 10;
+  padding: var(--sc-space-1) var(--sc-space-2);
+  background: var(--sc-surface);
+  color: var(--sc-primary);
+  border-radius: var(--sc-radius-control);
+  font-weight: var(--sc-weight-semibold);
 }
 
-.admin-tabs a,
-.area-tabs a {
-  border-bottom: 0.2rem solid transparent;
-  color: var(--pico-muted-color);
-  display: inline-block;
-  padding-block: 0.5rem;
+.skip-link:focus {
+  top: var(--sc-space-1);
+}
+
+/* The top bar (FR-018): the mark and the name link home; the current role sits under the name on
+   a phone and beside it from 768 px; the user menu is last. */
+body > header.top-bar {
+  padding-block: 0;
+}
+
+.top-bar {
+  background: var(--sc-top-bar);
+  color: var(--sc-on-top-bar);
+}
+
+.top-bar > .container {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: var(--sc-space-2);
+  min-height: 4rem;
+  padding-block: var(--sc-space-1);
+}
+
+@media (min-width: 768px) {
+  .top-bar > .container {
+    display: flex;
+    gap: var(--sc-space-2);
+  }
+}
+
+.brand,
+.brand:is(:hover, :active, :focus) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  min-height: var(--sc-touch-target);
+  color: var(--sc-on-top-bar);
+  font-size: var(--sc-text-h4);
+  font-weight: var(--sc-weight-bold);
+  line-height: var(--sc-line-height-heading);
   text-decoration: none;
 }
 
-.admin-tabs a[aria-current="page"],
-.area-tabs a[aria-current="page"] {
-  border-bottom-color: var(--pico-primary);
-  color: var(--pico-color);
-  font-weight: bold;
-}
-
-/* The subject list: names wrap rather than widen the page; the one-button forms sit inline with
-   the links in the actions column. */
-.subjects-table td {
+.brand-name {
   overflow-wrap: anywhere;
 }
 
-.subjects-actions {
-  white-space: nowrap;
-}
-
-.subjects-actions form {
-  display: inline;
-  margin: 0;
-}
-
-.subjects-actions button {
-  margin: 0;
-  padding: 0.125rem 0.5rem;
-  width: auto;
-}
-
-.subjects-empty {
-  color: var(--pico-muted-color);
-}
-
-/* The Educational institutions tab (specs/007-region-and-institutions-management FR-002, FR-006,
-   research D12): regions beside the institutions of the selected region from 768 px, stacked with
-   regions first below that. Names wrap rather than widen the page. */
-.institutions-layout {
-  display: grid;
-  gap: 2rem;
-  grid-template-columns: 1fr;
+.brand-role {
+  grid-column: 1;
+  grid-row: 2;
+  margin-top: calc(-1 * var(--sc-space-1));
+  padding-left: calc(2rem + var(--sc-space-1));
+  color: var(--sc-on-top-bar-muted);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+  line-height: var(--sc-line-height-heading);
 }
 
 @media (min-width: 768px) {
-  .institutions-layout {
-    grid-template-columns: minmax(14rem, 1fr) 2fr;
+  .brand-role {
+    margin-top: 0;
+    padding: 0 var(--sc-space-1);
+    border: var(--sc-border-width) solid var(--sc-on-top-bar-muted);
+    border-radius: var(--sc-radius-control);
+    line-height: 1.5rem;
   }
 }
 
-.regions-list {
+/* The user menu (FR-019): a native <details>, so it opens without JavaScript. Below 768 px the
+   summary is the account icon alone, read as "Account menu". */
+.user-menu {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1 / span 2;
   margin: 0;
-  padding: 0;
-}
-
-.regions-list li {
-  border-left: 0.2rem solid transparent;
-  list-style: none;
-  overflow-wrap: anywhere;
-  padding: 0.25rem 0.5rem;
-}
-
-/* The selected region: highlighted, and marked `aria-current="true"` for assistive technologies
-   (research D11). */
-.regions-list li.selected {
-  background: var(--pico-primary-background);
-  border-left-color: var(--pico-primary);
-}
-
-.regions-list li.selected > a,
-.regions-list a[aria-current="true"] {
-  color: var(--pico-primary-inverse);
-  font-weight: bold;
-}
-
-.status-deactivated,
-.list-empty {
-  color: var(--pico-muted-color);
-}
-
-.institutions-table td {
-  overflow-wrap: anywhere;
-}
-
-/* Rename, Deactivate/Activate and Delete: the one-button forms sit inline with the links, as in
-   the subject list. */
-.row-actions form {
-  display: inline;
-  margin: 0;
-}
-
-.row-actions button {
-  margin: 0;
-  padding: 0.125rem 0.5rem;
-  width: auto;
-}
-
-.institutions-table .row-actions {
-  white-space: nowrap;
-}
-
-.regions-list li.selected .row-actions a {
-  color: var(--pico-primary-inverse);
-}
-
-/* Teachers (specs/008-teacher-management-consent): the list and the institution picker wrap
-   rather than widen the page; a field-level picker error reads like the others. */
-.teachers-table td,
-.picker-table td {
-  overflow-wrap: anywhere;
-}
-
-.picker-table select {
-  margin: 0;
-}
-
-.picker-table input[type="checkbox"] {
-  margin: 0;
-}
-
-.form-error {
-  color: var(--pico-del-color);
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.notice {
-  border-left: 0.25rem solid var(--pico-ins-color);
-  padding: 0.75rem 1rem;
-}
-
-/* The details an invitation will store, and a profile's data: a plain two-column list. */
-.details-list {
-  display: grid;
-  gap: 0.25rem 1rem;
-  grid-template-columns: max-content 1fr;
-}
-
-.details-list dt {
-  font-weight: bold;
-}
-
-.details-list dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.consent-text {
-  border-left: 0.25rem solid var(--pico-muted-border-color);
-  padding-left: 1rem;
-}
-
-.detail-lines {
-  margin: 0;
-  padding-left: 1.25rem;
-}
-
-.consent-record {
-  margin-block: 1rem;
-}
-
-/* The Students tab of the teacher area (specs/009-classes-students-management FR-048, research
-   D7): the Region, Educational institution and Class lists in a row from 768 px, stacked in that
-   order below, each in its own small form with a Show button. */
-.class-picker {
-  display: grid;
-  gap: 2rem;
-  grid-template-columns: 1fr;
 }
 
 @media (min-width: 768px) {
-  .class-picker {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .user-menu {
+    margin-left: auto;
   }
 }
 
-.class-picker form {
-  margin: 0;
+.user-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sc-space-1);
+  min-width: var(--sc-touch-target);
+  min-height: var(--sc-touch-target);
+  padding-inline: var(--sc-space-1);
+  border: var(--sc-border-width) solid var(--sc-on-top-bar-muted);
+  border-radius: var(--sc-radius-control);
+  color: var(--sc-on-top-bar);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+  line-height: var(--sc-line-height);
 }
 
-.class-picker select {
+/* Pico colours a summary as an accordion's; in the top bar it keeps the bar's text colour in
+   every state. */
+details.user-menu > summary:not([role]),
+details.user-menu > summary:not([role]):focus,
+details.user-menu[open] > summary:not([role]):not(:focus) {
+  color: var(--sc-on-top-bar);
+}
+
+details.user-menu > summary:not([role]):focus-visible {
+  outline: none;
+  color: var(--sc-on-top-bar);
+  box-shadow: 0 0 0 0.25rem var(--sc-focus-ring);
+}
+
+.user-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.user-menu > summary::after {
+  display: none;
+}
+
+.user-menu-email {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .user-menu > summary {
+    padding-inline: var(--sc-space-2);
+  }
+
+  .user-menu-email {
+    display: inline;
+  }
+
+  details.user-menu > summary::after {
+    display: block;
+    float: none;
+    width: var(--sc-space-1);
+    height: var(--sc-space-1);
+    margin: 0;
+    background: none;
+    border-right: var(--sc-border-strong) solid currentColor;
+    border-bottom: var(--sc-border-strong) solid currentColor;
+    transform: translateY(-0.125rem) rotate(45deg);
+  }
+
+  details.user-menu[open] > summary::after {
+    transform: translateY(0.125rem) rotate(-135deg);
+  }
+}
+
+details.user-menu[open] > summary {
   margin-bottom: 0;
 }
 
-/* The selected class: its label, then its actions inline, as in the administrator's lists. */
-.class-bar {
-  border-top: 1px solid var(--pico-muted-border-color);
-  margin-top: 1.5rem;
-  padding-top: 1rem;
+.user-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--sc-space-1));
+  z-index: 5;
+  width: min(24rem, calc(100vw - 2 * var(--sc-space-2)));
+  padding-block: var(--sc-space-1);
+  background: var(--sc-surface);
+  color: var(--sc-text);
+  border: var(--sc-border-width) solid var(--sc-border);
+  border-radius: var(--sc-radius-card);
+  box-shadow: var(--sc-shadow-menu);
+  font-size: var(--sc-text-body);
 }
 
-.class-bar h2 {
-  margin-bottom: 0.5rem;
+.user-menu-panel > * {
+  margin: 0;
+  padding: var(--sc-space-2);
+}
+
+.user-menu-panel > * + * {
+  border-top: var(--sc-border-width) solid var(--sc-border);
+}
+
+.user-menu-profile {
+  display: block;
+  font-weight: var(--sc-weight-semibold);
   overflow-wrap: anywhere;
 }
 
-.class-bar .row-actions {
-  margin-bottom: 1rem;
+.menu-label {
+  display: block;
+  margin: 0 0 var(--sc-space-1);
+  padding: 0;
+  color: var(--sc-muted);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
 }
 
-.students-table td {
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-space-1);
+}
+
+.button-row > * {
+  margin: 0;
+}
+
+.user-menu-panel .logout button {
+  width: 100%;
+  margin: 0;
+}
+
+/* The area tabs (FR-020): ordinary links, the current one underlined in the primary colour and
+   bold, wrapping on a phone rather than scrolling sideways. */
+.area-tabs {
+  background: var(--sc-surface);
+  border-bottom: var(--sc-border-width) solid var(--sc-border);
+}
+
+nav.area-tabs {
+  display: block;
+}
+
+nav.area-tabs ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--sc-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 768px) {
+  nav.area-tabs ul {
+    gap: 0 var(--sc-space-4);
+  }
+}
+
+nav.area-tabs li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+nav.area-tabs li a {
+  display: flex;
+  align-items: center;
+  min-height: 3rem;
+  margin: 0;
+  padding: var(--sc-border-accent) 0 0;
+  border-bottom: var(--sc-border-accent) solid transparent;
+  border-radius: 0;
+  color: var(--sc-muted);
+  font-weight: var(--sc-weight-semibold);
+  text-decoration: none;
+}
+
+nav.area-tabs li a:hover {
+  color: var(--sc-text);
+}
+
+nav.area-tabs li a[aria-current="page"] {
+  border-bottom-color: var(--sc-primary);
+  color: var(--sc-text);
+  font-weight: var(--sc-weight-bold);
+}
+
+/* The footer (FR-036): the release, and on the home page the database line. Quiet and small. */
+body > footer.site-footer {
+  padding-block: var(--sc-space-3);
+}
+
+.site-footer {
+  border-top: var(--sc-border-width) solid var(--sc-border);
+  color: var(--sc-muted);
+  font-size: var(--sc-text-small);
+}
+
+.site-footer p {
+  margin: 0;
   overflow-wrap: anywhere;
 }
 
-.students-table .row-actions {
+.site-footer p + p {
+  margin-top: var(--sc-space-1);
+}
+
+.site-footer code {
+  padding: 0;
+  background: none;
+  color: inherit;
+  font-size: 0.875em;
+}
+
+/* == Components == */
+
+/* Icons (components/icons.html): the logo mark's tile and spark take the top bar's deep blue and
+   the accent amber; the line icons draw in the current text colour. */
+.logo-mark {
+  display: block;
+  flex: none;
+}
+
+.logo-mark-sm {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.logo-mark-md {
+  width: 2rem;
+  height: 2rem;
+}
+
+.logo-mark-lg {
+  width: 4rem;
+  height: 4rem;
+}
+
+.logo-mark-tile {
+  fill: var(--sc-top-bar);
+}
+
+.logo-mark-spark {
+  fill: var(--sc-accent);
+}
+
+.icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Page heading and back link (components/frame.html, FR-003, FR-024). */
+.page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-space-2);
+  margin-bottom: var(--sc-space-3);
+}
+
+.page-heading h1 {
+  margin: 0;
+}
+
+.page-heading [role="button"] {
+  margin: 0;
+}
+
+/* The line under a page's h1 that says what the page is for. */
+.lead {
+  margin-top: calc(-1 * var(--sc-space-1));
+  color: var(--sc-muted);
+  font-size: var(--sc-text-h4);
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  min-height: var(--sc-touch-target);
+  margin-bottom: var(--sc-space-1);
+  font-weight: var(--sc-weight-semibold);
+}
+/* Buttons (components/button.html, FR-025): primary is Pico's default, secondary is Pico's
+   `.secondary` restyled by the mapping, destructive is defined here. A link styled as a button is
+   the same box. `small` is the compact size of row actions, still a full touch target. */
+/* `a[role="button"]` is listed so the rule outranks Pico's own `a[role=button]` display. */
+:is(button, [type="submit"], a[role="button"], [role="button"]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sc-space-1);
+  min-height: var(--sc-touch-target);
+  font-weight: var(--sc-weight-semibold);
+  line-height: 1.25;
+  text-align: center;
+}
+
+button[type="submit"] {
+  width: auto;
+}
+
+:is(button, [type="submit"], [role="button"]).destructive {
+  --pico-background-color: var(--sc-danger);
+  --pico-border-color: var(--sc-danger);
+  --pico-color: var(--sc-on-danger);
+}
+
+:is(button, [type="submit"], [role="button"]).destructive:is(:hover, :active, :focus) {
+  --pico-background-color: var(--sc-danger-hover);
+  --pico-border-color: var(--sc-danger-hover);
+  --pico-color: var(--sc-on-danger);
+}
+
+:is(button, [type="submit"], [role="button"]).secondary.outline {
+  --pico-background-color: transparent;
+  --pico-border-color: var(--sc-border);
+  --pico-color: var(--sc-text);
+}
+
+:is(button, [type="submit"], [role="button"]).secondary.outline:is(:hover, :active, :focus) {
+  --pico-background-color: var(--sc-neutral-tint);
+  --pico-border-color: var(--sc-muted);
+  --pico-color: var(--sc-text);
+}
+
+:is(button, [type="submit"], [role="button"]).destructive.outline {
+  --pico-background-color: transparent;
+  --pico-border-color: var(--sc-danger);
+  --pico-color: var(--sc-danger);
+}
+
+:is(button, [type="submit"], [role="button"]).destructive.outline:is(:hover, :active, :focus) {
+  --pico-background-color: var(--sc-danger-tint);
+  --pico-border-color: var(--sc-danger);
+  --pico-color: var(--sc-danger);
+}
+
+:is(button, [type="submit"], [role="button"]).small {
+  --pico-form-element-spacing-vertical: var(--sc-space-1);
+  --pico-form-element-spacing-horizontal: var(--sc-space-2);
+  font-size: var(--sc-text-small);
+}
+
+.inline-form {
+  display: inline-block;
+  margin: 0;
+}
+
+.inline-form button {
+  margin: 0;
+}
+
+/* Card (components/card.html, FR-026): a whole-card link when it has one. */
+.card {
+  position: relative;
+  margin: 0 0 var(--sc-space-3);
+  padding: var(--sc-space-3);
+  background: var(--sc-surface);
+  border: var(--sc-border-width) solid var(--sc-border);
+  border-radius: var(--sc-radius-card);
+  box-shadow: var(--sc-shadow-card);
+}
+
+.card > :last-child {
+  margin-bottom: 0;
+}
+
+.card h3 {
+  margin-top: 0;
+  margin-bottom: var(--sc-space-1);
+}
+
+.card-link {
+  text-decoration: none;
+}
+
+.card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--sc-radius-card);
+}
+
+.card:has(.card-link):hover {
+  border-color: var(--sc-primary);
+}
+
+.card:hover .card-link {
+  text-decoration: underline;
+}
+
+.card-description {
+  margin: 0;
+  color: var(--sc-muted);
+}/* Cards in a grid: one column on a phone, as many as fit from 768 px. */
+.card-grid {
+  display: grid;
+  gap: var(--sc-space-2);
+  margin: 0 0 var(--sc-space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.card-grid > li {
+  margin: 0;
+  max-width: none;
+  list-style: none;
+}
+
+.card-grid .card {
+  height: 100%;
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: var(--sc-space-3);
+  }
+}
+
+
+/* Data table (components/table.html, FR-027): a real table from 768 px, a card of labelled values
+   per row below it. Long values wrap; nothing scrolls sideways. */
+.data-table {
+  width: 100%;
+  margin-bottom: var(--sc-space-3);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-table caption {
+  margin-bottom: var(--sc-space-1);
+  text-align: left;
+  font-weight: var(--sc-weight-semibold);
+}
+
+.data-table :is(th, td) {
+  background: none;
+  color: var(--sc-text);
+  overflow-wrap: anywhere;
+}
+
+.data-table td {
+  vertical-align: middle;
+}
+
+.row-actions {
   white-space: nowrap;
 }
+
+td.row-actions {
+  width: 1%;
+}
+
+/* The same actions outside a table (the selected class on the Students tab, a region in its
+   list): a wrapping row. */
+div.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-space-1);
+  margin-bottom: var(--sc-space-3);
+  white-space: normal;
+}
+
+div.row-actions > * + * {
+  margin-left: 0;
+}
+
+/* Every row action has the same gap and the same width, whether it is a link or a one-button
+   form, so Activate and Deactivate take the same room (design approval, round 1). */
+.row-actions > * + * {
+  margin-left: var(--sc-space-1);
+}
+
+.row-actions :is(button, [role="button"]) {
+  min-width: var(--sc-action-width);
+  margin-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .data-table {
+    background: var(--sc-surface);
+    border: var(--sc-border-width) solid var(--sc-border);
+    border-radius: var(--sc-radius-card);
+    overflow: hidden;
+  }
+
+  .data-table th {
+    border-bottom-width: var(--sc-border-width);
+    padding: var(--sc-space-1) var(--sc-space-2);
+    background: var(--sc-neutral-tint);
+    color: var(--sc-muted);
+    font-size: var(--sc-text-small);
+    font-weight: var(--sc-weight-semibold);
+  }
+
+  .data-table td {
+    padding: var(--sc-space-2);
+  }
+
+  .data-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+@media (width < 768px) {
+  .data-table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table td {
+    display: block;
+  }
+
+  .data-table thead {
+    position: absolute;
+    width: var(--sc-border-width);
+    height: var(--sc-border-width);
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .data-table tr {
+    margin-bottom: var(--sc-space-2);
+    padding: var(--sc-space-2);
+    background: var(--sc-surface);
+    border: var(--sc-border-width) solid var(--sc-border);
+    border-radius: var(--sc-radius-card);
+    box-shadow: var(--sc-shadow-card);
+  }
+
+  .data-table td {
+    width: auto;
+    padding: 0;
+    border: 0;
+  }
+
+  .data-table td + td {
+    margin-top: var(--sc-space-1);
+  }
+
+  .data-table td[data-label]:not([data-label=""])::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--sc-muted);
+    font-size: var(--sc-text-small);
+    font-weight: var(--sc-weight-semibold);
+  }
+
+  div.row-actions {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+
+  .data-table td.row-actions {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--sc-space-1);
+    margin-top: var(--sc-space-2);
+    padding-top: var(--sc-space-2);
+    border-top: var(--sc-border-width) solid var(--sc-border);
+    white-space: normal;
+  }
+
+  .row-actions > * + * {
+    margin-left: 0;
+  }
+
+  .row-actions :is(button, [role="button"]) {
+    width: 100%;
+    min-width: 0;
+    --pico-form-element-spacing-horizontal: var(--sc-space-1);
+  }
+
+  .row-actions .inline-form {
+    display: block;
+  }
+}
+
+/* Badges (components/badge.html, FR-028): a status is always a word, never colour alone. */
+.badge {
+  display: inline-block;
+  padding: 0 var(--sc-space-1);
+  border-radius: var(--sc-radius-control);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+  line-height: 1.5rem;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.badge-success {
+  background: var(--sc-success-tint);
+  color: var(--sc-success);
+}
+
+.badge-muted {
+  background: var(--sc-neutral-tint);
+  color: var(--sc-muted);
+}
+
+.badge-neutral {
+  background: var(--sc-neutral-tint);
+  color: var(--sc-text);
+}
+
+.badge-info {
+  background: var(--sc-primary-tint);
+  color: var(--sc-primary);
+}
+
+/* Notices and empty states (components/feedback.html, FR-029, FR-030). */
+.notice {
+  max-width: var(--sc-measure);
+  margin-bottom: var(--sc-space-3);
+  padding: var(--sc-space-2);
+  border-left: var(--sc-border-accent) solid var(--sc-primary);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-primary-tint);
+  color: var(--sc-text);
+}
+
+.notice > :last-child {
+  margin-bottom: 0;
+}
+
+.notice-info {
+  border-left-color: var(--sc-primary);
+  background: var(--sc-primary-tint);
+}
+
+.notice-success {
+  border-left-color: var(--sc-success);
+  background: var(--sc-success-tint);
+}
+
+.notice-error {
+  border-left-color: var(--sc-danger);
+  background: var(--sc-danger-tint);
+}
+
+.empty-state {
+  max-width: var(--sc-measure);
+  margin-bottom: var(--sc-space-3);
+  padding: var(--sc-space-4) var(--sc-space-3);
+  background: var(--sc-surface);
+  border: var(--sc-border-width) dashed var(--sc-border);
+  border-radius: var(--sc-radius-card);
+}
+
+.empty-state > :last-child {
+  margin-bottom: 0;
+}
+
+.empty-state-message {
+  margin: 0;
+  font-weight: var(--sc-weight-semibold);
+}
+
+.empty-state-hint {
+  margin: var(--sc-space-1) 0 0;
+  color: var(--sc-muted);
+}
+
+/* Forms (components/form.html, FR-031): the summary above the form, each message beside its
+   field, the primary button first and Cancel as a link. */
+.error-summary {
+  max-width: var(--sc-measure);
+  margin-bottom: var(--sc-space-4);
+  padding: var(--sc-space-2) var(--sc-space-3);
+  border: var(--sc-border-strong) solid var(--sc-danger);
+  border-left-width: var(--sc-space-1);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-danger-tint);
+}
+
+.error-summary:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.25rem var(--sc-focus-ring);
+}
+
+.error-summary h2 {
+  margin: 0 0 var(--sc-space-1);
+  font-size: var(--sc-text-h4);
+}
+
+.error-summary ul {
+  margin: 0;
+  padding-left: var(--sc-space-3);
+}
+
+.error-summary li {
+  margin-bottom: 0;
+  font-weight: var(--sc-weight-bold);
+}
+
+.error-summary a {
+  color: var(--sc-danger);
+  font-weight: var(--sc-weight-bold);
+}
+
+.field-hint,
+.field-error {
+  display: block;
+  margin: 0 0 var(--sc-space-1);
+}
+
+.field-hint {
+  color: var(--sc-muted);
+}
+
+.field-error {
+  color: var(--sc-danger);
+  font-size: var(--sc-text-body);
+  font-weight: var(--sc-weight-bold);
+}
+
+[aria-invalid="true"] {
+  border-width: var(--sc-border-strong);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sc-space-2) var(--sc-space-3);
+  margin-top: var(--sc-space-1);
+  margin-bottom: var(--sc-space-3);
+}
+
+.form-actions > * {
+  margin: 0;
+}
+
+.form-actions a:not([role="button"]) {
+  font-weight: var(--sc-weight-semibold);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  min-height: var(--sc-touch-target);
+  font-weight: var(--sc-weight-regular);
+}
+
+.checkbox-label input {
+  margin: 0;
+}
+
+fieldset > legend {
+  margin-bottom: var(--sc-space-1);
+  font-weight: var(--sc-weight-semibold);
+}
+
+/* Confirmations (components/confirmation.html, FR-032). */
+.confirmation {
+  max-width: var(--sc-measure);
+}
+
+.confirmation-refused .form-actions {
+  margin-top: 0;
+}
+
+/* Details list (components/details.html, FR-033): stacked on a phone, two columns from 768 px. */
+.details-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 var(--sc-space-3);
+  max-width: var(--sc-measure);
+  margin-bottom: var(--sc-space-3);
+}
+
+.details-list dt {
+  color: var(--sc-muted);
+  font-weight: var(--sc-weight-semibold);
+}
+
+.details-list dd {
+  margin: 0 0 var(--sc-space-2);
+  overflow-wrap: anywhere;
+}
+
+.details-list ul {
+  margin: 0;
+  padding-left: var(--sc-space-3);
+}
+
+.details-list li {
+  margin-bottom: var(--sc-space-1);
+}
+
+.details-list dd > :last-child {
+  margin-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .details-list {
+    grid-template-columns: minmax(10rem, max-content) 1fr;
+  }
+
+  .details-list dt {
+    margin-bottom: var(--sc-space-2);
+  }
+}
+
+/* Selectors (components/selectors.html, FR-034): the list beside its detail, and the chained
+   lists in a row, from 768 px; stacked below. */
+.selectors {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sc-space-4);
+  margin-bottom: var(--sc-space-3);
+}
+
+@media (min-width: 768px) {
+  .selectors-list-detail {
+    grid-template-columns: minmax(16rem, 1fr) 2fr;
+  }
+
+  .selectors-chained {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sc-space-3);
+  }
+}
+
+.selectors-chained form,
+.selectors-chained select {
+  margin-bottom: 0;
+}
+
+.selectors-chained select {
+  max-width: none;
+}
+
+.select-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.select-list > li {
+  margin: 0 0 var(--sc-space-1);
+  padding: var(--sc-space-1) var(--sc-space-2);
+  max-width: none;
+  list-style: none;
+  border: var(--sc-border-width) solid var(--sc-border);
+  border-left: var(--sc-border-accent) solid var(--sc-border);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-surface);
+  overflow-wrap: anywhere;
+}
+
+.select-list > li > a {
+  font-weight: var(--sc-weight-semibold);
+}
+
+.select-list > li.selected {
+  border-color: var(--sc-primary);
+  background: var(--sc-primary-tint);
+}
+
+.select-list > li.selected > a {
+  color: var(--sc-text);
+  font-weight: var(--sc-weight-bold);
+  text-decoration: none;
+}
+
+/* An item's actions share its width in equal parts, so they stay on one row in the narrow list. */
+.select-list div.row-actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--sc-space-1);
+  margin: var(--sc-space-1) 0 0;
+}
+
+.select-list .row-actions :is(button, [role="button"]) {
+  width: 100%;
+  min-width: 0;
+  --pico-form-element-spacing-horizontal: var(--sc-space-1);
+}
+
+.select-list .row-actions .inline-form {
+  display: block;
+}
+
+/* The theme switch (components/frame.html, FR-014): three secondary buttons; the current choice
+   is marked by the primary tint, a primary border and bold text, not by colour alone. */
+.theme-switch {
+  margin: 0;
+}
+
+.theme-switch fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.theme-switch legend {
+  margin: 0 0 var(--sc-space-1);
+  padding: 0;
+  color: var(--sc-muted);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+}
+
+.theme-switch .button-row {
+  flex-wrap: nowrap;
+}
+
+.theme-switch button {
+  flex: 1;
+}
+
+.theme-switch :is(button, [type="submit"]).secondary[aria-pressed="true"] {
+  --pico-background-color: var(--sc-primary-tint);
+  --pico-border-color: var(--sc-primary);
+  --pico-color: var(--sc-text);
+  border-width: var(--sc-border-strong);
+  font-weight: var(--sc-weight-bold);
+}
+
+.theme-switch-standalone {
+  margin-top: var(--sc-space-5);
+  padding-top: var(--sc-space-3);
+  border-top: var(--sc-border-width) solid var(--sc-border);
+  max-width: 20rem;
+}
+
+/* Palette swatches (components/palette.html): the gallery's view of every colour token. */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--sc-space-2);
+  margin-bottom: var(--sc-space-3);
+}
+
+.swatch {
+  overflow: hidden;
+  background: var(--sc-surface);
+  border: var(--sc-border-width) solid var(--sc-border);
+  border-radius: var(--sc-radius-control);
+}
+
+.swatch-chip {
+  height: var(--sc-space-6);
+  border-bottom: var(--sc-border-width) solid var(--sc-border);
+}
+
+.swatch-label {
+  margin: 0;
+  padding: var(--sc-space-1);
+  font-size: var(--sc-text-small);
+  overflow-wrap: anywhere;
+}
+
+.swatch-page {
+  background: var(--sc-page);
+}
+
+.swatch-surface {
+  background: var(--sc-surface);
+}
+
+.swatch-text {
+  background: var(--sc-text);
+}
+
+.swatch-muted {
+  background: var(--sc-muted);
+}
+
+.swatch-border {
+  background: var(--sc-border);
+}
+
+.swatch-top-bar {
+  background: var(--sc-top-bar);
+}
+
+.swatch-primary {
+  background: var(--sc-primary);
+}
+
+.swatch-on-primary {
+  background: var(--sc-on-primary);
+}
+
+.swatch-primary-tint {
+  background: var(--sc-primary-tint);
+}
+
+.swatch-accent {
+  background: var(--sc-accent);
+}
+
+.swatch-success {
+  background: var(--sc-success);
+}
+
+.swatch-success-tint {
+  background: var(--sc-success-tint);
+}
+
+.swatch-danger {
+  background: var(--sc-danger);
+}
+
+.swatch-danger-tint {
+  background: var(--sc-danger-tint);
+}
+
+.swatch-primary-hover {
+  background: var(--sc-primary-hover);
+}
+
+.swatch-focus-ring {
+  background: var(--sc-focus-ring);
+}
+
+.swatch-danger-hover {
+  background: var(--sc-danger-hover);
+}
+
+.swatch-on-danger {
+  background: var(--sc-on-danger);
+}
+
+.swatch-on-success {
+  background: var(--sc-on-success);
+}
+
+.swatch-on-accent {
+  background: var(--sc-on-accent);
+}
+
+.swatch-on-top-bar {
+  background: var(--sc-on-top-bar);
+}
+
+.swatch-on-top-bar-muted {
+  background: var(--sc-on-top-bar-muted);
+}
+
+.swatch-neutral-tint {
+  background: var(--sc-neutral-tint);
+}
+
+/* == End of components == */

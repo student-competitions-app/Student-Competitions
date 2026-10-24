@@ -96,6 +96,7 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/profile/withdraw"),
         ("POST", "/data-deletion"),
         ("POST", "/data-deletion/confirm/{token}"),
+        ("POST", "/theme"),
         ("POST", "/teacher/students/institutions/{institution_id:int}/classes"),
         ("POST", f"{TEACHER_CLASS}/edit"),
         ("POST", f"{TEACHER_CLASS}/deactivate"),
@@ -127,6 +128,7 @@ def test_the_allowlist_is_exact() -> None:
         ("GET", "/data-deletion/confirm/{token}"),
         ("POST", "/data-deletion/confirm/{token}"),
         ("GET", "/data-erased"),
+        ("POST", "/theme"),
     }
 
 

@@ -5,7 +5,7 @@ See specs/004-email-otp-auth/research.md#d12--safe-return-to-addresses.
 
 import pytest
 
-from app.core.security import safe_next_path
+from app.core.security import safe_next_path, safe_return_path
 
 LONGEST = "/" + "a" * 2047
 
@@ -51,3 +51,37 @@ def test_anything_else_becomes_the_home_page(value: str | None) -> None:
 def test_only_the_exact_role_path_is_refused() -> None:
     """`AUTH_PATHS` matches whole paths, as for `/login`: `/role/` is another page."""
     assert safe_next_path("/role/") == "/role/"
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 10: where the theme switch may return (research D6)
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "value", ["/login", "/login?next=%2Fprofile", "/role", "/admin/subjects?x=1", LONGEST]
+)
+def test_the_theme_switch_returns_to_local_pages_including_sign_in(value: str) -> None:
+    assert safe_return_path(value) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        None,
+        "",
+        LONGEST + "a",
+        "admin",
+        "//evil.example",
+        "https://evil.example/",
+        "/\\evil",
+        "/a b",
+        "/a\x00b",
+        "/login/code",
+        "/logout",
+        "/theme",
+        "/theme?x=1",
+    ],
+)
+def test_the_theme_switch_refuses_other_targets(value: str | None) -> None:
+    assert safe_return_path(value) is None

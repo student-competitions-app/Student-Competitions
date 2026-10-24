@@ -1,0 +1,19 @@
+{#- Icons (specs/010-design-system-ui-guidelines contracts/components.md §11, research D13).
+    Inline SVG: no request, and it follows the theme through classes. app/static/img/favicon.svg
+    is the same mark drawn with fixed colours. -#}
+
+{% macro logo_mark(size="md") -%}
+{%- if size not in ("sm", "md", "lg") %}{{ template_error("logo_mark: size must be sm, md or lg") }}{% endif -%}
+{%- set logo_class = {"sm": "logo-mark logo-mark-sm", "md": "logo-mark logo-mark-md", "lg": "logo-mark logo-mark-lg"}[size] -%}
+<svg class="{{ logo_class }}" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg>
+{%- endmacro %}
+
+{% macro icon(name) -%}
+{%- if name == "account" -%}
+<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+{%- elif name == "arrow-left" -%}
+<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+{%- else -%}
+{{ template_error("icon: unknown icon " ~ name) }}
+{%- endif -%}
+{%- endmacro %}

@@ -1,0 +1,89 @@
+{#- The page frame (contracts/components.md §1, FR-018–FR-021, FR-024, research D7). Import it
+    `with context`: `top_bar` and `user_menu` read the signed-in person from the template context
+    (`current_user`, `current_role`, `user_roles`, set by `app.core.templates`) unless they are
+    given one, as the component gallery does to show each variant. -#}
+
+{% from "components/icons.html" import logo_mark, icon %}
+{% from "components/button.html" import button, link_button %}
+
+{% macro top_bar(user=current_user, role=current_role, roles=user_roles) -%}
+<header class="top-bar">
+  <div class="container">
+    <a href="/" class="brand">{{ logo_mark() }}<span class="brand-name">{{ app_name }}</span></a>
+    {%- if user %}
+    {%- if role %}
+    <span class="brand-role">{{ role.label }}</span>
+    {%- endif %}
+    {{ user_menu(user, role, roles) }}
+    {%- endif %}
+  </div>
+</header>
+{%- endmacro %}
+
+{#- The user menu (FR-019): a native <details>, so it opens and closes without JavaScript. The
+    role switch shows only for a person with several roles who has chosen one, exactly as the
+    milestone 5 header did, so it never shows on the role-choice page itself. -#}
+{% macro user_menu(user=current_user, role=current_role, roles=user_roles) -%}
+<details class="user-menu">
+  <summary>{{ icon("account") }}<span class="user-menu-email">{{ user.email }}</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">{{ user.email }}</a>
+    {%- if role and roles | length > 1 %}
+    <form method="post" action="/role">
+      <span class="menu-label">Switch to</span>
+      <div class="button-row">
+        {%- for other in roles if other != role %}
+        <button type="submit" name="role" value="{{ other.value }}" class="secondary small">{{ other.label }}</button>
+        {%- endfor %}
+      </div>
+    </form>
+    {%- endif %}
+    {{ theme_switch(theme, theme_return) }}
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details>
+{%- endmacro %}
+
+{#- The theme switch (FR-014): three secondary buttons, so it never competes with the page's
+    primary action; the current choice carries `aria-pressed="true"`. `standalone` places it on
+    its own, under the sign-in form. -#}
+{% macro theme_switch(current, return_to, standalone=False) -%}
+{%- set switch_classes = "theme-switch theme-switch-standalone" if standalone else "theme-switch" -%}
+<form method="post" action="/theme" class="{{ switch_classes }}">
+  <fieldset>
+    <legend>Theme</legend>
+    <input type="hidden" name="next" value="{{ return_to }}">
+    <div class="button-row">
+      {%- for value, label in (("light", "Light"), ("dark", "Dark"), ("device", "Device")) %}
+      {{ button(label, kind="secondary", name="theme", value=value, small=True, attrs={"aria-pressed": "true" if value == current else "false"}) }}
+      {%- endfor %}
+    </div>
+  </fieldset>
+</form>
+{%- endmacro %}
+
+{% macro area_tabs(tabs, active, label) -%}
+<nav class="area-tabs" aria-label="{{ label }}">
+  <div class="container">
+    <ul>
+      {%- for tab in tabs %}
+      <li><a href="{{ tab.path }}"{% if active is not none and tab.key == active %} aria-current="page"{% endif %}>{{ tab.label }}</a></li>
+      {%- endfor %}
+    </ul>
+  </div>
+</nav>
+{%- endmacro %}
+
+{#- The arrow is an icon hidden from assistive technology, so the link reads as its words alone. -#}
+{% macro back_link(href, text) -%}
+<a href="{{ href }}" class="back-link">{{ icon("arrow-left") }}{{ text }}</a>
+{%- endmacro %}
+
+{% macro page_heading(title, action=None) -%}
+<div class="page-heading">
+  <h1>{{ title }}</h1>
+  {%- if action %}
+  {{ link_button(action[0], action[1]) }}
+  {%- endif %}
+</div>
+{%- endmacro %}

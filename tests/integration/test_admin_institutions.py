@@ -7,7 +7,6 @@ contracts/http-routes.md. The messages are asserted verbatim. Every test runs on
 rows directly.
 """
 
-import html
 import re
 
 import pytest
@@ -29,6 +28,7 @@ from app.models import (
     UserRole,
 )
 from app.schemas.names import name_key
+from tests import html as dom
 from tests.conftest import ClientAs, invite_and_accept
 
 TAB = "/admin/institutions"
@@ -141,52 +141,91 @@ def institution_path(rid: int, iid: int) -> str:
 
 
 def current_tabs(body: str) -> list[str]:
-    nav = re.search(r'<nav class="admin-tabs".*?</nav>', body, re.DOTALL)
-    assert nav is not None, "the page has no admin tab row"
-    return re.findall(r'<a href="([^"]+)" aria-current="page">', nav.group(0))
+    tabs = dom.nav(body, "Administrator area")
+    assert tabs, "the page has no admin tab row"
+    return [tab.href for tab in tabs if tab.attrs.get("aria-current") == "page"]
+
+
+def _section(body: str, heading: str) -> dom.Element:
+    """The section whose own heading starts with `heading`."""
+    found = [
+        section
+        for section in dom.parse(body).find_all("section")
+        if any(h.text().startswith(heading) for h in section.find_all("h2"))
+    ]
+    assert len(found) == 1, f"expected one section headed {heading!r}, found {len(found)}"
+    return found[0]
 
 
 def left(body: str) -> str:
-    match = re.search(r'<section aria-labelledby="regions-heading">.*?</section>', body, re.DOTALL)
-    assert match is not None, "the page has no region list"
-    return match.group(0)
+    """The region list, as HTML that can be queried again."""
+    return dom.outer_html(body, _section(body, "Regions"))
 
 
 def right(body: str) -> str:
-    match = re.search(
-        r'<section aria-labelledby="institutions-heading">.*?</section>', body, re.DOTALL
-    )
-    assert match is not None, "the page has no institution list"
-    return match.group(0)
+    """The institution list of the selected region, as HTML that can be queried again."""
+    return dom.outer_html(body, _section(body, "Educational institutions"))
+
+
+def _region_items(body: str) -> list[tuple[dom.Element, str]]:
+    """Each region's list item, with the region link's `href`."""
+    fragment = left(body)
+    items = []
+    for item in dom.parse(fragment).find_all("li"):
+        hrefs = [a.attrs.get("href", "") for a in item.find_all("a")]
+        if hrefs and re.fullmatch(r"/admin/institutions/regions/\d+", hrefs[0]):
+            items.append((item, hrefs[0]))
+    return items
 
 
 def listed_regions(body: str) -> list[str]:
     """The region names in the order the left list shows them."""
-    return re.findall(r'<a href="/admin/institutions/regions/\d+"[^>]*>([^<]*)</a>', left(body))
+    return [item.find_all("a")[0].text() for item, _ in _region_items(body)]
 
 
 def selected_regions(body: str) -> list[str]:
-    return re.findall(r'<a href="([^"]+)" aria-current="true">', body)
+    return [link.href for link in dom.links(body) if link.attrs.get("aria-current") == "true"]
 
 
 def region_item(body: str, rid: int) -> str:
-    match = re.search(
-        rf'<li[^>]*>\s*<a href="/admin/institutions/regions/{rid}"[^>]*>.*?</li>', body, re.DOTALL
-    )
-    assert match is not None, f"region {rid} is not listed"
-    return match.group(0)
+    fragment = left(body)
+    found = [
+        item
+        for item in dom.parse(fragment).find_all("li")
+        if [a.attrs.get("href") for a in item.find_all("a")][:1] == [f"{TAB}/regions/{rid}"]
+    ]
+    assert len(found) == 1, f"region {rid} is not listed"
+    return dom.outer_html(fragment, found[0])
 
 
 def listed_institutions(body: str) -> list[str]:
     """The institution names in the order the right list shows them."""
-    return re.findall(r'<td class="institution-name">([^<]*)</td>', right(body))
+    return [row["Name"] for row in dom.table_rows(right(body))]
 
 
 def institution_row(body: str, iid: int) -> str:
-    rows = re.findall(r"<tr>.*?</tr>", right(body), re.DOTALL)
-    found = [row for row in rows if f"/institutions/{iid}/" in row]
-    assert len(found) == 1, f"institution {iid} is not listed"
-    return found[0]
+    fragment = right(body)
+    rows = [
+        tr
+        for tbody in dom.parse(fragment).find_all("tbody")
+        for tr in tbody.find_all("tr")
+        if any(
+            f"/institutions/{iid}/" in link.href for link in dom.links(dom.outer_html(fragment, tr))
+        )
+        or any(f"/institutions/{iid}/" in f.action for f in dom.forms(dom.outer_html(fragment, tr)))
+    ]
+    assert len(rows) == 1, f"institution {iid} is not listed"
+    return dom.outer_html(fragment, rows[0])
+
+
+def cells(row: str) -> list[str]:
+    """The texts of a table row's cells."""
+    return [cell.text() for cell in dom.parse(row).iter() if cell.tag in ("td", "th")]
+
+
+def buttons(body: str) -> list[tuple[str, str]]:
+    """`(form action, button text)` for every button inside a form."""
+    return [(form.action, b.text) for form in dom.forms(body) for b in form.buttons]
 
 
 def post(client: TestClient, path: str, data: dict[str, str] | None = None) -> Response:
@@ -200,18 +239,19 @@ def assert_redirect(response: Response, location: str) -> None:
 
 def assert_form_refused(response: Response, message: str, value: str) -> None:
     assert response.status_code == 400
-    assert html.escape(message, quote=False) in response.text
-    assert f'value="{html.escape(value)}"' in response.text
-    assert 'aria-invalid="true"' in response.text
+    assert message in dom.text(response.text, "main")
+    name = dom.control(response.text, "name")
+    assert name["value"] == value
+    assert name.get("aria-invalid") == "true"
     assert current_tabs(response.text) == [TAB]
 
 
 def assert_region_not_found(response: Response) -> None:
     assert response.status_code == 404
     body = response.text
-    assert "<h1>Region not found</h1>" in body
+    assert dom.h1(body) == "Region not found"
     assert "This region does not exist. It may have been deleted." in body
-    assert '<a href="/admin/institutions">' in body
+    assert "/admin/institutions" in [a.href for a in dom.content_links(body)]
     assert current_tabs(body) == [TAB]
     assert "Traceback" not in body
 
@@ -219,12 +259,12 @@ def assert_region_not_found(response: Response) -> None:
 def assert_institution_not_found(response: Response) -> None:
     assert response.status_code == 404
     body = response.text
-    assert "<h1>Educational institution not found</h1>" in body
+    assert dom.h1(body) == "Educational institution not found"
     assert (
         "This educational institution does not exist in this region. It may have been deleted."
         in body
     )
-    assert '<a href="/admin/institutions">' in body
+    assert "/admin/institutions" in [a.href for a in dom.content_links(body)]
     assert current_tabs(body) == [TAB]
     assert "Traceback" not in body
 
@@ -239,7 +279,7 @@ def test_the_empty_tab(admin_client: TestClient) -> None:
     response = admin_client.get(TAB)
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Educational institutions</h1>" in body
+    assert dom.h1(body) == "Educational institutions"
     assert "No regions yet" in left(body)
     assert "Select a region" in right(body)
     assert current_tabs(body) == [TAB]
@@ -267,7 +307,7 @@ def test_the_selected_region_is_highlighted(admin_client: TestClient, session: S
     lviv = add_region(session, "Lviv")
     body = admin_client.get(region_path(lviv)).text
     assert selected_regions(body) == [region_path(lviv)]
-    assert 'class="selected"' in region_item(body, lviv)
+    assert "selected" in dom.parse(region_item(body, lviv)).find_all("li")[0].classes()
     assert selected_regions(admin_client.get(TAB).text) == []
 
 
@@ -284,7 +324,7 @@ def test_the_right_side_lists_only_the_selected_regions_institutions(
     body = admin_client.get(region_path(kyiv)).text
     assert "Educational institutions in “Kyiv”" in right(body)
     assert listed_institutions(body) == ["Academy", "art school", "Zaporizhzhia College"]
-    statuses = re.findall(r"<td>(Active|Deactivated)</td>", right(body))
+    statuses = [row["Status"] for row in dom.table_rows(right(body))]
     assert statuses == ["Active", "Deactivated", "Active"]
 
 
@@ -302,8 +342,8 @@ def test_with_no_region_selected_there_are_no_institution_actions(
     add_institution(session, kyiv, "Academy")
     section = right(admin_client.get(TAB).text)
     assert "Select a region" in section
-    assert "<form" not in section
-    assert "<button" not in section
+    assert dom.forms(section) == []
+    assert dom.parse(section).find_all("button") == []
     assert "/institutions/new" not in section
     assert "Academy" not in section
 
@@ -323,7 +363,7 @@ def test_a_non_integer_id_gets_the_normal_not_found_page(admin_client: TestClien
     response = admin_client.get(f"{TAB}/regions/abc")
     assert response.status_code == 404
     assert response.headers["content-type"].startswith("text/html")
-    assert "admin-tabs" not in response.text
+    assert dom.nav(response.text, "Administrator area") == []
 
 
 # ---------------------------------------------------------------------------------------------
@@ -333,24 +373,24 @@ def test_a_non_integer_id_gets_the_normal_not_found_page(admin_client: TestClien
 
 def test_the_tab_offers_create_for_regions(admin_client: TestClient) -> None:
     """FR-010."""
-    assert '<a href="/admin/institutions/regions/new" role="button">Create</a>' in left(
-        admin_client.get(TAB).text
-    )
+    create = [
+        a for a in dom.links(left(admin_client.get(TAB).text)) if a.href == f"{TAB}/regions/new"
+    ]
+    assert [(a.text, a.attrs.get("role")) for a in create] == [("Create region", "button")]
 
 
 def test_the_region_create_form(admin_client: TestClient) -> None:
     response = admin_client.get(f"{TAB}/regions/new")
     assert response.status_code == 200
     body = response.text
-    assert "<h1>New region</h1>" in body
-    assert '<form method="post" action="/admin/institutions/regions">' in body
-    field = re.search(r'<input[^>]*name="name"[^>]*>', body)
-    assert field is not None
-    assert 'maxlength="200"' in field.group(0)
-    assert "required" in field.group(0)
-    assert 'value=""' in field.group(0)
-    assert ">Save</button>" in body
-    assert '<a href="/admin/institutions">Cancel</a>' in body
+    assert dom.h1(body) == "New region"
+    assert ("post", "/admin/institutions/regions") in dom.form_targets(body)
+    field = dom.control(body, "name")
+    assert field["maxlength"] == "200"
+    assert "required" in field
+    assert field["value"] == ""
+    assert "Save" in [b.text for f in dom.forms(body) for b in f.buttons]
+    assert ("/admin/institutions", "Cancel") in dom.link_pairs(body)
     assert "aria-invalid" not in body
     assert current_tabs(body) == [TAB]
 
@@ -376,7 +416,7 @@ def test_a_duplicate_region_is_refused_with_the_value_kept(
     before = regions(session)
     response = post(admin_client, f"{TAB}/regions", {"name": "  KYIV  "})
     assert_form_refused(response, REGION_DUPLICATE.format("Kyiv"), "  KYIV  ")
-    assert '<form method="post" action="/admin/institutions/regions">' in response.text
+    assert ("post", "/admin/institutions/regions") in dom.form_targets(response.text)
     assert regions(session) == before
 
 
@@ -427,7 +467,11 @@ def test_a_selected_active_region_offers_create(admin_client: TestClient, sessio
     """US2-2, FR-014."""
     kyiv = add_region(session, "Kyiv")
     section = right(admin_client.get(region_path(kyiv)).text)
-    assert f'<a href="{region_path(kyiv)}/institutions/new" role="button">Create</a>' in section
+    assert (
+        f"{region_path(kyiv)}/institutions/new",
+        "Create educational institution",
+        "button",
+    ) in [(a.href, a.text, a.attrs.get("role")) for a in dom.links(section)]
     assert REGION_INACTIVE not in section
 
 
@@ -437,12 +481,12 @@ def test_the_institution_create_form(admin_client: TestClient, session: Session)
     response = admin_client.get(f"{region_path(kyiv)}/institutions/new")
     assert response.status_code == 200
     body = response.text
-    assert "<h1>New educational institution in “Kyiv”</h1>" in body
-    assert f'<form method="post" action="{region_path(kyiv)}/institutions">' in body
-    assert re.findall(r"<input[^>]*name=\"([^\"]+)\"", body) == ["name"]
-    assert "<select" not in body
-    assert ">Save</button>" in body
-    assert f'<a href="{region_path(kyiv)}">Cancel</a>' in body
+    assert dom.h1(body) == "New educational institution in “Kyiv”"
+    assert ("post", f"{region_path(kyiv)}/institutions") in dom.form_targets(body)
+    assert [i.name for f in dom.forms(body, "main") for i in f.inputs] == ["name"]
+    assert dom.parse(body).find_all("select") == []
+    assert "Save" in [b.text for f in dom.forms(body) for b in f.buttons]
+    assert (f"{region_path(kyiv)}", "Cancel") in dom.link_pairs(body)
     assert current_tabs(body) == [TAB]
 
 
@@ -455,7 +499,7 @@ def test_create_an_institution(admin_client: TestClient, session: Session) -> No
     body = admin_client.get(region_path(kyiv)).text
     assert listed_institutions(body) == [KPI]
     assert selected_regions(body) == [region_path(kyiv)]
-    assert "<td>Active</td>" in right(body)
+    assert "Active" in [row["Status"] for row in dom.table_rows(right(body))]
 
 
 def test_the_same_institution_name_in_two_regions(
@@ -482,7 +526,7 @@ def test_a_duplicate_institution_is_refused_with_the_value_kept(
     value = f"  {KPI.upper()}  "
     response = post(admin_client, f"{region_path(kyiv)}/institutions", {"name": value})
     assert_form_refused(response, INSTITUTION_DUPLICATE.format(KPI), value)
-    assert "<h1>New educational institution in “Kyiv”</h1>" in response.text
+    assert dom.h1(response.text) == "New educational institution in “Kyiv”"
     assert institutions(session) == before
 
 
@@ -518,8 +562,8 @@ def test_a_deactivated_region_refuses_new_institutions(
     page = admin_client.get(f"{region_path(kyiv)}/institutions/new")
     assert page.status_code == 409
     assert REGION_INACTIVE in page.text
-    assert "<form" not in page.text.split("</nav>", 1)[1].split("</main>")[0]
-    assert f'<a href="{region_path(kyiv)}">Back to “Kyiv”</a>' in page.text
+    assert dom.forms(page.text, "main") == []
+    assert (f"{region_path(kyiv)}", "Back to “Kyiv”") in dom.link_pairs(page.text)
     assert current_tabs(page.text) == [TAB]
 
     for name in ("College", ""):
@@ -552,10 +596,10 @@ def test_each_region_offers_its_actions(admin_client: TestClient, session: Sessi
     body = admin_client.get(TAB).text
     for rid in (kyiv, odesa):
         item = region_item(body, rid)
-        assert f'<a href="{region_path(rid)}/rename">Rename</a>' in item
-        assert f'<a href="{region_path(rid)}/delete">Delete</a>' in item
-    assert f'<a href="{region_path(kyiv)}/deactivate">Deactivate</a>' in body
-    assert f'<form method="post" action="{region_path(odesa)}/activate">' in body
+        assert (f"{region_path(rid)}/rename", "Rename") in dom.link_pairs(item)
+        assert (f"{region_path(rid)}/delete", "Delete") in dom.link_pairs(item)
+    assert (f"{region_path(kyiv)}/deactivate", "Deactivate") in dom.link_pairs(body)
+    assert ("post", f"{region_path(odesa)}/activate") in dom.form_targets(body)
     assert f"{region_path(kyiv)}/activate" not in body
     assert f"{region_path(odesa)}/deactivate" not in body
 
@@ -566,10 +610,10 @@ def test_the_region_rename_form_is_filled_in(admin_client: TestClient, session: 
     response = admin_client.get(f"{region_path(lvov)}/rename")
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Rename region</h1>" in body
-    assert f'<form method="post" action="{region_path(lvov)}/rename">' in body
-    assert 'value="Lvov"' in body
-    assert f'<a href="{region_path(lvov)}">Cancel</a>' in body
+    assert dom.h1(body) == "Rename region"
+    assert ("post", f"{region_path(lvov)}/rename") in dom.form_targets(body)
+    assert "Lvov" in [i.value for f in dom.forms(body) for i in f.inputs]
+    assert (f"{region_path(lvov)}", "Cancel") in dom.link_pairs(body)
     assert current_tabs(body) == [TAB]
 
 
@@ -590,7 +634,7 @@ def test_rename_onto_another_region_is_refused(admin_client: TestClient, session
     before = regions(session)
     response = post(admin_client, f"{region_path(lviv)}/rename", {"name": "KYIV"})
     assert_form_refused(response, REGION_DUPLICATE.format("Kyiv"), "KYIV")
-    assert f'<form method="post" action="{region_path(lviv)}/rename">' in response.text
+    assert ("post", f"{region_path(lviv)}/rename") in dom.form_targets(response.text)
     assert regions(session) == before
 
 
@@ -621,9 +665,7 @@ def test_deactivate_and_activate_a_region(admin_client: TestClient, session: Ses
     body = admin_client.get(region_path(kyiv)).text
     item = region_item(body, kyiv)
     assert "Deactivated" in item
-    assert re.search(
-        rf'action="{region_path(kyiv)}/activate">\s*<button[^>]*>Activate</button>', item
-    )
+    assert (f"{region_path(kyiv)}/activate", "Activate") in buttons(item)
     assert listed_institutions(body) == ["Academy"]
     assert "/institutions/new" not in right(body)
     assert REGION_INACTIVE in right(body)
@@ -632,7 +674,7 @@ def test_deactivate_and_activate_a_region(admin_client: TestClient, session: Ses
     assert region_names(session) == [("Kyiv", True)]
     body = admin_client.get(region_path(kyiv)).text
     assert f"{region_path(kyiv)}/institutions/new" in right(body)
-    assert f'<a href="{region_path(kyiv)}/deactivate">Deactivate</a>' in body
+    assert (f"{region_path(kyiv)}/deactivate", "Deactivate") in dom.link_pairs(body)
 
 
 def test_a_region_status_never_changes_its_institutions(
@@ -672,11 +714,11 @@ def test_the_region_delete_confirmation_deletes_nothing(
     response = admin_client.get(f"{region_path(test)}/delete")
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Delete region “Test”?</h1>" in body
+    assert dom.h1(body) == "Delete region “Test”?"
     assert "Deleting a region cannot be undone." in body
-    assert f'<form method="post" action="{region_path(test)}/delete">' in body
-    assert ">Delete</button>" in body
-    assert f'<a href="{region_path(test)}">Cancel</a>' in body
+    assert ("post", f"{region_path(test)}/delete") in dom.form_targets(body)
+    assert "Delete" in [b.text for f in dom.forms(body) for b in f.buttons]
+    assert (f"{region_path(test)}", "Cancel") in dom.link_pairs(body)
     assert current_tabs(body) == [TAB]
     assert regions(session) == before
 
@@ -703,9 +745,9 @@ def test_a_region_holding_an_institution_cannot_be_deleted(
     assert response.status_code == 409
     body = response.text
     assert NOT_EMPTY.format("Kyiv") in body
-    assert ">Delete</button>" not in body
-    assert f'action="{region_path(kyiv)}/delete"' not in body
-    assert f'<a href="{region_path(kyiv)}">Back to “Kyiv”</a>' in body
+    assert "Delete" not in [b.text for f in dom.forms(body) for b in f.buttons]
+    assert f"{region_path(kyiv)}/delete" not in [f.action for f in dom.forms(body)]
+    assert (f"{region_path(kyiv)}", "Back to “Kyiv”") in dom.link_pairs(body)
     assert current_tabs(body) == [TAB]
     assert (regions(session), institutions(session)) == before
 
@@ -749,14 +791,14 @@ def test_each_institution_offers_its_actions(
     body = admin_client.get(region_path(kyiv)).text
     for iid in (academy, college):
         row = institution_row(body, iid)
-        assert f'<a href="{institution_path(kyiv, iid)}/rename">Rename</a>' in row
-        assert f'<a href="{institution_path(kyiv, iid)}/delete">Delete</a>' in row
+        assert (f"{institution_path(kyiv, iid)}/rename", "Rename") in dom.link_pairs(row)
+        assert (f"{institution_path(kyiv, iid)}/delete", "Delete") in dom.link_pairs(row)
     academy_row = institution_row(body, academy)
     college_row = institution_row(body, college)
-    assert f'<a href="{institution_path(kyiv, academy)}/deactivate">Deactivate</a>' in (academy_row)
-    assert f'<form method="post" action="{institution_path(kyiv, college)}/activate">' in (
-        college_row
+    assert (f"{institution_path(kyiv, academy)}/deactivate", "Deactivate") in dom.link_pairs(
+        academy_row
     )
+    assert ("post", f"{institution_path(kyiv, college)}/activate") in dom.form_targets(college_row)
     assert "/activate" not in academy_row
     assert "/deactivate" not in college_row
 
@@ -768,13 +810,13 @@ def test_the_institution_rename_form(admin_client: TestClient, session: Session)
     response = admin_client.get(f"{institution_path(kyiv, academy)}/rename")
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Rename educational institution</h1>" in body
+    assert dom.h1(body) == "Rename educational institution"
     assert "Region: Kyiv" in body
-    assert f'<form method="post" action="{institution_path(kyiv, academy)}/rename">' in body
-    assert 'value="Acadmy"' in body
-    assert re.findall(r"<input[^>]*name=\"([^\"]+)\"", body) == ["name"]
-    assert "<select" not in body
-    assert f'<a href="{region_path(kyiv)}">Cancel</a>' in body
+    assert ("post", f"{institution_path(kyiv, academy)}/rename") in dom.form_targets(body)
+    assert "Acadmy" in [i.value for f in dom.forms(body) for i in f.inputs]
+    assert [i.name for f in dom.forms(body, "main") for i in f.inputs] == ["name"]
+    assert dom.parse(body).find_all("select") == []
+    assert (f"{region_path(kyiv)}", "Cancel") in dom.link_pairs(body)
     assert current_tabs(body) == [TAB]
 
 
@@ -850,12 +892,12 @@ def test_deactivate_and_activate_an_institution(admin_client: TestClient, sessio
     assert_redirect(post(admin_client, f"{path}/deactivate"), region_path(kyiv))
     assert institution_names(session, kyiv) == [("Academy", False)]
     row = institution_row(admin_client.get(region_path(kyiv)).text, academy)
-    assert "<td>Deactivated</td>" in row
-    assert re.search(rf'action="{path}/activate">\s*<button[^>]*>Activate</button>', row)
+    assert "Deactivated" in cells(row)
+    assert (f"{path}/activate", "Activate") in buttons(row)
     assert_redirect(post(admin_client, f"{path}/activate"), region_path(kyiv))
     assert institution_names(session, kyiv) == [("Academy", True)]
     row = institution_row(admin_client.get(region_path(kyiv)).text, academy)
-    assert "<td>Active</td>" in row
+    assert "Active" in cells(row)
 
 
 def test_repeating_an_institution_status_change_changes_nothing(
@@ -878,12 +920,12 @@ def test_the_institution_delete_confirmation_deletes_nothing(
     response = admin_client.get(f"{institution_path(kyiv, academy)}/delete")
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Delete educational institution “Academy”?</h1>" in body
+    assert dom.h1(body) == "Delete educational institution “Academy”?"
     assert "Region: Kyiv" in body
     assert "Deleting an educational institution cannot be undone." in body
-    assert f'<form method="post" action="{institution_path(kyiv, academy)}/delete">' in body
-    assert ">Delete</button>" in body
-    assert f'<a href="{region_path(kyiv)}">Cancel</a>' in body
+    assert ("post", f"{institution_path(kyiv, academy)}/delete") in dom.form_targets(body)
+    assert "Delete" in [b.text for f in dom.forms(body) for b in f.buttons]
+    assert (f"{region_path(kyiv)}", "Cancel") in dom.link_pairs(body)
     assert current_tabs(body) == [TAB]
     assert institutions(session) == before
 
@@ -919,10 +961,12 @@ def test_an_institution_in_use_cannot_be_deleted(
     assert response.status_code == 409
     body = response.text
     assert IN_USE.format("Academy") in body
-    assert ">Delete</button>" not in body
-    assert f'action="{institution_path(kyiv, academy)}/delete"' not in body
-    assert f'<a href="{institution_path(kyiv, academy)}/deactivate" role="button">' in body
-    assert f'<a href="{region_path(kyiv)}">Back to “Kyiv”</a>' in body
+    assert "Delete" not in [b.text for f in dom.forms(body) for b in f.buttons]
+    assert f"{institution_path(kyiv, academy)}/delete" not in [f.action for f in dom.forms(body)]
+    assert (f"{institution_path(kyiv, academy)}/deactivate", "button") in [
+        (a.href, a.attrs.get("role")) for a in dom.links(body)
+    ]
+    assert (f"{region_path(kyiv)}", "Back to “Kyiv”") in dom.link_pairs(body)
     assert current_tabs(body) == [TAB]
     assert institutions(session) == before
 
@@ -1071,10 +1115,10 @@ def test_the_region_confirmation_changes_nothing_and_posts_to_the_route(
     response = admin_client.get(f"{region_path(kyiv)}/deactivate")
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Deactivate region “Kyiv”?</h1>" in body
+    assert dom.h1(body) == "Deactivate region “Kyiv”?"
     assert SIGNED_OUT in body
-    assert f'<form method="post" action="{region_path(kyiv)}/deactivate">' in body
-    assert f'<a href="{region_path(kyiv)}">Cancel</a>' in body
+    assert ("post", f"{region_path(kyiv)}/deactivate") in dom.form_targets(body)
+    assert (f"{region_path(kyiv)}", "Cancel") in dom.link_pairs(body)
     assert current_tabs(body) == [TAB]
     assert regions(session) == before
     assert_redirect(post(admin_client, f"{region_path(kyiv)}/deactivate"), region_path(kyiv))
@@ -1091,10 +1135,10 @@ def test_the_institution_confirmation_changes_nothing_and_posts_to_the_route(
     response = admin_client.get(f"{path}/deactivate")
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Deactivate educational institution “Academy”?</h1>" in body
+    assert dom.h1(body) == "Deactivate educational institution “Academy”?"
     assert "Region: Kyiv" in body
     assert SIGNED_OUT in body
-    assert f'<form method="post" action="{path}/deactivate">' in body
+    assert ("post", f"{path}/deactivate") in dom.form_targets(body)
     assert institutions(session) == before
     assert_redirect(post(admin_client, f"{path}/deactivate"), region_path(kyiv))
     assert institution_names(session, kyiv) == [("Academy", False)]

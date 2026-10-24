@@ -1,20 +1,21 @@
 {% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/form.html" import error_summary, field, form_actions %}
 
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-<section>
-  <h1>{{ heading }}</h1>
-  <p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
-  <form method="post" action="{{ action }}">
-    <label for="name">Name</label>
-    <input type="text" name="name" id="name" maxlength="200" required value="{{ values.name }}"{% if errors.name %} aria-invalid="true" aria-describedby="name-error"{% endif %}>
-    {% if errors.name %}<small id="name-error">{{ errors.name }}</small>{% endif %}
-    <label for="year_of_study">Year of study</label>
-    <input type="number" name="year_of_study" id="year_of_study" min="1" max="12" step="1" required value="{{ values.year_of_study }}"{% if errors.year_of_study %} aria-invalid="true" aria-describedby="year-error"{% endif %}>
-    {% if errors.year_of_study %}<small id="year-error">{{ errors.year_of_study }}</small>{% endif %}
-    <button type="submit">Save</button>
-    <a href="{{ cancel }}">Cancel</a>
-  </form>
-</section>
+{% if class_name %}
+{{ back_link(cancel, "Back to “" ~ class_name ~ "”") }}
+{% else %}
+{{ back_link(cancel, "Back to Students") }}
+{% endif %}
+{{ page_heading(heading) }}
+{{ error_summary(errors, order=["name", "year_of_study"]) }}
+<p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
+<form method="post" action="{{ action }}">
+  {{ field("name", "Name", value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
+  {{ field("year_of_study", "Year of study", value=values.year_of_study, error=errors.year_of_study, type="number", attrs={"min": "1", "max": "12", "step": "1", "required": True}) }}
+  {{ form_actions("Save", cancel_href=cancel) }}
+</form>
 {% endblock %}

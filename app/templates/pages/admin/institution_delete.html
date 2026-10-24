@@ -1,26 +1,25 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation, refusal %}
+{% from "components/button.html" import link_button %}
 
 {% block title %}Delete educational institution “{{ institution.name }}” — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
 {% set region_path = "/admin/institutions/regions/" ~ region.id %}
 {% set path = region_path ~ "/institutions/" ~ institution.id %}
-<section>
-  <h1>Delete educational institution “{{ institution.name }}”?</h1>
-  <p>Region: {{ region.name }}</p>
-  {% if in_use %}
-  <p>“{{ institution.name }}” is in use and cannot be deleted. You can deactivate it instead.</p>
-  {% if institution.is_active %}
-  <p><a href="{{ path }}/deactivate" role="button">Deactivate</a></p>
-  {% endif %}
-  <p><a href="{{ region_path }}">Back to “{{ region.name }}”</a></p>
-  {% else %}
-  {% if classes == 1 %}<p>Its class will be deleted too.</p>{% elif classes > 1 %}<p>Its {{ classes }} classes will be deleted too.</p>{% endif %}
-  <p>Deleting an educational institution cannot be undone.</p>
-  <form method="post" action="{{ path }}/delete">
-    <button type="submit">Delete</button>
-    <a href="{{ region_path }}">Cancel</a>
-  </form>
-  {% endif %}
-</section>
+{% set question = "Delete educational institution “" ~ institution.name ~ "”?" %}
+{{ back_link(region_path, "Back to “" ~ region.name ~ "”") }}
+{% if in_use %}
+{% call refusal(question, "“" ~ institution.name ~ "” is in use and cannot be deleted. You can deactivate it instead.", region_path, "Back to “" ~ region.name ~ "”") %}
+{% if institution.is_active %}{{ link_button("Deactivate", path ~ "/deactivate", kind="destructive") }}{% endif %}
+{% endcall %}
+<p>Region: {{ region.name }}</p>
+{% else %}
+{% call confirmation(question, none, path ~ "/delete", "Delete", region_path) %}
+<p>Region: {{ region.name }}</p>
+{% if classes == 1 %}<p>Its class will be deleted too.</p>{% elif classes > 1 %}<p>Its {{ classes }} classes will be deleted too.</p>{% endif %}
+<p>Deleting an educational institution cannot be undone.</p>
+{% endcall %}
+{% endif %}
 {% endblock %}

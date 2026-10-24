@@ -1,10 +1,10 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import page_heading %}
+{% from "components/feedback.html" import empty_state %}
 
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>{{ heading }}</h1>
-  <p>{{ note }}</p>
-</section>
+{{ page_heading(heading) }}
+{{ empty_state(note) }}
 {% endblock %}

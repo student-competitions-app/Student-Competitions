@@ -1,22 +1,21 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/form.html" import error_summary, field, form_actions %}
+{% from "components/feedback.html" import notice %}
 
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>{{ heading }}</h1>
-  {% if refused %}
-  <p>This region is deactivated. New educational institutions cannot be added to it.</p>
-  <p><a href="{{ cancel }}">Back to “{{ region.name }}”</a></p>
-  {% else %}
-  <p>Region: {{ region.name }}</p>
-  <form method="post" action="{{ action }}">
-    <label for="name">Name</label>
-    <input type="text" name="name" id="name" maxlength="200" required value="{{ value }}"{% if error %} aria-invalid="true" aria-describedby="name-error"{% endif %}>
-    {% if error %}<small id="name-error">{{ error }}</small>{% endif %}
-    <button type="submit">Save</button>
-    <a href="{{ cancel }}">Cancel</a>
-  </form>
-  {% endif %}
-</section>
+{{ back_link(cancel, "Back to “" ~ region.name ~ "”") }}
+{{ page_heading(heading) }}
+{% if refused %}
+{{ notice("This region is deactivated. New educational institutions cannot be added to it.", "info") }}
+{% else %}
+{{ error_summary(errors, order=["name"]) }}
+<p>Region: {{ region.name }}</p>
+<form method="post" action="{{ action }}">
+  {{ field("name", "Name", value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
+  {{ form_actions("Save", cancel_href=cancel) }}
+</form>
+{% endif %}
 {% endblock %}

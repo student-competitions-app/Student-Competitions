@@ -1,102 +1,85 @@
 {% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import page_heading %}
+{% from "components/selectors.html" import chained_lists %}
+{% from "components/table.html" import data_table, cell, actions_cell %}
+{% from "components/badge.html" import status_badge %}
+{% from "components/button.html" import link_button, post_button %}
+{% from "components/feedback.html" import notice, empty_state %}
 
 {% block title %}Students — {{ app_name }}{% endblock %}
 
 {% block scripts %}<script src="/static/js/auto-submit.js" defer></script>{% endblock %}
 
 {% block teacher_content %}
-<h1>Students</h1>
-{% if sent_to %}<p class="notice" role="status">Invitation sent to {{ sent_to }}</p>{% endif %}
+{{ page_heading("Students") }}
+{% if sent_to %}{{ notice("Invitation sent to " ~ sent_to, "success") }}{% endif %}
 {% set no_links = not regions %}
-<div class="class-picker">
-  <form method="get" action="/teacher/students">
-    <label for="region">Region</label>
-    <select id="region" name="region" data-auto-submit{% if no_links %} disabled{% endif %}>
-      <option value="">Select a region</option>
-      {% for region_id, region_name in regions %}
-      <option value="{{ region_id }}"{% if region_id == selected_region %} selected{% endif %}>{{ region_name }}</option>
-      {% endfor %}
-    </select>
-  </form>
+{% set opts = namespace(institutions=[], classes=[]) %}
+{% for i in institutions %}{% set opts.institutions = opts.institutions + [(i.id, i.label)] %}{% endfor %}
+{% for c in classes %}{% set opts.classes = opts.classes + [(c.id, c.label ~ ("" if c.is_active else " (deactivated)"))] %}{% endfor %}
+{{ chained_lists([
+  {"id": "region", "name": "region", "label": "Region", "placeholder": "Select a region",
+   "options": regions, "selected": selected_region, "disabled": no_links, "carry": []},
+  {"id": "institution", "name": "institution", "label": "Educational institution",
+   "placeholder": "Select an educational institution", "options": opts.institutions,
+   "selected": selected_institution.id if selected_institution else none,
+   "disabled": no_links or selected_region is none,
+   "carry": [("region", selected_region)] if selected_region is not none else []},
+  {"id": "class", "name": "class", "label": "Class", "placeholder": "Select a class",
+   "options": opts.classes, "selected": selected_class.id if selected_class else none,
+   "disabled": no_links or not selected_institution,
+   "carry": [("region", selected_region), ("institution", selected_institution.id)] if selected_institution else [],
+   "extra_options": [("new", "+ Add class")] if can_write else []},
+], "/teacher/students") }}
 
-  {% set institution_off = no_links or selected_region is none %}
-  <form method="get" action="/teacher/students">
-    {% if selected_region is not none %}<input type="hidden" name="region" value="{{ selected_region }}">{% endif %}
-    <label for="institution">Educational institution</label>
-    <select id="institution" name="institution" data-auto-submit{% if institution_off %} disabled{% endif %}>
-      <option value="">Select an educational institution</option>
-      {% for i in institutions %}
-      <option value="{{ i.id }}"{% if selected_institution and i.id == selected_institution.id %} selected{% endif %}>{{ i.label }}</option>
-      {% endfor %}
-    </select>
-  </form>
-
-  {% set class_off = no_links or not selected_institution %}
-  <form method="get" action="/teacher/students">
-    {% if selected_institution %}
-    <input type="hidden" name="region" value="{{ selected_region }}">
-    <input type="hidden" name="institution" value="{{ selected_institution.id }}">
-    {% endif %}
-    <label for="class">Class</label>
-    <select id="class" name="class" data-auto-submit{% if class_off %} disabled{% endif %}>
-      <option value="">Select a class</option>
-      {% for c in classes %}
-      <option value="{{ c.id }}"{% if selected_class and c.id == selected_class.id %} selected{% endif %}>{{ c.label }}{% if not c.is_active %} (deactivated){% endif %}</option>
-      {% endfor %}
-      {% if can_write %}<option value="new">+ Add class</option>{% endif %}
-    </select>
-  </form>
-</div>
+{#- The one-line next step under each empty message (contracts/pages.md §4.3). -#}
+{% set hints = {
+  "You are not linked to any educational institution": "Ask an administrator to link you to an educational institution.",
+  "Select a region to continue": "Choose a region in the first list.",
+  "Select an educational institution to continue": "Choose an educational institution in the second list.",
+  "Select a class to see its students": "Choose a class in the third list.",
+  "No students in this class yet": "Add the first student with Add student." if can_write and selected_class and selected_class.is_active else none,
+  "This class is deactivated; its students are hidden until it is activated again": "Activate the class to see its students." if can_write else none,
+} %}
 
 {% if selected_class %}
 {% set class_path = "/teacher/students/classes/" ~ selected_class.id %}
-<section class="class-bar" aria-labelledby="class-heading">
-  <h2 id="class-heading">{{ selected_class.label }}{% if not selected_class.is_active %} <small class="status-deactivated">Deactivated</small>{% endif %}</h2>
+<section aria-labelledby="class-heading">
+  <div class="page-heading">
+    <h2 id="class-heading">{{ selected_class.label }}{% if not selected_class.is_active %} {{ status_badge(False) }}{% endif %}</h2>
+    {% if can_write and selected_class.is_active %}{{ link_button("Add student", class_path ~ "/invite") }}{% endif %}
+  </div>
   {% if can_write %}
   <div class="row-actions">
-    <a href="{{ class_path }}/edit">Edit</a>
-    {% if selected_class.is_active %}
-    <a href="{{ class_path }}/deactivate">Deactivate</a>
-    {% else %}
-    <form method="post" action="{{ class_path }}/activate">
-      <button type="submit" class="secondary outline">Activate</button>
-    </form>
-    {% endif %}
-    <a href="{{ class_path }}/delete">Delete</a>
-    {% if selected_class.is_active %}<a href="{{ class_path }}/invite" role="button">Add student</a>{% endif %}
+    {{- link_button("Edit", class_path ~ "/edit", kind="secondary", outline=True, small=True) -}}
+    {%- if selected_class.is_active -%}
+    {{- link_button("Deactivate", class_path ~ "/deactivate", kind="destructive", outline=True, small=True) -}}
+    {%- else -%}
+    {{- post_button(class_path ~ "/activate", "Activate", kind="secondary", outline=True, small=True) -}}
+    {%- endif -%}
+    {{- link_button("Delete", class_path ~ "/delete", kind="destructive", outline=True, small=True) -}}
   </div>
   {% endif %}
-  {% if message %}<p class="list-empty">{{ message }}</p>{% endif %}
+  {% if message %}{{ empty_state(message, hints.get(message)) }}{% endif %}
   {% if students %}
   {% set selection = "?region=" ~ selected_region ~ "&institution=" ~ selected_institution.id ~ "&class=" ~ selected_class.id %}
-  <div class="overflow-auto">
-    <table class="students-table">
-      <thead>
-        <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Email</th>
-          {% if can_write %}<th scope="col">Actions</th>{% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for s in students %}
-        <tr>
-          <td>{{ s.last_name }} {{ s.first_name }}</td>
-          <td>{{ s.email }}</td>
-          {% if can_write %}
-          <td class="row-actions">
-            <a href="/teacher/students/{{ s.user_id }}{{ selection }}">Edit</a>
-            <a href="/teacher/students/{{ s.user_id }}/remove{{ selection }}">Remove</a>
-          </td>
-          {% endif %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  {% call data_table(["Name", "Email", "Actions"] if can_write else ["Name", "Email"]) %}
+  {% for s in students %}
+  <tr>
+    {{ cell("Name", s.last_name ~ " " ~ s.first_name) }}
+    {{ cell("Email", s.email) }}
+    {% if can_write %}
+    {% call actions_cell() %}
+    {{- link_button("Edit", "/teacher/students/" ~ s.user_id ~ selection, kind="secondary", outline=True, small=True) -}}
+    {{- link_button("Remove", "/teacher/students/" ~ s.user_id ~ "/remove" ~ selection, kind="destructive", outline=True, small=True) -}}
+    {% endcall %}
+    {% endif %}
+  </tr>
+  {% endfor %}
+  {% endcall %}
   {% endif %}
 </section>
 {% elif message %}
-<p class="list-empty">{{ message }}</p>
+{{ empty_state(message, hints.get(message)) }}
 {% endif %}
 {% endblock %}

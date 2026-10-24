@@ -1,10 +1,10 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import page_heading %}
+{% from "components/feedback.html" import empty_state %}
 
 {% block title %}{{ area.title }} — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="hero">
-  <h1>{{ area.title }}</h1>
-  <p>The features of this area will arrive in a later milestone.</p>
-</section>
+{{ page_heading(area.title) }}
+{{ empty_state("The features of this area will arrive in a later milestone.") }}
 {% endblock %}

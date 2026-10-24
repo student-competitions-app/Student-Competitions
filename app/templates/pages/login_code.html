@@ -1,29 +1,27 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import page_heading %}
+{% from "components/feedback.html" import notice %}
+{% from "components/form.html" import error_summary, field, form_actions %}
+{% from "components/button.html" import post_button %}
 
 {% block title %}Enter your code — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="auth">
-  <h1>Enter your code</h1>
-  {% if message %}
-  <p class="auth-message" role="alert">{{ message }}</p>
-  {% else %}
-  <p role="status">If this address belongs to an account, we have sent a code to it. The code is valid for 20 minutes.</p>
+<div class="narrow">
+  {{ page_heading("Enter your code") }}
+  {{ error_summary(errors, form_error, order=["code"]) }}
+  {% if not (errors or form_error) %}
+  {{ notice("If this address belongs to an account, we have sent a code to it. The code is valid for 20 minutes.", "info") }}
   {% endif %}
   <form method="post" action="/login/code">
     <input type="hidden" name="email" value="{{ email }}">
     <input type="hidden" name="next" value="{{ next }}">
-    <label for="code">Sign-in code</label>
-    <input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" required>
-    <button type="submit">Sign in</button>
+    {{ field("code", "Sign-in code", error=errors.code, attrs={"inputmode": "numeric", "autocomplete": "one-time-code", "pattern": "[0-9]*", "maxlength": "6", "required": True}) }}
+    {{ form_actions("Sign in") }}
   </form>
-  <div class="auth-alternatives">
-    <form method="post" action="/login">
-      <input type="hidden" name="email" value="{{ email }}">
-      <input type="hidden" name="next" value="{{ next }}">
-      <button type="submit" class="secondary">Send a new code</button>
-    </form>
-    <p><a href="/login?next={{ next | urlencode }}">Use a different email</a></p>
+  <div class="form-actions">
+    {{ post_button("/login", "Send a new code", kind="secondary", hidden={"email": email, "next": next}) }}
+    <a href="/login?next={{ next | urlencode }}">Use a different email</a>
   </div>
-</section>
+</div>
 {% endblock %}

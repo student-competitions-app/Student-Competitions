@@ -50,7 +50,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - The **Teachers** and **Educational institutions** tabs are placeholders in this milestone.
    - A **subject** is a knowledge area in which competitions are held, such as mathematics or physics. The **Subjects** tab lists all subjects, active and deactivated, sorted by name ignoring case, with deactivated ones marked. An empty list shows "No subjects yet". The list starts empty.
    - **Create** and **Rename** use a form with one field, the name: trimmed, 1–200 characters, no control characters, and unique ignoring case, including deactivated subjects and non-Latin letters. An invalid or duplicate name shows the form again with the error and the entered value. A change of case alone is a valid rename.
-   - **Deactivate** keeps the subject but stops offering it for new questions (milestone 10) and new competitions (milestone 11). Questions and competitions that already use it stay valid. **Activate** reverses it.
+   - **Deactivate** keeps the subject but stops offering it for new questions (milestone 11) and new competitions (milestone 12). Questions and competitions that already use it stay valid. **Activate** reverses it.
    - **Delete** asks for confirmation and is refused while anything uses the subject, suggesting deactivation instead.
 
 7. **Administrator area: educational institutions.** _Spec:_ [007-region-and-institutions-management](../../specs/007-region-and-institutions-management/spec.md)
@@ -73,7 +73,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - `TEACHER_EMAILS` and `STUDENT_EMAILS` are retired: roles they granted were removed once, at deploy. `ADMIN_EMAILS` manages only the administrator role. Emailed links use `PUBLIC_BASE_URL`. No log line contains an email, a name or a link token.
 
 9. **User management with consent: classes and students.** _Spec:_ [009-classes-students-management](../../specs/009-classes-students-management/spec.md)
-   - The teacher page is a teacher area like the administrator area, with two tabs: **Students** (opened by `/teacher`) and **Competitions**, a placeholder for milestones 11 and 14.
+   - The teacher page is a teacher area like the administrator area, with two tabs: **Students** (opened by `/teacher`) and **Competitions**, a placeholder for milestones 12 and 15.
    - On **Students**, three lists in a row (**Region**, **Educational institution**, **Class**; stacked on narrow screens) choose a class among the available institutions the teacher is linked to, each marked "Read" or "Write". The selection is kept in the page address, and a message says what to choose next.
    - A class belongs to one institution and has a name (unique ignoring case within the institution) and a year of study from 1 to 12. With Write access a teacher creates, edits, deactivates (after a confirmation), activates and deletes classes; a class with a student cannot be deleted.
    - Teachers with Write access invite students one by one into an active class, through the milestone 8 consent flow. Nothing is stored until the student presses **I agree**; only then are the student role and the enrolment (institution and class) stored. An address that already belongs to a student is refused without naming their class, and student invitations are limited to 100 per teacher per hour.
@@ -82,25 +82,33 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - Regions, institutions and classes form a chain. Deactivating any of them signs out and hides every student below it until it is activated again, without changing any other status; a blocked student cannot sign in with the student role but can still delete their data. The administrator confirms deactivating a region or an institution.
    - An institution with an enrolled student cannot be deleted; its empty classes are deleted with it. A student's profile shows the institution, the class and the year of study; withdrawal and **Delete my data** erase the enrolment with the rest.
 
+10. **Professional design system and UI guidelines.** _Spec:_ [010-design-system-ui-guidelines](../../specs/010-design-system-ui-guidelines/spec.md)
+   - The application has a visual identity: the "Student Competitions" wordmark with an amber logo mark (also the favicon), the Classroom blue palette, Open Sans served by the application itself, an 8 px spacing grid and one type scale, all defined once as design tokens. The look was approved from a mockup before any page changed.
+   - Every page shares one frame: a top bar with the logo, the product name and the current role, a user menu (profile link, role switch, theme switch, **Log out**) that opens without JavaScript and folds to an icon on a phone, the area tabs, one content width and a quiet footer.
+   - Every existing page is rebuilt from a library of shared components (buttons in three kinds, cards, data tables that become labelled cards on a phone, status badges, notices, empty states with a hint, form fields with an error summary, confirmations, details lists and selectors) with no change in addresses, fields, messages or access. Every page below an area's main page has a back link; every form error is shown beside its field and in a summary headed "There is a problem".
+   - The home page greets the person and shows one card per area their role can open, with what is done there; the database line moves to the footer.
+   - **Light**, **Dark** or **Device** (the default) is chosen in the user menu or on the sign-in page and kept in that browser only; the server renders every page in the chosen theme.
+   - Administrators see every component in every variant at `/admin/components`, outside production only. The binding UI guidelines are in [ui-guidelines.md](ui-guidelines.md); an automated check keeps every page on the tokens and the components.
+
 ## Upcoming
 
-  10. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
+11. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
     _Subjects:_ every question belongs to exactly one subject. The teacher selects it from the list kept on the **Subjects** tab (milestone 6), with no free-text entry, and the server accepts only a subject that exists. Teachers can filter the question bank by subject. The sample questions seeded in milestone 3 have no subject, and the migration deletes them, since no real data exists yet.
     _Test:_ question CRUD works and is visible only to teachers. A question without a subject or with an unknown subject is refused. Filtering by subject shows only that subject's questions.
 
-11. **Creating a competition (teacher).** A competition with a subject, a start time, duration, assignment to a class/students, a set of questions from the bank and reference answers.
+12. **Creating a competition (teacher).** A competition with a subject, a start time, duration, assignment to a class/students, a set of questions from the bank and reference answers.
     _Who can create:_ only a teacher with **Can create competitions** (milestone 8) can create or change competitions. A teacher without it sees no create action, and the server answers with "access denied". The setting covers all the teacher's institutions, so participants can be students of any of them, with Read or Write access. Students of other institutions cannot be assigned.
     _Subjects:_ the teacher selects the competition's subject first, from the list kept on the **Subjects** tab. The question picker then offers only questions of that subject, and the server refuses a competition that includes a question of another subject. Changing the subject of an upcoming competition is refused while it still holds questions of the old subject.
     _Test:_ a competition is created and correctly linked to its subject, questions and participants. A competition with a question from another subject is refused. A teacher without **Can create competitions** gets "access denied". A teacher with it can assign students of a Read-access institution, but not students of an institution they are not linked to.
 
-12. **Taking a competition (student).** List of assigned competitions, enforcement of the time window and duration, entering and submitting text answers. The student's lists of upcoming and past competitions show each competition's subject.
+13. **Taking a competition (student).** List of assigned competitions, enforcement of the time window and duration, entering and submitting text answers. The student's lists of upcoming and past competitions show each competition's subject.
     _Test:_ answers are saved; the competition is not accessible outside its time window.
 
-13. **Answer evaluation via LLM.** Each answer receives a score of 1–10 that takes level of detail into account; results are saved to the database.
+14. **Answer evaluation via LLM.** Each answer receives a score of 1–10 that takes level of detail into account; results are saved to the database.
     _Test:_ evaluation returns a structured result and it is persisted.
 
-14. **Best answer selection + results.** For each question, the best answer is selected from the group's answers; competition results are saved and displayed.
+15. **Best answer selection + results.** For each question, the best answer is selected from the group's answers; competition results are saved and displayed.
     _Who sees results:_ a teacher sees the results of the students of their own institutions, with Read or Write access (milestone 8). Results of students from other institutions are not shown to them.
     _Test:_ the best answer is determined, the results page works. A teacher with Read access sees the results of that institution's students and none from institutions they are not linked to.
 
-15. **Polish and hardening.** Results dashboards, E2E tests with Playwright, error handling, security. (Optional stretch goal: move part of the UI to React.)
+16. **Polish and hardening.** Results dashboards, E2E tests with Playwright, error handling, security. (Optional stretch goal: move part of the UI to React.)

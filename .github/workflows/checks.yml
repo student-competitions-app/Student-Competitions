@@ -217,7 +217,7 @@ jobs:
       # show the next boot number and the six sample questions exactly once (nothing lost,
       # nothing re-seeded) and prove the server-side session survived the restart. Finally,
       # logging out must end the session (specs/004-email-otp-auth/contracts/pipeline.md#checksyml--image).
-      # The single-role administrator must also see "· Administrator" and only their area links,
+      # The single-role administrator must also see the "Administrator" role label and only their area links,
       # open /admin and be refused /student, and a cross-site logout must be refused without ending
       # the session (specs/005-roles-authorization/contracts/pipeline.md#checksyml--image).
       # The logs contain the code by design here: it is the console backend in a throw-away
@@ -232,7 +232,7 @@ jobs:
           : >/tmp/home.html
 
           fail() {
-            echo "::error::$1 Body: $(grep -m1 'class="db-status"' /tmp/home.html || head -c 500 /tmp/home.html)"
+            echo "::error::$1 Body: $(grep -m1 'data-engine=' /tmp/home.html || head -c 500 /tmp/home.html)"
             docker logs smoke
             exit 1
           }
@@ -286,11 +286,11 @@ jobs:
             found=$(sed -n 's/.*data-boots="\([0-9]*\)".*/\1/p' /tmp/home.html)
             [ "$found" = "$expected_boots" ] ||
               fail "GET $url shows data-boots=\"$found\" (expected \"$expected_boots\")."
-            items=$(sed -n '/<ol class="question-list">/,/<\/ol>/p' /tmp/home.html | grep -c '<li>' || true)
+            items=$(sed -n '/<section id="questions"/,/<\/section>/p' /tmp/home.html | grep -c '<li' || true)
             [ "$items" = "6" ] ||
               fail "GET $url lists $items questions (expected the 6 samples exactly once)."
-            grep -q 'class="site-role">· Administrator' /tmp/home.html ||
-              fail "GET $url does not show '· Administrator' in the header."
+            grep -q 'class="brand-role">Administrator<' /tmp/home.html ||
+              fail "GET $url does not show the 'Administrator' role label in the top bar."
             grep -q 'href="/admin"' /tmp/home.html && grep -q 'href="/staff"' /tmp/home.html ||
               fail "GET $url does not link the Administrator and Staff areas."
             ! grep -q -e 'href="/student"' -e 'href="/teacher"' /tmp/home.html ||
@@ -329,7 +329,7 @@ jobs:
           status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 -b "$jar" \
             -H 'Origin: https://evil.example' --data '' "$base/logout" || true)
           [ "$status" = "403" ] || fail "Cross-site POST $base/logout returned $status (expected 403)."
-          check_page / 200 'class="site-role"'
+          check_page / 200 'class="brand-role"'
           docker restart smoke
           wait_for_container
           check_home 2

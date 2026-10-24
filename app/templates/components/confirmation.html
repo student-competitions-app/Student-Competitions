@@ -1,0 +1,36 @@
+{#- Confirmations (contracts/components.md §8, FR-032, research D12). The question names the item,
+    the consequence says what happens, the destructive button repeats the verb, and Cancel goes
+    back. A refusal keeps the question, gives the reason, and offers the alternative the page
+    offers today (through `{% call %}`), then the way back. -#}
+
+{% from "components/button.html" import post_button %}
+{% from "components/feedback.html" import notice %}
+
+{% macro confirmation(question, consequence, action, verb, cancel_href, hidden={}) -%}
+<section class="confirmation">
+  <h1>{{ question }}</h1>
+  {%- if consequence %}
+  <p>{{ consequence }}</p>
+  {%- endif %}
+  {%- if caller is defined %}
+  {{ caller() }}
+  {%- endif %}
+  <div class="form-actions">
+    {{ post_button(action, verb, kind="destructive", hidden=hidden) }}
+    <a href="{{ cancel_href }}">Cancel</a>
+  </div>
+</section>
+{%- endmacro %}
+
+{% macro refusal(question, reason, back_href, back_text) -%}
+<section class="confirmation confirmation-refused">
+  <h1>{{ question }}</h1>
+  {{ notice(reason, "info") }}
+  <div class="form-actions">
+    {%- if caller is defined %}
+    {{ caller() }}
+    {%- endif %}
+    <a href="{{ back_href }}">{{ back_text }}</a>
+  </div>
+</section>
+{%- endmacro %}

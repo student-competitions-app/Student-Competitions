@@ -1,0 +1,926 @@
+{
+  "admin-institution-deactivate": [
+    {
+      "action": "/admin/institutions/regions/{id}/institutions/{id}/deactivate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-institution-delete": [
+    {
+      "action": "/admin/institutions/regions/{id}/institutions/{id}/delete",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-institution-delete-in-use": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-institution-new": [
+    {
+      "action": "/admin/institutions/regions/{id}/institutions",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-institution-new-invalid": [
+    {
+      "action": "/admin/institutions/regions/{id}/institutions",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-institution-rename": [
+    {
+      "action": "/admin/institutions/regions/{id}/institutions/{id}/rename",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-institutions-region-selected": [
+    {
+      "action": "/admin/institutions/regions/{id}/activate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/admin/institutions/regions/{id}/institutions/{id}/activate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-region-deactivate": [
+    {
+      "action": "/admin/institutions/regions/{id}/deactivate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-region-delete": [
+    {
+      "action": "/admin/institutions/regions/{id}/delete",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-region-delete-not-empty": [
+    {
+      "action": "/admin/institutions/regions/{id}/delete",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-region-new": [
+    {
+      "action": "/admin/institutions/regions",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-region-new-invalid": [
+    {
+      "action": "/admin/institutions/regions",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-region-rename": [
+    {
+      "action": "/admin/institutions/regions/{id}/rename",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-subject-delete": [
+    {
+      "action": "/admin/subjects/{id}/delete",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-subject-delete-in-use": [
+    {
+      "action": "/admin/subjects/{id}/deactivate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-subject-new": [
+    {
+      "action": "/admin/subjects",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-subject-new-duplicate": [
+    {
+      "action": "/admin/subjects",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-subject-rename": [
+    {
+      "action": "/admin/subjects/{id}/rename",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-subjects": [
+    {
+      "action": "/admin/subjects/{id}/activate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/admin/subjects/{id}/deactivate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-teacher-edit": [
+    {
+      "action": "/admin/teachers/{id}",
+      "buttons": [],
+      "fields": [
+        "access",
+        "can_create_competitions",
+        "first_name",
+        "institution",
+        "last_name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-teacher-edit-invalid": [
+    {
+      "action": "/admin/teachers/{id}",
+      "buttons": [],
+      "fields": [
+        "access",
+        "can_create_competitions",
+        "first_name",
+        "institution",
+        "last_name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-teacher-invite": [
+    {
+      "action": "/admin/teachers/invite",
+      "buttons": [],
+      "fields": [
+        "access",
+        "can_create_competitions",
+        "email",
+        "first_name",
+        "institution",
+        "last_name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-teacher-invite-invalid": [
+    {
+      "action": "/admin/teachers/invite",
+      "buttons": [],
+      "fields": [
+        "access",
+        "can_create_competitions",
+        "email",
+        "first_name",
+        "institution",
+        "last_name"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-teacher-remove": [
+    {
+      "action": "/admin/teachers/{id}/remove",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-teachers": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "data-deletion-confirm": [
+    {
+      "action": "/data-deletion/confirm/{token}",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "data-deletion-request": [
+    {
+      "action": "/data-deletion",
+      "buttons": [],
+      "fields": [
+        "email"
+      ],
+      "method": "post"
+    }
+  ],
+  "data-deletion-request-invalid": [
+    {
+      "action": "/data-deletion",
+      "buttons": [],
+      "fields": [
+        "email"
+      ],
+      "method": "post"
+    }
+  ],
+  "frame-single-role": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "frame-with-role-switch": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/role",
+      "buttons": [
+        [
+          "role",
+          "student"
+        ]
+      ],
+      "fields": [
+        "role"
+      ],
+      "method": "post"
+    }
+  ],
+  "login": [
+    {
+      "action": "/login",
+      "buttons": [],
+      "fields": [
+        "email",
+        "next"
+      ],
+      "method": "post"
+    }
+  ],
+  "login-code": [
+    {
+      "action": "/login",
+      "buttons": [],
+      "fields": [
+        "email",
+        "next"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/login/code",
+      "buttons": [],
+      "fields": [
+        "code",
+        "email",
+        "next"
+      ],
+      "method": "post"
+    }
+  ],
+  "login-code-wrong": [
+    {
+      "action": "/login",
+      "buttons": [],
+      "fields": [
+        "email",
+        "next"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/login/code",
+      "buttons": [],
+      "fields": [
+        "code",
+        "email",
+        "next"
+      ],
+      "method": "post"
+    }
+  ],
+  "login-invalid-email": [
+    {
+      "action": "/login",
+      "buttons": [],
+      "fields": [
+        "email",
+        "next"
+      ],
+      "method": "post"
+    }
+  ],
+  "profile-teacher": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "profile-withdraw": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/profile/withdraw",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "profile-withdraw-nothing-stored": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "role-choice": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/role",
+      "buttons": [
+        [
+          "role",
+          "student"
+        ],
+        [
+          "role",
+          "teacher"
+        ]
+      ],
+      "fields": [
+        "next",
+        "role"
+      ],
+      "method": "post"
+    }
+  ],
+  "role-choice-refused": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/role",
+      "buttons": [
+        [
+          "role",
+          "student"
+        ],
+        [
+          "role",
+          "teacher"
+        ]
+      ],
+      "fields": [
+        "next",
+        "role"
+      ],
+      "method": "post"
+    }
+  ],
+  "student-invitation": [
+    {
+      "action": "/invitations/{token}",
+      "buttons": [],
+      "fields": [
+        "consent_text_id"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-class-deactivate": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/classes/{id}/deactivate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-class-deactivated-selected": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students",
+      "buttons": [],
+      "fields": [
+        "class",
+        "institution",
+        "region"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/students",
+      "buttons": [],
+      "fields": [
+        "institution",
+        "region"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/students",
+      "buttons": [],
+      "fields": [
+        "region"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/students/classes/{id}/activate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-class-delete": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/classes/{id}/delete",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-class-delete-has-students": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/classes/{id}/delete",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-class-edit": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/classes/{id}/edit",
+      "buttons": [],
+      "fields": [
+        "name",
+        "year_of_study"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-class-new": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/institutions/{id}/classes",
+      "buttons": [],
+      "fields": [
+        "name",
+        "year_of_study"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-class-new-invalid": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/institutions/{id}/classes",
+      "buttons": [],
+      "fields": [
+        "name",
+        "year_of_study"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-invitation": [
+    {
+      "action": "/invitations/{token}",
+      "buttons": [],
+      "fields": [
+        "consent_text_id"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-invitation-consent-changed": [
+    {
+      "action": "/invitations/{token}",
+      "buttons": [],
+      "fields": [
+        "consent_text_id"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-student-edit": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/{id}",
+      "buttons": [],
+      "fields": [
+        "class",
+        "class_id",
+        "first_name",
+        "institution",
+        "last_name",
+        "region"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-student-edit-invalid": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/{id}",
+      "buttons": [],
+      "fields": [
+        "class",
+        "class_id",
+        "first_name",
+        "institution",
+        "last_name",
+        "region"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-student-invite": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/classes/{id}/invite",
+      "buttons": [],
+      "fields": [
+        "email",
+        "first_name",
+        "last_name"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-student-invite-invalid": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/classes/{id}/invite",
+      "buttons": [],
+      "fields": [
+        "email",
+        "first_name",
+        "last_name"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-student-remove": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students/{id}/remove",
+      "buttons": [],
+      "fields": [
+        "class",
+        "institution",
+        "region"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-students-class-selected": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students",
+      "buttons": [],
+      "fields": [
+        "class",
+        "institution",
+        "region"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/students",
+      "buttons": [],
+      "fields": [
+        "institution",
+        "region"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/students",
+      "buttons": [],
+      "fields": [
+        "region"
+      ],
+      "method": "get"
+    }
+  ],
+  "teacher-students-nothing-selected": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/students",
+      "buttons": [],
+      "fields": [
+        "class"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/students",
+      "buttons": [],
+      "fields": [
+        "institution"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/students",
+      "buttons": [],
+      "fields": [
+        "region"
+      ],
+      "method": "get"
+    }
+  ]
+}

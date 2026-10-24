@@ -1,11 +1,10 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
 
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>{{ heading }}</h1>
-  <p>{{ message }}</p>
-  <p><a href="/admin/institutions">Back to the educational institutions</a></p>
-</section>
+{{ back_link("/admin/institutions", "Back to the educational institutions") }}
+{{ page_heading(heading) }}
+<p>{{ message }}</p>
 {% endblock %}

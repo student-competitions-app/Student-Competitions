@@ -10,7 +10,6 @@ from typing import Any
 import httpx2
 import pytest
 from fastapi.testclient import TestClient
-from markupsafe import escape
 from sqlalchemy import func, update
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, select
@@ -22,6 +21,7 @@ from app.main import app
 from app.models import AccessLevel, LoginCode, UserSession
 from app.services.classes import set_class_active
 from app.services.email import EmailMessage
+from tests import html
 from tests.conftest import (
     ADMIN_EMAIL,
     STUDENT_EMAIL,
@@ -83,14 +83,26 @@ def fail(*args: Any, **kwargs: Any) -> Any:
 # ---------------------------------------------------------------------------------------------
 
 
+def next_values(body: str) -> list[str]:
+    """The values of the `next` fields of the page's sign-in forms (the theme switch's own
+    return address is not one)."""
+    return [
+        i.value
+        for f in html.forms(body, "main")
+        if f.action != "/theme"
+        for i in f.inputs
+        if i.name == "next"
+    ]
+
+
 def test_the_login_page_has_the_email_form(client: TestClient) -> None:
     response = client.get("/login")
     assert response.status_code == 200
     body = response.text
-    assert 'action="/login"' in body
-    assert 'name="email"' in body
-    assert 'type="email"' in body
-    assert '<input type="hidden" name="next" value="/">' in body
+    assert ("post", "/login") in html.form_targets(body, "main")
+    assert html.control(body, "email")["type"] == "email"
+    (login,) = [f for f in html.forms(body, "main") if f.action == "/login"]
+    assert html.Input("next", "hidden", "/") in login.inputs
 
 
 def test_sign_in_end_to_end(client: TestClient, outbox: list[EmailMessage]) -> None:
@@ -107,10 +119,8 @@ def test_sign_in_end_to_end(client: TestClient, outbox: list[EmailMessage]) -> N
 
     home = client.get("/")
     assert home.status_code == 200
-    header = re.search(r"<header.*?</header>", home.text, re.DOTALL)
-    assert header is not None
-    assert ADMIN_EMAIL in header.group(0)
-    assert 'action="/logout"' in header.group(0)
+    assert ADMIN_EMAIL in html.text(home.text, "header")
+    assert ("post", "/logout") in html.form_targets(home.text, "header")
 
 
 def test_the_next_page_is_carried_through_both_steps(
@@ -118,9 +128,9 @@ def test_the_next_page_is_carried_through_both_steps(
 ) -> None:
     """US1-2."""
     page = client.get("/login", params={"next": "/?x=1"})
-    assert 'name="next" value="/?x=1"' in page.text
+    assert next_values(page.text) == ["/?x=1"]
     step2 = request_code(client, next_path="/?x=1")
-    assert 'name="next" value="/?x=1"' in step2.text
+    assert set(next_values(step2.text)) == {"/?x=1"}
     response = submit_code(client, code_from(outbox[-1]), next_path="/?x=1")
     assert response.headers["location"] == "/?x=1"
 
@@ -156,18 +166,19 @@ def test_an_expired_code_is_refused(
 def test_step_two_offers_a_new_code_and_a_different_email(client: TestClient) -> None:
     """US1-7, FR-014."""
     body = request_code(client, next_path="/?x=1").text
-    forms = re.findall(r'<form method="post" action="(/login(?:/code)?)">(.*?)</form>', body, re.S)
-    actions = [action for action, _ in forms]
-    assert actions == ["/login/code", "/login"]
-    resend_form = forms[1][1]
-    assert f'name="email" value="{ADMIN_EMAIL}"' in resend_form
-    assert 'name="next" value="/?x=1"' in resend_form
-    assert "Send a new code" in resend_form
-    code_form = forms[0][1]
-    assert 'name="code"' in code_form
-    assert 'autocomplete="one-time-code"' in code_form
-    assert 'inputmode="numeric"' in code_form
-    assert '<a href="/login?next=/%3Fx%3D1">Use a different email</a>' in body
+    forms = [f for f in html.forms(body, "main") if f.action in ("/login", "/login/code")]
+    assert [(f.method, f.action) for f in forms] == [("post", "/login/code"), ("post", "/login")]
+    resend_form = forms[1]
+    fields = [(i.name, i.value) for i in resend_form.inputs]
+    assert ("email", ADMIN_EMAIL) in fields
+    assert ("next", "/?x=1") in fields
+    assert "Send a new code" in [b.text for b in resend_form.buttons]
+    code_form = forms[0]
+    assert "code" in [i.name for i in code_form.inputs]
+    code = html.control(body, "code")
+    assert code["autocomplete"] == "one-time-code"
+    assert code["inputmode"] == "numeric"
+    assert ("/login?next=/%3Fx%3D1", "Use a different email") in html.link_pairs(body, "main")
 
 
 def test_the_code_may_have_surrounding_spaces(
@@ -195,8 +206,8 @@ def test_an_invalid_address_is_refused_without_side_effects(
     response = request_code(client, email=email)
     assert response.status_code == 400
     assert INVALID_EMAIL in response.text
-    assert 'action="/login"' in response.text
-    assert f'value="{escape(email)}"' in response.text
+    assert ("post", "/login") in html.form_targets(response.text, "main")
+    assert html.control(response.text, "email")["value"] == email
     assert outbox == []
     assert session.exec(select(func.count()).select_from(LoginCode)).one() == 0
 
@@ -231,7 +242,7 @@ def test_requesting_a_code_while_the_database_is_down_is_a_friendly_503(
     response = request_code(client)
     assert response.status_code == 503
     assert UNAVAILABLE in response.text
-    assert 'action="/login"' in response.text
+    assert ("post", "/login") in html.form_targets(response.text, "main")
     for detail in ("OperationalError", "boom", "Traceback"):
         assert detail not in response.text
     assert outbox == []
@@ -282,7 +293,7 @@ def test_the_query_string_survives_the_whole_round_trip(
     response = client.get("/?a=1&b=2", follow_redirects=False)
     assert response.headers["location"] == "/login?next=%2F%3Fa%3D1%26b%3D2"
     login = client.get(response.headers["location"])
-    assert 'name="next" value="/?a=1&amp;b=2"' in login.text
+    assert next_values(login.text) == ["/?a=1&b=2"]
     signed_in = sign_in(client, outbox, next_path="/?a=1&b=2")
     assert signed_in.headers["location"] == "/?a=1&b=2"
 
@@ -351,7 +362,7 @@ def test_a_single_role_person_signs_in_exactly_as_before(
     assert row.current_role == "teacher"
     landed = client.get("/teacher")
     assert landed.status_code == 200
-    assert '<span class="site-role">· Teacher</span>' in landed.text
+    assert "Teacher" in html.role_label(landed.text)
 
 
 def test_a_person_with_no_role_left_gets_no_code(
@@ -441,11 +452,13 @@ def test_a_blocked_student_who_teaches_signs_in_as_a_teacher_only(
     [row] = session.exec(select(UserSession)).all()
     assert row.current_role == "teacher"
     home = client.get("/")
-    assert '<span class="site-role">· Teacher</span>' in home.text
-    assert 'value="student"' not in home.text
+    assert "Teacher" in html.role_label(home.text)
+    buttons = [(b.name, b.value) for f in html.forms(home.text) for b in f.buttons]
+    assert ("role", "student") not in buttons
     profile = client.get("/profile").text
-    assert "<dd>Teacher</dd>" in profile
-    assert 'KN-21 <small class="status-deactivated">(deactivated)</small>' in profile
+    assert ("Roles", "Teacher") in html.details(profile)
+    assert ("Class", "KN-21 Deactivated") in html.details(profile)
+    assert html.badges(profile) == ["Deactivated"]
 
 
 def test_a_student_signs_in_again_once_the_class_is_reactivated(

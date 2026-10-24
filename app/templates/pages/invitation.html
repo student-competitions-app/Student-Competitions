@@ -1,43 +1,40 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import page_heading %}
+{% from "components/details.html" import details_list %}
+{% from "components/form.html" import error_summary, form_actions %}
+{% from "components/card.html" import card %}
 
 {% block title %}Invitation — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="invitation">
-  <h1>Invitation to Student Competitions</h1>
-  {% if notice %}<p class="auth-message" role="alert">{{ notice }}</p>{% endif %}
-  <p>{{ inviter_name }} ({{ inviter_email }}) invites you to join as a {{ role_label|lower }}.</p>
-  <h2>What will be stored if you agree</h2>
-  <dl class="details-list">
-    <dt>Email</dt>
-    <dd>{{ invitation.email }}</dd>
-    <dt>First name</dt>
-    <dd>{{ invitation.first_name }}</dd>
-    <dt>Last name</dt>
-    <dd>{{ invitation.last_name }}</dd>
-    <dt>Role</dt>
-    <dd>{{ role_label }}</dd>
-    <dt>Details</dt>
-    <dd>
-      <ul class="detail-lines">
-        {% for line in lines %}
-        <li>{{ line.text }}</li>
-        {% endfor %}
-      </ul>
-    </dd>
-  </dl>
-  <p>If you are already a teacher or a student, your current names are kept.</p>
-  <p>This invitation expires on {{ invitation.expires_at|utc }}.</p>
-  <h2>Consent</h2>
-  <div class="consent-text">
-    {% for paragraph in consent_text.text.split("\n\n") %}
-    <p>{{ paragraph }}</p>
-    {% endfor %}
-  </div>
-  <form method="post">
-    <input type="hidden" name="consent_text_id" value="{{ consent_text.id }}">
-    <button type="submit">I agree</button>
-  </form>
-  <p><small>If any detail is wrong, ask the person who invited you for a new invitation, or accept and ask them to correct it.</small></p>
-</section>
+{{ page_heading("Invitation to Student Competitions") }}
+{{ error_summary({}, form_error=notice) }}
+<p>{{ inviter_name }} ({{ inviter_email }}) invites you to join as a {{ role_label|lower }}.</p>
+<h2>What will be stored if you agree</h2>
+{% call(label) details_list([
+  ("Email", invitation.email),
+  ("First name", invitation.first_name),
+  ("Last name", invitation.last_name),
+  ("Role", role_label),
+  ("Details", true),
+]) %}
+<ul>
+  {% for line in lines %}
+  <li>{{ line.text }}</li>
+  {% endfor %}
+</ul>
+{% endcall %}
+<p>If you are already a teacher or a student, your current names are kept.</p>
+<p>This invitation expires on {{ invitation.expires_at|utc }}.</p>
+<h2>Consent</h2>
+{% call card(none) %}
+{% for paragraph in consent_text.text.split("\n\n") %}
+<p>{{ paragraph }}</p>
+{% endfor %}
+{% endcall %}
+<form method="post">
+  <input type="hidden" name="consent_text_id" value="{{ consent_text.id }}">
+  {{ form_actions("I agree") }}
+</form>
+<p><small>If any detail is wrong, ask the person who invited you for a new invitation, or accept and ask them to correct it.</small></p>
 {% endblock %}

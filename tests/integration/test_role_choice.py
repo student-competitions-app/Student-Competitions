@@ -4,16 +4,16 @@ See specs/005-roles-authorization/contracts/http-routes.md#get-role--the-role-ch
 runs once per database engine.
 """
 
-import re
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+from app.core.config import APP_NAME
 from app.core.security import SESSION_COOKIE_NAME, hash_token
 from app.main import app
 from app.models import Role, UserSession
 from app.services.email import EmailMessage
+from tests import html
 from tests.conftest import (
     ADMIN_STUDENT_EMAIL,
     TEACHER_EMAIL,
@@ -33,15 +33,32 @@ def stored_role(session: Session, browser: TestClient) -> str | None:
 
 
 def header(body: str) -> str:
-    match = re.search(r"<header.*?</header>", body, re.DOTALL)
-    assert match is not None, "the page has no <header>"
-    return match.group(0)
+    return html.text(body, "header")
+
+
+def role_label(body: str) -> str:
+    """The header's text without the application name and the forms: the current role and the
+    address."""
+    text = header(body)
+    for form in html.forms(body, within="header"):
+        text = text.replace(form.text, "")
+    return text.replace(APP_NAME, "")
+
+
+def role_form(body: str) -> html.Form:
+    found = [f for f in html.forms(body, within="main") if f.action == "/role"]
+    assert len(found) == 1, "the page has no role form"
+    assert found[0].method == "post"
+    return found[0]
 
 
 def role_buttons(body: str) -> list[str]:
-    form = re.search(r'<main.*?<form method="post" action="/role"[^>]*>(.*?)</form>', body, re.S)
-    assert form is not None, "the page has no role form"
-    return re.findall(r'<button type="submit" name="role" value="([a-z]+)">', form.group(1))
+    return [b.value or "" for b in role_form(body).buttons if b.name == "role"]
+
+
+def next_fields(body: str) -> list[str]:
+    """The values of the hidden `next` fields in the page's content."""
+    return [i.value for f in html.forms(body, within="main") for i in f.inputs if i.name == "next"]
 
 
 def unchosen(client_as: ClientAs, email: str = TEACHER_STUDENT_EMAIL) -> TestClient:
@@ -66,13 +83,13 @@ def test_the_full_flow_from_a_requested_page(
 
     page = client.get(signed_in.headers["location"])
     assert page.status_code == 200
-    assert "<h1>Choose a role</h1>" in page.text
+    assert html.h1(page.text) == "Choose a role"
     assert role_buttons(page.text) == ["teacher", "student"]
-    assert '<input type="hidden" name="next" value="/teacher">' in page.text
+    assert html.Input("next", "hidden", "/teacher") in role_form(page.text).inputs
     top = header(page.text)
     assert TEACHER_STUDENT_EMAIL in top
     assert "Log out" in top
-    assert "site-role" not in top
+    assert not any(label in role_label(page.text) for label in ("Teacher", "Student"))
 
     chosen = client.post(
         "/role", data={"role": "teacher", "next": "/teacher"}, follow_redirects=False
@@ -81,7 +98,7 @@ def test_the_full_flow_from_a_requested_page(
     assert chosen.headers["location"] == "/teacher"
     landed = client.get("/teacher")
     assert landed.status_code == 200
-    assert '<span class="site-role">· Teacher</span>' in landed.text
+    assert "Teacher" in role_label(landed.text)
     assert stored_role(session, client) == "teacher"
 
 
@@ -127,7 +144,7 @@ def test_a_role_not_held_changes_nothing(
     response = browser.post("/role", data={**data, "next": "/teacher"}, follow_redirects=False)
     assert response.status_code == 400
     assert CHOOSE_ONE in response.text
-    assert "<h1>Choose a role</h1>" in response.text
+    assert html.h1(response.text) == "Choose a role"
     assert role_buttons(response.text) == ["teacher", "student"]
     assert stored_role(session, browser) is None
 
@@ -153,7 +170,7 @@ def test_an_unsafe_next_lands_on_the_home_page(client_as: ClientAs, next_path: s
     """FR-015: no loop back into the role choice or sign-in, and never another site."""
     browser = unchosen(client_as)
     page = browser.get("/role", params={"next": next_path})
-    assert '<input type="hidden" name="next" value="/">' in page.text
+    assert next_fields(page.text) == ["/"]
     response = browser.post(
         "/role", data={"role": "student", "next": next_path}, follow_redirects=False
     )
@@ -180,7 +197,7 @@ def test_choosing_again_after_a_choice_works_like_a_switch(
     browser = client_as(TEACHER_STUDENT_EMAIL, Role.TEACHER)
     page = browser.get("/role")
     assert page.status_code == 200
-    assert 'name="next"' not in page.text.split("<main", 1)[1]
+    assert next_fields(page.text) == []
     response = browser.post("/role", data={"role": "student"}, follow_redirects=False)
     assert response.headers["location"] == "/"
     assert stored_role(session, browser) == "student"

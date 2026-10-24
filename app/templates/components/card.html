@@ -1,0 +1,19 @@
+{#- Card (contracts/components.md §3, FR-026). With `href` the whole card is the link: the title's
+    link covers the card through CSS. The optional body comes from `{% call %}`; a card that only
+    frames a body (a consent record) passes no title. -#}
+
+{% macro card(title, href=None, description=None) -%}
+<article class="card">
+  {%- if href %}
+  <h3><a href="{{ href }}" class="card-link">{{ title }}</a></h3>
+  {%- elif title %}
+  <h3>{{ title }}</h3>
+  {%- endif %}
+  {%- if description %}
+  <p class="card-description">{{ description }}</p>
+  {%- endif %}
+  {%- if caller is defined %}
+  {{ caller() }}
+  {%- endif %}
+</article>
+{%- endmacro %}

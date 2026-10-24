@@ -1,41 +1,31 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import page_heading %}
+{% from "components/table.html" import data_table, cell %}
+{% from "components/badge.html" import status_badge, access_badge %}
+{% from "components/feedback.html" import notice, empty_state %}
 
 {% block title %}Teachers — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<h1>Teachers</h1>
-{% if sent_to %}<p class="notice" role="status">Invitation sent to {{ sent_to }}</p>{% endif %}
-<p><a href="/admin/teachers/invite" role="button">Invite teacher</a></p>
+{{ page_heading("Teachers", ("Invite teacher", "/admin/teachers/invite")) }}
+{% if sent_to %}{{ notice("Invitation sent to " ~ sent_to, "success") }}{% endif %}
 {% if teachers %}
-<div class="overflow-auto">
-  <table class="teachers-table">
-    <thead>
-      <tr>
-        <th scope="col">Name</th>
-        <th scope="col">Email</th>
-        <th scope="col">Educational institutions</th>
-        <th scope="col">Can create competitions</th>
-        <th scope="col">Date of consent</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for t in teachers %}
-      <tr>
-        <td><a href="/admin/teachers/{{ t.user_id }}">{{ t.first_name }} {{ t.last_name }}</a></td>
-        <td>{{ t.email }}</td>
-        <td>
-          {% for link in t.links %}
-          <div>{{ link.label }} — {{ link.access_level.label }}{% if not link.is_selectable %} <small class="status-deactivated">(deactivated)</small>{% endif %}</div>
-          {% endfor %}
-        </td>
-        <td>{% if t.can_create_competitions %}Yes{% else %}No{% endif %}</td>
-        <td>{{ t.consented_at|utc("date") }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+{% call data_table(["Name", "Email", "Educational institutions", "Can create competitions", "Date of consent"]) %}
+{% for t in teachers %}
+<tr>
+  {% call cell("Name") %}<a href="/admin/teachers/{{ t.user_id }}">{{ t.first_name }} {{ t.last_name }}</a>{% endcall %}
+  {{ cell("Email", t.email) }}
+  {% call cell("Educational institutions") %}
+  {% for link in t.links %}
+  <div>{{ link.label }} {{ access_badge(link.access_level) }}{% if not link.is_selectable %} {{ status_badge(False) }}{% endif %}</div>
+  {% endfor %}
+  {% endcall %}
+  {{ cell("Can create competitions", "Yes" if t.can_create_competitions else "No") }}
+  {{ cell("Date of consent", t.consented_at|utc("date")) }}
+</tr>
+{% endfor %}
+{% endcall %}
 {% else %}
-<p class="list-empty">No teachers yet</p>
+{{ empty_state("No teachers yet", "Invite the first teacher with Invite teacher.") }}
 {% endif %}
 {% endblock %}

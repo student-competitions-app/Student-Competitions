@@ -1,21 +1,24 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import page_heading %}
+{% from "components/form.html" import error_summary %}
+{% from "components/button.html" import button %}
 
 {% block title %}Choose a role — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="auth">
-  <h1>Choose a role</h1>
-  {% if message %}
-  <p class="auth-message" role="alert">{{ message }}</p>
-  {% endif %}
-  <p>You have more than one role. Choose the one to use now. You can switch at any time from the header.</p>
-  <form method="post" action="/role" class="role-choice">
+<div class="narrow">
+  {{ page_heading("Choose a role") }}
+  {{ error_summary({}, form_error=message) }}
+  <p>You have more than one role. Choose the one to use now. You can switch at any time from the menu at the top of the page.</p>
+  <form method="post" action="/role">
     {% if next %}
     <input type="hidden" name="next" value="{{ next }}">
     {% endif %}
-    {% for role in roles %}
-    <button type="submit" name="role" value="{{ role.value }}">{{ role.label }}</button>
-    {% endfor %}
+    <div class="button-row">
+      {% for role in roles %}
+      {{ button(role.label, kind="secondary", name="role", value=role.value) }}
+      {% endfor %}
+    </div>
   </form>
-</section>
+</div>
 {% endblock %}

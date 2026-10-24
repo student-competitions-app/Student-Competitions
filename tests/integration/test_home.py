@@ -20,13 +20,22 @@ from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, delete
 
 import app.routers.pages as pages
-from app.core.config import APP_NAME, APP_VERSION, COMMIT_SHA
+from app.core.config import APP_NAME, APP_TAGLINE, APP_VERSION, COMMIT_SHA
 from app.core.migrations import head_revision
 from app.core.templates import SHORT_COMMIT_LENGTH
-from app.models import Question
+from app.models import Question, Role
+from app.routers.areas import areas_for
 from app.schemas.question import QuestionCreate
 from app.services.questions import create_question
-from tests.conftest import ADMIN_EMAIL, STUDENT_EMAIL, TEACHER_EMAIL, ClientAs
+from tests import html
+from tests.conftest import (
+    ADMIN_EMAIL,
+    ADMIN_STUDENT_EMAIL,
+    STUDENT_EMAIL,
+    TEACHER_EMAIL,
+    TEACHER_STUDENT_EMAIL,
+    ClientAs,
+)
 
 VIEWPORT_META = '<meta name="viewport" content="width=device-width, initial-scale=1">'
 
@@ -49,11 +58,12 @@ def test_home_redirects_anonymous_visitors_to_login(client: TestClient) -> None:
 def test_home_header_shows_the_signed_in_email_and_a_logout_form(
     admin_client: TestClient,
 ) -> None:
-    header = re.search(r"<header.*?</header>", admin_client.get("/").text, re.DOTALL)
-    assert header is not None, "the page has no <header>"
-    assert ADMIN_EMAIL in header.group(0)
-    assert '<form method="post" action="/logout">' in header.group(0)
-    assert "Log out" in header.group(0)
+    body = admin_client.get("/").text
+    assert ADMIN_EMAIL in html.text(body, "header")
+    logout = [f for f in html.forms(body, within="header") if f.action == "/logout"]
+    assert len(logout) == 1
+    assert logout[0].method == "post"
+    assert [b.text for b in logout[0].buttons] == ["Log out"]
 
 
 @pytest.mark.parametrize(
@@ -61,15 +71,13 @@ def test_home_header_shows_the_signed_in_email_and_a_logout_form(
     [(ADMIN_EMAIL, "Administrator"), (TEACHER_EMAIL, "Teacher"), (STUDENT_EMAIL, "Student")],
 )
 def test_home_header_shows_the_current_role(client_as: ClientAs, email: str, label: str) -> None:
-    """FR-031, US1-5: "Student Competitions · <Role>", still with the address and Log out."""
-    header = re.search(r"<header.*?</header>", client_as(email).get("/").text, re.DOTALL)
-    assert header is not None, "the page has no <header>"
-    title = re.search(r'<span class="site-title">(.*?)</span>\s*</span>', header.group(0))
-    assert title is not None, "the header has no title"
-    assert f"<strong>{APP_NAME}</strong>" in title.group(1)
-    assert f'<span class="site-role">· {label}' in title.group(1)
-    assert email in header.group(0)
-    assert "Log out" in header.group(0)
+    """FR-031, US1-5: the application name and the current role, still with the address and
+    Log out."""
+    header = html.text(client_as(email).get("/").text, "header")
+    assert APP_NAME in header
+    assert label in header.replace(APP_NAME, "")
+    assert email in header
+    assert "Log out" in header
 
 
 def test_home_is_html(admin_client: TestClient) -> None:
@@ -84,9 +92,7 @@ def test_home_shows_the_application_name(admin_client: TestClient) -> None:
 def test_home_headline_is_the_application_name(admin_client: TestClient) -> None:
     """Asserted against the <h1>, not the whole body: the shared layout and the error page also
     carry APP_NAME, so a body-wide check alone cannot tell the home page from a 404."""
-    match = re.search(r"<h1>(.*?)</h1>", admin_client.get("/").text, re.DOTALL)
-    assert match is not None, "the home page has no <h1>"
-    assert APP_NAME in match.group(1)
+    assert APP_NAME in html.h1(admin_client.get("/").text)
 
 
 def test_home_has_a_non_empty_title(admin_client: TestClient) -> None:
@@ -109,9 +115,7 @@ def test_unknown_path_returns_a_rendered_not_found_page(client: TestClient) -> N
 
 
 def _footer(body: str) -> str:
-    match = re.search(r"<footer.*?</footer>", body, re.DOTALL)
-    assert match is not None, "the page has no <footer>"
-    return match.group(0)
+    return html.region(body, "footer")
 
 
 def test_home_footer_reports_the_release(admin_client: TestClient) -> None:
@@ -140,16 +144,32 @@ def test_error_page_reports_the_release_too(admin_client: TestClient) -> None:
 # ---------------------------------------------------------------------------------------------
 
 UNAVAILABLE_NOTICE = (
-    '<p class="data-unavailable" role="status">Question data is temporarily unavailable. '
-    "Please try again in a moment.</p>"
+    "status",
+    "Question data is temporarily unavailable. Please try again in a moment.",
 )
 
 
+def _questions_section(body: str) -> html.Element | None:
+    sections = [s for s in html.parse(body).find_all("section") if s.attrs.get("id") == "questions"]
+    assert len(sections) <= 1, f"expected at most one questions section, found {len(sections)}"
+    return sections[0] if sections else None
+
+
+def _question_lists(body: str) -> list[html.Element]:
+    section = _questions_section(body)
+    return section.find_all("ol") if section is not None else []
+
+
 def _question_items(body: str) -> list[str]:
-    """The raw (still escaped) contents of each `<li>` in the question list."""
-    lists = re.findall(r'<ol class="question-list">(.*?)</ol>', body, re.DOTALL)
+    """The raw (still escaped, line breaks kept) contents of each item of the question list."""
+    lists = _question_lists(body)
     assert len(lists) == 1, f"expected one question list, found {len(lists)}"
-    return re.findall(r"<li>(.*?)</li>", lists[0], re.DOTALL)
+    return [body[li.inner_start : li.inner_end] for li in lists[0].find_all("li")]
+
+
+def _status_lines(body: str) -> list[html.Element]:
+    """The database status line: the one element carrying the machine-readable attributes."""
+    return [e for e in html.parse(body).iter() if "data-engine" in e.attrs]
 
 
 def _fail_database_reads(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -160,9 +180,11 @@ def _fail_database_reads(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_home_has_the_questions_section(admin_client: TestClient) -> None:
-    body = admin_client.get("/").text
-    assert '<section id="questions" aria-labelledby="questions-heading">' in body
-    assert '<h2 id="questions-heading">Sample questions</h2>' in body
+    section = _questions_section(admin_client.get("/").text)
+    assert section is not None
+    headings = section.find_all("h2")
+    assert [h.text() for h in headings] == ["Sample questions"]
+    assert section.attrs.get("aria-labelledby") == headings[0].attrs.get("id")
 
 
 def test_home_lists_the_sample_questions_once_each_in_order(
@@ -192,15 +214,13 @@ def test_home_never_shows_a_reference_answer(
 
 
 def test_home_has_no_write_affordance(admin_client: TestClient) -> None:
-    """No form or button other than the header's logout form, and no link out of a list item
-    (US1-2, FR-018)."""
+    """No form or button in the page's content: only the header's own forms (the theme switch
+    and Log out), and no link out of a list item (US1-2, FR-018)."""
     body = admin_client.get("/").text
-    forms = re.findall(r"<form.*?</form>", body, re.DOTALL)
-    assert len(forms) == 1
-    assert 'action="/logout"' in forms[0]
-    without_logout = body.replace(forms[0], "")
-    assert "<form" not in without_logout
-    assert "<button" not in without_logout
+    assert [f.action for f in html.forms(body, within="header")] == ["/theme", "/logout"]
+    main = html.parse(body).find_all("main")[0]
+    assert main.find_all("form") == []
+    assert main.find_all("button") == []
     assert all("<a" not in item for item in _question_items(body))
 
 
@@ -218,8 +238,8 @@ def test_home_shows_an_empty_state_when_there_are_no_questions(
     session.exec(delete(Question))
     session.commit()
     body = admin_client.get("/").text
-    assert '<p class="questions-empty">No questions yet.</p>' in body
-    assert '<ol class="question-list">' not in body
+    assert "No questions yet." in html.text(body, "main")
+    assert _question_lists(body) == []
 
 
 def test_home_shows_the_same_list_on_every_load(admin_client: TestClient) -> None:
@@ -235,10 +255,10 @@ def test_home_degrades_when_the_database_fails(
     response = admin_client.get("/")
     body = response.text
     assert response.status_code == 200
-    assert re.search(r"<h1>.*?</h1>", body, re.DOTALL)
-    assert "<footer" in body
-    assert UNAVAILABLE_NOTICE in body
-    assert "question-list" not in body
+    assert html.h1(body)
+    assert html.region(body, "footer")
+    assert UNAVAILABLE_NOTICE in html.notices(body)
+    assert _question_lists(body) == []
     for detail in ("OperationalError", "boom", "SELECT"):
         assert detail not in body
 
@@ -250,37 +270,42 @@ def test_home_degrades_when_the_database_fails(
 DISPLAY_NAMES = {"sqlite": "SQLite", "postgresql": "PostgreSQL"}
 
 
-def _status_line(body: str) -> re.Match[str]:
-    matches = list(re.finditer(r'<p class="db-status"(.*?)>(.*?)</p>', body, re.DOTALL))
-    assert len(matches) == 1, f"expected one status line, found {len(matches)}"
-    return matches[0]
+def _status_line(body: str) -> html.Element:
+    lines = _status_lines(body)
+    assert len(lines) == 1, f"expected one status line, found {len(lines)}"
+    return lines[0]
 
 
 def test_status_line_carries_the_machine_readable_attributes(
     admin_client: TestClient, request: pytest.FixtureRequest
 ) -> None:
     engine = request.node.callspec.params["database_url"]
-    attributes = _status_line(admin_client.get("/").text).group(1)
-    assert f'data-engine="{engine}"' in attributes
-    assert f'data-revision="{head_revision()}"' in attributes
-    assert 'data-boots="1"' in attributes
+    attributes = _status_line(admin_client.get("/").text).attrs
+    assert attributes["data-engine"] == engine
+    assert attributes["data-revision"] == head_revision()
+    assert attributes["data-boots"] == "1"
 
 
 def test_status_line_reads_as_text(
     admin_client: TestClient, request: pytest.FixtureRequest
 ) -> None:
     engine = request.node.callspec.params["database_url"]
-    text = _status_line(admin_client.get("/").text).group(2)
-    assert text == (
+    body = admin_client.get("/").text
+    line = _status_line(body)
+    assert body[line.inner_start : line.inner_end] == (
         f"Database: {DISPLAY_NAMES[engine]} · schema revision <code>{head_revision()}</code>"
         " · boot #1"
     )
 
 
-def test_status_line_sits_between_the_questions_and_the_footer(admin_client: TestClient) -> None:
+def test_status_line_is_in_the_footer(admin_client: TestClient) -> None:
+    """Milestone 10 FR-036: the database line moved from under the questions into the footer of
+    the home page, in muted text (contracts/pages.md §4.1)."""
     body = admin_client.get("/").text
-    status = _status_line(body).start()
-    assert body.index('<section id="questions"') < status < body.index("<footer")
+    status = _status_line(body)
+    footer = html.parse(body).find_all("footer")[0]
+    assert footer.inner_end is not None
+    assert footer.inner_start < status.inner_start < footer.inner_end
 
 
 @pytest.mark.parametrize("failing_read", ["list_questions", "read_database_status"])
@@ -292,9 +317,9 @@ def test_a_failing_read_replaces_both_the_list_and_the_status_line(
 
     monkeypatch.setattr(pages, failing_read, failing)
     body = admin_client.get("/").text
-    assert UNAVAILABLE_NOTICE in body
-    assert "question-list" not in body
-    assert "db-status" not in body
+    assert UNAVAILABLE_NOTICE in html.notices(body)
+    assert _question_lists(body) == []
+    assert _status_lines(body) == []
 
 
 def test_home_lists_500_questions_quickly(
@@ -316,3 +341,58 @@ def test_home_lists_500_questions_quickly(
     assert len(items) == 506
     assert items[:6] == [str(escape(sample["text"])) for sample in sample_questions]
     assert items[6:] == [f"Question {i:03d}" for i in range(500)]
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 10: the start page (US6-2 to US6-4, FR-035)
+# ---------------------------------------------------------------------------------------------
+
+
+def area_cards(body: str) -> list[tuple[str, str, str]]:
+    """`(href, title, description)` of each card in the areas section."""
+    sections = [s for s in html.parse(body).find_all("section") if s.attrs.get("id") == "areas"]
+    assert len(sections) == 1
+    found = []
+    for card in sections[0].find_all("article"):
+        (link,) = [a for a in card.find_all("a") if "href" in a.attrs]
+        (description,) = [p for p in card.find_all("p") if "card-description" in p.classes()]
+        found.append((link.attrs["href"], link.text(), description.text()))
+    return found
+
+
+@pytest.mark.parametrize(
+    ("email", "role"),
+    [
+        (ADMIN_EMAIL, Role.ADMIN),
+        (TEACHER_EMAIL, Role.TEACHER),
+        (STUDENT_EMAIL, Role.STUDENT),
+        (ADMIN_STUDENT_EMAIL, Role.ADMIN),
+        (ADMIN_STUDENT_EMAIL, Role.STUDENT),
+        (TEACHER_STUDENT_EMAIL, Role.TEACHER),
+        (TEACHER_STUDENT_EMAIL, Role.STUDENT),
+    ],
+)
+def test_one_card_per_allowed_area_with_its_description(
+    client_as: ClientAs, email: str, role: Role
+) -> None:
+    body = client_as(email, role).get("/").text
+    expected = [(area.path, area.title, area.description) for area in areas_for(role)]
+    assert expected, "every role has at least one area"
+    assert area_cards(body) == expected
+
+
+def test_the_greeting_and_the_tagline(admin_client: TestClient) -> None:
+    body = admin_client.get("/").text
+    assert html.h1(body) == f"Welcome to {APP_NAME}"
+    assert APP_TAGLINE in html.text(body, "main")
+
+
+def test_unavailable_data_keeps_the_cards_and_drops_the_database_line(
+    admin_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _fail_database_reads(monkeypatch)
+    response = admin_client.get("/")
+    assert response.status_code == 200
+    assert UNAVAILABLE_NOTICE in html.notices(response.text)
+    assert [href for href, _, _ in area_cards(response.text)] == ["/admin", "/staff"]
+    assert _status_lines(response.text) == []

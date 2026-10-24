@@ -29,6 +29,7 @@ from app.services.email import EmailMessage
 from app.services.institutions import create_institution, list_institutions
 from app.services.regions import create_region, list_regions
 from app.services.subjects import create_subject, list_subjects
+from tests import html
 from tests.conftest import (
     ADMIN_EMAIL,
     ADMIN_STUDENT_EMAIL,
@@ -78,9 +79,7 @@ CASES = [(role, path) for role in SINGLE_ROLE for path in ACCESS_TABLE]
 
 
 def header(body: str) -> str:
-    match = re.search(r"<header.*?</header>", body, re.DOTALL)
-    assert match is not None, "the page has no <header>"
-    return match.group(0)
+    return html.region(body, "header")
 
 
 @pytest.mark.parametrize(("role", "path"), CASES, ids=[f"{r.value}-{p}" for r, p in CASES])
@@ -93,11 +92,12 @@ def test_the_access_table(client_as: ClientAs, role: Role, path: str) -> None:
         assert response.headers["location"] == REDIRECTS[path]
         tab = signed_in.get(REDIRECTS[path])
         assert tab.status_code == 200
-        assert f'<a href="{REDIRECTS[path]}" aria-current="page">Students</a>' in tab.text
+        current = [t for t in html.links(tab.text) if t.attrs.get("aria-current") == "page"]
+        assert [(t.href, t.text) for t in current] == [(REDIRECTS[path], "Students")]
     elif role in ACCESS_TABLE[path]:
         assert response.status_code == 200
         if path in TITLES:
-            assert f"<h1>{TITLES[path]}</h1>" in response.text
+            assert html.h1(response.text) == TITLES[path]
         if path in PLACEHOLDER_AREAS:
             assert PLACEHOLDER in response.text
     else:
@@ -113,13 +113,12 @@ def test_the_access_denied_page(client_as: ClientAs, role: Role) -> None:
     response = client_as(SINGLE_ROLE[role]).get(denied)
     body = response.text
     assert response.status_code == 403
-    assert "<h1>Access denied</h1>" in body
+    assert html.h1(body) == "Access denied"
     assert re.search(r"<title>Access denied — ", body)
     assert f"Your current role, {role.label}, cannot open this page." in body
-    assert '<a href="/">Back to the home page</a>' in body
-    top = header(body)
-    assert SINGLE_ROLE[role] in top
-    assert 'action="/logout"' in top
+    assert ("/", "Back to the home page") in html.link_pairs(body, "main")
+    assert SINGLE_ROLE[role] in html.text(body, "header")
+    assert ("post", "/logout") in html.form_targets(body, "header")
     assert TITLES[denied] not in body
     assert PLACEHOLDER not in body
 
@@ -128,10 +127,10 @@ def test_the_access_denied_page(client_as: ClientAs, role: Role) -> None:
 def test_the_home_page_lists_exactly_the_allowed_areas(client_as: ClientAs, role: Role) -> None:
     """FR-027, US1-4."""
     body = client_as(SINGLE_ROLE[role]).get("/").text
-    section = re.search(r'<section id="areas".*?</section>', body, re.DOTALL)
-    assert section is not None, "the home page has no areas section"
-    assert '<h2 id="areas-heading">Your areas</h2>' in section.group(0)
-    links = re.findall(r'<a href="([^"]+)">([^<]+)</a>', section.group(0))
+    sections = [s for s in html.parse(body).find_all("section") if s.attrs.get("id") == "areas"]
+    assert len(sections) == 1, "the home page has no areas section"
+    assert [h.text() for h in sections[0].find_all("h2")] == ["Your areas"]
+    links = [(a.attrs["href"], a.text()) for a in sections[0].find_all("a")]
     assert links == HOME_LINKS[role]
 
 
@@ -283,7 +282,13 @@ def test_signing_in_returns_to_the_subjects_tab(
     assert client.get("/admin/subjects").status_code == 200
 
 
-ADMIN_TAB_LINKS = ["admin-tabs", 'href="/admin/teachers"', 'href="/admin/institutions"']
+ADMIN_TAB_PATHS = ("/admin/teachers", "/admin/institutions", "/admin/subjects")
+
+
+def admin_tab_traces(body: str) -> list[str]:
+    """Anything of the administrator tab row on the page: the labelled nav, or a link to a tab."""
+    traces = ["tab row"] if html.nav(body, "Administrator area") else []
+    return traces + [link.href for link in html.links(body) if link.href in ADMIN_TAB_PATHS]
 
 
 @pytest.mark.parametrize("role", OTHER_ROLES)
@@ -294,13 +299,10 @@ def test_no_admin_tabs_for_other_roles(client_as: ClientAs, role: Role) -> None:
     for path in pages:
         response = browser.get(path)
         assert response.status_code == 200, path
-        for marker in [*ADMIN_TAB_LINKS, 'href="/admin/subjects"']:
-            assert marker not in response.text, (path, marker)
+        assert admin_tab_traces(response.text) == [], path
     denied = browser.get("/admin/subjects")
     assert denied.status_code == 403
-    for marker in ADMIN_TAB_LINKS:
-        assert marker not in denied.text, marker
-    assert '<a href="/admin/subjects"' not in denied.text
+    assert admin_tab_traces(denied.text) == []
 
 
 # ---------------------------------------------------------------------------------------------
@@ -438,7 +440,8 @@ def test_signing_in_returns_to_the_selected_region(
     assert response.headers["location"] == path
     page = client.get(path)
     assert page.status_code == 200
-    assert f'<a href="{path}" aria-current="true">Kyiv</a>' in page.text
+    selected = [link for link in html.links(page.text) if link.attrs.get("aria-current") == "true"]
+    assert [(link.href, link.text) for link in selected] == [(path, "Kyiv")]
 
 
 # ---------------------------------------------------------------------------------------------

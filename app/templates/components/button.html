@@ -1,0 +1,28 @@
+{#- Buttons (contracts/components.md §2, FR-025, research D9). Three kinds: primary (Pico's
+    default button), secondary (Pico's `.secondary`) and destructive (`.destructive`, app.css).
+    `outline` and `small` add a class each. A link that opens a form or a confirmation is a
+    `link_button`, styled as the action it leads to. At most one primary per page or section. -#}
+
+{% macro _classes(kind, outline, small) -%}
+{%- set kind_classes = {"primary": "", "secondary": "secondary", "destructive": "destructive"} -%}
+{%- if kind not in kind_classes %}{{ template_error("button: kind must be primary, secondary or destructive, not " ~ kind) }}{% endif -%}
+{%- set button_classes = [kind_classes[kind], "outline" if outline else "", "small" if small else ""] | select | join(" ") -%}
+{{ button_classes }}
+{%- endmacro %}
+
+{% macro button(label, kind="primary", name=None, value=None, outline=False, small=False, attrs={}) -%}
+{%- set classes = _classes(kind, outline, small) -%}
+<button type="submit"{% if classes %} class="{{ classes }}"{% endif %}{% if name %} name="{{ name }}"{% endif %}{% if value is not none %} value="{{ value }}"{% endif %}{% for key, val in attrs.items() %} {{ key }}="{{ val }}"{% endfor %}>{{ label }}</button>
+{%- endmacro %}
+
+{% macro link_button(label, href, kind="primary", outline=False, small=False) -%}
+{%- set classes = _classes(kind, outline, small) -%}
+<a href="{{ href }}" role="button"{% if classes %} class="{{ classes }}"{% endif %}>{{ label }}</a>
+{%- endmacro %}
+
+{% macro post_button(action, label, kind="primary", hidden={}, outline=False, small=False) -%}
+<form method="post" action="{{ action }}" class="inline-form">
+  {%- for key, val in hidden.items() %}<input type="hidden" name="{{ key }}" value="{{ val }}">{% endfor -%}
+  {{ button(label, kind=kind, outline=outline, small=small) }}
+</form>
+{%- endmacro %}

@@ -1,15 +1,13 @@
 {% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation %}
 
 {% block title %}Deactivate class “{{ school_class.name }}” — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-<section>
-  <h1>Deactivate class “{{ school_class.name }}”?</h1>
-  <p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
-  <p>Its students will be signed out and hidden until the class is activated again.</p>
-  <form method="post" action="/teacher/students/classes/{{ school_class.id }}/deactivate">
-    <button type="submit">Deactivate</button>
-    <a href="{{ cancel }}">Cancel</a>
-  </form>
-</section>
+{{ back_link(cancel, "Back to “" ~ school_class.name ~ "”") }}
+{% call confirmation("Deactivate class “" ~ school_class.name ~ "”?", none, "/teacher/students/classes/" ~ school_class.id ~ "/deactivate", "Deactivate", cancel) %}
+<p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
+<p>Its students will be signed out and hidden until the class is activated again.</p>
+{% endcall %}
 {% endblock %}

@@ -1,0 +1,27 @@
+{#- Notices and empty states (contracts/components.md §6, FR-029, FR-030). An error notice is an
+    alert; success and information are a status, announced without interrupting. -#}
+
+{% macro notice(text, kind="info") -%}
+{%- set notice_classes = {"success": "notice notice-success", "error": "notice notice-error", "info": "notice notice-info"} -%}
+{%- if kind not in notice_classes %}{{ template_error("notice: unknown kind " ~ kind) }}{% endif -%}
+<div class="{{ notice_classes[kind] }}" role="{{ 'alert' if kind == 'error' else 'status' }}">
+  {%- if text %}
+  <p>{{ text }}</p>
+  {%- endif %}
+  {%- if caller is defined %}
+  {{ caller() }}
+  {%- endif %}
+</div>
+{%- endmacro %}
+
+{% macro empty_state(message, hint=None) -%}
+<div class="empty-state">
+  <p class="empty-state-message">{{ message }}</p>
+  {%- if hint %}
+  <p class="empty-state-hint">{{ hint }}</p>
+  {%- endif %}
+  {%- if caller is defined %}
+  {{ caller() }}
+  {%- endif %}
+</div>
+{%- endmacro %}

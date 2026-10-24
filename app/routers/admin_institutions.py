@@ -136,13 +136,23 @@ def _region_form(
     cancel: str,
     error: str | None = None,
     status_code: int = 200,
+    region_name: str | None = None,
 ) -> HTMLResponse:
-    """The create or rename form; with `error`, the refused value and why (FR-025)."""
+    """The create or rename form; with `error`, the refused value and why (FR-025), in the shared
+    form shape: `values` and `errors` keyed by the field (milestone 10 data-model §4.2).
+    `region_name` (renaming) names the back link's target, which is the region's own page."""
     return render_admin(
         request,
         "pages/admin/region_form.html",
         TAB,
-        {"heading": heading, "action": action, "value": value, "error": error, "cancel": cancel},
+        {
+            "heading": heading,
+            "action": action,
+            "values": {"name": value},
+            "errors": {"name": error} if error else {},
+            "cancel": cancel,
+            "region_name": region_name,
+        },
         status_code=status_code,
     )
 
@@ -193,7 +203,9 @@ def rename_region_page(request: Request, session: SessionDep, region_id: int) ->
     except RegionNotFound:
         return _region_not_found(request)
     path = region_path(region_id)
-    return _region_form(request, "Rename region", f"{path}/rename", region.name, path)
+    return _region_form(
+        request, "Rename region", f"{path}/rename", region.name, path, region_name=region.name
+    )
 
 
 @router.post("/regions/{region_id:int}/rename", response_class=HTMLResponse)
@@ -208,7 +220,14 @@ def rename_region_action(
         return _region_not_found(request)
     except (InvalidName, DuplicateRegionName) as refused:
         return _region_form(
-            request, "Rename region", f"{path}/rename", name, path, refused.message, 400
+            request,
+            "Rename region",
+            f"{path}/rename",
+            name,
+            path,
+            refused.message,
+            400,
+            region_name=get_region(session, region_id).name,
         )
     return _redirect(path)
 
@@ -302,7 +321,8 @@ def _institution_form(
     status_code: int = 200,
 ) -> HTMLResponse:
     """The create or rename form, naming the region and offering no way to change it (FR-030).
-    With `refused`, the region is deactivated and there is no form at all (FR-024)."""
+    With `refused`, the region is deactivated and there is no form at all (FR-024). The form uses
+    the shared shape: `values` and `errors` keyed by the field (milestone 10 data-model §4.2)."""
     return render_admin(
         request,
         "pages/admin/institution_form.html",
@@ -310,8 +330,8 @@ def _institution_form(
         {
             "heading": heading,
             "action": action,
-            "value": value,
-            "error": error,
+            "values": {"name": value},
+            "errors": {"name": error} if error else {},
             "cancel": region_path(region.id),
             "region": region,
             "refused": refused,

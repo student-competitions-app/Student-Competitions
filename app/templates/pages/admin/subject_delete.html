@@ -1,24 +1,18 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation, refusal %}
+{% from "components/button.html" import post_button %}
 
 {% block title %}Delete “{{ subject.name }}” — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>Delete “{{ subject.name }}”?</h1>
-  {% if in_use %}
-  <p>“{{ subject.name }}” is in use and cannot be deleted. You can deactivate it instead.</p>
-  {% if subject.is_active %}
-  <form method="post" action="/admin/subjects/{{ subject.id }}/deactivate">
-    <button type="submit">Deactivate</button>
-  </form>
-  {% endif %}
-  <p><a href="/admin/subjects">Back to the subjects</a></p>
-  {% else %}
-  <p>Deleting a subject cannot be undone.</p>
-  <form method="post" action="/admin/subjects/{{ subject.id }}/delete">
-    <button type="submit">Delete</button>
-    <a href="/admin/subjects">Cancel</a>
-  </form>
-  {% endif %}
-</section>
+{{ back_link("/admin/subjects", "Back to the subjects") }}
+{% set question = "Delete “" ~ subject.name ~ "”?" %}
+{% if in_use %}
+{% call refusal(question, "“" ~ subject.name ~ "” is in use and cannot be deleted. You can deactivate it instead.", "/admin/subjects", "Back to the subjects") %}
+{% if subject.is_active %}{{ post_button("/admin/subjects/" ~ subject.id ~ "/deactivate", "Deactivate", kind="destructive") }}{% endif %}
+{% endcall %}
+{% else %}
+{{ confirmation(question, "Deleting a subject cannot be undone.", "/admin/subjects/" ~ subject.id ~ "/delete", "Delete", "/admin/subjects") }}
+{% endif %}
 {% endblock %}

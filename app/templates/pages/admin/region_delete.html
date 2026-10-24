@@ -1,19 +1,16 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation, refusal %}
 
 {% block title %}Delete region “{{ region.name }}” — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>Delete region “{{ region.name }}”?</h1>
-  {% if not_empty %}
-  <p>“{{ region.name }}” still holds educational institutions and cannot be deleted. Delete its institutions first.</p>
-  <p><a href="/admin/institutions/regions/{{ region.id }}">Back to “{{ region.name }}”</a></p>
-  {% else %}
-  <p>Deleting a region cannot be undone.</p>
-  <form method="post" action="/admin/institutions/regions/{{ region.id }}/delete">
-    <button type="submit">Delete</button>
-    <a href="/admin/institutions/regions/{{ region.id }}">Cancel</a>
-  </form>
-  {% endif %}
-</section>
+{% set region_path = "/admin/institutions/regions/" ~ region.id %}
+{% set question = "Delete region “" ~ region.name ~ "”?" %}
+{{ back_link(region_path, "Back to “" ~ region.name ~ "”") }}
+{% if not_empty %}
+{{ refusal(question, "“" ~ region.name ~ "” still holds educational institutions and cannot be deleted. Delete its institutions first.", region_path, "Back to “" ~ region.name ~ "”") }}
+{% else %}
+{{ confirmation(question, "Deleting a region cannot be undone.", region_path ~ "/delete", "Delete", region_path) }}
+{% endif %}
 {% endblock %}

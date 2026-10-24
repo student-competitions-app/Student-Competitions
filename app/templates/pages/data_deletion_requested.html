@@ -1,11 +1,13 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/feedback.html" import notice %}
 
 {% block title %}Link requested — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="auth">
-  <h1>Check your email</h1>
-  <p>If this email is registered, we have sent you a link.</p>
-  <p class="auth-alternatives"><a href="/login">Back to sign in</a></p>
-</section>
+<div class="narrow">
+  {{ back_link("/login", "Back to sign in") }}
+  {{ page_heading("Check your email") }}
+  {{ notice("If this email is registered, we have sent you a link.", "success") }}
+</div>
 {% endblock %}

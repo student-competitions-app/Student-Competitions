@@ -1,12 +1,8 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import area_tabs %}
+
+{% block tabs %}{{ area_tabs(teacher_tabs, active_tab, "Teacher area") }}{% endblock %}
 
 {% block content %}
-<nav class="area-tabs" aria-label="Teacher area">
-  <ul>
-    {% for tab in teacher_tabs %}
-    <li><a href="{{ tab.path }}"{% if tab.key == active_tab %} aria-current="page"{% endif %}>{{ tab.label }}</a></li>
-    {% endfor %}
-  </ul>
-</nav>
 {% block teacher_content %}{% endblock %}
 {% endblock %}

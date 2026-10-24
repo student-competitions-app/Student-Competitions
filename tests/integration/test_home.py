@@ -20,14 +20,22 @@ from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, delete
 
 import app.routers.pages as pages
-from app.core.config import APP_NAME, APP_VERSION, COMMIT_SHA
+from app.core.config import APP_NAME, APP_TAGLINE, APP_VERSION, COMMIT_SHA
 from app.core.migrations import head_revision
 from app.core.templates import SHORT_COMMIT_LENGTH
-from app.models import Question
+from app.models import Question, Role
+from app.routers.areas import areas_for
 from app.schemas.question import QuestionCreate
 from app.services.questions import create_question
 from tests import html
-from tests.conftest import ADMIN_EMAIL, STUDENT_EMAIL, TEACHER_EMAIL, ClientAs
+from tests.conftest import (
+    ADMIN_EMAIL,
+    ADMIN_STUDENT_EMAIL,
+    STUDENT_EMAIL,
+    TEACHER_EMAIL,
+    TEACHER_STUDENT_EMAIL,
+    ClientAs,
+)
 
 VIEWPORT_META = '<meta name="viewport" content="width=device-width, initial-scale=1">'
 
@@ -333,3 +341,58 @@ def test_home_lists_500_questions_quickly(
     assert len(items) == 506
     assert items[:6] == [str(escape(sample["text"])) for sample in sample_questions]
     assert items[6:] == [f"Question {i:03d}" for i in range(500)]
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 10: the start page (US6-2 to US6-4, FR-035)
+# ---------------------------------------------------------------------------------------------
+
+
+def area_cards(body: str) -> list[tuple[str, str, str]]:
+    """`(href, title, description)` of each card in the areas section."""
+    sections = [s for s in html.parse(body).find_all("section") if s.attrs.get("id") == "areas"]
+    assert len(sections) == 1
+    found = []
+    for card in sections[0].find_all("article"):
+        (link,) = [a for a in card.find_all("a") if "href" in a.attrs]
+        (description,) = [p for p in card.find_all("p") if "card-description" in p.classes()]
+        found.append((link.attrs["href"], link.text(), description.text()))
+    return found
+
+
+@pytest.mark.parametrize(
+    ("email", "role"),
+    [
+        (ADMIN_EMAIL, Role.ADMIN),
+        (TEACHER_EMAIL, Role.TEACHER),
+        (STUDENT_EMAIL, Role.STUDENT),
+        (ADMIN_STUDENT_EMAIL, Role.ADMIN),
+        (ADMIN_STUDENT_EMAIL, Role.STUDENT),
+        (TEACHER_STUDENT_EMAIL, Role.TEACHER),
+        (TEACHER_STUDENT_EMAIL, Role.STUDENT),
+    ],
+)
+def test_one_card_per_allowed_area_with_its_description(
+    client_as: ClientAs, email: str, role: Role
+) -> None:
+    body = client_as(email, role).get("/").text
+    expected = [(area.path, area.title, area.description) for area in areas_for(role)]
+    assert expected, "every role has at least one area"
+    assert area_cards(body) == expected
+
+
+def test_the_greeting_and_the_tagline(admin_client: TestClient) -> None:
+    body = admin_client.get("/").text
+    assert html.h1(body) == f"Welcome to {APP_NAME}"
+    assert APP_TAGLINE in html.text(body, "main")
+
+
+def test_unavailable_data_keeps_the_cards_and_drops_the_database_line(
+    admin_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _fail_database_reads(monkeypatch)
+    response = admin_client.get("/")
+    assert response.status_code == 200
+    assert UNAVAILABLE_NOTICE in html.notices(response.text)
+    assert [href for href, _, _ in area_cards(response.text)] == ["/admin", "/staff"]
+    assert _status_lines(response.text) == []

@@ -322,12 +322,12 @@ area with its description, the sample questions and the database line in the foo
 
 ### Tests for User Story 6
 
-- [ ] T075 [P] [US6] Extend `tests/integration/test_layout.py` with the identity tests (FR-008, FR-018, FR-021): on `/login`, `/`, `/admin/subjects` and the 404 page, the header has a link to `/` holding the `logo-mark` SVG and "Student Competitions"; signed in, the current role's label is in the top bar, and absent signed out; the head links `/static/img/favicon.svg`, `/static/img/favicon-32.png` and `/static/img/apple-touch-icon.png`; the footer shows the version on every page; the database status line is in the footer of `/` only.
-- [ ] T076 [P] [US6] Extend `tests/integration/test_home.py` (US6-2 to US6-4): for an administrator, a teacher, a student and a person holding administrator and teacher acting as each, the card links on `/` equal `areas_for(role)` in order, each with its description from `app/routers/areas.py`, and no other area; the sample questions are listed as before; with the database unavailable (the existing milestone 3 patch) the page answers 200 with the info notice's unchanged text and no database line.
+- [X] T075 [P] [US6] Extend `tests/integration/test_layout.py` with the identity tests (FR-008, FR-018, FR-021): on `/login`, `/`, `/admin/subjects` and the 404 page, the header has a link to `/` holding the `logo-mark` SVG and "Student Competitions"; signed in, the current role's label is in the top bar, and absent signed out; the head links `/static/img/favicon.svg`, `/static/img/favicon-32.png` and `/static/img/apple-touch-icon.png`; the footer shows the version on every page; the database status line is in the footer of `/` only.
+- [X] T076 [P] [US6] Extend `tests/integration/test_home.py` (US6-2 to US6-4): for an administrator, a teacher, a student and a person holding administrator and teacher acting as each, the card links on `/` equal `areas_for(role)` in order, each with its description from `app/routers/areas.py`, and no other area; the sample questions are listed as before; with the database unavailable (the existing milestone 3 patch) the page answers 200 with the info notice's unchanged text and no database line.
 
 ### Implementation for User Story 6
 
-- [ ] T077 [US6] Check the exception handlers in `app/main.py` (unmatched 404, `AccessDenied` 403, cross-site 403, 5xx/503): each renders `pages/error.html` through `base.html` with the full frame, the favicons and the footer, although `resolve_access` may not have run; fix any handler context that lacks a value the frame reads (the `_current_user` and `_theme` processors already default safely). T075 passes.
+- [X] T077 [US6] Check the exception handlers in `app/main.py` (unmatched 404, `AccessDenied` 403, cross-site 403, 5xx/503): each renders `pages/error.html` through `base.html` with the full frame, the favicons and the footer, although `resolve_access` may not have run; fix any handler context that lacks a value the frame reads (the `_current_user` and `_theme` processors already default safely). T075 passes.
 
 **Checkpoint**: the identity and start page hold for every role and every kind of page.
 

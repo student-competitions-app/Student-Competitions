@@ -23,6 +23,14 @@ file `tests/integration/form_contract.json` was generated once, from the milesto
 The signed-in 404 page is not a case: it shows no form today, because the error handlers render
 without the session (T077 checks the frame there).
 
+## Error pages (T077)
+
+No handler needed a change: the 404, the "Access denied" 403 and the "Request refused" 403 render
+`pages/error.html` through `base.html` with the full frame, the favicons and the footer. The
+`_current_user` and `_theme` context processors default safely when `resolve_access` has not
+run, and `app_name` is now a template global. `test_layout.py` checks the identity on each of
+these pages.
+
 ## Gate (T089)
 
 To be recorded.

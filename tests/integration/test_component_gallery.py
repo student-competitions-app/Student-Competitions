@@ -1,5 +1,7 @@
 """The component gallery, `GET /admin/components` (specs/010-design-system-ui-guidelines US7,
-FR-037–FR-038a, SC-009; contracts/http-routes.md §2, contracts/components.md §12).
+FR-037–FR-038a, SC-009; contracts/http-routes.md §2, contracts/components.md §12), with the
+loading feedback of milestone 10.1 (specs/010.1-loading-feedback-pinned-frame FR-017,
+contracts/components.md §5).
 
 Outside production an administrator sees every component and variant; other roles are refused
 as on any administrator page, and anonymous visitors are sent to sign in. In production the
@@ -32,6 +34,7 @@ GALLERY = "/admin/components"
 SECTIONS = {
     "identity": ["Student Competitions", "--sc-page", "--sc-accent", "Heading 1", "Small text"],
     "frame": ["Account menu", "Switch to", "Light", "Dark", "Device", "Back to the frame"],
+    "loading": ["Loading bar", "Busy button", "Send invitation"],
     "buttons": ["Primary button", "Secondary link", "Destructive form", "Destructive outline"],
     "cards": ["Card with a link", "Card without a link", "Card with a body"],
     "table": ["Physics", "Deactivated", "Rename", "Activate", "No subjects yet"],
@@ -70,6 +73,31 @@ def test_an_administrator_sees_every_section_and_variant(admin_client: TestClien
         text = section.text()
         for variant in SECTIONS[section.attrs["id"]]:
             assert variant in text, (section.attrs["id"], variant)
+
+
+def test_the_loading_section_shows_both_components_in_their_loading_state(
+    admin_client: TestClient,
+) -> None:
+    """The bar shown (not hidden) under a sample frame, and a busy button of each kind: never
+    disabled, and outside any form, so pressing one does nothing."""
+    (section,) = [s for s in sections(admin_client.get(GALLERY).text) if s.attrs["id"] == "loading"]
+    bars = [e for e in section.find_all("div") if "loading-bar" in e.classes()]
+    assert len(bars) == 1
+    (bar,) = bars
+    assert "hidden" not in bar.attrs
+    assert bar.attrs.get("aria-hidden") == "true"
+    assert bar.parent is not None and "frame" in bar.parent.classes()
+    busy = [b for b in section.find_all("button") if b.attrs.get("aria-busy") == "true"]
+    assert [b.text() for b in busy] == ["Send invitation", "Dark", "Delete"]
+    assert not any("disabled" in b.attrs for b in busy)
+
+    def in_form(element: html.Element) -> bool:
+        parent = element.parent
+        while parent is not None and parent.tag != "form":
+            parent = parent.parent
+        return parent is not None
+
+    assert not any(in_form(b) for b in busy)
 
 
 def test_the_gallery_is_no_tab(admin_client: TestClient) -> None:

@@ -3,7 +3,7 @@
     one section per component family, every variant, from the sample data of
     app/routers/admin_components.py. A new component or variant is added here, to the library
     and to docs/requirements/ui-guidelines.md in the same change (FR-045). -#}
-{% from "components/frame.html" import top_bar, user_menu, theme_switch, area_tabs, back_link, page_heading with context %}
+{% from "components/frame.html" import top_bar, user_menu, theme_switch, area_tabs, back_link, page_heading, loading_bar with context %}
 {% from "components/icons.html" import logo_mark, icon %}
 {% from "components/palette.html" import swatch %}
 {% from "components/button.html" import button, link_button, post_button %}
@@ -58,6 +58,19 @@
   <h3>Page heading, with and without an action</h3>
   <div class="page-heading"><h2>Subjects</h2>{{ link_button("Create subject", "/admin/components#frame") }}</div>
   <div class="page-heading"><h2>Educational institutions</h2></div>
+</section>
+
+<section id="loading" aria-labelledby="loading-heading">
+  <h2 id="loading-heading">Loading feedback</h2>
+  <p>Both appear only while the next page is on its way, and only after 200 ms. Pages never draw them: the base layout's script does.</p>
+  <h3>Loading bar</h3>
+  <div class="frame">{{ top_bar(one_role_user, teacher_role, [teacher_role]) }}{{ loading_bar(active=True) }}</div>
+  <h3>Busy button</h3>
+  <div class="button-row">
+    {{ button("Send invitation", busy=True) }}
+    {{ button("Dark", kind="secondary", small=True, busy=True) }}
+    {{ button("Delete", kind="destructive", busy=True) }}
+  </div>
 </section>
 
 <section id="buttons" aria-labelledby="buttons-heading">

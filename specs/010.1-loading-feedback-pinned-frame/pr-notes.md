@@ -167,3 +167,8 @@ without JavaScript: 14 of 14 passed in Chromium, Firefox and WebKit.
 
 **Still to check by hand before merge**: Tab and Shift-Tab in real Safari with "Press Tab to
 highlight each item" turned on.
+
+## Delivery
+
+Merged in PR #40 and deployed. The product owner confirmed by hand that the loading bar and the
+pinned frame behave as expected. `milestones.md` moves 10.1 to **Delivered** (T033).

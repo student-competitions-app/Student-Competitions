@@ -206,10 +206,10 @@ def test_home_never_shows_a_reference_answer(
 
 
 def test_home_has_no_write_affordance(admin_client: TestClient) -> None:
-    """No form or button in the page's content: only the header's own forms (Log out), and no
-    link out of a list item (US1-2, FR-018)."""
+    """No form or button in the page's content: only the header's own forms (the theme switch
+    and Log out), and no link out of a list item (US1-2, FR-018)."""
     body = admin_client.get("/").text
-    assert [f.action for f in html.forms(body, within="header")] == ["/logout"]
+    assert [f.action for f in html.forms(body, within="header")] == ["/theme", "/logout"]
     main = html.parse(body).find_all("main")[0]
     assert main.find_all("form") == []
     assert main.find_all("button") == []

@@ -134,22 +134,52 @@ def hash_invitation_cutoff_key(secret_key: str, email: str) -> str:
     return _hmac_hex(secret_key, f"invitation-cutoff\x00{email}")
 
 
+THEME_UNSAFE_RETURN_PATHS = frozenset({"/login/code", "/logout", "/theme"})
+"""Never a target to return to after choosing a theme: the code step and logout are `POST`-only
+and would answer 405, and returning to the switch itself makes no sense (milestone 10 research
+D6). Unlike a sign-in, the sign-in page and the role choice are fine targets: the switch is on
+the sign-in page."""
+
+
+def _local_path(value: str | None) -> str | None:
+    """The path part of `value` when `value` is a local return address, otherwise `None`.
+
+    Refuses absolute and protocol-relative URLs, backslashes (browsers read them as `/`),
+    whitespace and control characters, and anything over 2,048 characters.
+    """
+    if not value or len(value) > NEXT_PATH_MAX_LENGTH:
+        return None
+    if not value.startswith("/") or value.startswith("//"):
+        return None
+    if "\\" in value or any(char.isspace() or not char.isprintable() for char in value):
+        return None
+    parts = urlsplit(value)
+    if parts.scheme or parts.netloc:
+        return None
+    return parts.path
+
+
 def safe_next_path(value: str | None) -> str:
     """`value` if it is a safe local return path, otherwise `/` (research D12).
 
-    Refuses absolute and protocol-relative URLs, backslashes (browsers read them as `/`),
-    whitespace and control characters, anything over 2,048 characters, and the sign-in and
-    role-choice pages themselves.
+    Refuses what `_local_path` refuses, and the sign-in and role-choice pages themselves.
     """
-    if not value or len(value) > NEXT_PATH_MAX_LENGTH:
+    path = _local_path(value)
+    if path is None or path in AUTH_PATHS:
         return "/"
-    if not value.startswith("/") or value.startswith("//"):
-        return "/"
-    if "\\" in value or any(char.isspace() or not char.isprintable() for char in value):
-        return "/"
-    parts = urlsplit(value)
-    if parts.scheme or parts.netloc or parts.path in AUTH_PATHS:
-        return "/"
+    return value  # type: ignore[return-value]
+
+
+def safe_return_path(value: str | None) -> str | None:
+    """`value` if the theme switch may return there, otherwise `None` (milestone 10 research D6).
+
+    The same local-address rules as `safe_next_path`, but `/login` and `/role` are allowed, and
+    `/login/code`, `/logout` and `/theme` are refused. The caller also checks that the path has a
+    `GET` page, which this function cannot know.
+    """
+    path = _local_path(value)
+    if path is None or path in THEME_UNSAFE_RETURN_PATHS:
+        return None
     return value
 
 

@@ -16,6 +16,10 @@ The signed-in user, their roles and the role they are currently using reach ever
 same way, through a context processor that reads `request.state` (set by
 `app.core.auth.resolve_access`), so the layout header can show the address, the current role, the
 role switch and the logout form without each handler passing them (FR-031, FR-018).
+
+The theme choice reaches every template the same way, through `_theme` (milestone 10 research
+D5–D6): `theme` is the browser's choice, rendered by the layout as `data-theme`, and
+`theme_return` is where the theme switch sends the browser back to.
 """
 
 from datetime import datetime
@@ -27,6 +31,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import TemplateRuntimeError
 
 from app.core.config import APP_NAME, APP_VERSION, COMMIT_SHA
+from app.core.theme import read_theme
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 
@@ -47,7 +52,21 @@ def _current_user(request: Request) -> dict[str, Any]:
     }
 
 
-templates = Jinja2Templates(directory=TEMPLATES_DIR, context_processors=[_current_user])
+def _theme(request: Request) -> dict[str, Any]:
+    """`theme` (`light`, `dark` or `device`) and `theme_return` for every template. The return
+    address is the path and query of a page shown by `GET` (or `HEAD`); a page shown after a
+    `POST` returns to its path alone, since its query, if any, belonged to the submission.
+    `POST /theme` checks the address again."""
+    path = request.url.path
+    query = request.url.query
+    keep_query = request.method in ("GET", "HEAD") and query
+    return {
+        "theme": read_theme(request).value,
+        "theme_return": f"{path}?{query}" if keep_query else path,
+    }
+
+
+templates = Jinja2Templates(directory=TEMPLATES_DIR, context_processors=[_current_user, _theme])
 
 
 def utc(value: datetime | None, form: str = "time") -> str:

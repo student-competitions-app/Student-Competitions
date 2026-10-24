@@ -84,8 +84,15 @@ def fail(*args: Any, **kwargs: Any) -> Any:
 
 
 def next_values(body: str) -> list[str]:
-    """The values of the `next` fields of the page's forms."""
-    return [i.value for f in html.forms(body, "main") for i in f.inputs if i.name == "next"]
+    """The values of the `next` fields of the page's sign-in forms (the theme switch's own
+    return address is not one)."""
+    return [
+        i.value
+        for f in html.forms(body, "main")
+        if f.action != "/theme"
+        for i in f.inputs
+        if i.name == "next"
+    ]
 
 
 def test_the_login_page_has_the_email_form(client: TestClient) -> None:
@@ -94,12 +101,8 @@ def test_the_login_page_has_the_email_form(client: TestClient) -> None:
     body = response.text
     assert ("post", "/login") in html.form_targets(body, "main")
     assert html.control(body, "email")["type"] == "email"
-    assert html.control(body, "next") == {
-        "tag": "input",
-        "type": "hidden",
-        "name": "next",
-        "value": "/",
-    }
+    (login,) = [f for f in html.forms(body, "main") if f.action == "/login"]
+    assert html.Input("next", "hidden", "/") in login.inputs
 
 
 def test_sign_in_end_to_end(client: TestClient, outbox: list[EmailMessage]) -> None:

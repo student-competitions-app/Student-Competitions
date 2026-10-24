@@ -37,9 +37,28 @@
       </div>
     </form>
     {%- endif %}
+    {{ theme_switch(theme, theme_return) }}
     <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
   </div>
 </details>
+{%- endmacro %}
+
+{#- The theme switch (FR-014): three secondary buttons, so it never competes with the page's
+    primary action; the current choice carries `aria-pressed="true"`. `standalone` places it on
+    its own, under the sign-in form. -#}
+{% macro theme_switch(current, return_to, standalone=False) -%}
+{%- set switch_classes = "theme-switch theme-switch-standalone" if standalone else "theme-switch" -%}
+<form method="post" action="/theme" class="{{ switch_classes }}">
+  <fieldset>
+    <legend>Theme</legend>
+    <input type="hidden" name="next" value="{{ return_to }}">
+    <div class="button-row">
+      {%- for value, label in (("light", "Light"), ("dark", "Dark"), ("device", "Device")) %}
+      {{ button(label, kind="secondary", name="theme", value=value, small=True, attrs={"aria-pressed": "true" if value == current else "false"}) }}
+      {%- endfor %}
+    </div>
+  </fieldset>
+</form>
 {%- endmacro %}
 
 {% macro area_tabs(tabs, active, label) -%}

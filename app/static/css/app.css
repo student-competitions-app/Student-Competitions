@@ -1396,4 +1396,48 @@ fieldset > legend {
   display: block;
 }
 
+/* The theme switch (components/frame.html, FR-014): three secondary buttons; the current choice
+   is marked by the primary tint, a primary border and bold text, not by colour alone. */
+.theme-switch {
+  margin: 0;
+}
+
+.theme-switch fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.theme-switch legend {
+  margin: 0 0 var(--sc-space-1);
+  padding: 0;
+  color: var(--sc-muted);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+}
+
+.theme-switch .button-row {
+  flex-wrap: nowrap;
+}
+
+.theme-switch button {
+  flex: 1;
+}
+
+.theme-switch :is(button, [type="submit"]).secondary[aria-pressed="true"] {
+  --pico-background-color: var(--sc-primary-tint);
+  --pico-border-color: var(--sc-primary);
+  --pico-color: var(--sc-text);
+  border-width: var(--sc-border-strong);
+  font-weight: var(--sc-weight-bold);
+}
+
+.theme-switch-standalone {
+  margin-top: var(--sc-space-5);
+  padding-top: var(--sc-space-3);
+  border-top: var(--sc-border-width) solid var(--sc-border);
+  max-width: 20rem;
+}
+
 /* == End of components == */

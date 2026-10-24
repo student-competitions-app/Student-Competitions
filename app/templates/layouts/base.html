@@ -1,11 +1,11 @@
 {% from "components/frame.html" import top_bar with context -%}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"{% if theme != "device" %} data-theme="{{ theme }}"{% endif %}>
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% if app_description %}<meta name="description" content="{{ app_description }}">{% endif %}
-    <meta name="color-scheme" content="light dark">
+    <meta name="color-scheme" content="{{ 'light dark' if theme == 'device' else theme }}">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     <link rel="preload" href="/static/fonts/open-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">

@@ -1,5 +1,5 @@
 {% extends "layouts/base.html" %}
-{% from "components/frame.html" import page_heading %}
+{% from "components/frame.html" import page_heading, theme_switch %}
 {% from "components/feedback.html" import notice as show_notice %}
 {% from "components/form.html" import error_summary, field, form_actions %}
 
@@ -20,5 +20,6 @@
     {{ form_actions("Send code") }}
   </form>
   <p><a href="/data-deletion">Delete my data</a></p>
+  {{ theme_switch(theme, theme_return, standalone=True) }}
 </div>
 {% endblock %}

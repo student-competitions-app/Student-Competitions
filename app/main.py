@@ -71,6 +71,7 @@ from app.routers import (
     roles,
     teacher,
     teacher_students,
+    theme,
 )
 from app.services.database_status import record_boot
 from app.services.email import build_email_sender
@@ -180,6 +181,7 @@ app.include_router(admin_subjects.router)
 app.include_router(invitations.router)
 app.include_router(profile.router)
 app.include_router(data_deletion.router)
+app.include_router(theme.router)
 
 
 @app.exception_handler(LoginRequired)

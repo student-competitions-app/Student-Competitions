@@ -255,3 +255,15 @@ def test_cross_site_teacher_actions_change_nothing(
     session.expire_all()
     assert [row.name for row in session.exec(select(SchoolClass))] == ["KN-21"]
     assert len(outbox) == sent
+
+
+@pytest.mark.parametrize("forged", CROSS_SITE_HEADERS)
+def test_a_cross_site_theme_choice_is_refused(client: TestClient, forged: dict[str, str]) -> None:
+    """Milestone 10: the theme switch is public, but goes through the same check as every
+    `POST`, and a refused one sets no cookie."""
+    response = client.post(
+        "/theme", data={"theme": "dark", "next": "/login"}, headers=forged, follow_redirects=False
+    )
+    assert response.status_code == 403
+    assert html.h1(response.text) == "Request refused"
+    assert "set-cookie" not in response.headers

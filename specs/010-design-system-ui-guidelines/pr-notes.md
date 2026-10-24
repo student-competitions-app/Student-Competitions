@@ -14,6 +14,15 @@ Run on `010-design-system-ui-guidelines` at `cd8633b`, before any change, on 202
 
 Every later checkpoint compares against this count (SC-002).
 
+## Test harness checkpoint (T014)
+
+After the markup assertions moved to `tests/html.py` and the form contract was added, before any
+look change: ruff clean; **2328 passed, 3 skipped** on both engines, which is the 2215 baseline
+plus the 113 form-contract tests (56 cases × 2 engines, and the stale-case check). The contract
+file `tests/integration/form_contract.json` was generated once, from the milestone 9 templates.
+The signed-in 404 page is not a case: it shows no form today, because the error handlers render
+without the session (T077 checks the frame there).
+
 ## Gate (T089)
 
 To be recorded.

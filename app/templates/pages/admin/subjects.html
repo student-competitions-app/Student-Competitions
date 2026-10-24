@@ -7,7 +7,7 @@
   <h1>Subjects</h1>
   <p><a href="/admin/subjects/new" role="button">Create</a></p>
   {% if subjects %}
-  <div class="overflow-auto">
+  <div>
     <table class="subjects-table">
       <thead>
         <tr>
@@ -19,7 +19,7 @@
       <tbody>
         {% for s in subjects %}
         <tr>
-          <td class="subject-name">{{ s.name }}</td>
+          <td>{{ s.name }}</td>
           <td>{% if s.is_active %}Active{% else %}Inactive{% endif %}</td>
           <td class="subjects-actions">
             <a href="/admin/subjects/{{ s.id }}/rename">Rename</a>

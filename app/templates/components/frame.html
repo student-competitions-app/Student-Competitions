@@ -1,0 +1,68 @@
+{#- The page frame (contracts/components.md §1, FR-018–FR-021, FR-024, research D7). Import it
+    `with context`: `top_bar` and `user_menu` read the signed-in person from the template context
+    (`current_user`, `current_role`, `user_roles`, set by `app.core.templates`). -#}
+
+{% from "components/icons.html" import logo_mark, icon %}
+{% from "components/button.html" import button, link_button %}
+
+{% macro top_bar() -%}
+<header class="top-bar">
+  <div class="container">
+    <a href="/" class="brand">{{ logo_mark() }}<span class="brand-name">{{ app_name }}</span></a>
+    {%- if current_user %}
+    {%- if current_role %}
+    <span class="brand-role">{{ current_role.label }}</span>
+    {%- endif %}
+    {{ user_menu() }}
+    {%- endif %}
+  </div>
+</header>
+{%- endmacro %}
+
+{#- The user menu (FR-019): a native <details>, so it opens and closes without JavaScript. The
+    role switch shows only for a person with several roles who has chosen one, exactly as the
+    milestone 5 header did, so it never shows on the role-choice page itself. -#}
+{% macro user_menu() -%}
+<details class="user-menu">
+  <summary>{{ icon("account") }}<span class="user-menu-email">{{ current_user.email }}</span><span class="visually-hidden">Account menu</span></summary>
+  <div class="user-menu-panel">
+    <a href="/profile" class="user-menu-profile">{{ current_user.email }}</a>
+    {%- if current_role and user_roles | length > 1 %}
+    <form method="post" action="/role">
+      <span class="menu-label">Switch to</span>
+      <div class="button-row">
+        {%- for role in user_roles if role != current_role %}
+        <button type="submit" name="role" value="{{ role.value }}" class="secondary small">{{ role.label }}</button>
+        {%- endfor %}
+      </div>
+    </form>
+    {%- endif %}
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+  </div>
+</details>
+{%- endmacro %}
+
+{% macro area_tabs(tabs, active, label) -%}
+<nav class="area-tabs" aria-label="{{ label }}">
+  <div class="container">
+    <ul>
+      {%- for tab in tabs %}
+      <li><a href="{{ tab.path }}"{% if active is not none and tab.key == active %} aria-current="page"{% endif %}>{{ tab.label }}</a></li>
+      {%- endfor %}
+    </ul>
+  </div>
+</nav>
+{%- endmacro %}
+
+{% macro back_link(href, text) -%}
+<a href="{{ href }}" class="back-link">← {{ text }}</a>
+{%- endmacro %}
+
+{% macro page_heading(title, action=None) -%}
+<div class="page-heading">
+  <h1>{{ title }}</h1>
+  {%- if action %}
+  {{ link_button(action[0], action[1]) }}
+  {%- endif %}
+</div>
+{%- endmacro %}

@@ -24,8 +24,9 @@ from typing import Any
 
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
+from jinja2 import TemplateRuntimeError
 
-from app.core.config import APP_VERSION, COMMIT_SHA
+from app.core.config import APP_NAME, APP_VERSION, COMMIT_SHA
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 
@@ -62,6 +63,17 @@ def utc(value: datetime | None, form: str = "time") -> str:
 
 templates.env.filters["utc"] = utc
 
+
+def template_error(message: str) -> None:
+    """Fail the render with `message`: how a component macro refuses a call that breaks its
+    contract, such as a badge with no text (specs/010-design-system-ui-guidelines
+    contracts/components.md §5). A page that misuses a component never renders half-built."""
+    raise TemplateRuntimeError(message)
+
+
+templates.env.globals["template_error"] = template_error
+
+templates.env.globals["app_name"] = APP_NAME
 templates.env.globals["app_version"] = APP_VERSION
 templates.env.globals["commit_sha"] = COMMIT_SHA
 templates.env.globals["commit_short"] = COMMIT_SHA[:SHORT_COMMIT_LENGTH]

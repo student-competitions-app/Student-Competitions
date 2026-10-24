@@ -43,7 +43,7 @@
     <p class="list-empty">This region is deactivated. New educational institutions cannot be added to it.</p>
     {% endif %}
     {% if institutions %}
-    <div class="overflow-auto">
+    <div>
       <table class="institutions-table">
         <thead>
           <tr>
@@ -56,7 +56,7 @@
           {% for i in institutions %}
           {% set path = "/admin/institutions/regions/" ~ selected.id ~ "/institutions/" ~ i.id %}
           <tr>
-            <td class="institution-name">{{ i.name }}</td>
+            <td>{{ i.name }}</td>
             <td>{% if i.is_active %}Active{% else %}Deactivated{% endif %}</td>
             <td class="row-actions">
               <a href="{{ path }}/rename">Rename</a>

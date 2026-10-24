@@ -1,0 +1,30 @@
+{#- Data table (contracts/components.md §4, FR-027, research D11). A real table from 768 px; below
+    it each row is a card of labelled values, read from each cell's `data-label`, with the actions
+    last. Rows are plain `<tr>`s written by the page inside the `{% call %}` block. An empty list
+    renders `empty_state` instead of a table. -#}
+
+{% macro data_table(columns, caption=None) -%}
+<table class="data-table">
+  {%- if caption %}
+  <caption>{{ caption }}</caption>
+  {%- endif %}
+  <thead>
+    <tr>
+      {%- for column in columns %}
+      <th scope="col">{{ column }}</th>
+      {%- endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {{- caller() }}
+  </tbody>
+</table>
+{%- endmacro %}
+
+{% macro cell(label, value=None) -%}
+<td data-label="{{ label }}">{% if caller is defined %}{{ caller() }}{% else %}{{ value }}{% endif %}</td>
+{%- endmacro %}
+
+{% macro actions_cell() -%}
+<td class="row-actions" data-label="">{{ caller() }}</td>
+{%- endmacro %}

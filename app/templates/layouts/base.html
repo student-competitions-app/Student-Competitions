@@ -1,40 +1,33 @@
+{% from "components/frame.html" import top_bar with context -%}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% if app_description %}<meta name="description" content="{{ app_description }}">{% endif %}
+    <meta name="color-scheme" content="light dark">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    <link rel="preload" href="/static/fonts/open-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/static/img/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
     <link rel="stylesheet" href="/static/css/pico.min.css">
     <link rel="stylesheet" href="/static/css/app.css">
     {% block scripts %}{% endblock %}
   </head>
   <body>
-    <header class="container site-header">
-      <span class="site-title"><strong>{{ app_name }}</strong>{% if current_role %} <span class="site-role">· {{ current_role.label }}</span>{% endif %}</span>
-      {% if current_user %}
-      <div class="site-session">
-        <a href="/profile" class="site-session-email">{{ current_user.email }}</a>
-        {% if current_role and user_roles | length > 1 %}
-        <form method="post" action="/role" class="role-switch">
-          <span class="role-switch-label">Switch to</span>
-          {% for role in user_roles if role != current_role %}
-          <button type="submit" name="role" value="{{ role.value }}" class="secondary">{{ role.label }}</button>
-          {% endfor %}
-        </form>
-        {% endif %}
-        <form method="post" action="/logout"><button type="submit" class="secondary outline">Log out</button></form>
-      </div>
-      {% endif %}
-    </header>
-    <main class="container">
+    <a href="#main" class="skip-link">Skip to main content</a>
+    {{ top_bar() }}
+    {% block tabs %}{% endblock %}
+    <main id="main" class="container">
       {% block content %}{% endblock %}
     </main>
-    <footer class="container release">
-      <small>
-        {{ app_name }} <span class="release-version">v{{ app_version }}</span>
+    <footer class="site-footer container">
+      <p>
+        {{ app_name }} v{{ app_version }}
         · build <code title="{{ commit_sha }}">{{ commit_short }}</code>
-      </small>
+      </p>
+      {% block footer_extra %}{% endblock %}
     </footer>
   </body>
 </html>

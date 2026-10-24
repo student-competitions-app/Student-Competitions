@@ -2,11 +2,11 @@
     selectable institution, a checkbox to pick it and a Read/Write select, Read preselected.
     Rows marked `kept` are linked institutions that are no longer selectable (edit page only):
     checked, with the level as text and no select, since their level cannot change (FR-011). -#}
-<fieldset class="picker">
+<fieldset>
   <legend>Educational institutions</legend>
   {% if errors.picker %}<small id="picker-error" class="form-error" role="alert">{{ errors.picker }}</small>{% endif %}
   {% if picker_rows %}
-  <div class="overflow-auto">
+  <div>
     <table class="picker-table"{% if errors.picker %} aria-describedby="picker-error"{% endif %}>
       <thead>
         <tr>

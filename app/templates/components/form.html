@@ -1,0 +1,82 @@
+{#- Forms (contracts/components.md §7, FR-031, research D10). Every form page passes `values`,
+    `errors` (field id → message) and `form_error` (a message about the whole submission). The
+    summary sits under the `h1`, links each field error to its field, and lists the form error as
+    text; each field shows its own message and keeps the value entered. -#}
+
+{% from "components/button.html" import button %}
+
+{#- Extra attributes: `True` renders a bare attribute (`required`), `False`/`None` nothing, and
+    anything else `name="value"`. -#}
+{% macro _attrs(attrs) -%}
+{%- for key, val in attrs.items() -%}
+{%- if val is sameas true %} {{ key }}{% elif val is not none and val is not sameas false %} {{ key }}="{{ val }}"{% endif -%}
+{%- endfor -%}
+{%- endmacro %}
+
+{% macro _described(id, hint, error) -%}
+{%- set ids = [id ~ "-hint" if hint else "", id ~ "-error" if error else ""] | select | join(" ") -%}
+{%- if ids %} aria-describedby="{{ ids }}"{% endif %}{% if error %} aria-invalid="true"{% endif -%}
+{%- endmacro %}
+
+{% macro _messages(id, hint, error) -%}
+{%- if hint %}<small id="{{ id }}-hint" class="field-hint">{{ hint }}</small>{% endif -%}
+{%- if error %}<small id="{{ id }}-error" class="field-error">{{ error }}</small>{% endif -%}
+{%- endmacro %}
+
+{% macro error_summary(errors, form_error=None, order=None) -%}
+{%- if errors or form_error %}
+{%- set field_ids = order if order is not none else errors.keys() | list %}
+<div class="error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1">
+  <h2 id="error-summary-title">There is a problem</h2>
+  <ul>
+    {%- for field_id in field_ids if errors[field_id] %}
+    <li><a href="#{{ field_id }}">{{ errors[field_id] }}</a></li>
+    {%- endfor %}
+    {%- for field_id, message in errors.items() if field_id not in field_ids %}
+    <li><a href="#{{ field_id }}">{{ message }}</a></li>
+    {%- endfor %}
+    {%- if form_error %}
+    <li>{{ form_error }}</li>
+    {%- endif %}
+  </ul>
+</div>
+{%- endif %}
+{%- endmacro %}
+
+{% macro field(id, label, value="", error=None, hint=None, type="text", name=None, attrs={}) -%}
+<label for="{{ id }}">{{ label }}</label>
+{{ _messages(id, hint, error) }}
+<input type="{{ type }}" id="{{ id }}" name="{{ name or id }}" value="{{ value if value is not none else '' }}"{{ _described(id, hint, error) }}{{ _attrs(attrs) }}>
+{%- endmacro %}
+
+{% macro select_field(id, label, options, selected=None, error=None, hint=None, name=None, attrs={}, placeholder=None, extra_options=()) -%}
+<label for="{{ id }}">{{ label }}</label>
+{{ _messages(id, hint, error) }}
+<select id="{{ id }}" name="{{ name or id }}"{{ _described(id, hint, error) }}{{ _attrs(attrs) }}>
+  {%- if placeholder is not none %}
+  <option value="">{{ placeholder }}</option>
+  {%- endif %}
+  {%- for value, text in options %}
+  <option value="{{ value }}"{% if selected is not none and value | string == selected | string %} selected{% endif %}>{{ text }}</option>
+  {%- endfor %}
+  {%- for value, text in extra_options %}
+  <option value="{{ value }}">{{ text }}</option>
+  {%- endfor %}
+</select>
+{%- endmacro %}
+
+{% macro checkbox_field(id, label, checked=False, name=None, value=None, hint=None, attrs={}) -%}
+<label for="{{ id }}" class="checkbox-label"><input type="checkbox" id="{{ id }}" name="{{ name or id }}"{% if value is not none %} value="{{ value }}"{% endif %}{% if checked %} checked{% endif %}{% if hint %} aria-describedby="{{ id }}-hint"{% endif %}{{ _attrs(attrs) }}> {{ label }}</label>
+{%- if hint %}
+<small id="{{ id }}-hint" class="field-hint">{{ hint }}</small>
+{%- endif %}
+{%- endmacro %}
+
+{% macro form_actions(submit_label, cancel_href=None, kind="primary") -%}
+<div class="form-actions">
+  {{ button(submit_label, kind=kind) }}
+  {%- if cancel_href %}
+  <a href="{{ cancel_href }}">Cancel</a>
+  {%- endif %}
+</div>
+{%- endmacro %}

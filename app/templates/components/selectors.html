@@ -1,0 +1,52 @@
+{#- Selectors (contracts/components.md §10, FR-034, research D12). Both keep today's addresses,
+    `GET` parameters and no-JavaScript behaviour; only the look is shared.
+
+    `list_detail`: a list of items beside the selected item's detail, side by side from 768 px.
+    The page fills three parts through `{% call(part, item) list_detail(...) %}`: `"list_actions"`
+    (under the list's heading), `"item_actions"` (inside each item, `item` given) and `"detail"`
+    (the right panel). `item_href` is a path prefix, completed with the item's id.
+
+    `chained_lists`: one `GET` form per level, each submitting itself on change through the
+    existing `auto-submit.js`. A level is a mapping with `id`, `name`, `label`, `placeholder`,
+    `options` (`(value, text)` pairs), `selected`, `disabled`, `carry` (hidden `(name, value)`
+    pairs) and `extra_options`. -#}
+
+{% from "components/badge.html" import status_badge %}
+{% from "components/form.html" import select_field %}
+
+{% macro list_detail(list_label, items, selected_id, item_href, heading_id="list-detail-heading") -%}
+<div class="selectors selectors-list-detail">
+  <section aria-labelledby="{{ heading_id }}">
+    <h2 id="{{ heading_id }}">{{ list_label }}</h2>
+    {{ caller("list_actions", None) }}
+    {%- if items %}
+    <ul class="select-list">
+      {%- for item in items %}
+      {%- set is_selected = selected_id is not none and item.id == selected_id %}
+      <li{% if is_selected %} class="selected"{% endif %}>
+        <a href="{{ item_href }}{{ item.id }}"{% if is_selected %} aria-current="true"{% endif %}>{{ item.name }}</a>
+        {%- if not item.is_active %} {{ status_badge(False) }}{% endif %}
+        {{ caller("item_actions", item) }}
+      </li>
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+  </section>
+  <section aria-labelledby="{{ heading_id }}-detail">
+    {{ caller("detail", None) }}
+  </section>
+</div>
+{%- endmacro %}
+
+{% macro chained_lists(levels, action) -%}
+<div class="selectors selectors-chained">
+  {%- for level in levels %}
+  <form method="get" action="{{ action }}">
+    {%- for carry_name, carry_value in level.carry %}
+    <input type="hidden" name="{{ carry_name }}" value="{{ carry_value }}">
+    {%- endfor %}
+    {{ select_field(level.id, level.label, level.options, selected=level.selected, name=level.name, attrs={"data-auto-submit": True, "disabled": level.disabled}, placeholder=level.placeholder, extra_options=level.extra_options or ()) }}
+  </form>
+  {%- endfor %}
+</div>
+{%- endmacro %}

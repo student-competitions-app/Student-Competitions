@@ -1,0 +1,12 @@
+{#- Details list (contracts/components.md §9, FR-033): label and value pairs, stacked on a phone
+    and in two columns from 768 px. A `None` value skips its row. A rich value (a list, a badge)
+    comes from `{% call(label) %}`: pass the value as `True` and render it for that label. -#}
+
+{% macro details_list(items) -%}
+<dl class="details-list">
+  {%- for label, value in items if value is not none %}
+  <dt>{{ label }}</dt>
+  <dd>{% if value is sameas true and caller is defined %}{{ caller(label) }}{% else %}{{ value }}{% endif %}</dd>
+  {%- endfor %}
+</dl>
+{%- endmacro %}

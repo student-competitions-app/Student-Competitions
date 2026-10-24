@@ -95,6 +95,7 @@ All tokens are defined once, at the top of `app/static/css/app.css`, between the
 | `--sc-on-top-bar-muted` | Role label in the top bar | `#c3cfee` | `#9aa6bd` | Muted text on the deep blue. |
 | `--sc-neutral-tint` | Deactivated and Read badges, table header row | `#eef1f6` | `#1b253b` | Between page and border. |
 | `--sc-shadow-card` | Card shadow | `0 1px 2px rgb(23 32 51 / 0.06)` | `none` | Calm: barely visible in light, and borders only in dark. |
+| `--sc-shadow-menu` | User menu panel shadow | `0 8px 24px rgb(13 20 36 / 0.18)` | `0 8px 24px rgb(0 0 0 / 0.45)` | Added in implementation: the open menu floats over the page, so it needs more than the card shadow. |
 
 ### 2.3 Typography
 
@@ -121,6 +122,9 @@ All tokens are defined once, at the top of `app/static/css/app.css`, between the
 | `--sc-radius-card` | `0.75rem` (12 px) | Cards, table-as-card rows, the user menu panel (FR-011). |
 | `--sc-content-width` | `72rem` | The one content width (FR-021). |
 | `--sc-touch-target` | `2.75rem` (44 px) | The minimum height of buttons and menu entries. |
+| `--sc-form-width` | `30rem` | Added in implementation: the widest a text field or select grows, and the narrow column of the one-form public pages. |
+| `--sc-action-width` | `7.5rem` | Added in implementation (design approval, round 1): the minimum width of a row action, so Activate and Deactivate take the same room. |
+| `--sc-border-width` / `--sc-border-strong` / `--sc-border-accent` | `1px` / `0.125rem` / `0.25rem` | Added in implementation: hairlines, an invalid field or a pressed choice, and the coloured edge of a notice or the current tab. |
 | Breakpoints | `768px` (tables, user menu, selectors, headings), `1024px` (body text) | Media queries cannot read custom properties, so they are written as literals. They are the only `px` values outside the token block (research D2). |
 
 ### 2.5 Mapping onto Pico (research D2)

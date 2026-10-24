@@ -3,7 +3,7 @@
 {% block title %}Invitation — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="invitation">
+<section>
   <h1>Invitation to Student Competitions</h1>
   {% if notice %}<p class="auth-message" role="alert">{{ notice }}</p>{% endif %}
   <p>{{ inviter_name }} ({{ inviter_email }}) invites you to join as a {{ role_label|lower }}.</p>

@@ -1,0 +1,17 @@
+{#- Badges (contracts/components.md §5, FR-028). A status is always a word, so colour is never the
+    only signal: an empty text is refused. -#}
+
+{% macro badge(text, kind="neutral") -%}
+{%- if not text %}{{ template_error("badge: the text is required") }}{% endif -%}
+{%- set badge_classes = {"success": "badge badge-success", "muted": "badge badge-muted", "neutral": "badge badge-neutral", "info": "badge badge-info"} -%}
+{%- if kind not in badge_classes %}{{ template_error("badge: unknown kind " ~ kind) }}{% endif -%}
+<span class="{{ badge_classes[kind] }}">{{ text }}</span>
+{%- endmacro %}
+
+{% macro status_badge(is_active) -%}
+{%- if is_active %}{{ badge("Active", "success") }}{% else %}{{ badge("Deactivated", "muted") }}{% endif -%}
+{%- endmacro %}
+
+{% macro access_badge(level) -%}
+{%- if level == "write" %}{{ badge("Write", "info") }}{% else %}{{ badge("Read", "neutral") }}{% endif -%}
+{%- endmacro %}

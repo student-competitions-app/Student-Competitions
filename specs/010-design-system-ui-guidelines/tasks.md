@@ -73,13 +73,13 @@ comment density and error handling:
 
 **Purpose**: the baseline and the static assets the mockup needs.
 
-- [ ] T001 Record the baseline: run `uv run ruff check .`, `uv run ruff format --check .` and `TEST_POSTGRES_URL=postgresql://… uv run pytest` on this branch before any change, and note the passing test count in the PR description draft. Every later checkpoint compares against it (SC-002).
-- [ ] T002 [P] Add Open Sans to `app/static/fonts/` per research D4:
+- [X] T001 Record the baseline: run `uv run ruff check .`, `uv run ruff format --check .` and `TEST_POSTGRES_URL=postgresql://… uv run pytest` on this branch before any change, and note the passing test count in the PR description draft. Every later checkpoint compares against it (SC-002).
+- [X] T002 [P] Add Open Sans to `app/static/fonts/` per research D4:
   - four variable-weight (`wght` axis) `woff2` subsets, named exactly `open-sans-latin.woff2`, `open-sans-latin-ext.woff2`, `open-sans-cyrillic.woff2` and `open-sans-cyrillic-ext.woff2`;
   - taken from the open-source release (the `googlefonts/opensans` repository). If the release has no subset `woff2` files, subset the variable font once with `uv run --with 'fonttools[woff]' pyftsubset … --flavor=woff2`, using the `unicode-range` Google Fonts publishes for each subset, and keep those ranges for the `@font-face` rules in T015;
   - `app/static/fonts/OFL.txt`, the SIL Open Font License text from the same release;
   - record the source URL and commit in the commit message. Nothing is added to the project.
-- [ ] T003 [P] Add `screenshots/` to `.gitignore` (research D1).
+- [X] T003 [P] Add `screenshots/` to `.gitignore` (research D1).
 
 ---
 
@@ -92,10 +92,10 @@ identity and the five pages in all four width/theme frames, and `design-approval
 "Approved" entry committed before the first commit that changes `app/templates/` or `app.css`
 (quickstart §2).
 
-- [ ] T004 [P] [US1] Draw the logo mark (FR-008, research D13): a simple mark in `--sc-accent` amber on the deep blue of `--sc-top-bar`, legible at 16 px.
+- [X] T004 [P] [US1] Draw the logo mark (FR-008, research D13): a simple mark in `--sc-accent` amber on the deep blue of `--sc-top-bar`, legible at 16 px.
   - `app/static/img/favicon.svg`: `viewBox="0 0 32 32"`, fixed colours (no `currentColor`, no CSS);
   - `app/static/img/favicon-32.png` (32 × 32) and `app/static/img/apple-touch-icon.png` (180 × 180), rendered from the SVG once (for example with Playwright through `uv run --with playwright`, or `rsvg-convert` if installed). Nothing is added to the project.
-- [ ] T005 [US1] Create `specs/010-design-system-ui-guidelines/mockup/index.html`, one static self-contained page per research D1:
+- [X] T005 [US1] Create `specs/010-design-system-ui-guidelines/mockup/index.html`, one static self-contained page per research D1:
   - **Inline CSS** holding a draft of the full token block with the exact values of [data-model.md §2.1–§2.4](./data-model.md#2-design-tokens) (the given and the derived colours, type, spacing, radii, content width), the `@font-face` rules loading `../../../app/static/fonts/open-sans-*.woff2` by relative path, and draft CSS for every component the five pages use;
   - **Identity**: the wordmark "Student Competitions" beside the logo mark (inline SVG, the same drawing as T004), the favicon at 16 and 32 px, swatches of every colour token in light and dark, and the type scale (h1–h4, body, small);
   - **Five pages**, each in four frames (375 px light, 375 px dark, 1280 px light, 1280 px dark), as fixed-width `<div data-theme="light|dark">` frames on one page: sign-in (with the theme switch), home (greeting and one card per area), the **Subjects** list (heading with **Create subject**, data table with **Active** / **Deactivated** badges and row actions; the 375 px frame shows rows as cards), **Create subject** with the duplicate-name error (error summary "There is a problem", field error, kept value), and **Delete “Physics”?** with its "is in use" refusal offering **Deactivate**;

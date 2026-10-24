@@ -37,7 +37,22 @@ To be recorded.
 
 ## Behaviour audit (T061)
 
-To be recorded.
+Run on 2026-10-24, after US5 and US7.
+
+- **Routes**: the sorted `(method, path)` list of the application, `main` (76 entries) against
+  this branch (78), differs by exactly `GET /admin/components` and `POST /theme`.
+- **Fields**: `tests/integration/form_contract.json` has one commit, `71750e6`, the one that
+  generated it from the milestone 9 templates before any template changed. `test_form_contract.py`
+  (56 cases) is green on both engines, so every form on every page keeps its method, action and
+  field names.
+- **Tests**: `git diff main -- tests/integration tests/unit` replaces literal-markup assertions with
+  `tests/html.py` queries, applies the wording changes of contracts/pages.md §4, and adds the new
+  modules (`test_layout`, `test_page_patterns`, `test_form_contract`, `test_theme`,
+  `test_component_gallery`, `tests/unit/test_theme`, `test_stylesheet`). No milestone 1–9 test is
+  removed; one is renamed because its subject moved: `test_status_line_sits_between_the_questions_and_the_footer`
+  became `test_status_line_is_in_the_footer` (the database line is in the footer, pages.md §4.1).
+  No access or behaviour assertion is dropped or loosened; status codes, addresses and texts are
+  still asserted exactly.
 
 ## Walk-through (T088)
 

@@ -29,9 +29,11 @@ from tests import html
 from tests.conftest import (
     TEACHER_STUDENT_EMAIL,
     ClientAs,
+    invite,
     make_class,
     make_institution,
     make_teacher,
+    token_from,
 )
 from tests.integration.test_login_flow import INVALID_CODE, INVALID_EMAIL, code_from
 
@@ -517,3 +519,47 @@ def test_links_to_forms_and_confirmations_look_like_buttons(
         f"/admin/subjects/{physics}/delete",
     ):
         assert links[href].attrs.get("role") == "button", href
+
+
+# ---------------------------------------------------------------------------------------------
+# User story 4: the remaining public pages
+# ---------------------------------------------------------------------------------------------
+
+
+def a_teacher_invitation() -> str:
+    engine, settings = app.state.engine, app.state.settings
+    school = make_institution(engine, "Kyiv Lyceum", "Kyiv")
+    return invite(engine, settings, email=OLENA, institutions={school: AccessLevel.READ})
+
+
+def test_a_changed_consent_text_is_a_form_error(client: TestClient) -> None:
+    token = a_teacher_invitation()
+    response = client.post(f"/invitations/{token}", data={"consent_text_id": "stale"})
+    assert response.status_code == 409
+    assert_form_errors(
+        response.text,
+        {},
+        form_error="The consent text has changed since you opened this page. Please read it again.",
+    )
+
+
+def test_an_invalid_deletion_address_links_to_the_field(client: TestClient) -> None:
+    response = client.post("/data-deletion", data={"email": "not-an-email"})
+    assert response.status_code == 400
+    assert_form_errors(response.text, {"email": INVALID_EMAIL}, values={"email": "not-an-email"})
+
+
+def test_the_deletion_confirmation(client: TestClient, outbox: list[Any]) -> None:
+    engine, settings = app.state.engine, app.state.settings
+    school = make_institution(engine, "Kyiv Lyceum", "Kyiv")
+    make_teacher(engine, settings, email=OLENA, institutions={school: AccessLevel.READ})
+    client.post("/data-deletion", data={"email": OLENA})
+    path = f"/data-deletion/confirm/{token_from(outbox[-1])}"
+    body = client.get(path).text
+    assert_confirmation(body, "Delete my data", "Delete my data", "/", action=path)
+    assert ("Email", OLENA) in html.details(body)
+
+
+@pytest.mark.parametrize("path", ["/data-deletion", "/data-deletion/requested"])
+def test_the_deletion_request_pages_link_back_to_sign_in(client: TestClient, path: str) -> None:
+    assert_back_link(client.get(path).text, "/login", "Back to sign in")

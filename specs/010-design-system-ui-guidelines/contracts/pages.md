@@ -146,6 +146,8 @@ with its rule, before merge (SC-011).
 | `home.html` | the `APP_DESCRIPTION` paragraph in the body | removed from the body; kept as `<meta name="description">` | FR-035: the start page is a greeting and cards. The cards say what each area is for. |
 | `home.html` | `h1` "Student Competitions" | `h1` "Welcome to Student Competitions" | FR-035: the home page opens with a greeting |
 | `profile.html`, `admin/teacher_*`, `teacher/students.html` | "(deactivated)" in small text | the **Deactivated** badge | FR-028: a status is a badge with text |
+| `admin/teachers.html`, institutions column | "{institution} — Read" / "— Write" | "{institution}" followed by the **Read** or **Write** badge | FR-028: an access level is a badge with text, as on the other lists. The profile keeps "— Read" in its sentence-like list. |
+| `admin/subjects.html` and every row list | the actions as plain links and one-button forms | the same actions as buttons of one size: **Rename**, **Activate** and **Edit** secondary; **Deactivate**, **Delete** and **Remove** destructive | FR-025, FR-027: texts unchanged, only their kind |
 
 ### 4.2 New text
 

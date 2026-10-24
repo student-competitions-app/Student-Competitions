@@ -1,11 +1,15 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import page_heading %}
+{% from "components/feedback.html" import notice %}
 
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="auth">
-  <h1>{{ heading }}</h1>
-  <p>{{ message }}</p>
+<div class="narrow">
+  {{ page_heading(heading) }}
+  {#- A state that offers a way on (the person already holds the role) is information; the
+      refusals (expired, not valid) are errors. -#}
+  {{ notice(message, "info" if link else "error") }}
   {% if link %}<p><a href="{{ link.href }}">{{ link.text }}</a></p>{% endif %}
-</section>
+</div>
 {% endblock %}

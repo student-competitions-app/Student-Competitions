@@ -10,8 +10,6 @@ the templates and the CSS are read as text.
 import re
 from pathlib import Path
 
-import pytest
-
 APP = Path(__file__).resolve().parents[2] / "app"
 TEMPLATES = APP / "templates"
 APP_CSS = (APP / "static" / "css" / "app.css").read_text()
@@ -211,7 +209,6 @@ def test_emphasis_is_bold_and_text_left_aligned() -> None:
     assert re.search(r"font-style:\s*normal", rule)
 
 
-@pytest.mark.xfail(strict=True, reason="legacy section removed in T060")
 def test_no_page_specific_classes_remain() -> None:
     in_templates = sorted(PAGE_SPECIFIC & set(used_classes()))
     in_css = sorted(PAGE_SPECIFIC & defined_classes(APP_CSS))

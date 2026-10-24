@@ -1,19 +1,19 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/form.html" import error_summary, field, form_actions %}
 
 {% block title %}Delete my data — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="auth">
-  <h1>Delete my data</h1>
-  {% if message %}
-  <p class="auth-message" role="alert">{{ message }}</p>
-  {% endif %}
+<div class="narrow">
+  {{ back_link("/login", "Back to sign in") }}
+  {{ page_heading("Delete my data") }}
+  {% set errors = {"email": message} if message else {} %}
+  {{ error_summary(errors, order=["email"]) }}
   <p>Enter your email address and we will send you a link. The link erases the data stored with your consent: your names and your email address, and the roles granted with your consent. It works once, within one hour.</p>
   <form method="post" action="/data-deletion">
-    <label for="email">Email address</label>
-    <input type="email" id="email" name="email" required autocomplete="email" value="{{ email }}">
-    <button type="submit">Send link</button>
+    {{ field("email", "Email address", value=email, error=errors.email, type="email", attrs={"required": True, "autocomplete": "email"}) }}
+    {{ form_actions("Send link") }}
   </form>
-  <p class="auth-alternatives"><a href="/login">Back to sign in</a></p>
-</section>
+</div>
 {% endblock %}

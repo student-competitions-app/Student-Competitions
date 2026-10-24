@@ -1,11 +1,10 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import page_heading %}
 
 {% block title %}{{ heading or status_code }} — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="hero">
-  <h1>{{ heading or status_code }}</h1>
-  <p>{{ detail }}</p>
-  <p><a href="/">Back to the home page</a></p>
-</section>
+{{ page_heading(heading or status_code) }}
+<p>{{ detail }}</p>
+<p><a href="/">Back to the home page</a></p>
 {% endblock %}

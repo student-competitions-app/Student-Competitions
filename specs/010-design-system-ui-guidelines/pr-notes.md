@@ -82,3 +82,11 @@ Run on 2026-10-24, after US5 and US7.
 - **Themes**: Light, Dark and Device from the user menu and the sign-in page; `test_theme.py`.
 - **Production guard**: checked by `test_component_gallery.py` with `settings.production` on (every
   visitor gets the same 404 as an unknown address), not by starting the server with `RENDER=true`.
+
+## Constitution (T083) and final run (T091)
+
+The constitution amendment to v1.1.0 merged first, as PR #38. This branch then merged
+`origin/main` (PR #37, PR #38) and takes its constitution unchanged. After the merge: ruff clean;
+**2572 passed, 3 skipped** on SQLite and PostgreSQL; the gate check against `origin/main` still
+passes (`47d6a71` before `12f4a72`).
+

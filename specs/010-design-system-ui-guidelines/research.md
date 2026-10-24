@@ -209,7 +209,9 @@ Deleting the cookie for Device keeps the rule "no cookie means Device" true in e
 - **The control**: `theme_switch()` is a component (contracts/components.md). It is one
   `<form method="post" action="/theme">` with three submit buttons, `name="theme"` and the values
   `light`, `dark` and `device`.
-  - The current choice carries `aria-pressed="true"`.
+  - The buttons are secondary, so they never compete with the page's primary action (FR-025).
+  - The current choice carries `aria-pressed="true"`, and is styled from that attribute with the
+    primary tint, a primary border and bold text.
   - A hidden field, `next`, holds `theme_return`.
 - **Where it appears**: in the user menu, and on the sign-in page (`login.html`) only (FR-014). The
   other public pages render in the chosen theme but show no switch (spec assumption).

@@ -22,7 +22,7 @@ already has a "Back to …" link, its text and target are reused, and that link 
 |---|---|---|---|
 | `login.html` | `GET/POST /login` | page heading; notice (info: "Your account is ready…"); error summary; field `email`; form actions **Send code**; **theme switch**; the "Delete my data" link | — |
 | `login_code.html` | `POST /login` (step two), `POST /login/code` | page heading; info notice (code sent); error summary; field `code`; form actions **Sign in**; secondary `post_button` **Send a new code**; link "Use a different email" | — |
-| `role_choice.html` | `GET/POST /role` | page heading; error summary (form error); one primary `button` per role | — |
+| `role_choice.html` | `GET/POST /role` | page heading; error summary (form error); one secondary `button` per role (equal choices, so no primary: FR-025) | — |
 | `home.html` | `GET /` | `h1` greeting; one `card` per area; sample questions list, or the empty state "No questions yet."; info notice "Question data is temporarily unavailable…"; `footer_extra`: database status line | — |
 | `profile.html` | `GET /profile` | page heading; `details_list`; status badge for a deactivated link or class; consent records as `card`s; `link_button` **Withdraw consent** (destructive) | `/`: "Back to the home page" |
 | `profile_withdraw.html` | `GET/POST /profile/withdraw` | `confirmation` (verb **Withdraw consent**); error summary (form error "There is no data stored…") | `/profile`: "Back to your profile" |
@@ -30,7 +30,7 @@ already has a "Back to …" link, its text and target are reused, and that link 
 | `invitation_status.html` | the same, final states | page heading; notice (info or error, as the state requires) | — |
 | `data_deletion_request.html` | `GET/POST /data-deletion` | page heading; error summary; field `email`; form actions **Send link** | `/login`: "Back to sign in" |
 | `data_deletion_requested.html` | `GET /data-deletion/requested` | page heading; success notice | `/login`: "Back to sign in" |
-| `data_deletion_confirm.html` | `GET/POST /data-deletion/confirm/{token}` | `confirmation` (verb **Delete my data**) with a `details_list` of what will be deleted | — |
+| `data_deletion_confirm.html` | `GET/POST /data-deletion/confirm/{token}` | `confirmation` (verb **Delete my data**) with a `details_list` of what will be deleted; **Cancel** to `/` (the home page signed in, sign-in signed out) | — |
 | `link_status.html` | 400/410 link pages | page heading; error notice | — |
 | `data_erased.html` | `GET /data-erased` | page heading; success notice | — |
 | `error.html` | every 403/404/5xx handler | page heading; paragraph; link "Back to the home page" (unchanged) | — |
@@ -156,6 +156,7 @@ with its rule, before merge (SC-011).
 | User menu summary on a phone (visually hidden) | "Account menu" | FR-019 |
 | Skip link | "Skip to main content" | research D7 |
 | Home page section heading | "Your areas" (unchanged) and the four area descriptions ([data-model.md §4.1](../data-model.md#41-area-approutersareaspy)) | FR-035 |
+| `data_deletion_confirm.html` | a **Cancel** link to `/`, which the page did not have | FR-032 |
 | Back links that did not exist | "Back to the home page" (profile); "Back to the teachers", "Back to the subjects" and "Back to the educational institutions" (forms); "Back to Students"; "Back to {name}" | FR-003 |
 
 ### 4.3 Empty-state hints

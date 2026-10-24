@@ -32,14 +32,16 @@ check rely on. Attribute order and whitespace are not part of the contract.
 |---|---|---|
 | `top_bar()` | none; reads `app_name`, `current_user`, `current_role`, `user_roles`, `theme` and `theme_return` from the context | `<header class="top-bar">`, holding `<a href="/" class="brand">`, then `logo_mark()`, then `<span class="brand-name">Student Competitions</span>`. When signed in it adds `<span class="brand-role">{role label}</span>` and `user_menu()`. |
 | `user_menu()` | none (context as above) | `<details class="user-menu">` with `<summary>`, which holds `icon("account")`, then `<span class="user-menu-email">{email}</span>`, visually hidden below 768 px, where "Account menu" is read instead. Its panel holds, in order: `<a href="/profile">{email}</a>`; the role switch (§1.1); `theme_switch()`; `<form method="post" action="/logout"><button type="submit" class="secondary">Log out</button></form>`. |
-| `theme_switch(current, return_to)` | `current`: `"light"`, `"dark"` or `"device"`; `return_to`: `str` | `<form method="post" action="/theme" class="theme-switch">` with a `<fieldset>` and the legend "Theme", `<input type="hidden" name="next" value="{return_to}">`, and three `<button type="submit" name="theme" value="light\|dark\|device">` labelled **Light**, **Dark** and **Device**. The current one has `aria-pressed="true"`, the others `"false"`. |
+| `theme_switch(current, return_to)` | `current`: `"light"`, `"dark"` or `"device"`; `return_to`: `str` | `<form method="post" action="/theme" class="theme-switch">` with a `<fieldset>` and the legend "Theme", `<input type="hidden" name="next" value="{return_to}">`, and three `<button type="submit" name="theme" value="light\|dark\|device" class="secondary">` labelled **Light**, **Dark** and **Device**: secondary, so they never compete with the page's primary action (FR-025). The current one has `aria-pressed="true"`, the others `"false"`; the pressed one is styled from `.theme-switch [aria-pressed="true"]` with the primary tint, a primary border and bold text, so it is not marked by colour alone. |
 | `area_tabs(tabs, active, label)` | `tabs`: objects with `key`, `label` and `path`; `active`: `str \| None`; `label`: `str`, the nav's accessible name | `<nav class="area-tabs" aria-label="{label}"><ul>`, then one `<li><a href="{path}">` per tab. The active one adds `aria-current="page"`. |
 | `back_link(href, text)` | `href`: a local path; `text`: `str` | `<a href="{href}" class="back-link">← {text}</a>`. It is the first element in `<main>`. |
 | `page_heading(title, action=None)` | `title`: `str`; `action`: optional `(label, href)`, rendered as a primary `link_button` | `<div class="page-heading"><h1>{title}</h1> [action]</div>` |
 
 ### 1.1 Role switch (inside `user_menu`)
 
-This is the existing form, moved into the menu, and rendered only when `user_roles | length > 1`.
+This is the existing form, moved into the menu, and rendered only when
+`current_role and user_roles | length > 1`, exactly as in today's `base.html`. Without a current
+role (on the role-choice page) it is not shown.
 It is `<form method="post" action="/role">` with "Switch to" and one
 `<button type="submit" name="role" value="{role}" class="secondary">` per other role. The field
 names and values are unchanged (US2-3).

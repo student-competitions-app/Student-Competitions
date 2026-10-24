@@ -444,7 +444,10 @@ styling rule references them; run the automated stylesheet checks.
   scrolls sideways.
 - **FR-028**: **Status badge** (Active / Deactivated, Read / Write) MUST always contain text.
 - **FR-029**: **Empty state** MUST show the existing empty message ("No subjects yet", "Select a
-  region", …) with a short hint about what to do next.
+  region", …) with a short hint about what to do next. Exemption: where the person can do nothing
+  about it, the message stands alone with no hint. This covers the placeholder pages ("… will
+  arrive in a later milestone.") and the sample questions' "No questions yet." on the home page,
+  removed in milestone 11.
 - **FR-030**: **Notice** MUST come in three kinds: success, error and information.
 - **FR-031**: **Form field** MUST show the label, an optional hint, the error when there is one, and
   the entered value kept. **Error summary** MUST be headed "There is a problem" and list one link per

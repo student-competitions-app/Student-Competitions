@@ -29,7 +29,7 @@ TEST_POSTGRES_URL=postgresql://… uv run pytest
 |---|---|---|
 | US4, SC-002, SC-011 | the whole milestone 1–9 suite | Behaviour, addresses, access and messages are unchanged. Only markup assertions moved to `tests/html.py` queries (plan, "Changes to existing tests"). |
 | US4, FR-040, SC-011 | `tests/integration/test_form_contract.py` (new) | Every page state that shows a form, including those reached only by `POST`, renders the same forms as before the rebuild: the same method, action (ids as `{id}`), field names and named-button values as `form_contract.json`, generated once from the milestone 9 templates. Only the new theme-switch forms are left out. |
-| US8, FR-012, FR-041, FR-048, FR-049, SC-003, SC-004, SC-008 | `tests/unit/test_stylesheet.py` (new) | Every used class is defined, and every `app.css` class is used. No inline `style`, no page-specific classes, no literal colours or pixel lengths outside the token block, no off-site resources. The body-text and line-height tokens meet the minimums. |
+| US8, FR-004, FR-012, FR-041, FR-048, FR-049, SC-003, SC-004, SC-008 | `tests/unit/test_stylesheet.py` (new) | Every used class is defined, and every `app.css` class is used. No inline `style`, no page-specific classes, no literal colours or pixel lengths outside the token block, no off-site resources. The body-text and line-height tokens meet the minimums. Emphasis is bold only: no `<i>` or `<u>`, no italic, upper-case or justified text in `app.css`. |
 | US5, FR-014–FR-017, SC-005 | `tests/integration/test_theme.py` (new) | `POST /theme` sets or deletes `sc_theme` and returns to a safe target. `data-theme` and `color-scheme` match the cookie on the sign-in page, on a signed-in page and on an error page. Missing or unknown values follow the device. Cross-site posts are refused. The theme survives sign-in, role switch and logout. Unsafe and `POST`-only targets fall back. |
 | US7, FR-037–FR-038a, SC-009 | `tests/integration/test_component_gallery.py` (new) | The administrator gets 200 with every section and variant in [components.md §12](./contracts/components.md#12-gallery-coverage-checklist-sc-009). Teachers, students and an administrator acting as either get 403 naming the role. Anonymous visitors are sent to sign in. No tab links to it. With production on, everyone gets the same 404 as an unknown address. No database query runs: the engine is patched to fail. |
 | US2, US6, FR-018–FR-021, FR-035, FR-036 | `tests/integration/test_layout.py` (new) and the updated `test_home.py` | Top bar with the logo mark, the name and the role. The user menu is a `<details>` holding the email link, the role switch only with several roles, the theme switch and **Log out**. Favicon links. Footer version. Home cards exactly match `areas_for(role)` with their descriptions. The database line is in the footer on `/` only. The unavailable notice keeps its text. |
@@ -46,12 +46,25 @@ TEST_POSTGRES_URL=postgresql://… uv run pytest
    and the type scale. Then the five pages (sign-in, home, **Subjects**, **Create subject** with an
    error, **Delete “Physics”?** and its refusal), each at 375 px and 1280 px, light and dark.
 3. **Check** with the browser's network panel: no request leaves `file://`.
-4. **Expected**: `design-approval.md` has an "Approved" entry dated before the first commit that
-   changes `app/templates/pages/`:
+4. **Expected**: on this branch, the commit that records "Approved" in `design-approval.md` comes
+   before the first commit that changes the look (`app/templates/` or `app/static/css/app.css`).
+   The check compares commits by their order in the history, not by date, so two commits on the
+   same day are still ordered and rebased dates do not matter:
 
    ```bash
-   git log --format='%ad %s' --date=short -- app/templates/pages | tail -1
+   approved=$(git log --reverse --format=%H -S'| Approved |' main..HEAD \
+     -- specs/010-design-system-ui-guidelines/design-approval.md | head -1)
+   first_change=$(git log --reverse --format=%H main..HEAD \
+     -- app/templates app/static/css/app.css | head -1)
+   echo "approved=$approved first_change=$first_change"
+   [ -n "$approved" ] && [ -n "$first_change" ] && [ "$approved" != "$first_change" ] \
+     && git merge-base --is-ancestor "$approved" "$first_change" \
+     && echo "gate kept" || echo "gate NOT kept"
    ```
+
+   - `main..HEAD` limits both searches to this branch. Without it, the oldest commit that ever
+     touched the templates (milestone 1) would be found.
+   - An approval and a look change in the same commit count as a failure.
 
 ---
 

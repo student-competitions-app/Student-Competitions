@@ -14,7 +14,7 @@
 | Date | Round | Mockup commit | Changes requested | Changes made | Status |
 |---|---|---|---|---|---|
 | 2026-10-24 | 1 | `1f26f60` | Subjects list at 1280 px: no gap between Deactivate and Delete, or between Activate and Delete; use the same gap as between Rename and Deactivate. Activate and Deactivate must be the same size. | Every row action has the same gap, whether it is a link or a one-button form, and the same minimum width (7.5 rem), so Activate and Deactivate take the same room. On a phone the actions share the card's width in equal thirds. | Changes requested |
-| 2026-10-24 | 2 | `3ba63d7` | | | Awaiting review |
+| 2026-10-24 | 2 | `3ba63d7` | None | None | Approved |
 
 ## Questions for round 1
 

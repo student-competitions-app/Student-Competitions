@@ -26,7 +26,9 @@ from app.models import (
 )
 from app.services.email import EmailMessage
 from app.services.users import get_roles
+from tests import html
 from tests.conftest import ADMIN_EMAIL, make_institution, token_from
+from tests.integration.test_admin_teachers import access_options, picked
 
 OLENA = "olena@example.org"
 
@@ -77,21 +79,21 @@ def test_the_form_offers_only_selectable_institutions_with_read_preselected(
 ) -> None:
     """US1-1, FR-006, FR-009, FR-014."""
     body = admin_client.get("/admin/teachers/invite").text
-    for field in ('name="email"', 'name="first_name"', 'name="last_name"'):
-        assert field in body
-    assert (
-        '<input type="checkbox" id="can_create_competitions" name="can_create_competitions">'
-        in (body)
-    )
+    names = [i.name for f in html.forms(body, "main") for i in f.inputs]
+    for field in ("email", "first_name", "last_name"):
+        assert field in names
+    can_create = html.control(body, "can_create_competitions")
+    assert (can_create["type"], can_create["id"]) == ("checkbox", "can_create_competitions")
+    assert "checked" not in can_create
     assert "Kyiv Lyceum (Kyiv)" in body
     assert "Lviv School (Lviv)" in body
     assert "Closed School" not in body
     assert "Odesa College" not in body
     for key in ("kyiv", "lviv"):
         institution_id = institutions[key]
-        assert f'name="institution" value="{institution_id}"' in body
-        assert f'<option value="{institution_id}:read" selected>Read</option>' in body
-        assert f'<option value="{institution_id}:write">Write</option>' in body
+        assert (str(institution_id), False) in picked(body)
+        assert html.Option(f"{institution_id}:read", "Read", True) in access_options(body)
+        assert html.Option(f"{institution_id}:write", "Write", False) in access_options(body)
     assert body.index("Kyiv Lyceum (Kyiv)") < body.index("Lviv School (Lviv)")
 
 
@@ -158,9 +160,13 @@ def test_an_invitation_is_sent_opened_accepted_and_used_to_sign_in(
         assert shown in body
     with Session(app.state.engine) as session:
         current = session.exec(select(ConsentText).where(ConsentText.role == "teacher")).one()
-    assert f'<input type="hidden" name="consent_text_id" value="{current.id}">' in body
-    assert body.count("<input") == 1
-    assert "<select" not in body and "<textarea" not in body
+    (main,) = html.parse(body).find_all("main")
+    inputs = [
+        (e.attrs.get("type"), e.attrs.get("name"), e.attrs.get("value"))
+        for e in main.find_all("input")
+    ]
+    assert inputs == [("hidden", "consent_text_id", str(current.id))]
+    assert main.find_all("select") == [] and main.find_all("textarea") == []
 
     accepted = client.post(link, data={"consent_text_id": str(current.id)}, follow_redirects=False)
     assert accepted.status_code == 303
@@ -194,7 +200,7 @@ def test_an_invitation_is_sent_opened_accepted_and_used_to_sign_in(
 
     login = client.get(location)
     assert login.status_code == 200
-    assert f'value="{OLENA}"' in login.text
+    assert html.control(login.text, "email")["value"] == OLENA
     assert "Your account is ready. Send yourself a sign-in code to continue." in login.text
 
     client.post("/login", data={"email": OLENA})
@@ -282,7 +288,7 @@ def test_an_invalid_form_is_shown_again_and_sends_nothing(
     assert response.status_code == 400
     assert message in response.text
     for field in ("email", "first_name", "last_name"):
-        assert f'value="{form[field]}"' in response.text
+        assert html.control(response.text, field)["value"] == form[field]
     assert outbox == []
     assert users_with(OLENA) == []
 
@@ -306,9 +312,9 @@ def test_the_picked_rows_and_levels_are_kept(
     form = invite_form(institutions, email="bad")
     body = admin_client.post("/admin/teachers/invite", data=form).text
     kyiv = institutions["kyiv"]
-    assert f'value="{kyiv}" id="institution-{kyiv}" checked' in body
-    assert f'<option value="{kyiv}:write" selected>Write</option>' in body
-    assert 'name="can_create_competitions" checked' in body
+    assert (str(kyiv), True) in picked(body)
+    assert html.Option(f"{kyiv}:write", "Write", True) in access_options(body)
+    assert "checked" in html.control(body, "can_create_competitions")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -335,17 +341,17 @@ def test_the_new_teacher_sees_their_data_on_the_profile(
         OLENA,
         "Olena",
         "Kovalenko",
-        "<dd>Teacher</dd>",
         "Kyiv Lyceum (Kyiv) — Write",
         "Lviv School (Lviv) — Read",
-        "<dt>Can create competitions</dt>\n    <dd>Yes</dd>",
         "Teacher · version 1",
         text.text.split("\n\n")[1],
     ):
         assert shown in body
+    assert ("Roles", "Teacher") in html.details(body)
+    assert ("Can create competitions", "Yes") in html.details(body)
 
 
 @pytest.mark.parametrize("path", ["/", "/admin/teachers", "/profile"])
 def test_the_header_email_links_to_the_profile(admin_client: TestClient, path: str) -> None:
     body = admin_client.get(path).text
-    assert f'<a href="/profile" class="site-session-email">{ADMIN_EMAIL}</a>' in body
+    assert ("/profile", ADMIN_EMAIL) in html.link_pairs(body, "header")

@@ -8,8 +8,6 @@ layout". The expected tabs are a literal copy of the spec's, kept independent of
 `app.routers.admin.ADMIN_TABS`, so a wrong declaration fails here rather than being mirrored.
 """
 
-import re
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
@@ -19,6 +17,7 @@ from app.models import AccessLevel
 from app.services.institutions import create_institution
 from app.services.regions import create_region, set_region_active
 from app.services.subjects import create_subject
+from tests import html
 from tests.conftest import invite_and_accept
 
 TABS = [
@@ -27,23 +26,30 @@ TABS = [
     ("/admin/subjects", "Subjects"),
 ]
 
-NAV_OPEN = '<nav class="admin-tabs" aria-label="Administrator area">'
+NAV_LABEL = "Administrator area"
 
 
-def tab_row(body: str) -> str:
-    match = re.search(r'<nav class="admin-tabs".*?</nav>', body, re.DOTALL)
-    assert match is not None, "the page has no admin tab row"
-    return match.group(0)
+def tab_row(body: str) -> list[html.Link]:
+    tabs = html.nav(body, NAV_LABEL)
+    assert tabs, "the page has no admin tab row"
+    return tabs
 
 
-def after_tab_row(body: str) -> str:
-    """The page content: everything between the tab row and the end of `<main>`."""
-    start = body.index("</nav>") + len("</nav>")
-    return body[start : body.index("</main>")]
+def has_tab_row(body: str) -> bool:
+    return bool(html.nav(body, NAV_LABEL))
 
 
 def current_tabs(body: str) -> list[str]:
-    return re.findall(r'<a href="([^"]+)" aria-current="page">', tab_row(body))
+    return [tab.href for tab in tab_row(body) if tab.attrs.get("aria-current") == "page"]
+
+
+def current_page_marks(body: str) -> int:
+    """How many links on the whole page claim to be the current page."""
+    return sum(1 for link in html.links(body) if link.attrs.get("aria-current") == "page")
+
+
+def tab_navs(body: str) -> list[html.Element]:
+    return [n for n in html.parse(body).find_all("nav") if n.attrs.get("aria-label") == NAV_LABEL]
 
 
 def test_admin_opens_the_teachers_tab(admin_client: TestClient) -> None:
@@ -62,11 +68,8 @@ def test_every_tab_shows_the_row_with_itself_current(admin_client: TestClient, p
     response = admin_client.get(path)
     assert response.status_code == 200
     body = response.text
-    assert NAV_OPEN in body
-    row = tab_row(body)
-    links = re.findall(r'<a href="([^"]+)"[^>]*>([^<]+)</a>', row)
-    assert links == TABS
-    assert body.count('aria-current="page"') == 1
+    assert [(tab.href, tab.text) for tab in tab_row(body)] == TABS
+    assert current_page_marks(body) == 1
     assert current_tabs(body) == [path]
 
 
@@ -74,10 +77,10 @@ def test_every_tab_shows_the_row_with_itself_current(admin_client: TestClient, p
 def test_tabs_are_plain_links(admin_client: TestClient, path: str) -> None:
     """FR-003: no script, no HTMX; each tab has its own address."""
     body = admin_client.get(path).text
-    row = tab_row(body)
-    assert "<form" not in row
-    assert "hx-" not in row
-    assert "<script" not in body
+    (row,) = tab_navs(body)
+    assert row.find_all("form") == []
+    assert not any(name.startswith("hx-") for e in row.iter() for name in e.attrs)
+    assert html.parse(body).find_all("script") == []
 
 
 @pytest.mark.parametrize("path", [path for path, _ in TABS])
@@ -90,18 +93,18 @@ def test_no_tab_row_outside_the_area(admin_client: TestClient, path: str) -> Non
     """FR-006."""
     response = admin_client.get(path)
     assert response.status_code == 200
-    assert "admin-tabs" not in response.text
+    assert not has_tab_row(response.text)
 
 
 def test_an_unknown_admin_page_is_the_normal_not_found(admin_client: TestClient) -> None:
     response = admin_client.get("/admin/unknown")
     assert response.status_code == 404
-    assert "admin-tabs" not in response.text
+    assert not has_tab_row(response.text)
 
 
 def test_the_home_page_still_links_to_admin(admin_client: TestClient) -> None:
     """FR-008."""
-    assert '<a href="/admin">Administrator area</a>' in admin_client.get("/").text
+    assert ("/admin", "Administrator area") in html.link_pairs(admin_client.get("/").text, "main")
 
 
 def test_every_subject_page_marks_the_subjects_tab(
@@ -116,9 +119,9 @@ def test_every_subject_page_marks_the_subjects_tab(
         "/admin/subjects/999/rename",
     ]:
         body = admin_client.get(path).text
-        assert NAV_OPEN in body, path
+        assert has_tab_row(body), path
         assert current_tabs(body) == ["/admin/subjects"], path
-        assert body.count('aria-current="page"') == 1, path
+        assert current_page_marks(body) == 1, path
 
 
 # ---------------------------------------------------------------------------------------------
@@ -167,9 +170,9 @@ def test_every_institutions_page_marks_the_institutions_tab(
         response = admin_client.request(method, path, follow_redirects=False)
         assert response.status_code in {200, 404, 409}, (method, path, response.status_code)
         body = response.text
-        assert NAV_OPEN in body, path
+        assert has_tab_row(body), path
         assert current_tabs(body) == ["/admin/institutions"], path
-        assert body.count('aria-current="page"') == 1, path
+        assert current_page_marks(body) == 1, path
 
 
 def test_the_teachers_tab_is_no_longer_a_placeholder(admin_client: TestClient) -> None:
@@ -177,11 +180,15 @@ def test_the_teachers_tab_is_no_longer_a_placeholder(admin_client: TestClient) -
     list is empty."""
     response = admin_client.get("/admin/teachers")
     assert response.status_code == 200
-    body = after_tab_row(response.text)
-    assert "Teacher management will arrive in a later milestone." not in body
-    assert "<h1>Teachers</h1>" in body
-    assert "No teachers yet" in body
-    assert '<a href="/admin/teachers/invite" role="button">Invite teacher</a>' in body
+    body = response.text
+    main = html.text(body, "main")
+    assert "Teacher management will arrive in a later milestone." not in main
+    assert html.h1(body) == "Teachers"
+    assert "No teachers yet" in main
+    invite = [link for link in html.links(body, "main") if link.href == "/admin/teachers/invite"]
+    assert [(link.text, link.attrs.get("role")) for link in invite] == [
+        ("Invite teacher", "button")
+    ]
 
 
 TEACHER_PAGES = ["/admin/teachers", "/admin/teachers/invite", "/admin/teachers/999999"]
@@ -193,9 +200,9 @@ def test_every_teachers_page_marks_the_teachers_tab(admin_client: TestClient, pa
     """Milestone 8: every page of the tab is inside the area, with Teachers current."""
     response = admin_client.get(path)
     assert response.status_code in {200, 404}
-    assert NAV_OPEN in response.text
+    assert has_tab_row(response.text)
     assert current_tabs(response.text) == ["/admin/teachers"]
-    assert response.text.count('aria-current="page"') == 1
+    assert current_page_marks(response.text) == 1
 
 
 def test_every_page_of_a_teacher_marks_the_teachers_tab(
@@ -218,4 +225,4 @@ def test_every_page_of_a_teacher_marks_the_teachers_tab(
         response = admin_client.get(path)
         assert response.status_code in {200, 404}, path
         assert current_tabs(response.text) == ["/admin/teachers"], path
-        assert response.text.count('aria-current="page"') == 1, path
+        assert current_page_marks(response.text) == 1, path

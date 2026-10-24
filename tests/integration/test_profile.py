@@ -25,6 +25,7 @@ from app.services.consent import get_cutoff
 from app.services.email import EmailMessage
 from app.services.teachers import remove_teacher
 from app.services.users import get_roles
+from tests import html
 from tests.conftest import (
     ADMIN_EMAIL,
     ADMIN_STUDENT_EMAIL,
@@ -90,21 +91,22 @@ def test_a_teacher_sees_everything_stored_on_their_consent(
         follow_redirects=False,
     )
     body = signed_in(OLENA).get("/profile").text
+    main = html.text(body, "main")
     for shown in (
         OLENA,
         "Olena",
         "Kovalenko",
-        "<dd>Teacher</dd>",
         "Kyiv Lyceum (Kyiv) — Write",
-        'Lviv School (Lviv) — Read <small class="status-deactivated">(deactivated)</small>',
-        "<dt>Can create competitions</dt>\n    <dd>Yes</dd>",
+        "Lviv School (Lviv) — Read (deactivated)",
         "Accepted ",
-        " UTC</strong> · Teacher · version 1",
+        " UTC · Teacher · version 1",
         "Resend",
         "Corrections to teacher data are made by an administrator.",
-        '<a href="/profile/withdraw"',
     ):
-        assert shown in body
+        assert shown in main
+    assert ("Roles", "Teacher") in html.details(body)
+    assert ("Can create competitions", "Yes") in html.details(body)
+    assert "/profile/withdraw" in [a.href for a in html.content_links(body)]
 
 
 def test_an_administrator_without_consent_data_sees_only_the_basics(
@@ -113,7 +115,7 @@ def test_an_administrator_without_consent_data_sees_only_the_basics(
     """US4-2, FR-045."""
     body = admin_client.get("/profile").text
     assert ADMIN_EMAIL in body
-    assert "<dd>Administrator</dd>" in body
+    assert ("Roles", "Administrator") in html.details(body)
     assert "First name" not in body
     assert "Your consent" not in body
     assert "/profile/withdraw" not in body
@@ -130,9 +132,9 @@ def test_the_profile_is_read_only(places: dict[str, int], client: TestClient) ->
     """FR-044: no form at all; withdrawing starts from a link."""
     a_teacher(places)
     body = signed_in(OLENA).get("/profile").text
-    content = body[body.index("<main") : body.index("</main>")]
-    assert "<form" not in content
-    assert "<input" not in content
+    (main,) = html.parse(body).find_all("main")
+    assert main.find_all("form") == []
+    assert main.find_all("input") == []
 
 
 def test_the_withdraw_confirmation_changes_nothing(
@@ -226,8 +228,8 @@ def test_a_removed_teacher_who_is_still_an_administrator_can_withdraw(
     with Session(app.state.engine) as session:
         remove_teacher(session, app.state.settings, user_id)
     body = signed_in(ADMIN_EMAIL).get("/profile").text
-    assert '<a href="/profile/withdraw"' in body
-    assert "<dd>Administrator</dd>" in body
+    assert "/profile/withdraw" in [a.href for a in html.content_links(body)]
+    assert ("Roles", "Administrator") in html.details(body)
     assert "Kyiv Lyceum" not in body
 
 
@@ -265,20 +267,24 @@ def test_a_student_sees_their_enrolment_and_record(
     """US7-1, US7-2, FR-045, FR-046."""
     a_student(places)
     body = signed_in(TARAS).get("/profile").text
+    main = html.text(body, "main")
     for shown in (
         TARAS,
         "Taras",
         "Shevchenko",
-        "<dd>Student</dd>",
-        "<dt>Educational institution</dt>\n    <dd>Kyiv Lyceum (Kyiv)</dd>",
-        "<dt>Class</dt>\n    <dd>KN-21</dd>",
-        "<dt>Year of study</dt>\n    <dd>2</dd>",
-        " UTC</strong> · Student · version 1",
+        " UTC · Student · version 1",
         "and your class, which also records",
         STUDENT_NOTE,
-        '<a href="/profile/withdraw"',
     ):
-        assert shown in body
+        assert shown in main
+    for pair in (
+        ("Roles", "Student"),
+        ("Educational institution", "Kyiv Lyceum (Kyiv)"),
+        ("Class", "KN-21"),
+        ("Year of study", "2"),
+    ):
+        assert pair in html.details(body)
+    assert "/profile/withdraw" in [a.href for a in html.content_links(body)]
     assert TEACHER_NOTE not in body
 
 
@@ -289,7 +295,7 @@ def test_a_teacher_and_student_sees_both_notes(places: dict[str, int], client: T
     body = signed_in(TARAS, Role.TEACHER).get("/profile").text
     assert STUDENT_NOTE in body
     assert TEACHER_NOTE in body
-    assert "<dd>Teacher, Student</dd>" in body
+    assert ("Roles", "Teacher, Student") in html.details(body)
 
 
 def test_a_blocked_teacher_and_student_sees_the_enrolment_marked(
@@ -301,8 +307,8 @@ def test_a_blocked_teacher_and_student_sees_the_enrolment_marked(
     with Session(app.state.engine) as session:
         set_class_active(session, teacher_id, class_id, False)
     body = signed_in(TARAS, Role.TEACHER).get("/profile").text
-    assert 'KN-21 <small class="status-deactivated">(deactivated)</small>' in body
-    assert "<dd>Teacher</dd>" in body
+    assert ("Class", "KN-21 (deactivated)") in html.details(body)
+    assert ("Roles", "Teacher") in html.details(body)
     assert STUDENT_NOTE in body
 
 

@@ -5,7 +5,6 @@ See specs/009-classes-students-management/spec.md US2, FR-025–FR-029 and contr
 (year 2) is. Links are read from the `memory` outbox. Every case runs on both engines.
 """
 
-import re
 from dataclasses import dataclass
 
 import pytest
@@ -36,6 +35,7 @@ from app.services.rate_limits import (
 )
 from app.services.students import remove_student
 from app.services.users import get_roles, get_user_by_email
+from tests import html
 from tests.conftest import (
     ADMIN_EMAIL,
     STUDENT_EMAIL,
@@ -126,19 +126,19 @@ def student_text_id() -> int:
 def test_add_student_opens_the_form_for_the_class(scene: Scene) -> None:
     """US2-1."""
     page = scene.teacher.get(scene.selection).text
-    assert f'<a href="{scene.invite_path}" role="button">Add student</a>' in page
+    add = [a for a in html.links(page, "main") if a.href == scene.invite_path]
+    assert [(a.text, a.attrs.get("role")) for a in add] == [("Add student", "button")]
     body = scene.teacher.get(scene.invite_path).text
     for shown in (
         "Invite a student to “KN-21”",
         "Kyiv Polytechnic Institute (Kyiv)",
         "KN-21 · year 2",
-        'name="email"',
-        'name="first_name"',
-        'name="last_name"',
         "Send invitation",
         "Nothing about them is stored unless they accept.",
     ):
         assert shown in body
+    names = [i.name for f in html.forms(body, "main") for i in f.inputs]
+    assert {"email", "first_name", "last_name"} <= set(names)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -193,7 +193,7 @@ def test_an_invalid_form_is_refused_with_the_values_kept(
     response = scene.teacher.post(scene.invite_path, data=submitted)
     assert response.status_code == 400
     assert message in response.text
-    assert f'value="{submitted["email"]}"' in response.text
+    assert html.control(response.text, "email")["value"] == submitted["email"]
     assert outbox == []
     assert count(RateLimitHit) == 0
 
@@ -231,7 +231,7 @@ def test_an_existing_student_is_refused_without_naming_their_class(
         response = send(scene, address)
         assert response.status_code == 400
         assert "This email already belongs to a student" in response.text
-        assert f'value="{address}"' in response.text
+        assert html.control(response.text, "email")["value"] == address
         assert "Odesa" not in response.text
         assert "OC-7" not in response.text
     assert outbox == []
@@ -278,7 +278,7 @@ def test_a_teacher_has_100_student_invitations_an_hour(
     response = send(scene, "two@example.org")
     assert response.status_code == 429
     assert "Too many invitations. Please try again later." in response.text
-    assert 'value="two@example.org"' in response.text
+    assert html.control(response.text, "email")["value"] == "two@example.org"
     assert [message.to for message in outbox] == ["one@example.org"]
 
 
@@ -353,8 +353,8 @@ def test_a_send_failure_keeps_the_values_and_still_counts(
     response = send(scene)
     assert response.status_code == 503
     assert "The invitation email could not be sent. Please try again." in response.text
-    assert f'value="{TARAS}"' in response.text
-    assert f'value="{LAST}"' in response.text
+    assert html.control(response.text, "email")["value"] == TARAS
+    assert html.control(response.text, "last_name")["value"] == LAST
     monkeypatch.undo()
     assert get_user_by_email(Session(app.state.engine), TARAS) is None
     assert count(RateLimitHit) == 2
@@ -366,7 +366,7 @@ def test_a_deactivated_class_takes_no_invitation(scene: Scene, outbox: list[Emai
     page = scene.teacher.get(scene.invite_path)
     assert page.status_code == 409
     assert "This class is deactivated. Students cannot be added to it." in page.text
-    assert 'name="email"' not in page.text
+    assert "email" not in [i.name for f in html.forms(page.text) for i in f.inputs]
     response = send(scene)
     assert response.status_code == 409
     assert outbox == []
@@ -396,7 +396,6 @@ def test_the_acceptance_page_shows_everything_and_changes_nothing(
         TARAS,
         FIRST,
         LAST,
-        "<dd>Student</dd>",
         "Educational institution: Kyiv Polytechnic Institute (Kyiv)",
         "Class: KN-21 · year 2",
         "and your class, which also records your educational institution and your year of study",
@@ -404,7 +403,8 @@ def test_the_acceptance_page_shows_everything_and_changes_nothing(
         "I agree",
     ):
         assert shown in body
-    assert f'name="consent_text_id" value="{student_text_id()}"' in body
+    assert ("Role", "Student") in html.details(body)
+    assert html.control(body, "consent_text_id")["value"] == str(student_text_id())
     assert get_user_by_email(Session(app.state.engine), TARAS) is None
     assert count(Enrolment) == 0
 
@@ -458,15 +458,18 @@ def test_the_student_signs_in_and_sees_their_profile(
         TARAS,
         FIRST,
         LAST,
-        "<dd>Student</dd>",
-        "<dt>Educational institution</dt>\n    <dd>Kyiv Polytechnic Institute (Kyiv)</dd>",
-        "<dt>Class</dt>\n    <dd>KN-21</dd>",
-        "<dt>Year of study</dt>\n    <dd>2</dd>",
-        " UTC</strong> · Student · version 1",
+        " UTC · Student · version 1",
         "and your class, which also records",
         "Corrections to student data are made by a teacher of your educational institution.",
     ):
-        assert shown in body
+        assert shown in html.text(body, "main")
+    for pair in (
+        ("Roles", "Student"),
+        ("Educational institution", "Kyiv Polytechnic Institute (Kyiv)"),
+        ("Class", "KN-21"),
+        ("Year of study", "2"),
+    ):
+        assert pair in html.details(body)
     assert "Corrections to teacher data" not in body
     assert client.get("/student").status_code == 200
 
@@ -503,5 +506,6 @@ def test_the_students_of_the_class_are_listed(
     link = invited(scene, outbox)
     client.post(link, data={"consent_text_id": str(student_text_id())})
     body = scene.teacher.get(scene.selection).text
-    assert re.search(rf"<td>{LAST} {FIRST}</td>\s*<td>{TARAS}</td>", body)
+    rows = [(row["Name"], row["Email"]) for row in html.table_rows(body)]
+    assert (f"{LAST} {FIRST}", TARAS) in rows
     assert "No students in this class yet" not in body

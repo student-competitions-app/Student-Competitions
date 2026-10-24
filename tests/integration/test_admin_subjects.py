@@ -5,9 +5,6 @@ The messages are asserted verbatim. Every test runs once per engine; the `sessio
 the same database the application serves, so tests can arrange and inspect rows directly.
 """
 
-import html
-import re
-
 import pytest
 from fastapi.testclient import TestClient
 from httpx2 import Response
@@ -15,6 +12,7 @@ from sqlmodel import Session
 
 import app.services.subjects
 from app.services.subjects import list_subjects, set_subject_active
+from tests import html as dom
 
 DUPLICATE = "A subject named “{}” already exists."
 CONTROL = "The name cannot contain tabs, line breaks or other control characters."
@@ -35,21 +33,27 @@ def create(client: TestClient, name: str) -> None:
 
 def current_tabs(body: str) -> list[str]:
     """The `href` of every tab marked current."""
-    nav = re.search(r'<nav class="admin-tabs".*?</nav>', body, re.DOTALL)
-    assert nav is not None, "the page has no admin tab row"
-    return re.findall(r'<a href="([^"]+)" aria-current="page">', nav.group(0))
+    tabs = dom.nav(body, "Administrator area")
+    assert tabs, "the page has no admin tab row"
+    return [tab.href for tab in tabs if tab.attrs.get("aria-current") == "page"]
 
 
 def table_names(body: str) -> list[str]:
     """The subject names in the order the list shows them."""
-    return re.findall(r'<td class="subject-name">([^<]*)</td>', body)
+    return [row["Name"] for row in dom.table_rows(body)]
+
+
+def buttons(body: str) -> list[tuple[str, str]]:
+    """`(form action, button text)` for every button inside a form in the page's content."""
+    return [(form.action, b.text) for form in dom.forms(body, "main") for b in form.buttons]
 
 
 def assert_form_refused(response: Response, message: str, value: str) -> None:
     assert response.status_code == 400
-    assert html.escape(message, quote=False) in response.text
-    assert f'value="{html.escape(value)}"' in response.text
-    assert 'aria-invalid="true"' in response.text
+    assert message in dom.text(response.text, "main")
+    name = dom.control(response.text, "name")
+    assert name["value"] == value
+    assert name.get("aria-invalid") == "true"
     assert current_tabs(response.text) == ["/admin/subjects"]
 
 
@@ -62,9 +66,10 @@ def test_the_empty_list(admin_client: TestClient) -> None:
     """US1-1."""
     response = admin_client.get("/admin/subjects")
     assert response.status_code == 200
-    assert "<h1>Subjects</h1>" in response.text
+    assert dom.h1(response.text) == "Subjects"
     assert "No subjects yet" in response.text
-    assert '<a href="/admin/subjects/new" role="button">Create</a>' in response.text
+    create_links = [link for link in dom.links(response.text) if link.href == "/admin/subjects/new"]
+    assert [(link.text, link.attrs.get("role")) for link in create_links] == [("Create", "button")]
     assert current_tabs(response.text) == ["/admin/subjects"]
 
 
@@ -72,15 +77,14 @@ def test_the_create_form(admin_client: TestClient) -> None:
     response = admin_client.get("/admin/subjects/new")
     assert response.status_code == 200
     body = response.text
-    assert '<form method="post" action="/admin/subjects">' in body
-    field = re.search(r'<input[^>]*name="name"[^>]*>', body)
-    assert field is not None
-    assert 'maxlength="200"' in field.group(0)
-    assert "required" in field.group(0)
-    assert 'value=""' in field.group(0)
-    assert ">Save</button>" in body
-    assert '<a href="/admin/subjects">Cancel</a>' in body
-    assert "aria-invalid" not in body
+    assert ("post", "/admin/subjects") in dom.form_targets(body, "main")
+    field = dom.control(body, "name")
+    assert field["maxlength"] == "200"
+    assert "required" in field
+    assert field["value"] == ""
+    assert ("/admin/subjects", "Save") in buttons(body)
+    assert ("/admin/subjects", "Cancel") in dom.link_pairs(body, "main")
+    assert "aria-invalid" not in field
     assert current_tabs(body) == ["/admin/subjects"]
 
 
@@ -109,7 +113,7 @@ def test_a_duplicate_is_refused_with_the_value_kept(
     create(admin_client, "Physics")
     response = admin_client.post("/admin/subjects", data={"name": "  PHYSICS  "})
     assert_form_refused(response, DUPLICATE.format("Physics"), "  PHYSICS  ")
-    assert '<form method="post" action="/admin/subjects">' in response.text
+    assert ("post", "/admin/subjects") in dom.form_targets(response.text, "main")
     assert stored(session) == [("Physics", True)]
 
 
@@ -207,10 +211,10 @@ def test_each_row_offers_its_actions(admin_client: TestClient, session: Session)
     set_subject_active(session, biology, False)
     body = admin_client.get("/admin/subjects").text
     for sid in (physics, biology):
-        assert f'<a href="/admin/subjects/{sid}/rename">Rename</a>' in body
-        assert f'<a href="/admin/subjects/{sid}/delete">Delete</a>' in body
-    assert f'<form method="post" action="/admin/subjects/{physics}/deactivate">' in body
-    assert f'<form method="post" action="/admin/subjects/{biology}/activate">' in body
+        assert (f"/admin/subjects/{sid}/rename", "Rename") in dom.link_pairs(body, "main")
+        assert (f"/admin/subjects/{sid}/delete", "Delete") in dom.link_pairs(body, "main")
+    assert ("post", f"/admin/subjects/{physics}/deactivate") in dom.form_targets(body, "main")
+    assert ("post", f"/admin/subjects/{biology}/activate") in dom.form_targets(body, "main")
     assert f"/admin/subjects/{physics}/activate" not in body
     assert f"/admin/subjects/{biology}/deactivate" not in body
     assert "Inactive" in body
@@ -223,10 +227,10 @@ def test_the_rename_form_is_filled_in(admin_client: TestClient, session: Session
     response = admin_client.get(f"/admin/subjects/{sid}/rename")
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Rename subject</h1>" in body
-    assert f'<form method="post" action="/admin/subjects/{sid}/rename">' in body
-    assert 'value="Mathmatics"' in body
-    assert '<a href="/admin/subjects">Cancel</a>' in body
+    assert dom.h1(body) == "Rename subject"
+    assert ("post", f"/admin/subjects/{sid}/rename") in dom.form_targets(body, "main")
+    assert dom.control(body, "name")["value"] == "Mathmatics"
+    assert ("/admin/subjects", "Cancel") in dom.link_pairs(body, "main")
     assert current_tabs(body) == ["/admin/subjects"]
 
 
@@ -249,7 +253,7 @@ def test_rename_onto_another_subject_is_refused(admin_client: TestClient, sessio
     before = snapshot(session)
     response = post(admin_client, f"/admin/subjects/{sid}/rename", {"name": "physics"})
     assert_form_refused(response, DUPLICATE.format("Physics"), "physics")
-    assert f'<form method="post" action="/admin/subjects/{sid}/rename">' in response.text
+    assert ("post", f"/admin/subjects/{sid}/rename") in dom.form_targets(response.text, "main")
     assert snapshot(session) == before
 
 
@@ -306,15 +310,11 @@ def test_deactivate_and_activate(admin_client: TestClient, session: Session) -> 
     body = admin_client.get("/admin/subjects").text
     assert table_names(body) == ["Physics"]
     assert "Inactive" in body
-    assert re.search(
-        rf'action="/admin/subjects/{sid}/activate">\s*<button[^>]*>Activate</button>', body
-    )
+    assert (f"/admin/subjects/{sid}/activate", "Activate") in buttons(body)
     assert_back_to_the_list(post(admin_client, f"/admin/subjects/{sid}/activate"))
     assert stored(session) == [("Physics", True)]
     body = admin_client.get("/admin/subjects").text
-    assert re.search(
-        rf'action="/admin/subjects/{sid}/deactivate">\s*<button[^>]*>Deactivate</button>', body
-    )
+    assert (f"/admin/subjects/{sid}/deactivate", "Deactivate") in buttons(body)
 
 
 def test_repeating_a_status_change_changes_nothing(
@@ -342,11 +342,10 @@ def test_the_delete_confirmation_deletes_nothing(
     response = admin_client.get(f"/admin/subjects/{sid}/delete")
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Delete “Physics”?</h1>" in body
+    assert dom.h1(body) == "Delete “Physics”?"
     assert "Deleting a subject cannot be undone." in body
-    assert f'<form method="post" action="/admin/subjects/{sid}/delete">' in body
-    assert ">Delete</button>" in body
-    assert '<a href="/admin/subjects">Cancel</a>' in body
+    assert (f"/admin/subjects/{sid}/delete", "Delete") in buttons(body)
+    assert ("/admin/subjects", "Cancel") in dom.link_pairs(body, "main")
     assert current_tabs(body) == ["/admin/subjects"]
     assert snapshot(session) == before
 
@@ -374,10 +373,10 @@ def test_a_subject_in_use_cannot_be_deleted(
     assert response.status_code == 409
     body = response.text
     assert IN_USE.format("Physics") in body
-    assert ">Delete</button>" not in body
-    assert f'action="/admin/subjects/{sid}/delete"' not in body
-    assert f'<form method="post" action="/admin/subjects/{sid}/deactivate">' in body
-    assert '<a href="/admin/subjects">' in body
+    assert "Delete" not in [text for _, text in buttons(body)]
+    assert f"/admin/subjects/{sid}/delete" not in [action for _, action in dom.form_targets(body)]
+    assert ("post", f"/admin/subjects/{sid}/deactivate") in dom.form_targets(body, "main")
+    assert "/admin/subjects" in [link.href for link in dom.content_links(body)]
     assert current_tabs(body) == ["/admin/subjects"]
     assert snapshot(session) == before
 
@@ -412,9 +411,9 @@ def test_a_missing_subject_is_not_found(admin_client: TestClient, method: str, p
     response = admin_client.request(method, path, data={"name": "Physics"}, follow_redirects=False)
     assert response.status_code == 404
     body = response.text
-    assert "<h1>Subject not found</h1>" in body
+    assert dom.h1(body) == "Subject not found"
     assert "This subject does not exist. It may have been deleted." in body
-    assert '<a href="/admin/subjects">' in body
+    assert "/admin/subjects" in [link.href for link in dom.content_links(body)]
     assert current_tabs(body) == ["/admin/subjects"]
     assert "Traceback" not in body
 
@@ -424,14 +423,14 @@ def test_a_rename_of_a_missing_subject_with_an_invalid_name_is_not_found(
 ) -> None:
     response = post(admin_client, f"/admin/subjects/{MISSING}/rename", {"name": ""})
     assert response.status_code == 404
-    assert "<h1>Subject not found</h1>" in response.text
+    assert dom.h1(response.text) == "Subject not found"
 
 
 def test_a_non_integer_id_gets_the_normal_not_found_page(admin_client: TestClient) -> None:
     response = admin_client.get("/admin/subjects/abc/rename")
     assert response.status_code == 404
     assert response.headers["content-type"].startswith("text/html")
-    assert "admin-tabs" not in response.text
+    assert dom.nav(response.text, "Administrator area") == []
 
 
 def test_reloading_after_each_action_repeats_nothing(

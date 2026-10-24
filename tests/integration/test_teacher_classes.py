@@ -5,7 +5,6 @@ See specs/009-classes-students-management/spec.md US1 and contracts/http-routes.
 (Lviv). Every case runs on both engines.
 """
 
-import re
 from dataclasses import dataclass
 
 import pytest
@@ -17,6 +16,7 @@ from app.main import app
 from app.models import AccessLevel, Enrolment, Institution, Region, Role, SchoolClass, User
 from app.services.institutions import set_institution_active
 from app.services.regions import set_region_active
+from tests import html
 from tests.conftest import (
     TEACHER_EMAIL,
     ClientAs,
@@ -94,16 +94,20 @@ def deactivate(institution_id: int, region_too: bool = False) -> None:
             set_institution_active(session, institution.region_id, institution_id, False)
 
 
-def select_tag(body: str, name: str) -> str:
-    found = re.search(rf'<select id="{name}" name="{name}"[^>]*>', body)
-    assert found is not None, f"no {name} list"
-    return found.group(0)
+def select_tag(body: str, name: str) -> dict[str, str]:
+    """The attributes of the list named `name`."""
+    select = html.control(body, name)
+    assert select["tag"] == "select", f"no {name} list"
+    return select
 
 
 def options(body: str, name: str) -> list[str]:
-    found = re.search(rf'<select id="{name}" name="{name}"[^>]*>(.*?)</select>', body, re.DOTALL)
-    assert found is not None
-    return [text.strip() for text in re.findall(r"<option[^>]*>([^<]*)</option>", found.group(1))]
+    return [option.text for option in html.options(body, name)]
+
+
+def selected(body: str, name: str) -> list[tuple[str, str]]:
+    """`(value, text)` of the selected options of the list named `name`."""
+    return [(o.value, o.text) for o in html.options(body, name) if o.selected]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -117,17 +121,20 @@ def test_the_teacher_area_opens_the_students_tab(scene: Scene) -> None:
     assert response.status_code == 303
     assert response.headers["location"] == STUDENTS
     body = scene.teacher.get(STUDENTS).text
-    assert '<nav class="area-tabs" aria-label="Teacher area">' in body
-    assert f'<a href="{STUDENTS}" aria-current="page">Students</a>' in body
-    assert '<a href="/teacher/competitions">Competitions</a>' in body
+    tabs = html.nav(body, "Teacher area")
+    assert (STUDENTS, "Students", "page") in [
+        (t.href, t.text, t.attrs.get("aria-current")) for t in tabs
+    ]
+    assert ("/teacher/competitions", "Competitions") in html.link_pairs(body)
 
 
 def test_competitions_is_a_placeholder(scene: Scene) -> None:
     body = scene.teacher.get("/teacher/competitions").text
-    assert "<h1>Competitions</h1>" in body
+    assert html.h1(body) == "Competitions"
     assert "Competitions will arrive in a later milestone." in body
-    assert '<a href="/teacher/competitions" aria-current="page">Competitions</a>' in body
-    assert f'<a href="{STUDENTS}">Students</a>' in body
+    current = [t for t in html.nav(body, "Teacher area") if t.attrs.get("aria-current") == "page"]
+    assert [(t.href, t.text) for t in current] == [("/teacher/competitions", "Competitions")]
+    assert (f"{STUDENTS}", "Students") in html.link_pairs(body)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -140,8 +147,8 @@ def test_nothing_selected(scene: Scene) -> None:
     body = scene.teacher.get(STUDENTS).text
     assert "Select a region to continue" in body
     assert "disabled" not in select_tag(body, "region")
-    assert select_tag(body, "institution").endswith(" disabled>")
-    assert select_tag(body, "class").endswith(" disabled>")
+    assert "disabled" in select_tag(body, "institution")
+    assert "disabled" in select_tag(body, "class")
     assert options(body, "region") == ["Select a region", "Kyiv", "Lviv"]
 
 
@@ -171,7 +178,7 @@ def test_a_teacher_with_no_links_sees_disabled_lists(scene: Scene, client_as: Cl
     body = client_as(TEACHER_EMAIL).get(STUDENTS).text
     assert "You are not linked to any educational institution" in body
     for name in ("region", "institution", "class"):
-        assert select_tag(body, name).endswith(" disabled>")
+        assert "disabled" in select_tag(body, name)
     assert "Show</button>" not in body
 
 
@@ -182,8 +189,9 @@ def test_choosing_from_a_list_opens_the_selection_at_once(
     client = client_as(TEACHER_EMAIL)
     body = client.get(STUDENTS).text
     for name in ("region", "institution", "class"):
-        assert " data-auto-submit" in select_tag(body, name)
-    assert '<script src="/static/js/auto-submit.js" defer></script>' in body
+        assert "data-auto-submit" in select_tag(body, name)
+    scripts = [e.attrs for e in html.parse(body).find_all("script")]
+    assert {"src": "/static/js/auto-submit.js", "defer": ""} in scripts
     script = client.get("/static/js/auto-submit.js")
     assert script.status_code == 200
     assert "requestSubmit()" in script.text
@@ -206,21 +214,22 @@ def test_links_to_unavailable_institutions_only_count_as_none(
     deactivate(hidden, region_too=True)
     body = client_as(OLENA).get(STUDENTS).text
     assert "You are not linked to any educational institution" in body
-    assert select_tag(body, "region").endswith(" disabled>")
+    assert "disabled" in select_tag(body, "region")
 
 
 def test_a_region_selected(scene: Scene) -> None:
     """US1-4."""
     body = scene.teacher.get(f"{STUDENTS}?region={scene.kyiv}").text
     assert "Select an educational institution to continue" in body
-    assert f'<option value="{scene.kyiv}" selected>Kyiv</option>' in body
+    assert selected(body, "region") == [(str(scene.kyiv), "Kyiv")]
     assert "disabled" not in select_tag(body, "institution")
-    assert select_tag(body, "class").endswith(" disabled>")
+    assert "disabled" in select_tag(body, "class")
     assert options(body, "institution") == [
         "Select an educational institution",
         "Kyiv Polytechnic Institute — Write",
     ]
-    assert f'<input type="hidden" name="region" value="{scene.kyiv}">' in body
+    hidden = [i for f in html.forms(body) for i in f.inputs if i.type == "hidden"]
+    assert html.Input("region", "hidden", str(scene.kyiv)) in hidden
 
 
 def test_an_institution_selected_with_write(scene: Scene) -> None:
@@ -236,7 +245,7 @@ def test_an_institution_selected_with_write(scene: Scene) -> None:
         "kn-31 · year 3",
         "+ Add class",
     ]
-    assert '<option value="new">+ Add class</option>' in body
+    assert html.Option("new", "+ Add class", False) in html.options(body, "class")
 
 
 def test_add_class_opens_the_form_with_write_and_is_denied_with_read(scene: Scene) -> None:
@@ -265,9 +274,14 @@ def test_a_class_is_created_and_selected(scene: Scene) -> None:
     """US1-6, FR-050."""
     form = scene.teacher.get(f"{STUDENTS}/institutions/{scene.a}/classes/new").text
     assert "New class in “Kyiv Polytechnic Institute”" in form
-    assert 'type="number" name="year_of_study" id="year_of_study" min="1" max="12" step="1"' in (
-        form
-    )
+    year = html.control(form, "year_of_study")
+    assert {k: year[k] for k in ("type", "id", "min", "max", "step")} == {
+        "type": "number",
+        "id": "year_of_study",
+        "min": "1",
+        "max": "12",
+        "step": "1",
+    }
     response = create(scene, institution_id=str(scene.b))
     assert response.status_code == 303
     [(name, year, active)] = classes(scene.a)
@@ -277,7 +291,7 @@ def test_a_class_is_created_and_selected(scene: Scene) -> None:
         class_id = session.exec(select(SchoolClass.id)).one()
     assert response.headers["location"] == scene.selection(class_id)
     page = scene.teacher.get(response.headers["location"]).text
-    assert f'<option value="{class_id}" selected>KN-21 · year 2</option>' in page
+    assert selected(page, "class") == [(str(class_id), "KN-21 · year 2")]
     assert "No students in this class yet" in page
 
 
@@ -306,7 +320,7 @@ def test_an_invalid_class_is_refused_with_the_values_kept(
     response = create(scene, name, year)
     assert response.status_code == 400
     assert message in response.text
-    assert f'value="{year}"' in response.text
+    assert f"{year}" in [i.value for f in html.forms(response.text) for i in f.inputs]
     assert classes(scene.a) == []
 
 
@@ -322,7 +336,7 @@ def test_a_duplicate_is_refused(scene: Scene) -> None:
     response = create(scene, "kn-21", "2")
     assert response.status_code == 400
     assert "A class named “KN-21” already exists in this institution." in response.text
-    assert 'value="kn-21"' in response.text
+    assert "kn-21" in [i.value for f in html.forms(response.text) for i in f.inputs]
     assert classes(scene.a) == [("KN-21", 2, False)]
 
 
@@ -336,7 +350,8 @@ def test_edit_changes_the_name_and_year(scene: Scene) -> None:
     class_id = make_class(app.state.engine, scene.a, "KN-21", 2)
     form = scene.teacher.get(f"{STUDENTS}/classes/{class_id}/edit").text
     assert "Edit class “KN-21”" in form
-    assert 'value="KN-21"' in form and 'value="2"' in form
+    assert html.control(form, "name")["value"] == "KN-21"
+    assert html.control(form, "year_of_study")["value"] == "2"
     response = scene.teacher.post(
         f"{STUDENTS}/classes/{class_id}/edit",
         data={"name": "KN-22", "year_of_study": "3"},
@@ -359,7 +374,7 @@ def test_an_invalid_edit_is_refused(scene: Scene) -> None:
         f"{STUDENTS}/classes/{class_id}/edit", data={"name": "KN-21", "year_of_study": "two"}
     )
     assert response.status_code == 400
-    assert 'value="two"' in response.text
+    assert "two" in [i.value for f in html.forms(response.text) for i in f.inputs]
     assert classes(scene.a) == [("KN-21", 2, True)]
 
 
@@ -380,8 +395,8 @@ def test_deactivate_asks_first_then_marks_the_class(scene: Scene) -> None:
     assert response.status_code == 303
     assert response.headers["location"] == scene.selection(class_id)
     page = scene.teacher.get(response.headers["location"]).text
-    assert 'KN-21 · year 2 <small class="status-deactivated">Deactivated</small>' in page
-    assert f'action="{STUDENTS}/classes/{class_id}/activate"' in page
+    assert "KN-21 · year 2 Deactivated" in html.text(page, "main")
+    assert f"{STUDENTS}/classes/{class_id}/activate" in [f.action for f in html.forms(page)]
     assert "Add student" not in page
     assert "This class is deactivated; its students are hidden until it is activated again" in page
     again = scene.teacher.post(f"{STUDENTS}/classes/{class_id}/activate", follow_redirects=False)
@@ -413,7 +428,9 @@ def test_a_class_with_a_student_is_not_deleted(scene: Scene) -> None:
     assert response.status_code == 409
     assert "“KN-21” has students and cannot be deleted." in response.text
     assert "You can deactivate it instead." in response.text
-    assert f'href="{STUDENTS}/classes/{class_id}/deactivate"' in response.text
+    assert f"{STUDENTS}/classes/{class_id}/deactivate" in [
+        link.href for link in html.content_links(response.text)
+    ]
     scene.teacher.post(f"{STUDENTS}/classes/{class_id}/deactivate")
     refused = scene.teacher.post(f"{STUDENTS}/classes/{class_id}/delete")
     assert refused.status_code == 409
@@ -439,9 +456,9 @@ def test_reloading_a_result_page_changes_nothing(scene: Scene) -> None:
 def test_a_bookmarked_selection_opens_as_it_was(scene: Scene) -> None:
     class_id = make_class(app.state.engine, scene.a, "KN-21")
     body = scene.teacher.get(scene.selection(class_id)).text
-    assert f'<option value="{scene.kyiv}" selected>Kyiv</option>' in body
-    assert f'<option value="{scene.a}" selected>Kyiv Polytechnic Institute — Write</option>' in body
-    assert f'<option value="{class_id}" selected>KN-21 · year 2</option>' in body
+    assert selected(body, "region") == [(str(scene.kyiv), "Kyiv")]
+    assert selected(body, "institution") == [(str(scene.a), "Kyiv Polytechnic Institute — Write")]
+    assert selected(body, "class") == [(str(class_id), "KN-21 · year 2")]
 
 
 def test_read_access_shows_everything_without_actions(scene: Scene) -> None:

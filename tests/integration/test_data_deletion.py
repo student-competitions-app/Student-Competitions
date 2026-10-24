@@ -22,6 +22,7 @@ from app.services.consent import erase_personal_data
 from app.services.email import EmailMessage
 from app.services.teachers import remove_teacher
 from app.services.users import get_roles
+from tests import html
 from tests.conftest import (
     ADMIN_EMAIL,
     ADMIN_STUDENT_EMAIL,
@@ -73,10 +74,13 @@ def assert_link_headers(response: object) -> None:
 
 def test_the_sign_in_page_offers_the_deletion(client: TestClient) -> None:
     """FR-049."""
-    assert '<a href="/data-deletion">Delete my data</a>' in client.get("/login").text
+    assert ("/data-deletion", "Delete my data") in html.link_pairs(
+        client.get("/login").text, "main"
+    )
     form = client.get("/data-deletion")
     assert form.status_code == 200
-    assert 'name="email"' in form.text
+    assert ("post", "/data-deletion") in html.form_targets(form.text, "main")
+    assert html.control(form.text, "email")["tag"] == "input"
     assert "Send link" in form.text
 
 
@@ -105,7 +109,7 @@ def test_a_malformed_address_is_refused(client: TestClient, outbox: list[EmailMe
     response = client.post("/data-deletion", data={"email": "not-an-email"})
     assert response.status_code == 400
     assert "Enter a valid email address." in response.text
-    assert 'value="not-an-email"' in response.text
+    assert html.control(response.text, "email")["value"] == "not-an-email"
     assert outbox == []
 
 
@@ -150,7 +154,7 @@ def test_opening_the_link_changes_nothing_and_confirming_erases(
         again = client.request(method, link)
         assert again.status_code == 410
         assert LINK_EXPIRED in again.text
-        assert '<a href="/data-deletion">' in again.text
+        assert "/data-deletion" in [link.href for link in html.content_links(again.text)]
         assert_link_headers(again)
 
 

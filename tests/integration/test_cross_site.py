@@ -20,6 +20,7 @@ from app.services.email import EmailMessage
 from app.services.institutions import create_institution, list_institutions
 from app.services.regions import create_region, list_regions
 from app.services.subjects import create_subject, list_subjects
+from tests import html
 from tests.conftest import (
     ADMIN_EMAIL,
     ADMIN_STUDENT_EMAIL,
@@ -54,7 +55,7 @@ def test_a_cross_site_switch_changes_nothing(
     browser = client_as(ADMIN_STUDENT_EMAIL, Role.ADMIN)
     response = browser.post("/role", data={"role": "student"}, headers=forged)
     assert response.status_code == 403
-    assert "<h1>Request refused</h1>" in response.text
+    assert html.h1(response.text) == "Request refused"
     assert REFUSED in response.text
     assert current_role(session, browser) == "admin"
 
@@ -130,7 +131,7 @@ def test_a_cross_site_subject_action_changes_nothing(
     ]:
         response = admin_client.post(path, data=data, headers=forged, follow_redirects=False)
         assert response.status_code == 403, path
-        assert "<h1>Request refused</h1>" in response.text
+        assert html.h1(response.text) == "Request refused"
         assert rows() == before, path
 
 

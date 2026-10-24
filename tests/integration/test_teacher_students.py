@@ -6,7 +6,6 @@ a deactivated "KN-11"), Read to "Lviv Academy". Students are real: invited and a
 runs on both engines.
 """
 
-import re
 from dataclasses import dataclass
 
 import pytest
@@ -29,6 +28,7 @@ from app.routers.invitations import NEUTRAL
 from app.services.consent import current_consent_text, get_cutoff
 from app.services.sessions import create_session, get_session_identity
 from app.services.users import get_roles, get_user_by_email
+from tests import html
 from tests.conftest import (
     ClientAs,
     enrol_student,
@@ -158,17 +158,16 @@ def test_the_students_are_listed_by_last_name_then_first_name(scene: Scene) -> N
         student("c@example.org", scene.kn21, "Iryna", "Antonenko"),
     ]
     body = scene.teacher.get(scene.selection(scene.kn21)).text
-    rows = re.findall(r"<td>([^<]+)</td>\s*<td>([^<]+@example\.org)</td>", body)
+    rows = [(row["Name"], row["Email"]) for row in html.table_rows(body)]
     assert rows == [
         ("Antonenko Iryna", "c@example.org"),
         ("Kovalenko Andriy", "a@example.org"),
         ("kovalenko Bohdan", "b@example.org"),
     ]
     for user_id in ids:
-        assert f'href="/teacher/students/{user_id}{scene.carried(scene.kn21)}"' in body.replace(
-            "&amp;", "&"
-        )
-        assert f'href="/teacher/students/{user_id}/remove' in body
+        hrefs = [link.href for link in html.content_links(body)]
+        assert f"/teacher/students/{user_id}{scene.carried(scene.kn21)}" in hrefs
+        assert any(href.startswith(f"/teacher/students/{user_id}/remove") for href in hrefs)
 
 
 def test_read_access_lists_students_without_actions(scene: Scene) -> None:
@@ -180,7 +179,7 @@ def test_read_access_lists_students_without_actions(scene: Scene) -> None:
         region = lviv.region_id
     path = f"/teacher/students?region={region}&institution={scene.b}&class={scene.other_class}"
     body = scene.teacher.get(path).text
-    assert "<td>Franko Ivan</td>" in body
+    assert "Franko Ivan" in [row["Name"] for row in html.table_rows(body)]
     assert f"/teacher/students/{user_id}" not in body
 
 
@@ -195,12 +194,14 @@ def test_the_edit_page_offers_the_active_classes_of_the_institution(scene: Scene
     body = scene.teacher.get(f"/teacher/students/{user_id}{scene.carried(scene.kn21)}").text
     assert "taras@example.org" in body
     assert "Kyiv Polytechnic Institute (Kyiv)" in body
-    assert 'value="Taras"' in body and 'value="Shevchenko"' in body
-    assert f'<option value="{scene.kn21}" selected>KN-21 · year 2</option>' in body
-    assert f'<option value="{scene.kn22}">KN-22 · year 2</option>' in body
+    assert html.control(body, "first_name")["value"] == "Taras"
+    assert html.control(body, "last_name")["value"] == "Shevchenko"
+    classes = html.options(body, "class_id")
+    assert html.Option(str(scene.kn21), "KN-21 · year 2", True) in classes
+    assert html.Option(str(scene.kn22), "KN-22 · year 2", False) in classes
     assert "KN-11" not in body
     assert "LA-1" not in body
-    assert 'name="email"' not in body
+    assert "email" not in [i.name for f in html.forms(body) for i in f.inputs]
 
 
 def test_saving_new_names_and_a_class_keeps_the_student_signed_in(scene: Scene) -> None:
@@ -426,7 +427,7 @@ def test_a_teacher_can_invite_themselves_as_a_student(scene: Scene, client: Test
         == 303
     )
     body = scene.teacher.get(scene.selection(scene.kn21)).text
-    assert f"<td>Kovalenko Olena</td>\n          <td>{OLENA}</td>" in body
+    assert ("Kovalenko Olena", OLENA) in [(r["Name"], r["Email"]) for r in html.table_rows(body)]
     assert (
         edit(
             scene,

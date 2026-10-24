@@ -4,13 +4,13 @@ See specs/005-roles-authorization/contracts/http-routes.md#layout-header-every-p
 #post-role--choose-or-switch. Every test runs once per database engine.
 """
 
-import re
-
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+from app.core.config import APP_NAME
 from app.core.security import SESSION_COOKIE_NAME, hash_token
 from app.models import Role, UserSession
+from tests import html
 from tests.conftest import ADMIN_STUDENT_EMAIL, TEACHER_EMAIL, ClientAs
 
 
@@ -24,21 +24,29 @@ def session_row(session: Session, browser: TestClient) -> UserSession:
     return session.exec(statement).one()
 
 
-def switch_form(body: str) -> str | None:
-    header = re.search(r"<header.*?</header>", body, re.DOTALL)
-    assert header is not None, "the page has no <header>"
-    form = re.search(
-        r'<form method="post" action="/role" class="role-switch">(.*?)</form>',
-        header.group(0),
-        re.DOTALL,
-    )
-    return form.group(1) if form else None
+def switch_form(body: str) -> html.Form | None:
+    """The role switch: the header's `POST /role` form, if there is one."""
+    assert html.region(body, "header") is not None
+    found = [f for f in html.forms(body, within="header") if f.action == "/role"]
+    assert len(found) <= 1, "the header has more than one role switch"
+    if found:
+        assert found[0].method == "post"
+    return found[0] if found else None
+
+
+def role_label(body: str) -> str:
+    """The header's text without the application name and the forms: the current role and the
+    address."""
+    header = html.text(body, "header")
+    for form in html.forms(body, within="header"):
+        header = header.replace(form.text, "")
+    return header.replace(APP_NAME, "")
 
 
 def area_links(body: str) -> list[str]:
-    section = re.search(r'<section id="areas".*?</section>', body, re.DOTALL)
-    assert section is not None
-    return re.findall(r'<a href="([^"]+)">', section.group(0))
+    sections = [s for s in html.parse(body).find_all("section") if s.attrs.get("id") == "areas"]
+    assert len(sections) == 1
+    return [a.attrs["href"] for a in sections[0].find_all("a")]
 
 
 def admin_student(client_as: ClientAs) -> TestClient:
@@ -49,9 +57,9 @@ def test_the_header_offers_the_other_role(client_as: ClientAs) -> None:
     """US4-1, FR-018: one button per other role, and no `next`, so a switch lands on `/`."""
     form = switch_form(admin_student(client_as).get("/").text)
     assert form is not None
-    assert "Switch to" in form
-    assert re.findall(r'name="role" value="([a-z]+)"', form) == ["student"]
-    assert 'name="next"' not in form
+    assert "Switch to" in form.text
+    assert [(b.name, b.value) for b in form.buttons] == [("role", "student")]
+    assert "next" not in [i.name for i in form.inputs]
 
 
 def test_a_switch_changes_what_this_browser_may_open(client_as: ClientAs, session: Session) -> None:
@@ -70,7 +78,8 @@ def test_a_switch_changes_what_this_browser_may_open(client_as: ClientAs, sessio
     assert (row.id, row.current_role) == (row_id, "student")
 
     home = browser.get("/").text
-    assert '<span class="site-role">· Student</span>' in home
+    assert "Student" in role_label(home)
+    assert "Administrator" not in role_label(home)
     assert area_links(home) == ["/student"]
     denied = browser.get("/admin")
     assert denied.status_code == 403
@@ -104,7 +113,7 @@ def test_the_access_denied_page_still_offers_the_switch(client_as: ClientAs) -> 
     assert denied.status_code == 403
     form = switch_form(denied.text)
     assert form is not None
-    assert 'value="admin"' in form
+    assert ("role", "admin") in [(b.name, b.value) for b in form.buttons]
 
 
 def test_a_single_role_header_has_no_switch(client_as: ClientAs) -> None:

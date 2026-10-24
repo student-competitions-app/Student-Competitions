@@ -27,6 +27,7 @@ from app.models import (
 )
 from app.services.consent import current_consent_text
 from app.services.email import EmailMessage
+from tests import html
 from tests.conftest import (
     ClientAs,
     enrol_student,
@@ -188,7 +189,8 @@ def test_a_blocked_student_signs_in_again_once_reactivated(
     with Session(app.state.engine) as session:
         [row] = session.exec(select(UserSession).where(UserSession.user_id == scene.taras))
     assert row.current_role == Role.STUDENT
-    assert "<td>Shevchenko Taras</td>" in scene.teacher.get(scene.selection(scene.kn21)).text
+    rows = html.table_rows(scene.teacher.get(scene.selection(scene.kn21)).text)
+    assert "Shevchenko Taras" in [row["Name"] for row in rows]
 
 
 def test_a_class_reactivated_quickly_simply_needs_a_new_sign_in(

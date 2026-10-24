@@ -12,6 +12,7 @@ from app.models import ConsentRecord, Role, User, UserRole
 from app.services.consent import current_consent_text
 from app.services.email import EmailDeliveryError, EmailMessage
 from app.services.users import get_roles
+from tests import html
 from tests.conftest import TEACHER_EMAIL, ClientAs, make_institution, token_from
 
 OLENA = "olena@example.org"
@@ -69,7 +70,7 @@ def test_an_existing_teacher_is_told_so(
     page = client.get(f"/invitations/{second}")
     assert page.status_code == 200
     assert "You are already a teacher." in page.text
-    assert '<a href="/login">Sign in</a>' in page.text
+    assert ("/login", "Sign in") in html.link_pairs(page.text, "main")
     response = client.post(
         f"/invitations/{second}", data={"consent_text_id": consent_id()}, follow_redirects=False
     )
@@ -132,7 +133,7 @@ def test_the_inviter_limit_is_twenty_an_hour(
     response = admin_client.post("/admin/teachers/invite", data=form(school, "late@example.org"))
     assert response.status_code == 429
     assert "Too many invitations. Please try again later." in response.text
-    assert 'value="late@example.org"' in response.text
+    assert html.control(response.text, "email")["value"] == "late@example.org"
     assert len(outbox) == 20
 
 
@@ -162,8 +163,8 @@ def test_a_send_failure_stores_nothing_and_still_counts(
     response = admin_client.post("/admin/teachers/invite", data=form(school))
     assert response.status_code == 503
     assert "The invitation email could not be sent. Please try again." in response.text
-    assert f'value="{OLENA}"' in response.text
-    assert 'value="Kovalenko"' in response.text
+    assert html.control(response.text, "email")["value"] == OLENA
+    assert html.control(response.text, "last_name")["value"] == "Kovalenko"
     monkeypatch.undo()
     with Session(app.state.engine) as session:
         assert session.exec(select(User).where(User.email == OLENA)).first() is None
@@ -193,7 +194,7 @@ def test_a_signed_in_teacher_accepting_someone_elses_invitation(
     assert OLENA in page.text
     assert agree(teacher, token) == 303
     assert teacher.get("/teacher").status_code == 200
-    assert '<span class="site-role">· Teacher</span>' in teacher.get("/teacher").text
+    assert "Teacher" in html.role_label(teacher.get("/teacher").text)
     with Session(app.state.engine) as session:
         cast = session.exec(select(User).where(User.email == TEACHER_EMAIL)).one()
         assert cast.first_name is None

@@ -26,14 +26,21 @@ The UI is server-rendered with Jinja2, made interactive with HTMX and styled wit
 - Pages MUST be rendered on the server; interactivity MUST use HTMX partials
   (`app/templates/partials/`) returning HTML fragments, not JSON consumed by client code.
 - Custom JavaScript MUST be minimal and MUST NOT require a build step (no bundlers, no SPA
-  framework). The optional React migration in milestone 12 requires a constitution amendment.
+  framework). The optional React migration in milestone 16 requires a constitution amendment.
 - Every feature MUST use the stack defined in Technology & Architecture Constraints →
   Technology Stack. Adding a new runtime dependency MUST be justified in the feature's `plan.md`.
 - Prefer the simplest design that satisfies the spec (YAGNI); abstractions MUST have at least
   one concrete present need.
+- Every page MUST be built from the component library in `app/templates/components/` and MUST
+  follow the UI guidelines in `docs/requirements/ui-guidelines.md` (design tokens only, the
+  shared page frame, the button kinds, the wording patterns). A new UI pattern MUST first be
+  added to the component library, the component gallery (`/admin/components`) and the
+  guidelines, and only then used; it MUST NOT be hand-built on a single page.
 
 **Rationale**: A small team and a small user base (competitions of ~10 students) do not justify
-SPA complexity; SSR + HTMX keeps one language, one codebase and one deployment unit.
+SPA complexity; SSR + HTMX keeps one language, one codebase and one deployment unit. One
+component library and one set of guidelines keep every page calm, readable and consistent for
+students from year 1 to university, and stop each milestone from inventing its own look.
 
 ### III. Test-Backed Delivery (NON-NEGOTIABLE)
 
@@ -42,7 +49,7 @@ SPA complexity; SSR + HTMX keeps one language, one codebase and one deployment u
   acceptance scenarios.
 - Tests live in `tests/unit/` (pure logic, services), `tests/integration/` (HTTP routes via
   the FastAPI test client, database, auth flows) and `tests/e2e/` (Playwright, from
-  milestone 12).
+  milestone 16).
 - Every protected route MUST have tests proving both allowed and denied access per role.
 - Tests MUST NOT call real external services: the LLM provider and the email sender MUST be
   replaced by fakes/stubs in the test suite.
@@ -137,7 +144,7 @@ column shows when each component enters the codebase.
 | Language & web framework | Python + FastAPI | One FastAPI application serves all pages and HTMX fragments. | 1 |
 | Templating | Jinja2 | Every page is rendered on the server (Principle II). | 1 |
 | Interactivity | HTMX | Partial updates return HTML fragments from `templates/partials/`, never JSON for the UI. | 1+ (as needed) |
-| Styling | Pico.css | Semantic HTML styled by Pico.css; custom CSS only as overrides in `static/css/`; no CSS build step. | 1 |
+| Styling | Pico.css v2 | Restyled only by overriding its CSS variables with the design tokens in `static/css/app.css`; Pico's own stylesheet is not edited; no CSS build step; fonts self-hosted in `static/fonts/`; nothing loaded from another site. Pages follow `docs/requirements/ui-guidelines.md` (Principle II). | 1 (tokens and components from 10) |
 | Dependency & environment management | uv | `pyproject.toml` + committed `uv.lock`; no pip/poetry/requirements files. | 1 |
 | Lint & format | ruff | `ruff check` and `ruff format` are the only linter/formatter; enforced in CI from milestone 2. | 1 |
 | Unit & integration tests | pytest | Every milestone's "_Test:_" criterion is an automated pytest test (Principle III). | 1 |
@@ -149,8 +156,8 @@ column shows when each component enters the codebase.
 | Database | SQLite (local development, tests) → PostgreSQL (production) | The same code and migrations run on both engines. | 3 |
 | Authentication | Email one-time code (OTP) + server-side sessions in a signed cookie | No passwords, no third-party identity provider (Principle V). | 4 |
 | Authorization | Roles: student / teacher / administrator; administrator list from deploy-time configuration | Enforced server-side, deny-by-default (Principle IV). | 5 |
-| Answer evaluation | LLM API (Claude or OpenAI) with structured output | Behind one provider-agnostic service; provider chosen by configuration (Principle VI). | 10 |
-| End-to-end tests | Playwright | Added "later", as part of polish and hardening; lives in `tests/e2e/`. | 12 |
+| Answer evaluation | LLM API (Claude or OpenAI) with structured output | Behind one provider-agnostic service; provider chosen by configuration (Principle VI). | 14 |
+| End-to-end tests | Playwright | Added "later", as part of polish and hardening; lives in `tests/e2e/`. | 16 |
 | Development process | GitHub Spec Kit | Every feature goes through the Spec Kit flow (see Development Workflow). | all |
 
 **Stack rules**:
@@ -162,7 +169,7 @@ column shows when each component enters the codebase.
   application. External brokers or workers (e.g. Redis, Celery) are not part of the stack.
 - Server-side session and OTP state MUST be stored in the application database, not in new
   infrastructure.
-- The milestone-12 stretch goal of moving part of the UI to React is **not** approved. Adopting
+- The milestone-16 stretch goal of moving part of the UI to React is **not** approved. Adopting
   it requires a constitution amendment (Principle II).
 - Choosing between alternatives the table already lists (Render / Railway / Fly.io;
   Claude / OpenAI) needs no amendment, but the choice MUST be recorded in the relevant
@@ -177,7 +184,7 @@ decided and recorded in the `plan.md` of the named milestone, within the rules a
 | Python version (pinned via `.python-version` / `requires-python`) | 1 |
 | Hosting provider (Render unless justified) and managed PostgreSQL offering | 2 |
 | Email delivery service (SMTP or transactional-email API) for sending OTP codes | 4 |
-| LLM provider and model for answer evaluation | 10 |
+| LLM provider and model for answer evaluation | 14 |
 
 ### Application Layout
 
@@ -190,8 +197,9 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
   call a service, render a template. Business logic MUST NOT live in routers or templates.
 - `services/` — business logic (competitions, scoring, users, email, LLM); independently
   unit-testable.
-- `templates/` — `layouts/`, `pages/`, `partials/` (HTMX fragments).
-- `static/` — `css/`, `js/`, `img/`.
+- `templates/` — `components/` (the component library: Jinja macros shared by every page),
+  `layouts/`, `pages/`, `partials/` (HTMX fragments).
+- `static/` — `css/`, `fonts/` (self-hosted fonts and their licence), `js/`, `img/`.
 
 ### Operational Constraints
 
@@ -233,8 +241,11 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
   - PATCH — clarifications, wording and typo fixes.
 - **Compliance**: every `plan.md` MUST include a Constitution Check; any deviation MUST be
   recorded in its Complexity Tracking table with justification and the simpler alternative
-  rejected. Reviewers MUST verify PRs against the Quality Gates above.
+  rejected. From milestone 11 the Constitution Check MUST include a **UI guidelines** row: the
+  feature's pages are built from the component library, use design tokens only, follow
+  `docs/requirements/ui-guidelines.md`, and any new pattern is added to the library, the
+  gallery and the guidelines first. Reviewers MUST verify PRs against the Quality Gates above.
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 1.0.1 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-10-14
+**Version**: 1.1.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-10-24

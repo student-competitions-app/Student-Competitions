@@ -49,12 +49,18 @@ def _form(
     error: str | None = None,
     status_code: int = 200,
 ) -> HTMLResponse:
-    """The create or rename form; with `error`, the refused value and why (FR-019)."""
+    """The create or rename form; with `error`, the refused value and why (FR-019), in the shared
+    form shape: `values` and `errors` keyed by the field (milestone 10 data-model §4.2)."""
     return render_admin(
         request,
         "pages/admin/subject_form.html",
         TAB,
-        {"heading": heading, "action": action, "value": value, "error": error},
+        {
+            "heading": heading,
+            "action": action,
+            "values": {"name": value},
+            "errors": {"name": error} if error else {},
+        },
         status_code=status_code,
     )
 

@@ -1,16 +1,19 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/form.html" import error_summary, field, form_actions %}
 
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>{{ heading }}</h1>
-  <form method="post" action="{{ action }}">
-    <label for="name">Name</label>
-    <input type="text" name="name" id="name" maxlength="200" required value="{{ value }}"{% if error %} aria-invalid="true" aria-describedby="name-error"{% endif %}>
-    {% if error %}<small id="name-error">{{ error }}</small>{% endif %}
-    <button type="submit">Save</button>
-    <a href="{{ cancel }}">Cancel</a>
-  </form>
-</section>
+{% if region_name %}
+{{ back_link(cancel, "Back to “" ~ region_name ~ "”") }}
+{% else %}
+{{ back_link(cancel, "Back to the educational institutions") }}
+{% endif %}
+{{ page_heading(heading) }}
+{{ error_summary(errors, order=["name"]) }}
+<form method="post" action="{{ action }}">
+  {{ field("name", "Name", value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
+  {{ form_actions("Save", cancel_href=cancel) }}
+</form>
 {% endblock %}

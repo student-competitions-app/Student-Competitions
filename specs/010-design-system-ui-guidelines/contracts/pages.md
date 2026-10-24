@@ -157,7 +157,8 @@ with its rule, before merge (SC-011).
 | Skip link | "Skip to main content" | research D7 |
 | Home page section heading | "Your areas" (unchanged) and the four area descriptions ([data-model.md §4.1](../data-model.md#41-area-approutersareaspy)) | FR-035 |
 | `data_deletion_confirm.html` | a **Cancel** link to `/`, which the page did not have | FR-032 |
-| Back links that did not exist | "Back to the home page" (profile); "Back to the teachers", "Back to the subjects" and "Back to the educational institutions" (forms); "Back to Students"; "Back to {name}" | FR-003 |
+| Back links that did not exist | "Back to the home page" (profile); "Back to the teachers", "Back to the subjects" and "Back to the educational institutions" (forms); "Back to Students"; "Back to {name}"; "Back to “{region}”"; "Back to “{class}”"; "Back to your profile" (withdrawal) | FR-003 |
+| `teacher/student_form.html` | a **Remove** link (destructive) to the existing `GET /teacher/students/{id}/remove` confirmation, carrying the selection, which the page did not have | pages.md §1.3: the edit page offers the removal it leads to, as the teacher edit page does |
 
 ### 4.3 Empty-state hints
 
@@ -169,5 +170,11 @@ with its rule, before merge (SC-011).
 | "Select a region" | "Choose a region from the list to see its educational institutions." |
 | "No teachers yet" (if present) | "Invite the first teacher with Invite teacher." |
 | "No questions yet." | none: a milestone-3 sample, removed in milestone 11 |
-| The Students tab messages ("Select a region", "Select an educational institution", "Select a class", "No students in this class yet", the no-links message …) | A one-line next step, for example "Choose a class to see its students." or "Add the first student with Add student." Each one is added to this table during implementation, before merge. |
+| "You are not linked to any educational institution" (Students tab) | "Ask an administrator to link you to an educational institution." |
+| "Select a region to continue" (Students tab) | "Choose a region in the first list." |
+| "Select an educational institution to continue" (Students tab) | "Choose an educational institution in the second list." |
+| "Select a class to see its students" (Students tab) | "Choose a class in the third list." |
+| "No students in this class yet" (Students tab) | "Add the first student with Add student." Only for a teacher with Write access to an active class, who has the button. |
+| "This class is deactivated; its students are hidden until it is activated again" (Students tab) | "Activate the class to see its students." Only for a teacher with Write access, who has the button. |
+| "No educational institution can be selected yet. Create one on the Educational institutions tab." (institution picker) | none: the message already says what to do |
 | The placeholder pages ("… will arrive in a later milestone.") | none |

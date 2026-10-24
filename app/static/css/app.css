@@ -794,7 +794,8 @@ body > footer.site-footer {
 /* Buttons (components/button.html, FR-025): primary is Pico's default, secondary is Pico's
    `.secondary` restyled by the mapping, destructive is defined here. A link styled as a button is
    the same box. `small` is the compact size of row actions, still a full touch target. */
-:is(button, [type="submit"], [role="button"]) {
+/* `a[role="button"]` is listed so the rule outranks Pico's own `a[role=button]` display. */
+:is(button, [type="submit"], a[role="button"], [role="button"]) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -955,7 +956,24 @@ button[type="submit"] {
 
 .row-actions {
   white-space: nowrap;
+}
+
+td.row-actions {
   width: 1%;
+}
+
+/* The same actions outside a table (the selected class on the Students tab, a region in its
+   list): a wrapping row. */
+div.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-space-1);
+  margin-bottom: var(--sc-space-3);
+  white-space: normal;
+}
+
+div.row-actions > * + * {
+  margin-left: 0;
 }
 
 /* Every row action has the same gap and the same width, whether it is a link or a one-button
@@ -978,6 +996,7 @@ button[type="submit"] {
   }
 
   .data-table th {
+    border-bottom-width: var(--sc-border-width);
     padding: var(--sc-space-1) var(--sc-space-2);
     background: var(--sc-neutral-tint);
     color: var(--sc-muted);
@@ -1035,6 +1054,12 @@ button[type="submit"] {
     color: var(--sc-muted);
     font-size: var(--sc-text-small);
     font-weight: var(--sc-weight-semibold);
+  }
+
+  div.row-actions {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
   }
 
   .data-table td.row-actions {
@@ -1352,17 +1377,23 @@ fieldset > legend {
   text-decoration: none;
 }
 
-.select-list .row-actions {
-  display: flex;
-  flex-wrap: wrap;
+/* An item's actions share its width in equal parts, so they stay on one row in the narrow list. */
+.select-list div.row-actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: var(--sc-space-1);
-  width: auto;
-  margin-top: var(--sc-space-1);
-  white-space: normal;
+  margin: var(--sc-space-1) 0 0;
 }
 
-.select-list .row-actions > * + * {
-  margin-left: 0;
+.select-list .row-actions :is(button, [role="button"]) {
+  width: 100%;
+  min-width: 0;
+  --pico-form-element-spacing-horizontal: var(--sc-space-1);
+}
+
+.select-list .row-actions .inline-form {
+  display: block;
 }
 
 /* == End of components == */
@@ -1372,156 +1403,6 @@ fieldset > legend {
 /* The milestone 1–9 page rules, moved unchanged. Each page rebuilt from the components deletes
    the rules it no longer uses; the section goes when the last page is rebuilt (T060). */
 
-/* The subject list: names wrap rather than widen the page; the one-button forms sit inline with
-   the links in the actions column. */
-.subjects-table td {
-  overflow-wrap: anywhere;
-}
-
-.subjects-actions {
-  white-space: nowrap;
-}
-
-.subjects-actions form {
-  display: inline;
-  margin: 0;
-}
-
-.subjects-actions button {
-  margin: 0;
-  padding: 0.125rem 0.5rem;
-  width: auto;
-}
-
-.subjects-empty {
-  color: var(--pico-muted-color);
-}
-
-/* The Educational institutions tab (specs/007-region-and-institutions-management FR-002, FR-006,
-   research D12): regions beside the institutions of the selected region from 768 px, stacked with
-   regions first below that. Names wrap rather than widen the page. */
-.institutions-layout {
-  display: grid;
-  gap: 2rem;
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 768px) {
-  .institutions-layout {
-    grid-template-columns: minmax(14rem, 1fr) 2fr;
-  }
-}
-
-.regions-list {
-  margin: 0;
-  padding: 0;
-}
-
-.regions-list li {
-  border-left: 0.2rem solid transparent;
-  list-style: none;
-  overflow-wrap: anywhere;
-  padding: 0.25rem 0.5rem;
-}
-
-/* The selected region: highlighted, and marked `aria-current="true"` for assistive technologies
-   (research D11). */
-.regions-list li.selected {
-  background: var(--pico-primary-background);
-  border-left-color: var(--pico-primary);
-}
-
-.regions-list li.selected > a,
-.regions-list a[aria-current="true"] {
-  color: var(--pico-primary-inverse);
-  font-weight: bold;
-}
-
-.status-deactivated,
-.list-empty {
-  color: var(--pico-muted-color);
-}
-
-.institutions-table td {
-  overflow-wrap: anywhere;
-}
-
-.institutions-table .row-actions {
-  white-space: nowrap;
-}
-
-.regions-list li.selected .row-actions a {
-  color: var(--pico-primary-inverse);
-}
-
-/* Teachers (specs/008-teacher-management-consent): the list and the institution picker wrap
-   rather than widen the page; a field-level picker error reads like the others. */
-.teachers-table td,
-.picker-table td {
-  overflow-wrap: anywhere;
-}
-
-.picker-table select {
-  margin: 0;
-}
-
-.picker-table input[type="checkbox"] {
-  margin: 0;
-}
-
-.form-error {
-  color: var(--pico-del-color);
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-/* The Students tab of the teacher area (specs/009-classes-students-management FR-048, research
-   D7): the Region, Educational institution and Class lists in a row from 768 px, stacked in that
-   order below, each in its own small form with a Show button. */
-.class-picker {
-  display: grid;
-  gap: 2rem;
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 768px) {
-  .class-picker {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-.class-picker form {
-  margin: 0;
-}
-
-.class-picker select {
-  margin-bottom: 0;
-}
-
-/* The selected class: its label, then its actions inline, as in the administrator's lists. */
-.class-bar {
-  border-top: 1px solid var(--pico-muted-border-color);
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-}
-
-.class-bar h2 {
-  margin-bottom: 0.5rem;
-  overflow-wrap: anywhere;
-}
-
-.class-bar .row-actions {
-  margin-bottom: 1rem;
-}
-
-.students-table td {
-  overflow-wrap: anywhere;
-}
-
-.students-table .row-actions {
-  white-space: nowrap;
-}
-
 .hero {
   padding-block: 2rem;
 }
@@ -1529,7 +1410,6 @@ fieldset > legend {
 .hero > h1 {
   margin-bottom: 0.25rem;
 }
-
 
 /* The sign-in pages: a narrow column, and the messages visible without alarming. */
 .auth {

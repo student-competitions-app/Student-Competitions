@@ -146,8 +146,10 @@ def test_the_list_is_sorted_and_shows_every_column(
     assert order == [second, third, first]
     assert "Petro Antonenko" in body
     assert "a@example.org" in body
-    assert "Lviv School (Lviv) — Read" in body
-    assert "Odesa College (Odesa) — Write (deactivated)" in html.text(body, "main")
+    institutions = [row["Educational institutions"] for row in html.table_rows(body)]
+    assert "Lviv School (Lviv) Read" in institutions[0]
+    assert "Odesa College (Odesa) Write Deactivated" in institutions[0]
+    assert {"Read", "Write", "Deactivated"} <= set(html.badges(body))
     cells = [value for row in html.table_rows(body) for value in row.values()]
     assert "Yes" in cells and "No" in cells
     assert utc_now().strftime("%Y-%m-%d") in cells
@@ -231,7 +233,8 @@ def test_a_deactivated_link_is_kept_with_its_level_and_can_be_removed(
         follow_redirects=False,
     )
     page = admin_client.get(f"/admin/teachers/{user_id}").text
-    assert "Lviv School (Lviv) (deactivated)" in html.text(page, "main")
+    assert "Lviv School (Lviv) Deactivated" in html.text(page, "main")
+    assert html.badges(page) == ["Deactivated"]
     assert f"{lviv}:read" not in [o.value for o in access_options(page)]
     before = links_of(user_id)
 

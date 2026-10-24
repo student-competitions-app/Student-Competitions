@@ -69,7 +69,9 @@ def test_the_empty_list(admin_client: TestClient) -> None:
     assert dom.h1(response.text) == "Subjects"
     assert "No subjects yet" in response.text
     create_links = [link for link in dom.links(response.text) if link.href == "/admin/subjects/new"]
-    assert [(link.text, link.attrs.get("role")) for link in create_links] == [("Create", "button")]
+    assert [(link.text, link.attrs.get("role")) for link in create_links] == [
+        ("Create subject", "button")
+    ]
     assert current_tabs(response.text) == ["/admin/subjects"]
 
 
@@ -217,7 +219,7 @@ def test_each_row_offers_its_actions(admin_client: TestClient, session: Session)
     assert ("post", f"/admin/subjects/{biology}/activate") in dom.form_targets(body, "main")
     assert f"/admin/subjects/{physics}/activate" not in body
     assert f"/admin/subjects/{biology}/deactivate" not in body
-    assert "Inactive" in body
+    assert "Deactivated" in dom.badges(body)
 
 
 def test_the_rename_form_is_filled_in(admin_client: TestClient, session: Session) -> None:
@@ -309,7 +311,7 @@ def test_deactivate_and_activate(admin_client: TestClient, session: Session) -> 
     assert stored(session) == [("Physics", False)]
     body = admin_client.get("/admin/subjects").text
     assert table_names(body) == ["Physics"]
-    assert "Inactive" in body
+    assert "Deactivated" in dom.badges(body)
     assert (f"/admin/subjects/{sid}/activate", "Activate") in buttons(body)
     assert_back_to_the_list(post(admin_client, f"/admin/subjects/{sid}/activate"))
     assert stored(session) == [("Physics", True)]

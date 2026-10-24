@@ -54,8 +54,9 @@
 </nav>
 {%- endmacro %}
 
+{#- The arrow is an icon hidden from assistive technology, so the link reads as its words alone. -#}
 {% macro back_link(href, text) -%}
-<a href="{{ href }}" class="back-link">← {{ text }}</a>
+<a href="{{ href }}" class="back-link">{{ icon("arrow-left") }}{{ text }}</a>
 {%- endmacro %}
 
 {% macro page_heading(title, action=None) -%}

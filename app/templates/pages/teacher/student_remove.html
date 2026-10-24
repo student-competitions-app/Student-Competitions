@@ -1,23 +1,17 @@
 {% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import back_link %}
+{% from "components/details.html" import details_list %}
+{% from "components/confirmation.html" import confirmation %}
 
 {% block title %}Remove {{ student.first_name }} {{ student.last_name }} as a student — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-<section>
-  <h1>Remove {{ student.first_name }} {{ student.last_name }} as a student?</h1>
-  <dl class="details-list">
-    <dt>Class</dt>
-    <dd>{{ school_class.label }}</dd>
-    <dt>Educational institution</dt>
-    <dd>{{ institution.name }} ({{ institution.region_name }})</dd>
-  </dl>
-  <p>They lose the student role and their class, and are signed out everywhere. If they have no other role, they can no longer sign in. Their email, names and consent records stay until they delete their data.</p>
-  <form method="post" action="/teacher/students/{{ student.user_id }}/remove">
-    <input type="hidden" name="region" value="{{ carried.region }}">
-    <input type="hidden" name="institution" value="{{ carried.institution }}">
-    <input type="hidden" name="class" value="{{ carried.class }}">
-    <button type="submit">Remove</button>
-    <a href="{{ cancel }}">Cancel</a>
-  </form>
-</section>
+{{ back_link(cancel, "Back to “" ~ school_class.name ~ "”") }}
+{% call confirmation("Remove " ~ student.first_name ~ " " ~ student.last_name ~ " as a student?", none, "/teacher/students/" ~ student.user_id ~ "/remove", "Remove", cancel, hidden={"region": carried.region, "institution": carried.institution, "class": carried.class}) %}
+{{ details_list([
+  ("Class", school_class.label),
+  ("Educational institution", institution.name ~ " (" ~ institution.region_name ~ ")"),
+]) }}
+<p>They lose the student role and their class, and are signed out everywhere. If they have no other role, they can no longer sign in. Their email, names and consent records stay until they delete their data.</p>
+{% endcall %}
 {% endblock %}

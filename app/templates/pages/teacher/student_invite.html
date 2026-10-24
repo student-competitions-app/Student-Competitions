@@ -1,30 +1,27 @@
 {% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/details.html" import details_list %}
+{% from "components/form.html" import error_summary, field, form_actions %}
+{% from "components/feedback.html" import notice %}
 
 {% block title %}Invite a student to “{{ school_class.name }}” — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-<section>
-  <h1>Invite a student to “{{ school_class.name }}”</h1>
-  <dl class="details-list">
-    <dt>Educational institution</dt>
-    <dd>{{ institution.name }} ({{ institution.region_name }})</dd>
-    <dt>Class</dt>
-    <dd>{{ school_class.label }}</dd>
-  </dl>
-  {% if refused %}
-  <p>This class is deactivated. Students cannot be added to it.</p>
-  <p><a href="{{ cancel }}">Back to “{{ school_class.name }}”</a></p>
-  {% else %}
-  <p>The person receives an email with a link. Nothing about them is stored unless they accept.</p>
-  {% if form_error %}<p class="auth-message" role="alert">{{ form_error }}</p>{% endif %}
-  <form method="post" action="/teacher/students/classes/{{ school_class.id }}/invite">
-    <label for="email">Email address</label>
-    <input type="email" id="email" name="email" maxlength="254" required value="{{ values.email }}"{% if errors.email %} aria-invalid="true" aria-describedby="email-error"{% endif %}>
-    {% if errors.email %}<small id="email-error">{{ errors.email }}</small>{% endif %}
-    {% include "pages/admin/_person_names.html" %}
-    <button type="submit">Send invitation</button>
-    <a href="{{ cancel }}">Cancel</a>
-  </form>
-  {% endif %}
-</section>
+{{ back_link(cancel, "Back to “" ~ school_class.name ~ "”") }}
+{{ page_heading("Invite a student to “" ~ school_class.name ~ "”") }}
+{% if not refused %}{{ error_summary(errors, form_error, order=["email", "first_name", "last_name"]) }}{% endif %}
+{{ details_list([
+  ("Educational institution", institution.name ~ " (" ~ institution.region_name ~ ")"),
+  ("Class", school_class.label),
+]) }}
+{% if refused %}
+{{ notice("This class is deactivated. Students cannot be added to it.", "info") }}
+{% else %}
+<p>The person receives an email with a link. Nothing about them is stored unless they accept.</p>
+<form method="post" action="/teacher/students/classes/{{ school_class.id }}/invite">
+  {{ field("email", "Email address", value=values.email, error=errors.email, type="email", attrs={"maxlength": "254", "required": True}) }}
+  {% include "pages/admin/_person_names.html" %}
+  {{ form_actions("Send invitation", cancel_href=cancel) }}
+</form>
+{% endif %}
 {% endblock %}

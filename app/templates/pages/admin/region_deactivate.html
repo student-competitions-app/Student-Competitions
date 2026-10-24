@@ -1,14 +1,11 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation %}
 
 {% block title %}Deactivate region “{{ region.name }}” — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>Deactivate region “{{ region.name }}”?</h1>
-  <p>Its students will be signed out and hidden until it is activated again.</p>
-  <form method="post" action="/admin/institutions/regions/{{ region.id }}/deactivate">
-    <button type="submit">Deactivate</button>
-    <a href="/admin/institutions/regions/{{ region.id }}">Cancel</a>
-  </form>
-</section>
+{% set region_path = "/admin/institutions/regions/" ~ region.id %}
+{{ back_link(region_path, "Back to “" ~ region.name ~ "”") }}
+{{ confirmation("Deactivate region “" ~ region.name ~ "”?", "Its students will be signed out and hidden until it is activated again.", region_path ~ "/deactivate", "Deactivate", region_path) }}
 {% endblock %}

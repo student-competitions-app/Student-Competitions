@@ -1,21 +1,20 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/form.html" import error_summary, checkbox_field, form_actions %}
+{% from "components/button.html" import link_button %}
 
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>{{ heading }}</h1>
-  <p>Email: {{ teacher.email }}</p>
-  <form method="post" action="/admin/teachers/{{ teacher.user_id }}">
-    {% include "pages/admin/_person_names.html" %}
-    {% include "pages/admin/_institution_picker.html" %}
-    <label for="can_create_competitions">
-      <input type="checkbox" id="can_create_competitions" name="can_create_competitions"{% if values.can_create_competitions %} checked{% endif %}>
-      Can create competitions
-    </label>
-    <button type="submit">Save</button>
-    <a href="/admin/teachers">Cancel</a>
-  </form>
-  <p><a href="/admin/teachers/{{ teacher.user_id }}/remove">Remove teacher</a></p>
-</section>
+{{ back_link("/admin/teachers", "Back to the teachers") }}
+{{ page_heading(heading) }}
+{{ error_summary(errors, order=["first_name", "last_name", "picker"]) }}
+<p>Email: {{ teacher.email }}</p>
+<form method="post" action="/admin/teachers/{{ teacher.user_id }}">
+  {% include "pages/admin/_person_names.html" %}
+  {% include "pages/admin/_institution_picker.html" %}
+  {{ checkbox_field("can_create_competitions", "Can create competitions", checked=values.can_create_competitions) }}
+  {{ form_actions("Save", cancel_href="/admin/teachers") }}
+</form>
+<div class="form-actions">{{ link_button("Remove teacher", "/admin/teachers/" ~ teacher.user_id ~ "/remove", kind="destructive", outline=True) }}</div>
 {% endblock %}

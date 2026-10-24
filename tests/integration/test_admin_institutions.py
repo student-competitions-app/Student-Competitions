@@ -376,7 +376,7 @@ def test_the_tab_offers_create_for_regions(admin_client: TestClient) -> None:
     create = [
         a for a in dom.links(left(admin_client.get(TAB).text)) if a.href == f"{TAB}/regions/new"
     ]
-    assert [(a.text, a.attrs.get("role")) for a in create] == [("Create", "button")]
+    assert [(a.text, a.attrs.get("role")) for a in create] == [("Create region", "button")]
 
 
 def test_the_region_create_form(admin_client: TestClient) -> None:
@@ -467,9 +467,11 @@ def test_a_selected_active_region_offers_create(admin_client: TestClient, sessio
     """US2-2, FR-014."""
     kyiv = add_region(session, "Kyiv")
     section = right(admin_client.get(region_path(kyiv)).text)
-    assert (f"{region_path(kyiv)}/institutions/new", "Create", "button") in [
-        (a.href, a.text, a.attrs.get("role")) for a in dom.links(section)
-    ]
+    assert (
+        f"{region_path(kyiv)}/institutions/new",
+        "Create educational institution",
+        "button",
+    ) in [(a.href, a.text, a.attrs.get("role")) for a in dom.links(section)]
     assert REGION_INACTIVE not in section
 
 

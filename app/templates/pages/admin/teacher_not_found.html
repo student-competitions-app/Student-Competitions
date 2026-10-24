@@ -1,11 +1,10 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
 
 {% block title %}Teacher not found — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>Teacher not found</h1>
-  <p>This person is not a teacher. They may have been removed.</p>
-  <p><a href="/admin/teachers">Back to the teachers</a></p>
-</section>
+{{ back_link("/admin/teachers", "Back to the teachers") }}
+{{ page_heading("Teacher not found") }}
+<p>This person is not a teacher. They may have been removed.</p>
 {% endblock %}

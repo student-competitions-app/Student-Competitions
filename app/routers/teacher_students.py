@@ -261,9 +261,10 @@ def _class_form(
     cancel: str,
     errors: dict[str, str] | None = None,
     status_code: int = 200,
+    class_name: str | None = None,
 ) -> HTMLResponse:
     """The create or edit form, naming the institution and offering no way to change it
-    (FR-003)."""
+    (FR-003). `class_name` (editing) names the back link's target, the class's own page."""
     return render_teacher(
         request,
         "pages/teacher/class_form.html",
@@ -275,6 +276,7 @@ def _class_form(
             "values": values,
             "errors": errors or {},
             "cancel": cancel,
+            "class_name": class_name,
         },
         status_code=status_code,
     )
@@ -366,6 +368,7 @@ def edit_class_page(request: Request, session: SessionDep, class_id: int) -> HTM
         institution,
         {"name": school_class.name, "year_of_study": str(school_class.year_of_study)},
         selection_path(institution.region_id, institution.id, class_id),
+        class_name=school_class.name,
     )
 
 
@@ -395,6 +398,7 @@ def edit_class_action(
             back,
             errors,
             400,
+            class_name=school_class.name,
         )
 
     errors = _class_errors(name, year_of_study)
@@ -702,6 +706,7 @@ def _student_form(
         {
             "student": student,
             "institution": institution,
+            "school_class": school_class,
             "classes": active,
             "values": values,
             "carried": carried,

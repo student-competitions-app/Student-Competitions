@@ -1,14 +1,11 @@
 {% extends "layouts/admin.html" %}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation %}
 
 {% block title %}Remove {{ name }} as a teacher — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-<section>
-  <h1>Remove {{ name }} as a teacher?</h1>
-  <p>They lose the teacher role, their institutions and the competitions setting. If they have no other role, they can no longer sign in. Their email, names and consent records stay until they delete their data.</p>
-  <form method="post" action="/admin/teachers/{{ user_id }}/remove">
-    <button type="submit">Remove</button>
-    <a href="/admin/teachers/{{ user_id }}">Cancel</a>
-  </form>
-</section>
+{% set teacher_path = "/admin/teachers/" ~ user_id %}
+{{ back_link(teacher_path, "Back to " ~ name) }}
+{{ confirmation("Remove " ~ name ~ " as a teacher?", "They lose the teacher role, their institutions and the competitions setting. If they have no other role, they can no longer sign in. Their email, names and consent records stay until they delete their data.", teacher_path ~ "/remove", "Remove", teacher_path) }}
 {% endblock %}

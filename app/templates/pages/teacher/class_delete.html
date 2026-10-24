@@ -1,22 +1,24 @@
 {% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation, refusal %}
+{% from "components/button.html" import link_button %}
 
 {% block title %}Delete class “{{ school_class.name }}” — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
 {% set class_path = "/teacher/students/classes/" ~ school_class.id %}
-<section>
-  <h1>Delete class “{{ school_class.name }}”?</h1>
-  <p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
-  {% if in_use %}
-  <p>“{{ school_class.name }}” has students and cannot be deleted.{% if school_class.is_active %} You can deactivate it instead.{% endif %}</p>
-  {% if school_class.is_active %}<p><a href="{{ class_path }}/deactivate" role="button">Deactivate</a></p>{% endif %}
-  <p><a href="{{ cancel }}">Back to “{{ school_class.name }}”</a></p>
-  {% else %}
-  <p>Deleting a class cannot be undone.</p>
-  <form method="post" action="{{ class_path }}/delete">
-    <button type="submit">Delete</button>
-    <a href="{{ cancel }}">Cancel</a>
-  </form>
-  {% endif %}
-</section>
+{% set question = "Delete class “" ~ school_class.name ~ "”?" %}
+{% set back_text = "Back to “" ~ school_class.name ~ "”" %}
+{{ back_link(cancel, back_text) }}
+{% if in_use %}
+{% call refusal(question, "“" ~ school_class.name ~ "” has students and cannot be deleted." ~ (" You can deactivate it instead." if school_class.is_active else ""), cancel, back_text) %}
+{% if school_class.is_active %}{{ link_button("Deactivate", class_path ~ "/deactivate", kind="destructive") }}{% endif %}
+{% endcall %}
+<p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
+{% else %}
+{% call confirmation(question, none, class_path ~ "/delete", "Delete", cancel) %}
+<p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
+<p>Deleting a class cannot be undone.</p>
+{% endcall %}
+{% endif %}
 {% endblock %}

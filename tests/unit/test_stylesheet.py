@@ -223,7 +223,6 @@ def test_no_page_specific_classes_remain() -> None:
     assert not in_templates and not in_css and not site, (in_templates, in_css, site)
 
 
-@pytest.mark.xfail(strict=True, reason="legacy section removed in T060")
 def test_only_tokens_hold_literal_values() -> None:
     """FR-012: no hex colour, `rgb(`/`hsl(` or pixel length outside the token block; the
     `768px` and `1024px` breakpoints are the only exception."""

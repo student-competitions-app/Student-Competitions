@@ -664,6 +664,14 @@ module keeps them in CI for every later milestone, which is what makes the guide
 - **What stays**:
   - the address, the method, the text, the status code and the role are still asserted exactly;
   - no assertion about behaviour or access is removed or loosened (SC-002).
+- **A form contract**: the milestone 1–9 tests post to the server by field name and never read
+  the names from the rendered page, so a renamed field in a template would pass them. After the
+  rebuild the names are macro arguments (`field("email", …)`), so comparing template sources
+  proves nothing either. `tests/integration/test_form_contract.py` renders every page state that
+  shows a form and compares each form's method, action and field names with
+  `tests/integration/form_contract.json`. The file is generated once from the current templates
+  before any page changes and does not change in this milestone (SC-011). The theme switch's
+  forms are left out, since they are new.
 - **The changed modules** are listed in [plan.md](./plan.md#changes-to-existing-tests-why-they-change).
   Each change is a markup change, or a wording change listed in contracts/pages.md §4.
 

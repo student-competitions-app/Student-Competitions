@@ -58,7 +58,9 @@ comment density and error handling:
   through `uv run --with …` and are never added.
 - **Escaping**: macros take plain strings; rich content goes through `{% call %}` / `caller()`.
 - **Suite green**: after each page task, `uv run pytest` passes. A test changes only where it pinned
-  markup or a wording change listed in pages.md §4 (SC-002).
+  markup or a wording change listed in pages.md §4 (SC-002). `tests/integration/form_contract.json`
+  never changes after T092: a failing form contract means a field was renamed or lost, so the
+  template is fixed, not the file.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -117,7 +119,7 @@ identity and the five pages in all four width/theme frames, and `design-approval
 - [ ] T008 Create `tests/html.py`, a stdlib `html.parser` helper that queries pages by meaning (research D17). Whitespace in returned text is collapsed and stripped. Functions, each taking the response body as `str`:
   - `h1(body) -> str`: the text of the page's only `h1` (asserts there is exactly one);
   - `links(body, within=None) -> list[Link]`, with `Link(href, text, attrs)`; `within` is a tag name (`"header"`, `"main"`, `"footer"`, `"details"`, `"nav"`) limiting the search to that element;
-  - `forms(body, within=None) -> list[Form]`, with `Form(method, action, buttons, inputs)`; `buttons` as `(name, value, text, attrs)`, `inputs` as `(name, type, value)`;
+  - `forms(body, within=None) -> list[Form]`, with `Form(method, action, buttons, inputs)`; `buttons` as `(name, value, text, attrs)`, `inputs` as `(name, type, value)`, where `inputs` also holds every `<select>` (type `"select"`) and `<textarea>` (type `"textarea"`) inside the form; `method` is lowercased and defaults to `"get"`;
   - `nav(body, label) -> list[Link]`: the links inside `<nav aria-label="{label}">`;
   - `region(body, tag) -> str`: the inner HTML of the first `header`, `main` or `footer`;
   - `badges(body) -> list[str]`: the texts of elements whose classes include `badge`;
@@ -133,7 +135,13 @@ identity and the five pages in all four width/theme frames, and `design-approval
 - [ ] T011 [P] Rewrite the markup assertions of `tests/integration/test_admin_teachers.py`, `test_profile.py`, `test_teacher_students.py`, `test_teacher_classes.py` and `test_availability.py` against the current templates, as in T010. Assertions on `(deactivated)` and on `first-name-error`-style ids stay; they change with the page rebuild (US2, US3).
 - [ ] T012 [P] Rewrite the markup assertions of `tests/integration/test_role_choice.py` and `test_role_switch.py`: find the role-switch form with `forms(body, within="header")` (it moves into the user menu, still inside the header), and its buttons by `name="role"` and value. The role-choice sentence assertion stays until T037.
 - [ ] T013 [P] Rewrite the markup assertions of `tests/integration/test_login_flow.py`, `test_data_deletion.py`, `test_invitation_cutoff.py`, `test_invitation_edge_cases.py`, `test_invitation_refusals.py`, `test_student_invitation.py`, `test_student_invitation_refusals.py`, `test_teacher_invitation.py` and `test_names_on_acceptance.py`: messages are found by their text in `region(body, "main")` (they move from `auth-message` to the error summary, a field error or a notice), never by class. Texts and status codes stay exact.
-- [ ] T014 Run the whole suite on both engines: it must be green with the same count as T001, proving the rewrites kept every assertion's meaning before any page changes (plan step 2). Depends on T008–T013.
+- [ ] T092 [P] Create the form contract (FR-040, SC-011, research D17), against the **current** templates, so it proves every form keeps its field names through the rebuild:
+  - `tests/integration/test_form_contract.py` with a table of named cases, one per state that shows a form, each giving the client (anonymous, `admin_client`, `client_as(...)` with the cast helpers) and the request that produces the page. The cases cover every template with a form in [pages.md §1](./contracts/pages.md#1-page-inventory), including the states reached only by `POST`: sign-in step one and step two, a step-one error, role choice for a person with several roles, withdraw consent, a teacher and a student invitation, the data-deletion request and confirmation; every administrator page with a form (the subjects list with an active and a deactivated subject, subject new/rename/delete in use and not in use, the region and institution forms, deactivate and delete pages, teacher invite/edit/remove); every teacher page with a form (the Students tab with region, institution and class selected, class new/edit/deactivate/delete, student invite/edit/remove); and the frame forms (role switch, **Log out**) on `/` for a person with several roles;
+  - for each case, the page's forms from `forms()` as records of `method`, `action` (empty means the request path; numeric path segments become `{id}` and invitation and deletion tokens `{token}`, so the record does not depend on database ids), the sorted, de-duplicated field names of its inputs, selects, textareas and named buttons, and the sorted `(name, value)` pairs of its named buttons (for example `role=teacher`). The records of a case are compared as a sorted list, so moving a form on the page (the role switch into the user menu) is not a change;
+  - forms whose action is `/theme` are left out (they arrive with US5);
+  - the expected records live in `tests/integration/form_contract.json`, keyed by case name. Running the module with `UPDATE_FORM_CONTRACT=1` rewrites the file; it is generated **once** here, from the current templates, reviewed and committed, and never regenerated in this milestone. A mismatch fails with the case name and the differing records;
+  - a module docstring says why it exists: the milestone 1–9 tests post to the server by field name and never read the names from the page, so only this test catches a renamed or lost field in a template.
+- [ ] T014 Run the whole suite on both engines: it must be green with the T001 count plus T092's cases, proving the rewrites kept every assertion's meaning and the form contract matches the current templates before any page changes (plan step 2). Depends on T008–T013 and T092.
 
 ### 3b. Tokens, components and frame (after T007)
 
@@ -257,7 +265,7 @@ changed message is listed with its rule; `test_stylesheet.py` passes with no `xf
 - [ ] T060 [US4] Clean up `app/static/css/app.css` (FR-041, US4-4): delete the `/* == Legacy page styles == */` section and any rule left in it; search `app/templates/` for every denylisted class and remove what remains; remove both `xfail` markers from `tests/unit/test_stylesheet.py`. `uv run pytest tests/unit/test_stylesheet.py` passes in full. Depends on T035–T059.
 - [ ] T061 [US4] Audit that behaviour is unchanged (FR-040, SC-011), recording the results in the PR description draft:
   - **Routes**: the sorted `(methods, path)` list of `app.main.app.routes` on `main` and on this branch differs only by `POST /theme` and `GET /admin/components` (run after US5 and US7 are merged into the branch, or re-run then);
-  - **Fields**: for every template, the set of `name=` attributes inside `<form>` on `main` (`git show main:<path>`) equals the set on this branch;
+  - **Fields**: `tests/integration/test_form_contract.py` (T092) is green and `git diff main -- tests/integration/form_contract.json` shows only the file being added, never a changed record: every form on every page keeps its method, action and field names;
   - **Tests**: `git diff main -- tests/integration tests/unit` shows only markup-query rewrites, the wording changes of pages.md §4 and new tests; no behaviour or access assertion removed or loosened (SC-002).
 - [ ] T062 [US4] Complete [contracts/pages.md §4](./contracts/pages.md#4-wording-changes-fr-040): every text change made in Phases 4–6 is listed with its rule, including every Students-tab hint added by T053 in §4.3.
 
@@ -389,7 +397,7 @@ rule references them; `tests/unit/test_stylesheet.py` passes (quickstart §5).
 - **Setup (Phase 1)**: none.
 - **US1 approval gate (Phase 2)**: depends on T002 (the mockup loads the fonts). **Blocks** every
   task that changes `app/static/css/app.css` or `app/templates/`.
-- **Foundational (Phase 3)**: 3a (T008–T014) needs only Phase 1 and may run alongside Phase 2; 3b
+- **Foundational (Phase 3)**: 3a (T008–T014 and T092) needs only Phase 1 and may run alongside Phase 2; 3b
   (T015–T031) starts after T007. Blocks every story phase below.
 - **US2 (Phase 4)**, **US3 (Phase 5)**: after Foundational; independent of each other.
 - **US4 (Phase 6)**: T056–T059 after Foundational; T060 (legacy CSS removal) after US2, US3 and
@@ -422,7 +430,7 @@ rule references them; `tests/unit/test_stylesheet.py` passes (quickstart §5).
 ### Parallel Opportunities
 
 - T002 and T003; T004 alongside T002.
-- T009–T013 (different test modules), and all of 3a alongside Phase 2.
+- T009–T013 and T092 (different test modules, after T008), and all of 3a alongside Phase 2.
 - T016–T026: eleven component files, all independent.
 - Test tasks marked [P] at the start of each story.
 - US2 and US3 page tasks touch different templates and can be split between people; they share

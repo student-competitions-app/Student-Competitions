@@ -93,7 +93,9 @@ it is an unknown address for everyone.
   - `test_theme.py`;
   - `test_component_gallery.py`;
   - `test_layout.py`;
-  - `test_page_patterns.py`.
+  - `test_page_patterns.py`;
+  - `test_form_contract.py`, with its expected forms in `form_contract.json`, generated once from
+    the current templates before the rebuild (research D17).
 - Screenshots: Playwright, through `uv run --with playwright`, is a one-off review aid and not part
   of the suite (research D1).
 
@@ -229,6 +231,8 @@ tests/
     ├── test_component_gallery.py      # NEW: US7
     ├── test_layout.py                 # NEW: US2, US6 (frame, menu, favicon, footer)
     ├── test_page_patterns.py          # NEW: US3 (error summary, confirmations, back links, badges, link buttons)
+    ├── test_form_contract.py          # NEW: SC-011 (every form keeps its method, action and field names)
+    ├── form_contract.json             # NEW: the expected forms, generated once before the rebuild
     └── (milestone 1–9 modules)        # CHANGED: markup assertions → tests/html.py (see below)
 
 docs/requirements/ui-guidelines.md     # NEW: the binding guidelines (research D20)
@@ -272,8 +276,13 @@ address, method, text, status and role are still asserted exactly (research D17,
 2. **Test harness**:
    - `tests/html.py`;
    - rewrite the markup assertions of the milestone 1–9 tests to use it, against the **current**
-     templates. The suite must stay green, which proves the rewrite kept every assertion's meaning
-     before any page changes.
+     templates;
+   - `test_form_contract.py` and `form_contract.json`, generated once from the **current**
+     templates.
+
+   The suite must stay green, which proves the rewrite kept every assertion's meaning before any
+   page changes. From then on `form_contract.json` does not change, so the contract proves every
+   form keeps its field names through the rebuild (SC-011).
 3. **Foundation**:
    - the token block and Pico mapping in `app.css`;
    - `@font-face`;

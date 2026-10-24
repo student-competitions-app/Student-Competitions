@@ -1,23 +1,24 @@
 {% extends "layouts/base.html" %}
+{% from "components/frame.html" import page_heading %}
+{% from "components/feedback.html" import notice as show_notice %}
+{% from "components/form.html" import error_summary, field, form_actions %}
 
 {% block title %}Sign in — {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="auth">
-  <h1>Sign in</h1>
-  {% if message %}
-  <p class="auth-message" role="alert">{{ message }}</p>
-  {% elif notice %}
-  <p class="notice" role="status">{{ notice }}</p>
-  {% else %}
+<div class="narrow">
+  {{ page_heading("Sign in") }}
+  {{ error_summary(errors, form_error, order=["email"]) }}
+  {% if notice and not (errors or form_error) %}
+  {{ show_notice(notice, "info") }}
+  {% elif not (errors or form_error) %}
   <p>Enter your email address and we will send you a sign-in code.</p>
   {% endif %}
   <form method="post" action="/login">
-    <label for="email">Email address</label>
-    <input type="email" id="email" name="email" required autocomplete="email" value="{{ email }}">
+    {{ field("email", "Email address", value=values.email, error=errors.email, type="email", attrs={"required": True, "autocomplete": "email"}) }}
     <input type="hidden" name="next" value="{{ next }}">
-    <button type="submit">Send code</button>
+    {{ form_actions("Send code") }}
   </form>
-  <p class="auth-alternatives"><a href="/data-deletion">Delete my data</a></p>
-</section>
+  <p><a href="/data-deletion">Delete my data</a></p>
+</div>
 {% endblock %}

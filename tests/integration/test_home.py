@@ -290,13 +290,14 @@ def test_status_line_reads_as_text(
     )
 
 
-def test_status_line_sits_between_the_questions_and_the_footer(admin_client: TestClient) -> None:
+def test_status_line_is_in_the_footer(admin_client: TestClient) -> None:
+    """Milestone 10 FR-036: the database line moved from under the questions into the footer of
+    the home page, in muted text (contracts/pages.md §4.1)."""
     body = admin_client.get("/").text
-    status = _status_line(body).inner_start
-    questions = _questions_section(body)
-    assert questions is not None and questions.inner_end is not None
+    status = _status_line(body)
     footer = html.parse(body).find_all("footer")[0]
-    assert questions.inner_end < status < footer.inner_start
+    assert footer.inner_end is not None
+    assert footer.inner_start < status.inner_start < footer.inner_end
 
 
 @pytest.mark.parametrize("failing_read", ["list_questions", "read_database_status"])

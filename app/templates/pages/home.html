@@ -1,18 +1,17 @@
 {% extends "layouts/base.html" %}
+{% from "components/card.html" import card %}
+{% from "components/feedback.html" import notice, empty_state %}
 
 {% block title %}{{ app_name }} — {{ app_tagline }}{% endblock %}
 
 {% block content %}
-<section class="hero">
-  <h1>{{ app_name }}</h1>
-  <p class="tagline">{{ app_tagline }}</p>
-  <p>{{ app_description }}</p>
-</section>
+<h1>Welcome to {{ app_name }}</h1>
+<p class="lead">{{ app_tagline }}</p>
 <section id="areas" aria-labelledby="areas-heading">
   <h2 id="areas-heading">Your areas</h2>
-  <ul>
+  <ul class="card-grid">
     {% for area in areas %}
-    <li><a href="{{ area.path }}">{{ area.title }}</a></li>
+    <li>{{ card(area.title, href=area.path, description=area.description) }}</li>
     {% endfor %}
   </ul>
 </section>
@@ -20,17 +19,22 @@
 <section id="questions" aria-labelledby="questions-heading">
   <h2 id="questions-heading">Sample questions</h2>
   {% if questions %}
-  <ol class="question-list">
+  <ol>
     {% for question in questions %}
-    <li>{{ question.text }}</li>
+    <li class="keep-lines">{{ question.text }}</li>
     {% endfor %}
   </ol>
   {% else %}
-  <p class="questions-empty">No questions yet.</p>
+  {{ empty_state("No questions yet.") }}
   {% endif %}
 </section>
-<p class="db-status" data-engine="{{ db_status.engine }}" data-revision="{{ db_status.revision }}" data-boots="{{ db_status.boots }}">Database: {{ db_status.display_name }} · schema revision <code>{{ db_status.revision }}</code> · boot #{{ db_status.boots }}</p>
 {% else %}
-<p class="data-unavailable" role="status">Question data is temporarily unavailable. Please try again in a moment.</p>
+{{ notice("Question data is temporarily unavailable. Please try again in a moment.", "info") }}
+{% endif %}
+{% endblock %}
+
+{% block footer_extra %}
+{% if data_available %}
+<p data-engine="{{ db_status.engine }}" data-revision="{{ db_status.revision }}" data-boots="{{ db_status.boots }}">Database: {{ db_status.display_name }} · schema revision <code>{{ db_status.revision }}</code> · boot #{{ db_status.boots }}</p>
 {% endif %}
 {% endblock %}

@@ -64,18 +64,24 @@ def _page(
     *,
     email: str = "",
     next_path: str = "/",
-    message: str | None = None,
+    errors: dict[str, str] | None = None,
+    form_error: str | None = None,
     notice: str | None = None,
     status_code: int = 200,
 ) -> HTMLResponse:
+    """A sign-in step in the shared form shape (specs/010-design-system-ui-guidelines
+    data-model §4.2): a message about the address or the code goes to `errors` under that
+    field, and one about the whole attempt (a limit, an outage) to `form_error`."""
     return templates.TemplateResponse(
         request,
         template,
         {
             "app_name": APP_NAME,
             "email": email,
+            "values": {"email": email},
             "next": next_path,
-            "message": message,
+            "errors": errors or {},
+            "form_error": form_error,
             "notice": notice,
         },
         status_code=status_code,
@@ -139,7 +145,7 @@ def request_code(
             STEP_ONE,
             email=email,
             next_path=next_path,
-            message=INVALID_EMAIL,
+            errors={"email": INVALID_EMAIL},
             status_code=400,
         )
     settings = _settings(request)
@@ -157,7 +163,7 @@ def request_code(
             STEP_ONE,
             email=submission.email,
             next_path=next_path,
-            message=UNAVAILABLE,
+            form_error=UNAVAILABLE,
             status_code=503,
         )
     if not allowed:
@@ -166,7 +172,7 @@ def request_code(
             STEP_ONE,
             email=submission.email,
             next_path=next_path,
-            message=TOO_MANY,
+            form_error=TOO_MANY,
             status_code=429,
         )
     background_tasks.add_task(
@@ -205,7 +211,7 @@ def submit_code(
             STEP_TWO,
             email=email,
             next_path=next_path,
-            message=INVALID_CODE,
+            errors={"code": INVALID_CODE},
             status_code=400,
         )
     settings = _settings(request)
@@ -219,7 +225,7 @@ def submit_code(
             STEP_TWO,
             email=submission.email,
             next_path=next_path,
-            message=UNAVAILABLE,
+            form_error=UNAVAILABLE,
             status_code=503,
         )
     if started is None:
@@ -228,7 +234,7 @@ def submit_code(
             STEP_TWO,
             email=submission.email,
             next_path=next_path,
-            message=INVALID_CODE,
+            errors={"code": INVALID_CODE},
             status_code=400,
         )
     token, current_role = started
@@ -253,7 +259,7 @@ def logout(request: Request, session: SessionDep) -> Response:
         except SQLAlchemyError as exc:
             # Keep the cookie: clearing it would look like a logout while the session lives on.
             logger.error("Sign-out unavailable: %s", type(exc).__name__)
-            return _page(request, STEP_ONE, message=UNAVAILABLE, status_code=503)
+            return _page(request, STEP_ONE, form_error=UNAVAILABLE, status_code=503)
     response = RedirectResponse("/login", status_code=303)
     clear_session_cookie(response, settings)
     return response

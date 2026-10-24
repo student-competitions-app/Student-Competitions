@@ -97,7 +97,7 @@ def test_a_teacher_sees_everything_stored_on_their_consent(
         "Olena",
         "Kovalenko",
         "Kyiv Lyceum (Kyiv) — Write",
-        "Lviv School (Lviv) — Read (deactivated)",
+        "Lviv School (Lviv) — Read Deactivated",
         "Accepted ",
         " UTC · Teacher · version 1",
         "Resend",
@@ -106,6 +106,7 @@ def test_a_teacher_sees_everything_stored_on_their_consent(
         assert shown in main
     assert ("Roles", "Teacher") in html.details(body)
     assert ("Can create competitions", "Yes") in html.details(body)
+    assert html.badges(body) == ["Deactivated"]
     assert "/profile/withdraw" in [a.href for a in html.content_links(body)]
 
 
@@ -307,7 +308,8 @@ def test_a_blocked_teacher_and_student_sees_the_enrolment_marked(
     with Session(app.state.engine) as session:
         set_class_active(session, teacher_id, class_id, False)
     body = signed_in(TARAS, Role.TEACHER).get("/profile").text
-    assert ("Class", "KN-21 (deactivated)") in html.details(body)
+    assert ("Class", "KN-21 Deactivated") in html.details(body)
+    assert html.badges(body) == ["Deactivated"]
     assert ("Roles", "Teacher") in html.details(body)
     assert STUDENT_NOTE in body
 

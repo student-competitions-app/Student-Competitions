@@ -28,15 +28,39 @@ router = APIRouter()
 
 @dataclass(frozen=True)
 class Area:
+    """One area: its address, its title, the roles that may open it, and the one-line
+    description its card shows on the home page (specs/010-design-system-ui-guidelines FR-035)."""
+
     path: str
     title: str
     roles: frozenset[Role]
+    description: str
 
 
-ADMIN_AREA = Area("/admin", "Administrator area", frozenset({Role.ADMIN}))
-TEACHER_AREA = Area("/teacher", "Teacher area", frozenset({Role.TEACHER}))
-STUDENT_AREA = Area("/student", "Student area", frozenset({Role.STUDENT}))
-STAFF_AREA = Area("/staff", "Staff area", frozenset({Role.ADMIN, Role.TEACHER}))
+ADMIN_AREA = Area(
+    "/admin",
+    "Administrator area",
+    frozenset({Role.ADMIN}),
+    "Manage teachers, educational institutions and subjects.",
+)
+TEACHER_AREA = Area(
+    "/teacher",
+    "Teacher area",
+    frozenset({Role.TEACHER}),
+    "Manage your classes and invite your students.",
+)
+STUDENT_AREA = Area(
+    "/student",
+    "Student area",
+    frozenset({Role.STUDENT}),
+    "Take part in competitions and see your results.",
+)
+STAFF_AREA = Area(
+    "/staff",
+    "Staff area",
+    frozenset({Role.ADMIN, Role.TEACHER}),
+    "Pages shared by administrators and teachers.",
+)
 AREAS = (ADMIN_AREA, TEACHER_AREA, STUDENT_AREA, STAFF_AREA)
 
 

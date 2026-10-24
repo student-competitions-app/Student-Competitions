@@ -359,6 +359,13 @@ label {
   font-weight: var(--sc-weight-semibold);
 }
 
+/* Text entered by people (a question) keeps its line breaks, and a long word wraps rather than
+   push the page wider than a phone. */
+.keep-lines {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 .visually-hidden {
   position: absolute;
   width: var(--sc-border-width);
@@ -396,6 +403,12 @@ body > main {
   body > main {
     padding-block: var(--sc-space-5) var(--sc-space-6);
   }
+}
+
+/* A narrow centred column, for the sign-in steps and the other one-form public pages. */
+.narrow {
+  max-width: var(--sc-form-width);
+  margin-inline: auto;
 }
 
 .skip-link {
@@ -763,6 +776,13 @@ body > footer.site-footer {
   margin: 0;
 }
 
+/* The line under a page's h1 that says what the page is for. */
+.lead {
+  margin-top: calc(-1 * var(--sc-space-1));
+  color: var(--sc-muted);
+  font-size: var(--sc-text-h4);
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -882,7 +902,29 @@ button[type="submit"] {
 .card-description {
   margin: 0;
   color: var(--sc-muted);
-}.card + .card {
+}/* Cards in a grid: one column on a phone, as many as fit from 768 px. */
+.card-grid {
+  display: grid;
+  gap: var(--sc-space-2);
+  margin: 0 0 var(--sc-space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.card-grid > li {
+  margin: 0;
+  max-width: none;
+  list-style: none;
+}
+
+@media (min-width: 768px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: var(--sc-space-3);
+  }
+}
+
+.card + .card {
   margin-top: var(--sc-space-2);
 }
 
@@ -1225,6 +1267,15 @@ fieldset > legend {
   overflow-wrap: anywhere;
 }
 
+.details-list ul {
+  margin: 0;
+  padding-left: var(--sc-space-3);
+}
+
+.details-list li {
+  margin-bottom: var(--sc-space-1);
+}
+
 .details-list dd > :last-child {
   margin-bottom: 0;
 }
@@ -1320,66 +1371,6 @@ fieldset > legend {
 
 /* The milestone 1–9 page rules, moved unchanged. Each page rebuilt from the components deletes
    the rules it no longer uses; the section goes when the last page is rebuilt (T060). */
-
-.hero {
-  padding-block: 2rem;
-}
-
-.hero > h1 {
-  margin-bottom: 0.25rem;
-}
-
-.hero > .tagline {
-  color: var(--pico-muted-color);
-  font-size: 1.125rem;
-  margin-bottom: 1.5rem;
-}
-
-/* Question text keeps its line breaks, and long words wrap rather than push the page wider than
-   a phone screen (spec edge cases). */
-.question-list li {
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-}
-
-.questions-empty {
-  color: var(--pico-muted-color);
-}
-
-/* Shown in place of the data when the database fails mid-request (FR-026): visible, not alarming. */
-.data-unavailable {
-  border-left: 0.25rem solid var(--pico-muted-border-color);
-  color: var(--pico-muted-color);
-  padding: 0.75rem 1rem;
-}
-
-/* Which database is serving, at which schema revision, and how many times the application has
-   started against it (FR-025). Quiet like the release footer; the revision wraps on a phone. */
-.db-status {
-  color: var(--pico-muted-color);
-  font-size: 0.875rem;
-  overflow-wrap: anywhere;
-}
-
-.db-status code {
-  font-size: 0.875em;
-}
-
-/* The sign-in pages: a narrow column, and the messages visible without alarming. */
-.auth {
-  margin-inline: auto;
-  max-width: 28rem;
-  padding-block: 2rem;
-}
-
-.auth-message {
-  border-left: 0.25rem solid var(--pico-del-color);
-  padding: 0.75rem 1rem;
-}
-
-.auth-alternatives {
-  margin-top: 1.5rem;
-}
 
 /* The subject list: names wrap rather than widen the page; the one-button forms sit inline with
    the links in the actions column. */
@@ -1484,20 +1475,6 @@ fieldset > legend {
   margin-bottom: 0.5rem;
 }
 
-.consent-text {
-  border-left: 0.25rem solid var(--pico-muted-border-color);
-  padding-left: 1rem;
-}
-
-.detail-lines {
-  margin: 0;
-  padding-left: 1.25rem;
-}
-
-.consent-record {
-  margin-block: 1rem;
-}
-
 /* The Students tab of the teacher area (specs/009-classes-students-management FR-048, research
    D7): the Region, Educational institution and Class lists in a row from 768 px, stacked in that
    order below, each in its own small form with a Show button. */
@@ -1543,4 +1520,39 @@ fieldset > legend {
 
 .students-table .row-actions {
   white-space: nowrap;
+}
+
+.hero {
+  padding-block: 2rem;
+}
+
+.hero > h1 {
+  margin-bottom: 0.25rem;
+}
+
+
+/* The sign-in pages: a narrow column, and the messages visible without alarming. */
+.auth {
+  margin-inline: auto;
+  max-width: 28rem;
+  padding-block: 2rem;
+}
+
+.auth-message {
+  border-left: 0.25rem solid var(--pico-del-color);
+  padding: 0.75rem 1rem;
+}
+
+.auth-alternatives {
+  margin-top: 1.5rem;
+}
+
+.consent-text {
+  border-left: 0.25rem solid var(--pico-muted-border-color);
+  padding-left: 1rem;
+}
+
+.detail-lines {
+  margin: 0;
+  padding-left: 1.25rem;
 }

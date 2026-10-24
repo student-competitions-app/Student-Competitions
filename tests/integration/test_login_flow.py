@@ -454,7 +454,8 @@ def test_a_blocked_student_who_teaches_signs_in_as_a_teacher_only(
     assert ("role", "student") not in buttons
     profile = client.get("/profile").text
     assert ("Roles", "Teacher") in html.details(profile)
-    assert ("Class", "KN-21 (deactivated)") in html.details(profile)
+    assert ("Class", "KN-21 Deactivated") in html.details(profile)
+    assert html.badges(profile) == ["Deactivated"]
 
 
 def test_a_student_signs_in_again_once_the_class_is_reactivated(

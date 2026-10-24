@@ -478,7 +478,10 @@ body.mockup {
 .data-table tbody tr:last-child td { border-bottom: 0; }
 .data-table tbody tr:hover td { background: var(--sc-page); }
 .row-actions { white-space: nowrap; width: 1%; }
-.row-actions > * + * { margin-left: var(--sc-space-1); }
+/* Every row action has the same gap and the same width, whether it is a link or a one-button
+   form, so Activate and Deactivate take the same room. */
+.frame .row-actions > * + * { margin-left: var(--sc-space-1); }
+.frame .row-actions .small { min-width: 7.5rem; }
 
 .frame-phone .data-table, .frame-phone .data-table tbody, .frame-phone .data-table tr, .frame-phone .data-table td { display: block; }
 .frame-phone .data-table { background: none; border: 0; border-radius: 0; overflow: visible; }
@@ -502,16 +505,17 @@ body.mockup {
   font-weight: var(--sc-weight-semibold);
 }
 .frame-phone .data-table td.row-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: var(--sc-space-1);
   margin-top: var(--sc-space-2);
   padding-top: var(--sc-space-2);
   border-top: 1px solid var(--sc-border);
-  white-space: normal;
 }
 .frame-phone .data-table td.row-actions::before { display: none; }
 .frame-phone .row-actions > * + * { margin-left: 0; }
+.frame-phone .row-actions .small { width: 100%; min-width: 0; padding-inline: var(--sc-space-1); }
 
 .badge {
   display: inline-block;

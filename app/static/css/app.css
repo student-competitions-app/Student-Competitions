@@ -864,7 +864,7 @@ button[type="submit"] {
 /* Card (components/card.html, FR-026): a whole-card link when it has one. */
 .card {
   position: relative;
-  margin: 0;
+  margin: 0 0 var(--sc-space-3);
   padding: var(--sc-space-3);
   background: var(--sc-surface);
   border: var(--sc-border-width) solid var(--sc-border);
@@ -918,6 +918,11 @@ button[type="submit"] {
   list-style: none;
 }
 
+.card-grid .card {
+  height: 100%;
+  margin: 0;
+}
+
 @media (min-width: 768px) {
   .card-grid {
     grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
@@ -925,9 +930,6 @@ button[type="submit"] {
   }
 }
 
-.card + .card {
-  margin-top: var(--sc-space-2);
-}
 
 /* Data table (components/table.html, FR-027): a real table from 768 px, a card of labelled values
    per row below it. Long values wrap; nothing scrolls sideways. */

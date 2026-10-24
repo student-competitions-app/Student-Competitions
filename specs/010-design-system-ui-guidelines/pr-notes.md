@@ -31,9 +31,22 @@ No handler needed a change: the 404, the "Access denied" 403 and the "Request re
 run, and `app_name` is now a template global. `test_layout.py` checks the identity on each of
 these pages.
 
+## Screenshots (T086)
+
+A throw-away Playwright script (`uv run --with playwright`, kept out of the repository) captured
+56 pages for four people (signed out, an administrator, a teacher, a student), at 375 and 1280 px,
+light and dark, set by the `sc_theme` cookie: 224 screenshots in the git-ignored `screenshots/`,
+with `screenshots/index.html` as the contact sheet. The report found **0 problems**: no page wider
+than 375 px at phone width, body text 16 px at 375 px and 18 px at 1280 px, line height 1.5, and
+every page rendered the chosen theme. The only non-200 statuses are the intended error states
+(400 link pages, 404 not-found pages, 403 access denied, 409 refusals).
+
 ## Gate (T089)
 
-To be recorded.
+Checked by commit order on this branch with the quickstart §2 script: the first commit adding
+`| Approved |` to `design-approval.md` is `47d6a71`, the first commit changing `app/templates/`
+or `app/static/css/app.css` is `12f4a72`, and `47d6a71` is an ancestor of `12f4a72`. **Gate
+kept.**
 
 ## Behaviour audit (T061)
 
@@ -56,4 +69,16 @@ Run on 2026-10-24, after US5 and US7.
 
 ## Walk-through (T088)
 
-To be recorded.
+- **Phone, student** (375 px): sign-in with **Dark** chosen first, then home with one card
+  (**Student area**), the user menu and the profile with its back link, all checked in the
+  screenshots and in a browser with JavaScript disabled: the theme switch works on the sign-in
+  page, the choice survives signing in, the menu opens and closes, and **Device** removes the
+  choice. The SC-010 timing (under two minutes) was not measured by a person.
+- **Desktop, administrator** (1280 px): the subjects list, the duplicate-name form, the in-use and
+  the plain delete confirmations, the cards below 768 px and the gallery, in the screenshots and in
+  `test_page_patterns.py`.
+- **Teacher**: the Students tab's three lists, badges and table; the lists keep milestone 9's
+  auto-submit, unchanged.
+- **Themes**: Light, Dark and Device from the user menu and the sign-in page; `test_theme.py`.
+- **Production guard**: checked by `test_component_gallery.py` with `settings.production` on (every
+  visitor gets the same 404 as an unknown address), not by starting the server with `RENDER=true`.

@@ -30,3 +30,14 @@ The mockup takes these choices. Each is easy to change before the rebuild starts
    **Delete** are red.
 5. **The error summary**: a red-bordered box with a tinted background. The message is repeated in
    red, bold, above the field.
+
+## Screenshot review (T087)
+
+Before merge, the product owner reviews every rebuilt page in `screenshots/index.html` (git-ignored;
+regenerate it with the throw-away capture script of research D1). The capture of 2026-10-24 has
+224 screenshots of 56 pages, at 375 and 1280 px, light and dark, with 0 problems in its report.
+
+| Date | Round | Branch commit | Changes requested | Changes made | Result |
+|---|---|---|---|---|---|
+| 2026-10-24 | 1 | the commit that adds this table | | | Awaiting review |
+

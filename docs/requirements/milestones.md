@@ -50,7 +50,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - The **Teachers** and **Educational institutions** tabs are placeholders in this milestone.
    - A **subject** is a knowledge area in which competitions are held, such as mathematics or physics. The **Subjects** tab lists all subjects, active and deactivated, sorted by name ignoring case, with deactivated ones marked. An empty list shows "No subjects yet". The list starts empty.
    - **Create** and **Rename** use a form with one field, the name: trimmed, 1–200 characters, no control characters, and unique ignoring case, including deactivated subjects and non-Latin letters. An invalid or duplicate name shows the form again with the error and the entered value. A change of case alone is a valid rename.
-   - **Deactivate** keeps the subject but stops offering it for new questions (milestone 10) and new competitions (milestone 11). Questions and competitions that already use it stay valid. **Activate** reverses it.
+   - **Deactivate** keeps the subject but stops offering it for new questions (milestone 11) and new competitions (milestone 12). Questions and competitions that already use it stay valid. **Activate** reverses it.
    - **Delete** asks for confirmation and is refused while anything uses the subject, suggesting deactivation instead.
 
 7. **Administrator area: educational institutions.** _Spec:_ [007-region-and-institutions-management](../../specs/007-region-and-institutions-management/spec.md)
@@ -73,7 +73,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - `TEACHER_EMAILS` and `STUDENT_EMAILS` are retired: roles they granted were removed once, at deploy. `ADMIN_EMAILS` manages only the administrator role. Emailed links use `PUBLIC_BASE_URL`. No log line contains an email, a name or a link token.
 
 9. **User management with consent: classes and students.** _Spec:_ [009-classes-students-management](../../specs/009-classes-students-management/spec.md)
-   - The teacher page is a teacher area like the administrator area, with two tabs: **Students** (opened by `/teacher`) and **Competitions**, a placeholder for milestones 11 and 14.
+   - The teacher page is a teacher area like the administrator area, with two tabs: **Students** (opened by `/teacher`) and **Competitions**, a placeholder for milestones 12 and 15.
    - On **Students**, three lists in a row (**Region**, **Educational institution**, **Class**; stacked on narrow screens) choose a class among the available institutions the teacher is linked to, each marked "Read" or "Write". The selection is kept in the page address, and a message says what to choose next.
    - A class belongs to one institution and has a name (unique ignoring case within the institution) and a year of study from 1 to 12. With Write access a teacher creates, edits, deactivates (after a confirmation), activates and deletes classes; a class with a student cannot be deleted.
    - Teachers with Write access invite students one by one into an active class, through the milestone 8 consent flow. Nothing is stored until the student presses **I agree**; only then are the student role and the enrolment (institution and class) stored. An address that already belongs to a student is refused without naming their class, and student invitations are limited to 100 per teacher per hour.
@@ -84,23 +84,72 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
 
 ## Upcoming
 
-  10. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
+10. **Professional design system and UI guidelines.** The application looks and works like a professionally designed educational website: calm, readable, consistent and trustworthy for students, teachers and administrators. It gets a visual identity, a library of shared page components and written UI guidelines that follow established practice for educational and public-service websites. Every existing page moves onto them with no change in behaviour, and every later milestone builds its pages from them.
+    _Audience:_ students from school to university (years of study 1–12), teachers and administrators. Students mostly use phones and many have no laptop; young readers scan rather than read, skip long instructions, and rely on an in-page back link rather than the browser's. Teachers and administrators mostly work on desktops with lists and forms. Every page works for the youngest student who can take a written competition and stays efficient for staff.
+    _Design principles_ (each one explained, with sources, in the guidelines):
+    - **Calm and focused.** Content comes first, with no decoration that competes with it. No moving or blinking content; transitions are subtle. No advertising or promotional content.
+    - **Clear and consistent.** One navigation per page. The same component looks and behaves the same everywhere and sits in the same place. Every page below an area's main page has a visible back link.
+    - **Readable.** Body text at least 16 px on phones and 18 px on desktops, line height at least 1.5, lines no longer than about 70 characters, left-aligned, never justified. Emphasis uses bold, not italics, underlining or capitals. The font is **Open Sans** (open licence, Latin and Cyrillic letters) in regular 400, semibold 600 and bold 700, served from the application itself, never from a third-party font service, with the system font stack as a fallback.
+    - **Plain language.** Short sentences and words students know. Buttons are verbs ("Save", "Invite student"). Abbreviations are spelled out. Instructions are a sentence or two, placed where they are needed.
+    - **Forgiving.** Every form error is shown next to its field, and also in an error summary at the top of the page (heading "There is a problem", one link per error that moves to its field). Entered values are kept. Destructive actions always ask for confirmation and say what will happen.
+    _Visual identity:_ a wordmark for "Student Competitions" with a simple logo mark, also used as the favicon; the **Classroom blue** palette; neutral surfaces with content grouped on cards against a slightly tinted page background; an 8 px spacing grid; one corner radius (8 px for controls, 12 px for cards); a type scale with clear heading levels. All of these are design tokens defined once at the top of `app.css`, and the rest of the CSS uses the tokens instead of literal values.
+    _Classroom blue:_ a deep blue top bar, a bright blue for primary actions, links and the current tab, and amber as the accent (the logo mark, highlights). Success is green and destructive actions are red. The main tokens, light / dark:
+
+    | Token | Light | Dark |
+    |---|---|---|
+    | Page background | `#f4f6fb` | `#0d1424` |
+    | Surface (cards, tables) | `#ffffff` | `#151f35` |
+    | Text | `#172033` | `#e6eaf2` |
+    | Muted text | `#556070` | `#9aa6bd` |
+    | Border | `#dde3ee` | `#26324d` |
+    | Top bar | `#16337a` | `#111a2e` |
+    | Primary (buttons, current tab) | `#1f56d6` | `#6c9cff` |
+    | Text on primary | `#ffffff` | `#0d1424` |
+    | Primary tint (selection, icons) | `#e7eefc` | `#1d2c4f` |
+    | Accent | `#f2a516` | `#f5b83d` |
+    | Success / its tint | `#17803d` / `#e5f5ea` | `#5fcf86` / `#13291c` |
+    | Danger / its tint | `#c0392b` / `#fdf0ee` | `#ff8a7a` / `#341b19` |
+
+    _Light and dark themes:_ both themes are complete, and a theme switch with three choices (**Light**, **Dark**, **Device**) sits in the user menu and on the sign-in page. **Device**, the default, follows the device's setting. The choice is kept in a cookie in that browser, so the server renders every page in the chosen theme with no flash on load and no JavaScript; it is not stored in the database and does not follow the person to another browser.
+    _Stack:_ still Jinja2, HTMX and Pico.css v2, with no build step and no new runtime frontend dependency. The look comes from overriding Pico's CSS variables; Pico's own stylesheet is not edited. The font files (`woff2`) are kept in `static/`.
+    _Page layout:_ a top bar with the logo, the product name and the current role; the email, the role switch, the theme switch and **Log out** in a user menu that opens without JavaScript and folds into the top bar on a phone; the area tabs below it; one content width on every page; a quiet footer with the version.
+    _Components:_ Jinja macros in `templates/components/`, each with one purpose:
+    - **Top bar and user menu**, **area tabs**, **back link**, and **page heading** with the page's primary action.
+    - **Button** in three kinds: *primary* (at most one per page or section), *secondary*, and *destructive* (Delete, Remove, Deactivate, Withdraw consent). The kind decides the look, not whether the HTML is a link or a form: a link that opens a form or a confirmation page looks like the action it leads to.
+    - **Card**, for grouping content and for the entries on the home page.
+    - **Data table** with row actions: all actions in a row look the same and sit together. Long values wrap. At phone width (below 768 px) each row becomes a card of labelled values, so the page never scrolls sideways.
+    - **Status badge** (Active / Deactivated, Read / Write), always with text.
+    - **Empty state**: the existing messages ("No subjects yet", "Select a region", …) with a short hint about what to do next.
+    - **Notice** in three kinds (success, error, information).
+    - **Form field** (label, optional hint, error, entered value kept), **error summary**, and the form's actions (the primary button first, then **Cancel** as a link).
+    - **Confirmation page**: the question names the item ("Delete “Physics”?"), the consequence is stated, the destructive button repeats the verb, then **Cancel**. Its refusal variant explains why ("is in use") and offers the alternative (deactivate).
+    - **Details list**: label and value pairs, as on the profile and invitation pages.
+    - **Selectors**: the list-and-detail pair (regions → institutions) and the chained lists (region → institution → class), ready for reuse in milestones 11 and 12.
+    _Home page:_ a start page for the current role: a greeting and a card for each area the role can open, with a one-line description of what is done there. The database status line moves to the footer in muted text. The sample questions keep their place until milestone 11 removes them.
+    _Guidelines:_ `docs/requirements/ui-guidelines.md` sets out the principles with their sources; the tokens; when to use each component and each kind of button; wording (the patterns for buttons, confirmations, errors and empty states); and behaviour at phone width. It also records the research for later screens, so they start from it: for taking a competition (milestone 13), a visible countdown with warnings before the end, a "saved" status for answers, and a clear final submit. The constitution's styling rule points to the guidelines, so every later spec and plan is checked against them. A new pattern is first added to the component library and the guidelines, never hand-built on a single page.
+    _Design approval:_ the font (Open Sans) and the palette (Classroom blue) were chosen from mockups of several candidates. Before the pages are rebuilt, a mockup of the visual identity and of key pages (sign-in, home, a list, a form with errors, a confirmation) at phone and desktop width, in light and dark mode, is reviewed and approved.
+    _Gallery:_ `/admin/components`, open only to administrators and not linked from the tabs, shows every component in every variant with sample data.
+    _Existing pages:_ every page (sign-in, role choice, home, profile, consent and data deletion, the administrator and teacher areas, confirmations, error pages) is built from the components. Addresses, fields, texts, messages, the order of steps and access rules stay the same; only wording that breaks the plain-language rules may change. Page-specific CSS classes (`subjects-table`, `teachers-table`, `subjects-empty`, …) are removed; `app.css` holds only the tokens, the page layout and the components.
+    _Out of scope:_ accessibility work (conformance to WCAG, screen reader and keyboard-only testing). Pages keep the accessibility features they already have.
+    _Test:_ all existing tests pass; only tests that check markup rather than behaviour may change. A test checks that every CSS class used in a template is defined in Pico.css or `app.css`, that every class in `app.css` is used, and that no template has an inline `style`. No page loads anything from another site. Choosing **Light** or **Dark** renders every following page, the sign-in page included, in that theme; **Device** and a missing or unknown cookie value follow the device. Teachers and students get "access denied" on the gallery. Screenshots of every page at phone (375 px) and desktop (1280 px) width, in light and dark mode, are reviewed before merge.
+
+11. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
     _Subjects:_ every question belongs to exactly one subject. The teacher selects it from the list kept on the **Subjects** tab (milestone 6), with no free-text entry, and the server accepts only a subject that exists. Teachers can filter the question bank by subject. The sample questions seeded in milestone 3 have no subject, and the migration deletes them, since no real data exists yet.
     _Test:_ question CRUD works and is visible only to teachers. A question without a subject or with an unknown subject is refused. Filtering by subject shows only that subject's questions.
 
-11. **Creating a competition (teacher).** A competition with a subject, a start time, duration, assignment to a class/students, a set of questions from the bank and reference answers.
+12. **Creating a competition (teacher).** A competition with a subject, a start time, duration, assignment to a class/students, a set of questions from the bank and reference answers.
     _Who can create:_ only a teacher with **Can create competitions** (milestone 8) can create or change competitions. A teacher without it sees no create action, and the server answers with "access denied". The setting covers all the teacher's institutions, so participants can be students of any of them, with Read or Write access. Students of other institutions cannot be assigned.
     _Subjects:_ the teacher selects the competition's subject first, from the list kept on the **Subjects** tab. The question picker then offers only questions of that subject, and the server refuses a competition that includes a question of another subject. Changing the subject of an upcoming competition is refused while it still holds questions of the old subject.
     _Test:_ a competition is created and correctly linked to its subject, questions and participants. A competition with a question from another subject is refused. A teacher without **Can create competitions** gets "access denied". A teacher with it can assign students of a Read-access institution, but not students of an institution they are not linked to.
 
-12. **Taking a competition (student).** List of assigned competitions, enforcement of the time window and duration, entering and submitting text answers. The student's lists of upcoming and past competitions show each competition's subject.
+13. **Taking a competition (student).** List of assigned competitions, enforcement of the time window and duration, entering and submitting text answers. The student's lists of upcoming and past competitions show each competition's subject.
     _Test:_ answers are saved; the competition is not accessible outside its time window.
 
-13. **Answer evaluation via LLM.** Each answer receives a score of 1–10 that takes level of detail into account; results are saved to the database.
+14. **Answer evaluation via LLM.** Each answer receives a score of 1–10 that takes level of detail into account; results are saved to the database.
     _Test:_ evaluation returns a structured result and it is persisted.
 
-14. **Best answer selection + results.** For each question, the best answer is selected from the group's answers; competition results are saved and displayed.
+15. **Best answer selection + results.** For each question, the best answer is selected from the group's answers; competition results are saved and displayed.
     _Who sees results:_ a teacher sees the results of the students of their own institutions, with Read or Write access (milestone 8). Results of students from other institutions are not shown to them.
     _Test:_ the best answer is determined, the results page works. A teacher with Read access sees the results of that institution's students and none from institutions they are not linked to.
 
-15. **Polish and hardening.** Results dashboards, E2E tests with Playwright, error handling, security. (Optional stretch goal: move part of the UI to React.)
+16. **Polish and hardening.** Results dashboards, E2E tests with Playwright, error handling, security. (Optional stretch goal: move part of the UI to React.)

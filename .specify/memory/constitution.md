@@ -31,9 +31,16 @@ The UI is server-rendered with Jinja2, made interactive with HTMX and styled wit
   Technology Stack. Adding a new runtime dependency MUST be justified in the feature's `plan.md`.
 - Prefer the simplest design that satisfies the spec (YAGNI); abstractions MUST have at least
   one concrete present need.
+- Every page MUST be built from the component library in `app/templates/components/` and MUST
+  follow the UI guidelines in `docs/requirements/ui-guidelines.md` (design tokens only, the
+  shared page frame, the button kinds, the wording patterns). A new UI pattern MUST first be
+  added to the component library, the component gallery (`/admin/components`) and the
+  guidelines, and only then used; it MUST NOT be hand-built on a single page.
 
 **Rationale**: A small team and a small user base (competitions of ~10 students) do not justify
-SPA complexity; SSR + HTMX keeps one language, one codebase and one deployment unit.
+SPA complexity; SSR + HTMX keeps one language, one codebase and one deployment unit. One
+component library and one set of guidelines keep every page calm, readable and consistent for
+students from year 1 to university, and stop each milestone from inventing its own look.
 
 ### III. Test-Backed Delivery (NON-NEGOTIABLE)
 
@@ -137,7 +144,7 @@ column shows when each component enters the codebase.
 | Language & web framework | Python + FastAPI | One FastAPI application serves all pages and HTMX fragments. | 1 |
 | Templating | Jinja2 | Every page is rendered on the server (Principle II). | 1 |
 | Interactivity | HTMX | Partial updates return HTML fragments from `templates/partials/`, never JSON for the UI. | 1+ (as needed) |
-| Styling | Pico.css | Semantic HTML styled by Pico.css; custom CSS only as overrides in `static/css/`; no CSS build step. | 1 |
+| Styling | Pico.css v2 | Restyled only by overriding its CSS variables with the design tokens in `static/css/app.css`; Pico's own stylesheet is not edited; no CSS build step; fonts self-hosted in `static/fonts/`; nothing loaded from another site. Pages follow `docs/requirements/ui-guidelines.md` (Principle II). | 1 (tokens and components from 10) |
 | Dependency & environment management | uv | `pyproject.toml` + committed `uv.lock`; no pip/poetry/requirements files. | 1 |
 | Lint & format | ruff | `ruff check` and `ruff format` are the only linter/formatter; enforced in CI from milestone 2. | 1 |
 | Unit & integration tests | pytest | Every milestone's "_Test:_" criterion is an automated pytest test (Principle III). | 1 |
@@ -190,8 +197,9 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
   call a service, render a template. Business logic MUST NOT live in routers or templates.
 - `services/` — business logic (competitions, scoring, users, email, LLM); independently
   unit-testable.
-- `templates/` — `layouts/`, `pages/`, `partials/` (HTMX fragments).
-- `static/` — `css/`, `js/`, `img/`.
+- `templates/` — `components/` (the component library: Jinja macros shared by every page),
+  `layouts/`, `pages/`, `partials/` (HTMX fragments).
+- `static/` — `css/`, `fonts/` (self-hosted fonts and their licence), `js/`, `img/`.
 
 ### Operational Constraints
 
@@ -233,8 +241,11 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
   - PATCH — clarifications, wording and typo fixes.
 - **Compliance**: every `plan.md` MUST include a Constitution Check; any deviation MUST be
   recorded in its Complexity Tracking table with justification and the simpler alternative
-  rejected. Reviewers MUST verify PRs against the Quality Gates above.
+  rejected. From milestone 11 the Constitution Check MUST include a **UI guidelines** row: the
+  feature's pages are built from the component library, use design tokens only, follow
+  `docs/requirements/ui-guidelines.md`, and any new pattern is added to the library, the
+  gallery and the guidelines first. Reviewers MUST verify PRs against the Quality Gates above.
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 1.0.2 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-10-24
+**Version**: 1.1.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-10-24

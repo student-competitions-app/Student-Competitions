@@ -39,5 +39,5 @@ regenerate it with the throw-away capture script of research D1). The capture of
 
 | Date | Round | Branch commit | Changes requested | Changes made | Result |
 |---|---|---|---|---|---|
-| 2026-10-24 | 1 | the commit that adds this table | | | Awaiting review |
+| 2026-10-24 | 1 | `b69c6ac` | None | None | Screenshots approved |
 

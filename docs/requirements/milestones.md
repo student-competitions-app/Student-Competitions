@@ -82,56 +82,15 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - Regions, institutions and classes form a chain. Deactivating any of them signs out and hides every student below it until it is activated again, without changing any other status; a blocked student cannot sign in with the student role but can still delete their data. The administrator confirms deactivating a region or an institution.
    - An institution with an enrolled student cannot be deleted; its empty classes are deleted with it. A student's profile shows the institution, the class and the year of study; withdrawal and **Delete my data** erase the enrolment with the rest.
 
+10. **Professional design system and UI guidelines.** _Spec:_ [010-design-system-ui-guidelines](../../specs/010-design-system-ui-guidelines/spec.md)
+   - The application has a visual identity: the "Student Competitions" wordmark with an amber logo mark (also the favicon), the Classroom blue palette, Open Sans served by the application itself, an 8 px spacing grid and one type scale, all defined once as design tokens. The look was approved from a mockup before any page changed.
+   - Every page shares one frame: a top bar with the logo, the product name and the current role, a user menu (profile link, role switch, theme switch, **Log out**) that opens without JavaScript and folds to an icon on a phone, the area tabs, one content width and a quiet footer.
+   - Every existing page is rebuilt from a library of shared components (buttons in three kinds, cards, data tables that become labelled cards on a phone, status badges, notices, empty states with a hint, form fields with an error summary, confirmations, details lists and selectors) with no change in addresses, fields, messages or access. Every page below an area's main page has a back link; every form error is shown beside its field and in a summary headed "There is a problem".
+   - The home page greets the person and shows one card per area their role can open, with what is done there; the database line moves to the footer.
+   - **Light**, **Dark** or **Device** (the default) is chosen in the user menu or on the sign-in page and kept in that browser only; the server renders every page in the chosen theme.
+   - Administrators see every component in every variant at `/admin/components`, outside production only. The binding UI guidelines are in [ui-guidelines.md](ui-guidelines.md); an automated check keeps every page on the tokens and the components.
+
 ## Upcoming
-
-10. **Professional design system and UI guidelines.** The application looks and works like a professionally designed educational website: calm, readable, consistent and trustworthy for students, teachers and administrators. It gets a visual identity, a library of shared page components and written UI guidelines that follow established practice for educational and public-service websites. Every existing page moves onto them with no change in behaviour, and every later milestone builds its pages from them.
-    _Audience:_ students from school to university (years of study 1–12), teachers and administrators. Students mostly use phones and many have no laptop; young readers scan rather than read, skip long instructions, and rely on an in-page back link rather than the browser's. Teachers and administrators mostly work on desktops with lists and forms. Every page works for the youngest student who can take a written competition and stays efficient for staff.
-    _Design principles_ (each one explained, with sources, in the guidelines):
-    - **Calm and focused.** Content comes first, with no decoration that competes with it. No moving or blinking content; transitions are subtle. No advertising or promotional content.
-    - **Clear and consistent.** One navigation per page. The same component looks and behaves the same everywhere and sits in the same place. Every page below an area's main page has a visible back link.
-    - **Readable.** Body text at least 16 px on phones and 18 px on desktops, line height at least 1.5, lines no longer than about 70 characters, left-aligned, never justified. Emphasis uses bold, not italics, underlining or capitals. The font is **Open Sans** (open licence, Latin and Cyrillic letters) in regular 400, semibold 600 and bold 700, served from the application itself, never from a third-party font service, with the system font stack as a fallback.
-    - **Plain language.** Short sentences and words students know. Buttons are verbs ("Save", "Invite student"). Abbreviations are spelled out. Instructions are a sentence or two, placed where they are needed.
-    - **Forgiving.** Every form error is shown next to its field, and also in an error summary at the top of the page (heading "There is a problem", one link per error that moves to its field). Entered values are kept. Destructive actions always ask for confirmation and say what will happen.
-    _Visual identity:_ a wordmark for "Student Competitions" with a simple logo mark, also used as the favicon; the **Classroom blue** palette; neutral surfaces with content grouped on cards against a slightly tinted page background; an 8 px spacing grid; one corner radius (8 px for controls, 12 px for cards); a type scale with clear heading levels. All of these are design tokens defined once at the top of `app.css`, and the rest of the CSS uses the tokens instead of literal values.
-    _Classroom blue:_ a deep blue top bar, a bright blue for primary actions, links and the current tab, and amber as the accent (the logo mark, highlights). Success is green and destructive actions are red. The main tokens, light / dark:
-
-    | Token | Light | Dark |
-    |---|---|---|
-    | Page background | `#f4f6fb` | `#0d1424` |
-    | Surface (cards, tables) | `#ffffff` | `#151f35` |
-    | Text | `#172033` | `#e6eaf2` |
-    | Muted text | `#556070` | `#9aa6bd` |
-    | Border | `#dde3ee` | `#26324d` |
-    | Top bar | `#16337a` | `#111a2e` |
-    | Primary (buttons, current tab) | `#1f56d6` | `#6c9cff` |
-    | Text on primary | `#ffffff` | `#0d1424` |
-    | Primary tint (selection, icons) | `#e7eefc` | `#1d2c4f` |
-    | Accent | `#f2a516` | `#f5b83d` |
-    | Success / its tint | `#17803d` / `#e5f5ea` | `#5fcf86` / `#13291c` |
-    | Danger / its tint | `#c0392b` / `#fdf0ee` | `#ff8a7a` / `#341b19` |
-
-    _Light and dark themes:_ both themes are complete, and a theme switch with three choices (**Light**, **Dark**, **Device**) sits in the user menu and on the sign-in page. **Device**, the default, follows the device's setting. The choice is kept in a cookie in that browser, so the server renders every page in the chosen theme with no flash on load and no JavaScript; it is not stored in the database and does not follow the person to another browser.
-    _Stack:_ still Jinja2, HTMX and Pico.css v2, with no build step and no new runtime frontend dependency. The look comes from overriding Pico's CSS variables; Pico's own stylesheet is not edited. The font files (`woff2`) are kept in `static/`.
-    _Page layout:_ a top bar with the logo, the product name and the current role; the email, the role switch, the theme switch and **Log out** in a user menu that opens without JavaScript and folds into the top bar on a phone; the area tabs below it; one content width on every page; a quiet footer with the version.
-    _Components:_ Jinja macros in `templates/components/`, each with one purpose:
-    - **Top bar and user menu**, **area tabs**, **back link**, and **page heading** with the page's primary action.
-    - **Button** in three kinds: *primary* (at most one per page or section), *secondary*, and *destructive* (Delete, Remove, Deactivate, Withdraw consent). The kind decides the look, not whether the HTML is a link or a form: a link that opens a form or a confirmation page looks like the action it leads to.
-    - **Card**, for grouping content and for the entries on the home page.
-    - **Data table** with row actions: all actions in a row look the same and sit together. Long values wrap. At phone width (below 768 px) each row becomes a card of labelled values, so the page never scrolls sideways.
-    - **Status badge** (Active / Deactivated, Read / Write), always with text.
-    - **Empty state**: the existing messages ("No subjects yet", "Select a region", …) with a short hint about what to do next.
-    - **Notice** in three kinds (success, error, information).
-    - **Form field** (label, optional hint, error, entered value kept), **error summary**, and the form's actions (the primary button first, then **Cancel** as a link).
-    - **Confirmation page**: the question names the item ("Delete “Physics”?"), the consequence is stated, the destructive button repeats the verb, then **Cancel**. Its refusal variant explains why ("is in use") and offers the alternative (deactivate).
-    - **Details list**: label and value pairs, as on the profile and invitation pages.
-    - **Selectors**: the list-and-detail pair (regions → institutions) and the chained lists (region → institution → class), ready for reuse in milestones 11 and 12.
-    _Home page:_ a start page for the current role: a greeting and a card for each area the role can open, with a one-line description of what is done there. The database status line moves to the footer in muted text. The sample questions keep their place until milestone 11 removes them.
-    _Guidelines:_ `docs/requirements/ui-guidelines.md` sets out the principles with their sources; the tokens; when to use each component and each kind of button; wording (the patterns for buttons, confirmations, errors and empty states); and behaviour at phone width. It also records the research for later screens, so they start from it: for taking a competition (milestone 13), a visible countdown with warnings before the end, a "saved" status for answers, and a clear final submit. The constitution's styling rule points to the guidelines, so every later spec and plan is checked against them. A new pattern is first added to the component library and the guidelines, never hand-built on a single page.
-    _Design approval:_ the font (Open Sans) and the palette (Classroom blue) were chosen from mockups of several candidates. Before the pages are rebuilt, a mockup of the visual identity and of key pages (sign-in, home, a list, a form with errors, a confirmation) at phone and desktop width, in light and dark mode, is reviewed and approved.
-    _Gallery:_ `/admin/components`, open only to administrators and not linked from the tabs, shows every component in every variant with sample data.
-    _Existing pages:_ every page (sign-in, role choice, home, profile, consent and data deletion, the administrator and teacher areas, confirmations, error pages) is built from the components. Addresses, fields, texts, messages, the order of steps and access rules stay the same; only wording that breaks the plain-language rules may change. Page-specific CSS classes (`subjects-table`, `teachers-table`, `subjects-empty`, …) are removed; `app.css` holds only the tokens, the page layout and the components.
-    _Out of scope:_ accessibility work (conformance to WCAG, screen reader and keyboard-only testing). Pages keep the accessibility features they already have.
-    _Test:_ all existing tests pass; only tests that check markup rather than behaviour may change. A test checks that every CSS class used in a template is defined in Pico.css or `app.css`, that every class in `app.css` is used, and that no template has an inline `style`. No page loads anything from another site. Choosing **Light** or **Dark** renders every following page, the sign-in page included, in that theme; **Device** and a missing or unknown cookie value follow the device. Teachers and students get "access denied" on the gallery. Screenshots of every page at phone (375 px) and desktop (1280 px) width, in light and dark mode, are reviewed before merge.
 
 11. **Question bank (teacher).** Uploading a list of questions, viewing, editing, reference answers for questions.
     _Subjects:_ every question belongs to exactly one subject. The teacher selects it from the list kept on the **Subjects** tab (milestone 6), with no free-text entry, and the server accepts only a subject that exists. Teachers can filter the question bank by subject. The sample questions seeded in milestone 3 have no subject, and the migration deletes them, since no real data exists yet.

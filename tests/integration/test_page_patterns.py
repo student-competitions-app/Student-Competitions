@@ -522,6 +522,112 @@ def test_links_to_forms_and_confirmations_look_like_buttons(
 
 
 # ---------------------------------------------------------------------------------------------
+# Milestone 11: the question bank
+# ---------------------------------------------------------------------------------------------
+
+
+def test_an_invalid_question_is_summarised_in_field_order(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The add and the edit form: the text first, then the reference answer."""
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, question = contract.a_question_manager(w)
+    added = browser.post(
+        "/teacher/questions",
+        data={"subject": str(subject), "page": "1", "text": " ", "reference_answer": ""},
+    )
+    edited = browser.post(
+        f"/teacher/questions/{question}/edit",
+        data={"page": "1", "text": "", "reference_answer": "\n"},
+    )
+    for response in (added, edited):
+        assert response.status_code == 400
+        assert_form_errors(
+            response.text,
+            {"text": "Enter the question text.", "reference_answer": "Enter the reference answer."},
+        )
+
+
+def test_the_question_confirmation(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, question = contract.a_question_manager(w)
+    path = f"/teacher/questions/{question}/delete"
+    body = browser.get(f"{path}?page=2").text
+    cancel = f"/teacher/questions?subject={subject}&page=2#question-{question}"
+    assert_confirmation(body, f"Delete question {question}?", "Delete", cancel, action=path)
+    assert (
+        "The question will be hidden from this list and can no longer be added to new "
+        "competitions. It is not erased, but it cannot be restored." in html.text(body, "main")
+    )
+
+
+def test_question_pages_link_back_to_the_list(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The add page to the page it came from; the edit and delete pages to the question."""
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, question = contract.a_question_manager(w)
+    back = "Back to the questions"
+    listed = f"/teacher/questions?subject={subject}&page=3"
+    new = browser.get(f"/teacher/questions/new?subject={subject}&page=3").text
+    assert_back_link(new, listed, back)
+    for path in ("edit", "delete"):
+        body = browser.get(f"/teacher/questions/{question}/{path}?page=3").text
+        assert_back_link(body, f"{listed}#question-{question}", back)
+
+
+def test_the_question_pages_have_at_most_one_primary_action(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, question = contract.a_question_manager(w)
+    assert primary_actions(browser.get(f"/teacher/questions?subject={subject}").text) == [
+        "Add question"
+    ]
+    for path in (f"new?subject={subject}", f"{question}/edit"):
+        body = browser.get(f"/teacher/questions/{path}").text
+        assert html.h1(body)
+        assert primary_actions(body) == ["Save question"]
+
+
+@pytest.mark.parametrize(
+    ("path", "heading", "text"),
+    [
+        (
+            "/teacher/questions/new?subject=999999",
+            "Subject not found",
+            "This subject does not exist or is deactivated.",
+        ),
+        (
+            "/teacher/questions/999999/edit",
+            "Question not found",
+            "This question does not exist, was deleted, or its subject is deactivated.",
+        ),
+    ],
+)
+def test_the_question_not_found_pages(
+    client: TestClient,
+    client_as: ClientAs,
+    outbox: list[Any],
+    monkeypatch: pytest.MonkeyPatch,
+    path: str,
+    heading: str,
+    text: str,
+) -> None:
+    """In the teacher frame, Questions current, with a back link to the tab (research R6)."""
+    browser, _, _ = contract.a_question_manager(world(client, client_as, outbox, monkeypatch))
+    response = browser.get(path)
+    assert response.status_code == 404
+    assert html.h1(response.text) == heading
+    assert text in html.text(response.text, "main")
+    current = [t for t in html.nav(response.text, "Teacher area") if t.attrs.get("aria-current")]
+    assert [t.text for t in current] == ["Questions"]
+    assert_back_link(response.text, "/teacher/questions", "Back to the questions")
+
+
+# ---------------------------------------------------------------------------------------------
 # User story 4: the remaining public pages
 # ---------------------------------------------------------------------------------------------
 

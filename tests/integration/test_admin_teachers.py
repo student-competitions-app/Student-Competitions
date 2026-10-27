@@ -97,14 +97,14 @@ def edit_form(places: dict[str, int], **overrides: Any) -> dict[str, Any]:
         "last_name": "Kovalenko",
         "institution": [str(places["kyiv"]), str(places["lviv"])],
         "access": [f"{places['kyiv']}:write", f"{places['lviv']}:read"],
-        "can_create_competitions": "on",
+        "can_manage_competitions": "on",
     }
     form.update(overrides)
     return {key: value for key, value in form.items() if value is not None}
 
 
 def a_kyiv_lviv_teacher(places: dict[str, int]) -> int:
-    return teacher(institutions={places["kyiv"]: WRITE, places["lviv"]: READ}, can_create=True)
+    return teacher(institutions={places["kyiv"]: WRITE, places["lviv"]: READ}, can_manage=True)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ def test_the_list_is_sorted_and_shows_every_column(
         "Petro",
         "Antonenko",
         institutions={places["lviv"]: READ, places["odesa"]: WRITE},
-        can_create=True,
+        can_manage=True,
     )
     third = teacher("b@example.org", "Iryna", "bondar", institutions={places["odesa"]: READ})
     admin_client.post(
@@ -152,6 +152,7 @@ def test_the_list_is_sorted_and_shows_every_column(
     assert {"Read", "Write", "Deactivated"} <= set(html.badges(body))
     cells = [value for row in html.table_rows(body) for value in row.values()]
     assert "Yes" in cells and "No" in cells
+    assert [row["Can manage competitions"] for row in html.table_rows(body)] == ["Yes", "No", "No"]
     assert utc_now().strftime("%Y-%m-%d") in cells
     assert "No teachers yet" not in body
 
@@ -174,7 +175,9 @@ def test_the_teacher_page_shows_the_email_but_not_as_a_field(
     kyiv = places["kyiv"]
     assert (str(kyiv), True) in picked(body)
     assert html.Option(f"{kyiv}:write", "Write", True) in access_options(body)
-    assert "checked" in html.control(body, "can_create_competitions")
+    assert "checked" in html.control(body, "can_manage_competitions")
+    assert '<label for="can_manage_competitions" class="checkbox-label">' in body
+    assert "> Can manage competitions</label>" in body
 
 
 def test_an_edit_changes_only_what_changed(
@@ -188,7 +191,7 @@ def test_an_edit_changes_only_what_changed(
         data=edit_form(
             places,
             access=[f"{places['kyiv']}:read", f"{places['lviv']}:read"],
-            can_create_competitions=None,
+            can_manage_competitions=None,
         ),
         follow_redirects=False,
     )
@@ -200,7 +203,7 @@ def test_an_edit_changes_only_what_changed(
     assert after[places["kyiv"]][2] > before[places["kyiv"]][2]
     with Session(app.state.engine) as session:
         profile = session.get(TeacherProfile, user_id)
-        assert profile is not None and profile.can_create_competitions is False
+        assert profile is not None and profile.can_manage_competitions is False
 
 
 def test_adding_an_institution_adds_one_link(

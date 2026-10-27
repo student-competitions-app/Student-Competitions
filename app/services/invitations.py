@@ -51,7 +51,7 @@ class DetailLine:
     """One line describing a role's details to the invited person."""
 
     text: str
-    """As shown on the acceptance page and the profile, e.g. "Can create competitions: Yes"."""
+    """As shown on the acceptance page and the profile, e.g. "Can manage competitions: Yes"."""
     email_text: str | None = None
     """The wording in the invitation email, when it differs from `text`."""
 

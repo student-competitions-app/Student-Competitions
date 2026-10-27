@@ -11,8 +11,11 @@ from httpx2 import Response
 from sqlmodel import Session
 
 import app.services.subjects
+from app.main import app as application
+from app.models import AccessLevel
 from app.services.subjects import list_subjects, set_subject_active
 from tests import html as dom
+from tests.conftest import ClientAs, make_institution, make_question, make_teacher
 
 DUPLICATE = "A subject named “{}” already exists."
 CONTROL = "The name cannot contain tabs, line breaks or other control characters."
@@ -395,6 +398,67 @@ def test_an_inactive_subject_in_use_offers_no_deactivate(
     assert IN_USE.format("Physics") in response.text
     assert "/deactivate" not in response.text
     assert stored(session) == [("Physics", False)]
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11: questions make a subject "in use" (US7, FR-040, FR-041)
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("deleted", [False, True], ids=["listed", "only-deleted"])
+def test_a_subject_with_questions_cannot_be_deleted(
+    admin_client: TestClient, session: Session, deleted: bool
+) -> None:
+    """US7-1, SC-004: real questions, no monkeypatch; deleted ones count too."""
+    create(admin_client, "Physics")
+    sid = subject_id(session, "Physics")
+    make_question(application.state.engine, sid, deleted=deleted)
+    before = snapshot(session)
+    response = post(admin_client, f"/admin/subjects/{sid}/delete")
+    assert response.status_code == 409
+    assert IN_USE.format("Physics") in response.text
+    assert snapshot(session) == before
+
+
+def test_a_never_used_subject_is_still_deleted(admin_client: TestClient, session: Session) -> None:
+    """US7-2: another subject's questions do not count."""
+    create(admin_client, "Physics")
+    create(admin_client, "Chemistry")
+    make_question(application.state.engine, subject_id(session, "Chemistry"))
+    assert_back_to_the_list(
+        post(admin_client, f"/admin/subjects/{subject_id(session, 'Physics')}/delete")
+    )
+    assert stored(session) == [("Chemistry", True)]
+
+
+def test_deactivating_and_activating_hides_and_shows_the_questions(
+    admin_client: TestClient, client_as: ClientAs, session: Session
+) -> None:
+    """US7-3, FR-041: back unchanged, and still without the deleted ones."""
+    engine, settings = application.state.engine, application.state.settings
+    institution = make_institution(engine, "Kyiv Polytechnic Institute", "Kyiv")
+    make_teacher(
+        engine, settings, email="olena@example.org", institutions={institution: AccessLevel.READ}
+    )
+    for name in ("Physics", "Chemistry", "Biology"):
+        create(admin_client, name)
+    sid = subject_id(session, "Physics")
+    kept = [make_question(engine, sid, f"Q{i}?", f"A{i}.") for i in range(3)]
+    make_question(engine, sid, "Gone?", deleted=True)
+    teacher = client_as("olena@example.org")
+    url = f"/teacher/questions?subject={sid}"
+
+    def shown() -> list[str]:
+        body = teacher.get(url).text
+        return [a.attrs["id"] for a in dom.parse(body).find_all("article")]
+
+    assert shown() == [f"question-{q}" for q in reversed(kept)]
+    post(admin_client, f"/admin/subjects/{sid}/deactivate")
+    assert shown() == []
+    assert "Select a subject" in teacher.get(url).text
+    post(admin_client, f"/admin/subjects/{sid}/activate")
+    assert shown() == [f"question-{q}" for q in reversed(kept)]
+    assert "Gone?" not in teacher.get(url).text
 
 
 NOT_FOUND_REQUESTS = [

@@ -31,7 +31,7 @@ class TeacherDetails:
 
     institutions: Mapping[int, AccessLevel]
     """Never empty: institution id → access level."""
-    can_create_competitions: bool
+    can_manage_competitions: bool
 
 
 class InvalidChoice(ValueError):

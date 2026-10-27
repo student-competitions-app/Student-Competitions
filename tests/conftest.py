@@ -33,11 +33,9 @@ import shutil
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import pytest
 from alembic import command
-from alembic.script import ScriptDirectory
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
@@ -48,7 +46,7 @@ from app.core.db import create_db_engine, utc_now
 from app.core.migrations import alembic_config
 from app.core.security import SESSION_COOKIE_NAME, sign_cookie_value
 from app.main import app
-from app.models import AccessLevel, Region, Role, SchoolClass, User, UserRole
+from app.models import AccessLevel, Question, Region, Role, SchoolClass, User, UserRole
 from app.schemas.names import name_key
 from app.schemas.students import StudentDetails
 from app.schemas.teachers import TeacherDetails
@@ -58,6 +56,7 @@ from app.services.institutions import create_institution, set_institution_active
 from app.services.invitations import Accepted, accept_invitation, issue_invitation
 from app.services.regions import create_region, set_region_active
 from app.services.sessions import create_session, start_session
+from app.services.subjects import create_subject, set_subject_active
 from app.services.users import get_active_user_by_email, get_user_by_email
 
 ENGINES = ["sqlite", "postgresql"]
@@ -370,26 +369,6 @@ def admin_client(client_as: ClientAs) -> TestClient:
 
 
 # ---------------------------------------------------------------------------------------------
-# Sample data
-# ---------------------------------------------------------------------------------------------
-
-
-@pytest.fixture(scope="session")
-def sample_questions() -> list[dict[str, Any]]:
-    """The seeded sample questions, read from the migration that inserts them.
-
-    The migration is the single source of truth; tests never keep a copy that could drift
-    (research D6).
-    """
-    script = ScriptDirectory.from_config(alembic_config())
-    for revision in script.walk_revisions():
-        samples = getattr(revision.module, "SAMPLE_QUESTIONS", None)
-        if samples is not None:
-            return samples
-    raise LookupError("no revision in migrations/versions/ defines SAMPLE_QUESTIONS")
-
-
-# ---------------------------------------------------------------------------------------------
 # Milestone 8: institutions, invitations and links
 # ---------------------------------------------------------------------------------------------
 
@@ -452,7 +431,7 @@ def invite(
     first: str = "Olena",
     last: str = "Kovalenko",
     institutions: Mapping[int, AccessLevel],
-    can_create: bool = False,
+    can_manage: bool = False,
     inviter_email: str = ADMIN_EMAIL,
     now: datetime | None = None,
 ) -> str:
@@ -471,7 +450,7 @@ def invite(
             email,
             first,
             last,
-            TeacherDetails(institutions=dict(institutions), can_create_competitions=can_create),
+            TeacherDetails(institutions=dict(institutions), can_manage_competitions=can_manage),
             now=now,
         )
     [message] = sender.outbox
@@ -503,7 +482,7 @@ def invite_and_accept(
     first: str = "Olena",
     last: str = "Kovalenko",
     institutions: Mapping[int, AccessLevel],
-    can_create: bool = False,
+    can_manage: bool = False,
     inviter_email: str = ADMIN_EMAIL,
     now: datetime | None = None,
 ) -> int:
@@ -516,7 +495,7 @@ def invite_and_accept(
         first=first,
         last=last,
         institutions=institutions,
-        can_create=can_create,
+        can_manage=can_manage,
         inviter_email=inviter_email,
         now=now,
     )
@@ -531,11 +510,19 @@ def make_teacher(
     institutions: Mapping[int, AccessLevel],
     first: str = "Olena",
     last: str = "Kovalenko",
+    can_manage: bool = False,
 ) -> int:
-    """A real teacher linked to `institutions` with the given levels: `invite_and_accept`, invited
-    by the cast administrator. Returns the teacher's user id."""
+    """A real teacher linked to `institutions` with the given levels, and with **Can manage
+    competitions** when `can_manage`: `invite_and_accept`, invited by the cast administrator.
+    Returns the teacher's user id."""
     return invite_and_accept(
-        engine, settings, email=email, first=first, last=last, institutions=institutions
+        engine,
+        settings,
+        email=email,
+        first=first,
+        last=last,
+        institutions=institutions,
+        can_manage=can_manage,
     )
 
 
@@ -629,3 +616,48 @@ def enrol_student(
         now=now,
     )
     return accept(engine, settings, token, now=now, role=Role.STUDENT)
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11: the question bank
+# ---------------------------------------------------------------------------------------------
+
+
+def make_subject(engine: Engine, name: str = "Physics", active: bool = True) -> int:
+    """A subject, created through the real service (then deactivated when not `active`); returns
+    its id."""
+    with Session(engine) as db_session:
+        subject = create_subject(db_session, name)
+        assert subject.id is not None
+        if not active:
+            set_subject_active(db_session, subject.id, False)
+        return subject.id
+
+
+def make_question(
+    engine: Engine,
+    subject_id: int,
+    text: str = "Question?",
+    reference_answer: str = "Answer.",
+    *,
+    deleted: bool = False,
+) -> int:
+    """A question of the subject, inserted directly (deleted when `deleted`); returns its id.
+
+    **Test-only**, but harmless: a question carries no personal data, and seeding it skips only
+    the setting check that `test_teacher_questions.py` and `test_question_service.py` cover.
+    """
+    now = utc_now()
+    with Session(engine) as db_session:
+        question = Question(
+            subject_id=subject_id,
+            text=text,
+            reference_answer=reference_answer,
+            created_at=now,
+            updated_at=now,
+            deleted_at=now if deleted else None,
+        )
+        db_session.add(question)
+        db_session.commit()
+        assert question.id is not None
+        return question.id

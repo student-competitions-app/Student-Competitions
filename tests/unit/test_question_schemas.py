@@ -1,100 +1,112 @@
-"""The validation boundary for question writes.
+"""The question bank's field rules: the question text and the reference answer.
 
-See specs/003-database-questions/data-model.md (§1 validation rules, §3 schemas) and the
-behaviour matrix in contracts/question-service.md, rows 7, 8, 10 and 12. Cyrillic `я` is used
-for the length limits because it is two bytes in UTF-8: the limits count characters, not bytes.
+See specs/011-question-bank/research.md R4 and contracts/services.md §schemas/question. Cyrillic
+`ї` is used for the length limit because it is two bytes in UTF-8: the limit counts characters,
+not bytes.
 """
 
 import pytest
-from pydantic import ValidationError
 
 from app.schemas.question import (
-    QUESTION_TEXT_MAX_LENGTH,
-    REFERENCE_ANSWER_MAX_LENGTH,
-    QuestionCreate,
-    QuestionUpdate,
+    QUESTION_FIELD_MAX_LENGTH,
+    InvalidQuestionField,
+    clean_question_field,
+    question_field_errors,
 )
 
-BLANKS = ["", "   ", "\n\t"]
+MESSAGES = {
+    "text": {
+        "empty": "Enter the question text.",
+        "long": "The question text can be at most 2,000 characters.",
+        "null": "The question text cannot contain a null character.",
+    },
+    "reference_answer": {
+        "empty": "Enter the reference answer.",
+        "long": "The reference answer can be at most 2,000 characters.",
+        "null": "The reference answer cannot contain a null character.",
+    },
+}
+FIELDS = ["text", "reference_answer"]
 
 
-@pytest.mark.parametrize("blank", BLANKS, ids=["empty", "spaces", "newline-tab"])
-@pytest.mark.parametrize("field", ["text", "reference_answer"])
-def test_create_rejects_a_blank_field(field: str, blank: str) -> None:
-    data = {"text": "Question?", "reference_answer": "Answer.", field: blank}
-    with pytest.raises(ValidationError):
-        QuestionCreate(**data)
+def test_the_limit_is_two_thousand() -> None:
+    assert QUESTION_FIELD_MAX_LENGTH == 2000
 
 
-@pytest.mark.parametrize("missing", ["text", "reference_answer"])
-def test_create_requires_both_fields(missing: str) -> None:
-    data = {"text": "Question?", "reference_answer": "Answer."}
-    del data[missing]
-    with pytest.raises(ValidationError):
-        QuestionCreate(**data)
+@pytest.mark.parametrize("field", FIELDS)
+def test_surrounding_whitespace_is_trimmed_and_inner_line_breaks_kept(field: str) -> None:
+    assert clean_question_field("  a \n", field) == "a"
+    assert clean_question_field("a\n\nb", field) == "a\n\nb"
+    assert clean_question_field("a\tb", field) == "a\tb"
 
 
+@pytest.mark.parametrize("field", FIELDS)
+@pytest.mark.parametrize("raw", ["a\r\nb", "a\rb"], ids=["crlf", "cr"])
+def test_line_endings_become_line_feeds(field: str, raw: str) -> None:
+    assert clean_question_field(raw, field) == "a\nb"
+
+
+@pytest.mark.parametrize("field", FIELDS)
+def test_a_crlf_line_break_counts_once(field: str) -> None:
+    raw = ("a" * 99 + "\r\n") * 19 + "a" * 100  # 2,019 sent, 2,000 once each break is one
+    cleaned = clean_question_field(raw, field)
+    assert cleaned == raw.replace("\r\n", "\n")
+    assert len(cleaned) == 2000
+
+
+@pytest.mark.parametrize("field", FIELDS)
 @pytest.mark.parametrize(
-    ("field", "limit"),
-    [("text", QUESTION_TEXT_MAX_LENGTH), ("reference_answer", REFERENCE_ANSWER_MAX_LENGTH)],
-)
-def test_create_rejects_one_character_over_the_limit(field: str, limit: int) -> None:
-    data = {"text": "Question?", "reference_answer": "Answer.", field: "я" * (limit + 1)}
-    with pytest.raises(ValidationError):
-        QuestionCreate(**data)
-
-
-@pytest.mark.parametrize(
-    ("field", "limit"),
-    [("text", QUESTION_TEXT_MAX_LENGTH), ("reference_answer", REFERENCE_ANSWER_MAX_LENGTH)],
-)
-def test_create_accepts_exactly_the_limit_after_stripping(field: str, limit: int) -> None:
-    """Surrounding whitespace is stripped before the length is checked."""
-    data = {"text": "Question?", "reference_answer": "Answer.", field: f"  {'я' * limit}  "}
-    assert getattr(QuestionCreate(**data), field) == "я" * limit
-
-
-def test_limits_match_the_specification() -> None:
-    assert QUESTION_TEXT_MAX_LENGTH == 1000
-    assert REFERENCE_ANSWER_MAX_LENGTH == 5000
-
-
-def test_surrounding_whitespace_is_stripped_and_internal_breaks_kept() -> None:
-    created = QuestionCreate(text="  Line one\nLine two  ", reference_answer="\t Answer. \n")
-    assert created.text == "Line one\nLine two"
-    assert created.reference_answer == "Answer."
-
-
-def test_markup_characters_are_kept_exactly() -> None:
-    assert QuestionCreate(text="<b>bold</b> & more", reference_answer="x").text == (
-        "<b>bold</b> & more"
-    )
-
-
-@pytest.mark.parametrize(
-    "kwargs", [{}, {"text": None, "reference_answer": None}], ids=["no-fields", "both-none"]
-)
-def test_update_requires_at_least_one_field(kwargs: dict[str, None]) -> None:
-    with pytest.raises(ValidationError, match="at least one"):
-        QuestionUpdate(**kwargs)
-
-
-def test_update_may_give_a_single_field() -> None:
-    update = QuestionUpdate(text="x")
-    assert update.text == "x"
-    assert update.reference_answer is None
-
-
-@pytest.mark.parametrize(
-    "kwargs",
+    ("raw", "rule"),
     [
-        {"text": "   "},
-        {"reference_answer": ""},
-        {"text": "я" * (QUESTION_TEXT_MAX_LENGTH + 1)},
-        {"reference_answer": "я" * (REFERENCE_ANSWER_MAX_LENGTH + 1)},
+        ("", "empty"),
+        ("   ", "empty"),
+        ("\n\t ", "empty"),
+        ("a\x00b", "null"),
+        ("a" * 2001, "long"),
+        ("ї" * 2001, "long"),
     ],
-    ids=["blank-text", "blank-answer", "long-text", "long-answer"],
+    ids=["empty", "spaces", "whitespace", "null", "long-ascii", "long-cyrillic"],
 )
-def test_update_validates_a_given_field_like_create(kwargs: dict[str, str]) -> None:
-    with pytest.raises(ValidationError):
-        QuestionUpdate(**kwargs)
+def test_a_refused_value_has_its_message(field: str, raw: str, rule: str) -> None:
+    with pytest.raises(InvalidQuestionField) as caught:
+        clean_question_field(raw, field)
+    assert caught.value.message == MESSAGES[field][rule]
+
+
+@pytest.mark.parametrize("field", FIELDS)
+@pytest.mark.parametrize(
+    "raw",
+    ["a" * 2000, "ї" * 2000, "a" * 1000 + "\n" + "a" * 999],
+    ids=["ascii", "cyrillic", "line-break"],
+)
+def test_exactly_two_thousand_characters_are_accepted(field: str, raw: str) -> None:
+    assert clean_question_field(raw, field) == raw
+
+
+@pytest.mark.parametrize("field", FIELDS)
+def test_markup_is_kept_unchanged(field: str) -> None:
+    assert clean_question_field("<b>&</b>", field) == "<b>&</b>"
+
+
+def test_both_fields_are_checked_at_once() -> None:
+    errors, text, answer = question_field_errors(" ", "")
+    assert errors == {
+        "text": MESSAGES["text"]["empty"],
+        "reference_answer": MESSAGES["reference_answer"]["empty"],
+    }
+    assert (text, answer) == (" ", "")
+
+
+def test_only_the_failing_field_is_reported() -> None:
+    errors, text, answer = question_field_errors("  Why?\r\n", "x" * 2001)
+    assert errors == {"reference_answer": MESSAGES["reference_answer"]["long"]}
+    assert text == "Why?"
+    assert answer == "x" * 2001
+
+
+def test_valid_fields_are_returned_cleaned() -> None:
+    assert question_field_errors(" Why? ", "\nBecause.\n") == ({}, "Why?", "Because.")
+
+
+def test_a_text_equal_to_its_answer_is_accepted() -> None:
+    assert question_field_errors("Same", "Same") == ({}, "Same", "Same")

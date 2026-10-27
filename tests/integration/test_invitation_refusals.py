@@ -164,7 +164,7 @@ def test_extra_fields_are_ignored(client: TestClient, school: int) -> None:
             "last_name": "Y",
             "institution": str(other),
             "access": f"{other}:write",
-            "can_create_competitions": "on",
+            "can_manage_competitions": "on",
         },
         follow_redirects=False,
     )
@@ -176,7 +176,7 @@ def test_extra_fields_are_ignored(client: TestClient, school: int) -> None:
         links = session.exec(select(TeacherInstitution)).all()
         assert [(link.institution_id, link.access_level) for link in links] == [(school, "write")]
         profile = session.get(TeacherProfile, olena.id)
-        assert profile is not None and profile.can_create_competitions is False
+        assert profile is not None and profile.can_manage_competitions is False
 
 
 def test_a_changed_consent_text_is_shown_again_and_nothing_is_stored(

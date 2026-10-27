@@ -295,7 +295,7 @@
       "buttons": [],
       "fields": [
         "access",
-        "can_create_competitions",
+        "can_manage_competitions",
         "first_name",
         "institution",
         "last_name"
@@ -315,7 +315,7 @@
       "buttons": [],
       "fields": [
         "access",
-        "can_create_competitions",
+        "can_manage_competitions",
         "first_name",
         "institution",
         "last_name"
@@ -335,7 +335,7 @@
       "buttons": [],
       "fields": [
         "access",
-        "can_create_competitions",
+        "can_manage_competitions",
         "email",
         "first_name",
         "institution",
@@ -356,7 +356,7 @@
       "buttons": [],
       "fields": [
         "access",
-        "can_create_competitions",
+        "can_manage_competitions",
         "email",
         "first_name",
         "institution",
@@ -758,6 +758,159 @@
         "consent_text_id"
       ],
       "method": "post"
+    }
+  ],
+  "teacher-question-delete": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/questions/{id}/delete",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-question-edit": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/questions/{id}/edit",
+      "buttons": [],
+      "fields": [
+        "page",
+        "reference_answer",
+        "text"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-question-edit-invalid": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/questions/{id}/edit",
+      "buttons": [],
+      "fields": [
+        "page",
+        "reference_answer",
+        "text"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-question-new": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/questions",
+      "buttons": [
+        [
+          "then",
+          "another"
+        ],
+        [
+          "then",
+          "list"
+        ]
+      ],
+      "fields": [
+        "page",
+        "reference_answer",
+        "subject",
+        "text",
+        "then"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-question-new-invalid": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/questions",
+      "buttons": [
+        [
+          "then",
+          "another"
+        ],
+        [
+          "then",
+          "list"
+        ]
+      ],
+      "fields": [
+        "page",
+        "reference_answer",
+        "subject",
+        "text",
+        "then"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-question-new-saved": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/questions",
+      "buttons": [
+        [
+          "then",
+          "another"
+        ],
+        [
+          "then",
+          "list"
+        ]
+      ],
+      "fields": [
+        "page",
+        "reference_answer",
+        "subject",
+        "text",
+        "then"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-questions-list": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/questions",
+      "buttons": [],
+      "fields": [
+        "subject"
+      ],
+      "method": "get"
     }
   ],
   "teacher-student-edit": [

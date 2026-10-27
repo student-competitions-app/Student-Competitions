@@ -21,7 +21,7 @@ from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import Connection, Engine, inspect, text
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import SQLModel
 
 import app.models  # noqa: F401 — every table on SQLModel.metadata, for the drift check
 from app.core.config import PROJECT_ROOT
@@ -32,7 +32,6 @@ from app.core.migrations import (
     current_revision,
     head_revision,
 )
-from app.models import BootCounter, Question
 
 APPLICATION_TABLES = {
     "questions",
@@ -65,21 +64,37 @@ def run_alembic(
     getattr(command, action)(alembic_config(), target)
 
 
+questions_t = sa.table(
+    "questions",
+    sa.column("id", sa.Integer()),
+    sa.column("text", sa.String()),
+    sa.column("reference_answer", sa.String()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("updated_at", sa.DateTime(timezone=True)),
+)
+"""The columns `questions` has at every revision: the models describe head only, and milestone
+11 added `subject_id` and `deleted_at`."""
+
+
 def stored_questions(engine: Engine) -> list[tuple[str, str]]:
-    with Session(engine) as session:
-        rows = session.exec(select(Question).order_by(Question.created_at, Question.id))
-        return [(row.text, row.reference_answer) for row in rows]
+    with engine.connect() as connection:
+        rows = connection.execute(
+            sa.select(questions_t.c.text, questions_t.c.reference_answer).order_by(
+                questions_t.c.created_at, questions_t.c.id
+            )
+        )
+        return [tuple(row) for row in rows]
 
 
 def snapshot(engine: Engine) -> tuple[str | None, list[tuple[Any, ...]], int]:
     """Revision, every question row including timestamps, and the boot count."""
-    with Session(engine) as session:
-        rows = session.exec(select(Question).order_by(Question.id)).all()
-        counter = session.get(BootCounter, 1)
+    with engine.connect() as connection:
+        rows = connection.execute(sa.select(questions_t).order_by(questions_t.c.id)).all()
+        boots = connection.execute(text("SELECT boots FROM boot_counter WHERE id = 1")).scalar()
         return (
-            current_revision(session.connection()),
-            [(q.id, q.text, q.reference_answer, q.created_at, q.updated_at) for q in rows],
-            counter.boots if counter else -1,
+            current_revision(connection),
+            [tuple(row) for row in rows],
+            boots if boots is not None else -1,
         )
 
 
@@ -87,23 +102,16 @@ def application_tables(engine: Engine) -> set[str]:
     return set(inspect(engine).get_table_names()) & APPLICATION_TABLES
 
 
-def samples_as_pairs(sample_questions: list[dict[str, str]]) -> list[tuple[str, str]]:
-    return [(sample["text"], sample["reference_answer"]) for sample in sample_questions]
-
-
 def test_empty_to_head(
-    monkeypatch: pytest.MonkeyPatch,
-    empty_database_url: str,
-    migration_engine: Engine,
-    sample_questions: list[dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
 ) -> None:
-    """US3-1, SC-006: the tables, the sample questions (Cyrillic and line break intact) and a
-    zero boot count."""
+    """US3-1: the tables, no questions (milestone 11 deletes the samples, SC-007) and a zero boot
+    count."""
     run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
     revision, _, boots = snapshot(migration_engine)
     assert revision == head_revision()
     assert application_tables(migration_engine) == APPLICATION_TABLES
-    assert stored_questions(migration_engine) == samples_as_pairs(sample_questions)
+    assert stored_questions(migration_engine) == []
     assert boots == 0
     assert "role" not in {c["name"] for c in inspect(migration_engine).get_columns("users")}
 
@@ -117,14 +125,11 @@ def test_head_to_head_changes_nothing(
     run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
     after = snapshot(migration_engine)
     assert after == before
-    assert len(after[1]) == 6
+    assert after[1] == []
 
 
 def test_stairway(
-    monkeypatch: pytest.MonkeyPatch,
-    empty_database_url: str,
-    migration_engine: Engine,
-    sample_questions: list[dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
 ) -> None:
     """Every revision's downgrade undoes its upgrade, one step at a time, then all the way."""
     script = ScriptDirectory.from_config(alembic_config())
@@ -139,7 +144,7 @@ def test_stairway(
     assert application_tables(migration_engine) == set()
 
     run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
-    assert stored_questions(migration_engine) == samples_as_pairs(sample_questions)
+    assert stored_questions(migration_engine) == []
 
 
 def test_single_head() -> None:
@@ -168,10 +173,7 @@ def _waiting_on_migration_lock(engine: Engine) -> int:
 
 
 def test_concurrent_upgrades_apply_once(
-    request: pytest.FixtureRequest,
-    empty_database_url: str,
-    migration_engine: Engine,
-    sample_questions: list[dict[str, str]],
+    request: pytest.FixtureRequest, empty_database_url: str, migration_engine: Engine
 ) -> None:
     """Two instances starting at once during a deploy overlap (spec edge case).
 
@@ -214,7 +216,7 @@ def test_concurrent_upgrades_apply_once(
     with migration_engine.connect() as connection:
         versions = connection.execute(text("SELECT version_num FROM alembic_version")).all()
     assert [row[0] for row in versions] == [head_revision()]
-    assert stored_questions(migration_engine) == samples_as_pairs(sample_questions)
+    assert stored_questions(migration_engine) == []
 
 
 # ---------------------------------------------------------------------------------------------
@@ -499,3 +501,123 @@ def test_the_student_consent_text_is_published_once(
             text("SELECT version FROM consent_texts WHERE role = 'student'")
         ).all()
     assert [tuple(row) for row in rows] == [(1,)]
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11: the question bank (the samples go, the setting is renamed)
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/011-question-bank/data-model.md §6 and research R3.
+
+BEFORE_QUESTION_BANK = "596ead9f1205"
+
+teacher_profiles_t = sa.table(
+    "teacher_profiles",
+    sa.column("user_id", sa.Integer()),
+    sa.column("can_create_competitions", sa.Boolean()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("updated_at", sa.DateTime(timezone=True)),
+)
+
+
+def test_upgrading_deletes_the_samples_and_keeps_the_setting(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """US8-1, SC-007: the sample questions are gone. US6-1, SC-006: each teacher keeps their
+    value under the new name."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", BEFORE_QUESTION_BANK)
+    assert len(stored_questions(migration_engine)) == 6
+    with migration_engine.begin() as connection:
+        now = utc_now()
+        values = {}
+        for email, value in (("yes@example.com", True), ("no@example.com", False)):
+            user_id = add_m8_user(connection, email, True, "teacher")
+            connection.execute(
+                teacher_profiles_t.insert().values(
+                    user_id=user_id, can_create_competitions=value, created_at=now, updated_at=now
+                )
+            )
+            values[user_id] = value
+
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+
+    assert stored_questions(migration_engine) == []
+    with migration_engine.connect() as connection:
+        found = connection.execute(
+            text("SELECT user_id, can_manage_competitions FROM teacher_profiles")
+        ).all()
+    assert {row[0]: bool(row[1]) for row in found} == values
+    columns = {c["name"] for c in inspect(migration_engine).get_columns("teacher_profiles")}
+    assert "can_create_competitions" not in columns
+
+
+def test_the_questions_table_at_head(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    inspector = inspect(migration_engine)
+    columns = {c["name"]: c for c in inspector.get_columns("questions")}
+    assert columns["subject_id"]["nullable"] is False
+    assert columns["deleted_at"]["nullable"] is True
+    assert columns["text"]["type"].length == 2000
+    assert columns["reference_answer"]["type"].length == 2000
+    indexes = {i["name"]: i["column_names"] for i in inspector.get_indexes("questions")}
+    assert indexes["ix_questions_subject_id"] == ["subject_id"]
+    [foreign_key] = inspector.get_foreign_keys("questions")
+    assert foreign_key["name"] == "fk_questions_subject_id_subjects"
+    assert (foreign_key["referred_table"], foreign_key["referred_columns"]) == ("subjects", ["id"])
+
+
+def test_sqlite_never_reuses_a_question_id(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    empty_database_url: str,
+    migration_engine: Engine,
+) -> None:
+    """R1: the rebuilt table has `AUTOINCREMENT`, so a rowid is never handed out twice."""
+    if request.node.callspec.params["empty_database_url"] != "sqlite":
+        pytest.skip("AUTOINCREMENT is SQLite's; PostgreSQL's sequence is checked below")
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.connect() as connection:
+        sql = connection.execute(
+            text("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'questions'")
+        ).scalar_one()
+    assert "AUTOINCREMENT" in sql
+
+
+def test_postgresql_keeps_the_question_id_sequence(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    empty_database_url: str,
+    migration_engine: Engine,
+) -> None:
+    """R3: the table was altered, not rebuilt, so ids still come from the original sequence and
+    continue past the seed's samples."""
+    if request.node.callspec.params["empty_database_url"] != "postgresql":
+        pytest.skip("the id sequence is PostgreSQL's")
+    run_alembic(monkeypatch, empty_database_url, "upgrade", BEFORE_QUESTION_BANK)
+    with migration_engine.connect() as connection:
+        largest_sample = connection.execute(text("SELECT max(id) FROM questions")).scalar_one()
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        default = connection.execute(
+            text(
+                "SELECT column_default FROM information_schema.columns "
+                "WHERE table_name = 'questions' AND column_name = 'id'"
+            )
+        ).scalar_one()
+        assert default == "nextval('questions_id_seq'::regclass)"
+        subject_id = connection.execute(
+            text(
+                "INSERT INTO subjects (name, name_key, is_active, created_at, updated_at) "
+                "VALUES ('Physics', 'physics', true, now(), now()) RETURNING id"
+            )
+        ).scalar_one()
+        new_id = connection.execute(
+            text(
+                "INSERT INTO questions (subject_id, text, reference_answer, created_at, "
+                "updated_at) VALUES (:s, 'Why?', 'Because.', now(), now()) RETURNING id"
+            ),
+            {"s": subject_id},
+        ).scalar_one()
+    assert new_id > largest_sample

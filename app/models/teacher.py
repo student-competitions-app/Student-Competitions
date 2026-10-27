@@ -37,8 +37,11 @@ class TeacherProfile(SQLModel, table=True):
     __tablename__ = "teacher_profiles"
 
     user_id: int = Field(foreign_key="users.id", primary_key=True)
-    can_create_competitions: bool = Field(default=False, nullable=False)
-    """FR-007. Only stored and shown in this milestone (FR-013)."""
+    can_manage_competitions: bool = Field(default=False, nullable=False)
+    """**Can manage competitions** (renamed in milestone 11, FR-009). True: the teacher may
+    change the question bank, and competitions from milestone 12. False, or no profile row: the
+    teacher reads the bank only. Read for access decisions only through
+    `app.services.teacher_access.can_manage_competitions`."""
     created_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
     updated_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
     """Changed only when the setting changes."""

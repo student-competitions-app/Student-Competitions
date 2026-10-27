@@ -13,6 +13,9 @@ import pytest
 
 from app.core import sealing
 from app.core.sealing import SEAL_VERSION, SealExpired, SealInvalid, seal, unseal
+from app.models import AccessLevel
+from app.schemas.teachers import TeacherDetails
+from app.services.teachers import TEACHER_INVITATION
 
 KEY = "k" * 32
 OTHER_KEY = "o" * 32
@@ -136,7 +139,7 @@ def test_a_worst_case_invitation_fits_in_a_url() -> None:
         "last": "Щ" * 100,
         "details": {
             "institutions": [[1_000 + i, "write"] for i in range(40)],
-            "can_create_competitions": True,
+            "can_manage_competitions": True,
         },
         "inviter": 123_456,
     }
@@ -145,3 +148,45 @@ def test_a_worst_case_invitation_fits_in_a_url() -> None:
     assert json.dumps(unseal(KEY, PURPOSE, token, DAY, now=NOW)["details"]) == json.dumps(
         payload["details"]
     )
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11: the teacher details' setting key (research R12)
+# ---------------------------------------------------------------------------------------------
+
+LINKS = [[3, "write"], [7, "read"]]
+
+
+@pytest.mark.parametrize("value", [True, False])
+def test_teacher_details_round_trip_with_the_new_key(value: bool) -> None:
+    details = TeacherDetails({7: AccessLevel.READ, 3: AccessLevel.WRITE}, value)
+    payload = TEACHER_INVITATION.details_to_payload(details)
+    assert payload == {"institutions": LINKS, "can_manage_competitions": value}
+    assert TEACHER_INVITATION.details_from_payload(json.loads(json.dumps(payload))) == details
+
+
+@pytest.mark.parametrize("value", [True, False])
+def test_teacher_details_with_the_legacy_key_are_read(value: bool) -> None:
+    """US6-3: invitations sealed in milestones 8–10.1."""
+    found = TEACHER_INVITATION.details_from_payload(
+        {"institutions": LINKS, "can_create_competitions": value}
+    )
+    assert found.can_manage_competitions is value
+    assert found.institutions == {3: AccessLevel.WRITE, 7: AccessLevel.READ}
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        {"institutions": LINKS, "can_create_competitions": True, "can_manage_competitions": True},
+        {"institutions": LINKS, "can_manage_competitions": True, "extra": 1},
+        {"institutions": LINKS},
+        {"institutions": LINKS, "can_manage_competitions": "yes"},
+        {"institutions": LINKS, "can_create_competitions": 1},
+        ["institutions", "can_manage_competitions"],
+    ],
+    ids=["both-keys", "extra-key", "no-setting", "not-bool", "legacy-not-bool", "not-a-dict"],
+)
+def test_other_teacher_details_are_refused(raw: object) -> None:
+    with pytest.raises(ValueError):
+        TEACHER_INVITATION.details_from_payload(raw)

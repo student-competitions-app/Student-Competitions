@@ -10,7 +10,7 @@
 {{ page_heading("Teachers", ("Invite teacher", "/admin/teachers/invite")) }}
 {% if sent_to %}{{ notice("Invitation sent to " ~ sent_to, "success") }}{% endif %}
 {% if teachers %}
-{% call data_table(["Name", "Email", "Educational institutions", "Can create competitions", "Date of consent"]) %}
+{% call data_table(["Name", "Email", "Educational institutions", "Can manage competitions", "Date of consent"]) %}
 {% for t in teachers %}
 <tr>
   {% call cell("Name") %}<a href="/admin/teachers/{{ t.user_id }}">{{ t.first_name }} {{ t.last_name }}</a>{% endcall %}
@@ -20,7 +20,7 @@
   <div>{{ link.label }} {{ access_badge(link.access_level) }}{% if not link.is_selectable %} {{ status_badge(False) }}{% endif %}</div>
   {% endfor %}
   {% endcall %}
-  {{ cell("Can create competitions", "Yes" if t.can_create_competitions else "No") }}
+  {{ cell("Can manage competitions", "Yes" if t.can_manage_competitions else "No") }}
   {{ cell("Date of consent", t.consented_at|utc("date")) }}
 </tr>
 {% endfor %}

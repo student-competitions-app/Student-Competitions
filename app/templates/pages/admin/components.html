@@ -7,14 +7,15 @@
 {% from "components/icons.html" import logo_mark, icon %}
 {% from "components/palette.html" import swatch %}
 {% from "components/button.html" import button, link_button, post_button %}
-{% from "components/card.html" import card %}
+{% from "components/card.html" import card, text_card, text_box %}
 {% from "components/table.html" import data_table, cell, actions_cell %}
 {% from "components/badge.html" import badge, status_badge, access_badge %}
 {% from "components/feedback.html" import notice, empty_state %}
-{% from "components/form.html" import error_summary, field, select_field, checkbox_field, form_actions %}
+{% from "components/form.html" import error_summary, field, textarea_field, select_field, checkbox_field, form_actions %}
 {% from "components/confirmation.html" import confirmation, refusal %}
 {% from "components/details.html" import details_list %}
 {% from "components/selectors.html" import list_detail, chained_lists %}
+{% from "components/pagination.html" import page_navigation %}
 
 {% block title %}Components — {{ app_name }}{% endblock %}
 
@@ -94,6 +95,25 @@
     <li>{{ card("Card without a link", description="A title and a description.") }}</li>
     <li>{% call card("Card with a body") %}<p>Any content, passed through the call block.</p>{% endcall %}</li>
   </ul>
+  <h3>Text cards</h3>
+  <ol class="text-card-list">
+    <li>
+      {% call text_card("Question 57", id="gallery-question-57") %}
+      {{ text_box("Question", multiline_text) }}
+      {{ text_box("Reference answer", "Solid, liquid and gas. Ice, water and steam.\nGas has the most energy.") }}
+      <div class="row-actions">
+        {{- link_button("Edit", "/admin/components#cards", kind="secondary", small=True) -}}
+        {{- link_button("Delete", "/admin/components#cards", kind="destructive", outline=True, small=True) -}}
+      </div>
+      {% endcall %}
+    </li>
+    <li>
+      {% call text_card("Question 58", id="gallery-question-58") %}
+      {{ text_box("Question", long_word_text) }}
+      {{ text_box("Reference answer", "Long words wrap inside the box.") }}
+      {% endcall %}
+    </li>
+  </ol>
 </section>
 
 <section id="table" aria-labelledby="table-heading">
@@ -148,8 +168,13 @@
   {{ field("gallery-name", "Name", value="", error=field_errors["gallery-name"]) }}
   {{ field("gallery-year", "Year of study", value="two", error=field_errors["gallery-year"]) }}
   {{ select_field("gallery-class-field", "Class", classes, selected=1) }}
-  {{ checkbox_field("gallery-check", "Can create competitions", checked=True) }}
+  {{ checkbox_field("gallery-check", "Can manage competitions", checked=True) }}
   {{ form_actions("Save", cancel_href="/admin/components#forms") }}
+  <h3>Multi-line fields and a second save button</h3>
+  {{ textarea_field("gallery-text-empty", "Question", hint="Up to 2,000 characters.") }}
+  {{ textarea_field("gallery-text-filled", "Reference answer", value=multiline_text) }}
+  {{ textarea_field("gallery-text-error", "Question text", value="", error=textarea_error) }}
+  {{ form_actions("Save question", cancel_href="/admin/components#forms", name="then", value="list", secondary={"label": "Save and add one more question", "name": "then", "value": "another"}) }}
 </section>
 
 <section id="confirmations" aria-labelledby="confirmations-heading">
@@ -177,10 +202,20 @@
   {% endif %}
   {% endcall %}
   <h3>Chained lists</h3>
+  <p>Each list sends itself when it changes. Without JavaScript, each list shows a <strong>Show</strong> button instead.</p>
   {{ chained_lists([
     {"id": "gallery-region", "name": "region", "label": "Region", "placeholder": "Select a region", "options": [(1, "Kyiv"), (2, "Lviv")], "selected": 1, "disabled": false, "carry": []},
     {"id": "gallery-institution", "name": "institution", "label": "Educational institution", "placeholder": "Select an educational institution", "options": [(1, "Kyiv Polytechnic Institute — Write")], "selected": 1, "disabled": false, "carry": [("region", 1)]},
     {"id": "gallery-class", "name": "class", "label": "Class", "placeholder": "Select a class", "options": classes, "selected": none, "disabled": false, "carry": [("region", 1), ("institution", 1)], "extra_options": [("new", "+ Add class")]},
   ], "/admin/components") }}
+</section>
+
+<section id="pagination" aria-labelledby="pagination-heading">
+  <h2 id="pagination-heading">Page navigation</h2>
+  <p>Above and below a long list. Every link stays on this page.</p>
+  {% for paging in pagings %}
+  <h3>Page {{ paging.number }} of {{ paging.last }}</h3>
+  {{ page_navigation(paging, "/admin/components?page=", "Questions", "Pages, sample " ~ loop.index) }}
+  {% endfor %}
 </section>
 {% endblock %}

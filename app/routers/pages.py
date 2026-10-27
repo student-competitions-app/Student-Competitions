@@ -15,9 +15,7 @@ from app.core.db import SessionDep
 from app.core.templates import templates
 from app.models import ALL_ROLES
 from app.routers.areas import areas_for
-from app.schemas.question import QuestionPublic
 from app.services.database_status import read_database_status
-from app.services.questions import list_questions
 
 router = APIRouter()
 
@@ -28,7 +26,8 @@ logger = logging.getLogger(__name__)
 @allow_roles(*ALL_ROLES)
 def home(request: Request, session: SessionDep, current_role: CurrentRole) -> HTMLResponse:
     """Render the home page: the introduction, links to the areas the current role may open
-    (FR-027), the stored questions, and the database status.
+    (FR-027), and the database status. The milestone 3 question list is gone (milestone 11
+    FR-043): questions are shown only in the teacher area.
 
     Sync rather than async: the database calls block, so FastAPI runs this in its thread pool.
 
@@ -44,16 +43,11 @@ def home(request: Request, session: SessionDep, current_role: CurrentRole) -> HT
         "areas": areas_for(current_role),
     }
     try:
-        questions = [
-            QuestionPublic.model_validate(question, from_attributes=True)
-            for question in list_questions(session)
-        ]
         db_status = read_database_status(session)
     except SQLAlchemyError as exc:
         logger.error("Question data unavailable: %s: %s", type(exc).__name__, exc)
         context["data_available"] = False
     else:
         context["data_available"] = True
-        context["questions"] = questions
         context["db_status"] = db_status
     return templates.TemplateResponse(request, "pages/home.html", context)

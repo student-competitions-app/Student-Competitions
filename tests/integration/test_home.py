@@ -1,8 +1,9 @@
 """HTTP contract for the home page and the friendly not-found page.
 
-See specs/001-hello-world-page/contracts/http-routes.md and, for the question list,
-specs/003-database-questions/contracts/http-routes.md#get---home-page. Every test that uses
-`client` runs once per database engine.
+See specs/001-hello-world-page/contracts/http-routes.md and
+specs/003-database-questions/contracts/http-routes.md#get---home-page. Milestone 11 removed the
+sample question list (specs/011-question-bank/spec.md US8); its replacements are at the end.
+Every test that uses `client` runs once per database engine.
 
 The home page is private since milestone 4, so its tests use `admin_client`, signed in through a
 session created directly in the database; `client` stays anonymous
@@ -10,23 +11,19 @@ session created directly in the database; `client` stays anonymous
 """
 
 import re
-import time
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from markupsafe import escape
 from sqlalchemy.exc import OperationalError
-from sqlmodel import Session, delete
 
 import app.routers.pages as pages
 from app.core.config import APP_NAME, APP_TAGLINE, APP_VERSION, COMMIT_SHA
 from app.core.migrations import head_revision
 from app.core.templates import SHORT_COMMIT_LENGTH
-from app.models import Question, Role
+from app.main import app
+from app.models import Role
 from app.routers.areas import areas_for
-from app.schemas.question import QuestionCreate
-from app.services.questions import create_question
 from tests import html
 from tests.conftest import (
     ADMIN_EMAIL,
@@ -35,6 +32,8 @@ from tests.conftest import (
     TEACHER_EMAIL,
     TEACHER_STUDENT_EMAIL,
     ClientAs,
+    make_question,
+    make_subject,
 )
 
 VIEWPORT_META = '<meta name="viewport" content="width=device-width, initial-scale=1">'
@@ -140,7 +139,7 @@ def test_error_page_reports_the_release_too(admin_client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------------------------
-# The question list (milestone 3)
+# The unavailable notice (milestone 3; the question list itself went in milestone 11)
 # ---------------------------------------------------------------------------------------------
 
 UNAVAILABLE_NOTICE = (
@@ -155,18 +154,6 @@ def _questions_section(body: str) -> html.Element | None:
     return sections[0] if sections else None
 
 
-def _question_lists(body: str) -> list[html.Element]:
-    section = _questions_section(body)
-    return section.find_all("ol") if section is not None else []
-
-
-def _question_items(body: str) -> list[str]:
-    """The raw (still escaped, line breaks kept) contents of each item of the question list."""
-    lists = _question_lists(body)
-    assert len(lists) == 1, f"expected one question list, found {len(lists)}"
-    return [body[li.inner_start : li.inner_end] for li in lists[0].find_all("li")]
-
-
 def _status_lines(body: str) -> list[html.Element]:
     """The database status line: the one element carrying the machine-readable attributes."""
     return [e for e in html.parse(body).iter() if "data-engine" in e.attrs]
@@ -176,75 +163,17 @@ def _fail_database_reads(monkeypatch: pytest.MonkeyPatch) -> None:
     def failing(*args: Any, **kwargs: Any) -> Any:
         raise OperationalError("SELECT 1", {}, Exception("boom"))
 
-    monkeypatch.setattr(pages, "list_questions", failing)
-
-
-def test_home_has_the_questions_section(admin_client: TestClient) -> None:
-    section = _questions_section(admin_client.get("/").text)
-    assert section is not None
-    headings = section.find_all("h2")
-    assert [h.text() for h in headings] == ["Sample questions"]
-    assert section.attrs.get("aria-labelledby") == headings[0].attrs.get("id")
-
-
-def test_home_lists_the_sample_questions_once_each_in_order(
-    admin_client: TestClient, sample_questions: list[dict[str, str]]
-) -> None:
-    """Compared with `markupsafe.escape`, which is what Jinja uses (`"` becomes `&#34;`)."""
-    expected = [str(escape(sample["text"])) for sample in sample_questions]
-    assert _question_items(admin_client.get("/").text) == expected
-
-
-def test_home_keeps_the_line_break_inside_the_ukrainian_sample(
-    admin_client: TestClient, sample_questions: list[dict[str, str]]
-) -> None:
-    multiline = [sample["text"] for sample in sample_questions if "\n" in sample["text"]]
-    assert multiline, "the samples should include a multi-line question"
-    assert all(text in _question_items(admin_client.get("/").text) for text in multiline)
-
-
-def test_home_never_shows_a_reference_answer(
-    admin_client: TestClient, sample_questions: list[dict[str, str]]
-) -> None:
-    body = admin_client.get("/").text
-    for sample in sample_questions:
-        answer = sample["reference_answer"]
-        assert answer not in body
-        assert str(escape(answer)) not in body
+    monkeypatch.setattr(pages, "read_database_status", failing)
 
 
 def test_home_has_no_write_affordance(admin_client: TestClient) -> None:
     """No form or button in the page's content: only the header's own forms (the theme switch
-    and Log out), and no link out of a list item (US1-2, FR-018)."""
+    and Log out) (US1-2, FR-018)."""
     body = admin_client.get("/").text
     assert [f.action for f in html.forms(body, within="header")] == ["/theme", "/logout"]
     main = html.parse(body).find_all("main")[0]
     assert main.find_all("form") == []
     assert main.find_all("button") == []
-    assert all("<a" not in item for item in _question_items(body))
-
-
-def test_question_text_is_escaped(admin_client: TestClient, session: Session) -> None:
-    session.add(Question(text="<b>bold</b> & more", reference_answer="x"))
-    session.commit()
-    body = admin_client.get("/").text
-    assert "&lt;b&gt;bold&lt;/b&gt; &amp; more" in body
-    assert "<b>bold</b>" not in body
-
-
-def test_home_shows_an_empty_state_when_there_are_no_questions(
-    admin_client: TestClient, session: Session
-) -> None:
-    session.exec(delete(Question))
-    session.commit()
-    body = admin_client.get("/").text
-    assert "No questions yet." in html.text(body, "main")
-    assert _question_lists(body) == []
-
-
-def test_home_shows_the_same_list_on_every_load(admin_client: TestClient) -> None:
-    lists = [_question_items(admin_client.get("/").text) for _ in range(3)]
-    assert lists[0] == lists[1] == lists[2]
 
 
 def test_home_degrades_when_the_database_fails(
@@ -258,7 +187,6 @@ def test_home_degrades_when_the_database_fails(
     assert html.h1(body)
     assert html.region(body, "footer")
     assert UNAVAILABLE_NOTICE in html.notices(body)
-    assert _question_lists(body) == []
     for detail in ("OperationalError", "boom", "SELECT"):
         assert detail not in body
 
@@ -308,39 +236,13 @@ def test_status_line_is_in_the_footer(admin_client: TestClient) -> None:
     assert footer.inner_start < status.inner_start < footer.inner_end
 
 
-@pytest.mark.parametrize("failing_read", ["list_questions", "read_database_status"])
-def test_a_failing_read_replaces_both_the_list_and_the_status_line(
-    admin_client: TestClient, monkeypatch: pytest.MonkeyPatch, failing_read: str
+def test_a_failing_read_replaces_the_status_line_with_the_notice(
+    admin_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def failing(*args: Any, **kwargs: Any) -> Any:
-        raise OperationalError("SELECT 1", {}, Exception("boom"))
-
-    monkeypatch.setattr(pages, failing_read, failing)
+    _fail_database_reads(monkeypatch)
     body = admin_client.get("/").text
     assert UNAVAILABLE_NOTICE in html.notices(body)
-    assert _question_lists(body) == []
     assert _status_lines(body) == []
-
-
-def test_home_lists_500_questions_quickly(
-    admin_client: TestClient, session: Session, sample_questions: list[dict[str, str]]
-) -> None:
-    """SC-005: the page stays fast with a realistic bank, samples first, then creation order."""
-    for i in range(500):
-        create_question(
-            session, QuestionCreate(text=f"Question {i:03d}", reference_answer="Answer.")
-        )
-
-    started = time.perf_counter()
-    response = admin_client.get("/")
-    elapsed = time.perf_counter() - started
-
-    assert response.status_code == 200
-    assert elapsed < 3, f"GET / took {elapsed:.2f}s with 506 questions"
-    items = _question_items(response.text)
-    assert len(items) == 506
-    assert items[:6] == [str(escape(sample["text"])) for sample in sample_questions]
-    assert items[6:] == [f"Question {i:03d}" for i in range(500)]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -396,3 +298,52 @@ def test_unavailable_data_keeps_the_cards_and_drops_the_database_line(
     assert UNAVAILABLE_NOTICE in html.notices(response.text)
     assert [href for href, _, _ in area_cards(response.text)] == ["/admin", "/staff"]
     assert _status_lines(response.text) == []
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11: the sample questions are gone (US8)
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("email", [ADMIN_EMAIL, TEACHER_EMAIL, STUDENT_EMAIL])
+def test_the_home_page_lists_no_questions(client_as: ClientAs, email: str) -> None:
+    """US8-2, SC-007: no questions section, with the database line still in the footer."""
+    body = client_as(email).get("/").text
+    assert _questions_section(body) is None
+    assert "Sample questions" not in body
+    assert len(_status_lines(body)) == 1
+
+
+def test_an_anonymous_visitor_sees_no_questions(client: TestClient) -> None:
+    """US8-2: the home page sends them to sign in, and that page lists nothing either."""
+    body = client.get("/").text
+    assert _questions_section(body) is None
+    assert "Sample questions" not in body
+
+
+def test_a_stored_question_never_reaches_the_home_page(admin_client: TestClient) -> None:
+    subject = make_subject(app.state.engine, "Physics")
+    make_question(app.state.engine, subject, "A secret question?", "A secret answer.")
+    body = admin_client.get("/").text
+    assert "A secret question?" not in body
+    assert "A secret answer." not in body
+
+
+def test_the_unavailable_message_is_kept(
+    admin_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """US8-3, FR-043: the page still renders, with its existing message."""
+    _fail_database_reads(monkeypatch)
+    response = admin_client.get("/")
+    assert response.status_code == 200
+    assert UNAVAILABLE_NOTICE in html.notices(response.text)
+
+
+def test_the_teacher_card_mentions_the_question_bank(client_as: ClientAs) -> None:
+    """US8-4, FR-044."""
+    body = client_as(TEACHER_EMAIL).get("/").text
+    assert (
+        "/teacher",
+        "Teacher area",
+        "Manage your classes and students, and see the question bank.",
+    ) in area_cards(body)

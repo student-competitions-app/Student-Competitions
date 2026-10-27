@@ -43,11 +43,20 @@ IRYNA = "iryna@example.org"
 AREA_PAGES = {"/teacher", "/teacher/students", "/teacher/competitions"}
 """The teacher pages that name no object; every other teacher page is a management page."""
 
+QUESTIONS_TAB = "/teacher/questions"
+"""Milestone 11's tab is left out of these sweeps: its access rule is the competitions setting,
+not institution links, so `test_teacher_questions.py` sweeps it with real subject and question
+ids and teachers with and without the setting."""
+
 TEACHER_GETS = sorted(
-    path for path, methods, _ in ALL_ROUTES if "GET" in methods and path.startswith("/teacher")
+    path
+    for path, methods, _ in ALL_ROUTES
+    if "GET" in methods and path.startswith("/teacher") and not path.startswith(QUESTIONS_TAB)
 )
 TEACHER_POSTS = sorted(
-    path for path, methods, _ in ALL_ROUTES if "POST" in methods and path.startswith("/teacher")
+    path
+    for path, methods, _ in ALL_ROUTES
+    if "POST" in methods and path.startswith("/teacher") and not path.startswith(QUESTIONS_TAB)
 )
 
 SNAPSHOT_TABLES = ("classes", "enrolments", "users", "user_roles", "consent_records")

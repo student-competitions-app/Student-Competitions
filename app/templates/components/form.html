@@ -49,6 +49,16 @@
 <input type="{{ type }}" id="{{ id }}" name="{{ name or id }}" value="{{ value if value is not none else '' }}"{{ _described(id, hint, error) }}{{ _attrs(attrs) }}>
 {%- endmacro %}
 
+{#- The multi-line twin of `field` (milestone 11 contracts/components.md §3). The value is kept
+    exactly: no whitespace sits between the tags and the value, and a value starting with a line
+    break gets one more, because HTML drops a single leading line break inside `<textarea>`. -#}
+{% macro textarea_field(id, label, value="", error=None, hint=None, name=None, rows=6, attrs={}) -%}
+{%- set text = value if value is not none else "" -%}
+<label for="{{ id }}">{{ label }}</label>
+{{ _messages(id, hint, error) }}
+<textarea id="{{ id }}" name="{{ name or id }}" rows="{{ rows }}"{{ _described(id, hint, error) }}{{ _attrs(attrs) }}>{% if text.startswith("\n") %}{{ "\n" }}{% endif %}{{ text }}</textarea>
+{%- endmacro %}
+
 {% macro select_field(id, label, options, selected=None, error=None, hint=None, name=None, attrs={}, placeholder=None, extra_options=()) -%}
 <label for="{{ id }}">{{ label }}</label>
 {{ _messages(id, hint, error) }}
@@ -72,9 +82,15 @@
 {%- endif %}
 {%- endmacro %}
 
-{% macro form_actions(submit_label, cancel_href=None, kind="primary") -%}
+{#- The main button first, so Enter submits it; `name`/`value` go on it. `secondary`
+    (`{"label", "name", "value"}`) adds one secondary save right after it, for "save and continue
+    with another" (milestone 11 contracts/components.md §2). Cancel is a link, last. -#}
+{% macro form_actions(submit_label, cancel_href=None, kind="primary", name=None, value=None, secondary=None) -%}
 <div class="form-actions">
-  {{ button(submit_label, kind=kind) }}
+  {{ button(submit_label, kind=kind, name=name, value=value) }}
+  {%- if secondary %}
+  {{ button(secondary.label, kind="secondary", name=secondary.name, value=secondary.value) }}
+  {%- endif %}
   {%- if cancel_href %}
   <a href="{{ cancel_href }}">Cancel</a>
   {%- endif %}

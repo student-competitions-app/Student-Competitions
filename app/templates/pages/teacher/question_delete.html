@@ -1,0 +1,11 @@
+{% extends "layouts/teacher.html" %}
+{#- The delete confirmation: it names the question by its number and shows nothing else (FR-033). -#}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation %}
+
+{% block title %}Delete question {{ question_id }} — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(cancel, "Back to the questions") }}
+{{ confirmation("Delete question " ~ question_id ~ "?", "The question will be hidden from this list and can no longer be added to new competitions. It is not erased, but it cannot be restored.", "/teacher/questions/" ~ question_id ~ "/delete", "Delete", cancel) }}
+{% endblock %}

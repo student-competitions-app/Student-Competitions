@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% from "components/card.html" import card %}
-{% from "components/feedback.html" import notice, empty_state %}
+{% from "components/feedback.html" import notice %}
 
 {% block title %}{{ app_name }} — {{ app_tagline }}{% endblock %}
 
@@ -15,20 +15,7 @@
     {% endfor %}
   </ul>
 </section>
-{% if data_available %}
-<section id="questions" aria-labelledby="questions-heading">
-  <h2 id="questions-heading">Sample questions</h2>
-  {% if questions %}
-  <ol>
-    {% for question in questions %}
-    <li class="keep-lines">{{ question.text }}</li>
-    {% endfor %}
-  </ol>
-  {% else %}
-  {{ empty_state("No questions yet.") }}
-  {% endif %}
-</section>
-{% else %}
+{% if not data_available %}
 {{ notice("Question data is temporarily unavailable. Please try again in a moment.", "info") }}
 {% endif %}
 {% endblock %}

@@ -7,7 +7,8 @@ Tabs are ordinary links: no script (FR-047).
 
 `GET /teacher` keeps milestone 5's address (the home page links to it through
 `areas.TEACHER_AREA`) and sends the browser on to the first tab. The Students tab lives in
-`app.routers.teacher_students`; Competitions is a placeholder until milestones 11 and 14.
+`app.routers.teacher_students` and the Questions tab in `app.routers.teacher_questions`
+(milestone 11); Competitions is a placeholder until milestone 12.
 """
 
 from dataclasses import dataclass
@@ -34,6 +35,7 @@ class TeacherTab:
 
 TEACHER_TABS = (
     TeacherTab("students", "Students", "/teacher/students"),
+    TeacherTab("questions", "Questions", "/teacher/questions"),
     TeacherTab("competitions", "Competitions", "/teacher/competitions"),
 )
 """The tabs, in the order shown. A milestone that adds a tab adds it here."""

@@ -213,7 +213,7 @@ def _invite_form(
 @router.get("/invite", response_class=HTMLResponse)
 @allow_roles(Role.ADMIN)
 def invite_page(request: Request, session: SessionDep) -> HTMLResponse:
-    values = {"email": "", "first_name": "", "last_name": "", "can_create_competitions": False}
+    values = {"email": "", "first_name": "", "last_name": "", "can_manage_competitions": False}
     return _invite_form(request, session, values)
 
 
@@ -227,7 +227,7 @@ def invite_action(
     email: str = Form(""),
     first_name: str = Form(""),
     last_name: str = Form(""),
-    can_create_competitions: str | None = Form(None),
+    can_manage_competitions: str | None = Form(None),
 ) -> HTMLResponse:
     """Validate (email, names, picker), check the limits, then seal and send (FR-014–FR-021).
 
@@ -235,12 +235,12 @@ def invite_action(
     """
     settings = _settings(request)
     inviter: User = request.state.user
-    can_create = can_create_competitions is not None
+    can_manage = can_manage_competitions is not None
     values = {
         "email": email,
         "first_name": first_name,
         "last_name": last_name,
-        "can_create_competitions": can_create,
+        "can_manage_competitions": can_manage,
     }
     picked, levels = _submitted(institution, access)
 
@@ -291,7 +291,7 @@ def invite_action(
             address,
             first,
             last,
-            TeacherDetails(institutions=choices, can_create_competitions=can_create),
+            TeacherDetails(institutions=choices, can_manage_competitions=can_manage),
         )
     except InvalidChoice as invalid:
         return refused(400, {"picker": invalid.message})
@@ -351,7 +351,7 @@ def teacher_page(request: Request, session: SessionDep, user_id: int) -> HTMLRes
     values = {
         "first_name": teacher.first_name,
         "last_name": teacher.last_name,
-        "can_create_competitions": teacher.can_create_competitions,
+        "can_manage_competitions": teacher.can_manage_competitions,
     }
     picked = {link.institution_id for link in teacher.links}
     levels = {link.institution_id: link.access_level.value for link in teacher.links}
@@ -368,7 +368,7 @@ def update_teacher_action(
     access: RepeatedField,
     first_name: str = Form(""),
     last_name: str = Form(""),
-    can_create_competitions: str | None = Form(None),
+    can_manage_competitions: str | None = Form(None),
 ) -> HTMLResponse:
     """Save the edit: only what changed is written, and the teacher stays signed in (FR-040,
     FR-041). Any field other than these, such as an email, is ignored."""
@@ -376,11 +376,11 @@ def update_teacher_action(
         teacher = get_teacher(session, user_id)
     except TeacherNotFound:
         return _not_found(request)
-    can_create = can_create_competitions is not None
+    can_manage = can_manage_competitions is not None
     values = {
         "first_name": first_name,
         "last_name": last_name,
-        "can_create_competitions": can_create,
+        "can_manage_competitions": can_manage,
     }
     picked, levels = _submitted(institution, access)
     errors: dict[str, str] = {}
@@ -392,7 +392,7 @@ def update_teacher_action(
         errors["picker"] = invalid.message
     if not errors:
         try:
-            update_teacher(session, user_id, first, last, choices, can_create)
+            update_teacher(session, user_id, first, last, choices, can_manage)
         except TeacherNotFound:
             return _not_found(request)
         except InstitutionNotSelectable as invalid:

@@ -1,0 +1,35 @@
+{#- Page navigation (milestone 11 contracts/components.md §1, research R9, FR-023, FR-025). Plain
+    links, so it works without JavaScript. `paging` is an `app.services.paging.Paging`; `href` is
+    the address prefix a page number completes (`/teacher/questions?subject=3&page=`); `noun` is
+    the plural the range names ("Questions"); `label` names the landmark, so two copies on a page
+    can be told apart ("Pages, top", "Pages, bottom"). Nothing is emitted for an empty list.
+
+    The current page is a link with `aria-current="page"`, so keyboard users land on it too. An
+    unavailable Previous or Next is text, never a disabled link; a gap is a hidden `…`. -#}
+
+{% macro page_navigation(paging, href, noun, label) -%}
+{%- if paging.total %}
+<nav class="pagination" aria-label="{{ label }}">
+  <p class="pagination-range">{{ noun }} {{ paging.first_item }}–{{ paging.last_item }} of {{ paging.total }}</p>
+  <ul>
+    {%- if paging.previous %}
+    <li><a href="{{ href }}{{ paging.previous }}" rel="prev">Previous</a></li>
+    {%- else %}
+    <li><span class="pagination-off">Previous</span></li>
+    {%- endif %}
+    {%- for link in paging.links %}
+    {%- if link.number is none %}
+    <li><span class="pagination-gap" aria-hidden="true">…</span></li>
+    {%- else %}
+    <li><a href="{{ href }}{{ link.number }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.number }}</a></li>
+    {%- endif %}
+    {%- endfor %}
+    {%- if paging.next %}
+    <li><a href="{{ href }}{{ paging.next }}" rel="next">Next</a></li>
+    {%- else %}
+    <li><span class="pagination-off">Next</span></li>
+    {%- endif %}
+  </ul>
+</nav>
+{%- endif %}
+{%- endmacro %}

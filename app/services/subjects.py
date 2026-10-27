@@ -1,4 +1,4 @@
-"""Subject operations: what the `/admin/subjects` routes call, and milestones 9 and 10 build on.
+"""Subject operations: what the `/admin/subjects` routes call, and the question bank builds on.
 
 See specs/006-admin-area/contracts/subject-service.md and research D3–D4. These functions enforce
 no authorization: every route that calls them is `@allow_roles(Role.ADMIN)`, and a later caller
@@ -10,15 +10,19 @@ write is one committed unit of work, rolled back on error. Names are cleaned her
 `name_key`, not the lookup before an insert, is the guarantee against simultaneous submissions.
 
 Each successful change logs one line with the subject id only; a no-op logs nothing.
+
+References: questions count as uses from milestone 11 (`count_subject_uses`), and competitions
+add theirs in milestone 12.
 """
 
 import logging
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
-from app.models import Subject
+from app.models import Question, Subject
 from app.schemas.subject import clean_subject_name, subject_name_key
 
 logger = logging.getLogger("uvicorn.error")
@@ -57,6 +61,13 @@ def list_subjects(session: Session) -> list[Subject]:
     collation: this way SQLite and PostgreSQL give the same order (research D3).
     """
     subjects = session.exec(select(Subject)).all()
+    return sorted(subjects, key=lambda subject: (subject.name_key, subject.id))
+
+
+def list_active_subjects(session: Session) -> list[Subject]:
+    """The active subjects, sorted exactly like `list_subjects`: the question bank's subject
+    list (milestone 11)."""
+    subjects = session.exec(select(Subject).where(col(Subject.is_active))).all()
     return sorted(subjects, key=lambda subject: (subject.name_key, subject.id))
 
 
@@ -139,13 +150,16 @@ def set_subject_active(session: Session, subject_id: int, active: bool) -> Subje
 
 
 def count_subject_uses(session: Session, subject_id: int) -> int:
-    """How many records refer to the subject. Nothing does yet, so this is `0` (research D4).
+    """How many records refer to the subject.
 
-    Milestone 9 (questions) and milestone 10 (competitions) each add their count here when they
-    add a `subject_id` reference. Do not rely on the foreign key alone: SQLite does not enforce
-    foreign keys in this application, so without a count here a subject in use could be deleted.
+    From milestone 11, every question of the subject counts, deleted ones too: milestone 15 shows
+    the questions of past competitions, so a deleted question still needs its subject
+    (specs/011-question-bank/research.md R16, FR-040). Competitions add their count in milestone
+    12. Do not rely on the foreign key alone: it is the backstop on PostgreSQL, but SQLite does not
+    enforce foreign keys in this application, so there the count is the rule.
     """
-    return 0
+    statement = select(func.count()).select_from(Question).where(Question.subject_id == subject_id)
+    return session.exec(statement).one()
 
 
 def delete_subject(session: Session, subject_id: int) -> None:

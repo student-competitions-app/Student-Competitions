@@ -214,9 +214,10 @@ jobs:
       # reads it from the console backend's output in `docker logs` (as a developer would), and
       # submits it. The page is then checked twice: once as started, and once after a restart
       # against the same database with the same cookie jar, without signing in again. That must
-      # show the next boot number and the six sample questions exactly once (nothing lost,
-      # nothing re-seeded) and prove the server-side session survived the restart. Finally,
-      # logging out must end the session (specs/004-email-otp-auth/contracts/pipeline.md#checksyml--image).
+      # show the next boot number and prove the server-side session survived the restart. Since
+      # milestone 11 the home page lists no questions: the sample questions are deleted
+      # (specs/011-question-bank/spec.md FR-042, FR-043). Finally, logging out must end the
+      # session (specs/004-email-otp-auth/contracts/pipeline.md#checksyml--image).
       # The single-role administrator must also see the "Administrator" role label and only their area links,
       # open /admin and be refused /student, and a cross-site logout must be refused without ending
       # the session (specs/005-roles-authorization/contracts/pipeline.md#checksyml--image).
@@ -277,25 +278,22 @@ jobs:
               fail "GET $url does not show the signed-in address in the header."
             grep -q 'action="/logout"' /tmp/home.html ||
               fail "GET $url has no logout form."
-            grep -q 'What is the boiling point of water at sea level' /tmp/home.html ||
-              fail "GET $url did not contain the first sample question."
             ! grep -q 'temporarily unavailable' /tmp/home.html ||
-              fail "GET $url shows the 'temporarily unavailable' notice (expected the questions)."
+              fail "GET $url shows the 'temporarily unavailable' notice (expected the database to be reachable)."
+            ! grep -q -e '<section id="questions"' -e 'What is the boiling point of water at sea level' /tmp/home.html ||
+              fail "GET $url still lists questions (the home page lists none since milestone 11)."
             grep -q 'data-engine="postgresql"' /tmp/home.html ||
               fail "GET $url does not report data-engine=\"postgresql\"."
             found=$(sed -n 's/.*data-boots="\([0-9]*\)".*/\1/p' /tmp/home.html)
             [ "$found" = "$expected_boots" ] ||
               fail "GET $url shows data-boots=\"$found\" (expected \"$expected_boots\")."
-            items=$(sed -n '/<section id="questions"/,/<\/section>/p' /tmp/home.html | grep -c '<li' || true)
-            [ "$items" = "6" ] ||
-              fail "GET $url lists $items questions (expected the 6 samples exactly once)."
             grep -q 'class="brand-role">Administrator<' /tmp/home.html ||
               fail "GET $url does not show the 'Administrator' role label in the top bar."
             grep -q 'href="/admin"' /tmp/home.html && grep -q 'href="/staff"' /tmp/home.html ||
               fail "GET $url does not link the Administrator and Staff areas."
             ! grep -q -e 'href="/student"' -e 'href="/teacher"' /tmp/home.html ||
               fail "GET $url links an area the administrator role may not open."
-            echo "GET $url → $status: signed in, PostgreSQL, boot #$found, $items sample questions."
+            echo "GET $url → $status: signed in, PostgreSQL, boot #$found, no question list."
           }
 
           # GET <path> with the session; fail unless it answers <status> and contains <text>.

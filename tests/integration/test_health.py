@@ -56,7 +56,7 @@ def test_healthz_stays_ok_while_the_database_is_failing(
     def failing(*args: Any, **kwargs: Any) -> Any:
         raise OperationalError("SELECT 1", {}, Exception("boom"))
 
-    monkeypatch.setattr(pages, "list_questions", failing)
+    monkeypatch.setattr(pages, "read_database_status", failing)
 
     home = admin_client.get("/")
     assert home.status_code == 200

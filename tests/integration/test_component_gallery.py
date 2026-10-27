@@ -36,15 +36,41 @@ SECTIONS = {
     "frame": ["Account menu", "Switch to", "Light", "Dark", "Device", "Back to the frame"],
     "loading": ["Loading bar", "Busy button", "Send invitation"],
     "buttons": ["Primary button", "Secondary link", "Destructive form", "Destructive outline"],
-    "cards": ["Card with a link", "Card without a link", "Card with a body"],
+    "cards": [
+        "Card with a link",
+        "Card without a link",
+        "Card with a body",
+        "Text cards",
+        "Question 57",
+        "Reference answer",
+        "Longwordwithoutbreak" * 15,
+    ],
     "table": ["Physics", "Deactivated", "Rename", "Activate", "No subjects yet"],
     "badges": ["Active", "Deactivated", "Read", "Write"],
     "empty-states": ["No subjects yet", "Select a region"],
     "notices": ["Invitation sent to", "no longer valid", "temporarily unavailable"],
-    "forms": ["There is a problem", "Enter a name.", "Can create competitions", "Save", "Cancel"],
+    "forms": [
+        "There is a problem",
+        "Enter a name.",
+        "Can manage competitions",
+        "Save",
+        "Cancel",
+        "Up to 2,000 characters.",
+        "Reference answer",
+        "Enter the question text.",
+        "Save question",
+        "Save and add one more question",
+    ],
     "confirmations": ["Delete “Physics”?", "is in use and cannot be deleted", "Deactivate"],
     "details": ["Email", "Olena", "Teacher, Student"],
-    "selectors": ["Regions", "Kyiv", "Educational institutions in “Kyiv”", "+ Add class"],
+    "selectors": ["Regions", "Kyiv", "Educational institutions in “Kyiv”", "+ Add class", "Show"],
+    "pagination": [
+        "Questions 1–5 of 5",
+        "Questions 31–40 of 200",
+        "Questions 191–200 of 200",
+        "Previous",
+        "Next",
+    ],
 }
 """components.md §12, in order: each section's id and texts of its variants."""
 
@@ -98,6 +124,61 @@ def test_the_loading_section_shows_both_components_in_their_loading_state(
         return parent is not None
 
     assert not any(in_form(b) for b in busy)
+
+
+def test_the_page_navigation_variants(admin_client: TestClient) -> None:
+    """Milestone 11 contracts/components.md §1: the range, Previous and Next as text at the ends,
+    one current page per nav, and gaps; every link stays on the gallery."""
+    body = admin_client.get(GALLERY).text
+    found = [html.pagination(body, f"Pages, sample {n}") for n in (1, 2, 3)]
+    assert all(nav is not None for nav in found)
+    (first_range, first), (middle_range, middle), (last_range, last) = found  # type: ignore[misc]
+    assert first_range == "Questions 1–5 of 5"
+    assert [(e.text, e.href, e.current) for e in first] == [
+        ("Previous", None, False),
+        ("1", "/admin/components?page=1", True),
+        ("Next", None, False),
+    ]
+    assert middle_range == "Questions 31–40 of 200"
+    assert [e.text for e in middle] == ["Previous", "1", "2", "3", "4", "5", "…", "20", "Next"]
+    assert [e.href for e in middle if e.text in ("Previous", "Next")] == [
+        "/admin/components?page=3",
+        "/admin/components?page=5",
+    ]
+    assert last_range == "Questions 191–200 of 200"
+    assert [e.text for e in last] == ["Previous", "1", "…", "19", "20", "Next"]
+    assert last[-1].href is None
+    for entries in (first, middle, last):
+        assert [e.text for e in entries if e.current] in (["1"], ["4"], ["20"])
+        assert all(e.href is None or e.href.startswith(GALLERY) for e in entries)
+    (gap,) = [s for s in html.parse(body).find_all("span") if "pagination-gap" in s.classes()][:1]
+    assert gap.attrs.get("aria-hidden") == "true"
+
+
+def test_the_two_button_form_and_the_textareas(admin_client: TestClient) -> None:
+    """Milestone 11 contracts/components.md §2–§3: the main save first, then the secondary save,
+    then Cancel; a textarea keeps its line breaks and wires its hint and error."""
+    body = admin_client.get(GALLERY).text
+    (actions,) = [
+        d
+        for d in html.parse(body).find_all("div")
+        if "form-actions" in d.classes() and "Save question" in d.text()
+    ]
+    buttons = [
+        (b.text(), b.attrs.get("name"), b.attrs.get("value"), b.classes())
+        for b in actions.find_all("button")
+    ]
+    assert buttons == [
+        ("Save question", "then", "list", []),
+        ("Save and add one more question", "then", "another", ["secondary"]),
+    ]
+    assert [a.text() for a in actions.find_all("a")] == ["Cancel"]
+    assert 'aria-describedby="gallery-text-empty-hint"' in body
+    assert 'aria-describedby="gallery-text-error-error" aria-invalid="true"' in body
+    assert (
+        '<textarea id="gallery-text-filled" name="gallery-text-filled" rows="6">Name the three'
+        " states of matter.\nFor each" in body
+    )
 
 
 def test_the_gallery_is_no_tab(admin_client: TestClient) -> None:

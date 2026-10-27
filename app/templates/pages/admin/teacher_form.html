@@ -13,7 +13,7 @@
 <form method="post" action="/admin/teachers/{{ teacher.user_id }}">
   {% include "pages/admin/_person_names.html" %}
   {% include "pages/admin/_institution_picker.html" %}
-  {{ checkbox_field("can_create_competitions", "Can create competitions", checked=values.can_create_competitions) }}
+  {{ checkbox_field("can_manage_competitions", "Can manage competitions", checked=values.can_manage_competitions) }}
   {{ form_actions("Save", cancel_href="/admin/teachers") }}
 </form>
 <div class="form-actions">{{ link_button("Remove teacher", "/admin/teachers/" ~ teacher.user_id ~ "/remove", kind="destructive", outline=True) }}</div>

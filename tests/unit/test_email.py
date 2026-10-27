@@ -196,7 +196,7 @@ def an_invitation() -> EmailMessage:
         [
             "Kyiv Lyceum (Kyiv) — Write",
             "Lviv School (Lviv) — Read",
-            "You will be able to create competitions.",
+            "You will be able to manage competitions and change the question bank.",
         ],
         INVITE_LINK,
         EXPIRES,
@@ -214,7 +214,7 @@ def test_the_invitation_states_everything_required() -> None:
         "Role: Teacher",
         "Kyiv Lyceum (Kyiv) — Write",
         "Lviv School (Lviv) — Read",
-        "You will be able to create competitions.",
+        "You will be able to manage competitions and change the question bank.",
         "Nothing about you is stored unless you accept.",
         f"\n{INVITE_LINK}\n",
         "This invitation expires on 2026-10-22 14:05 UTC.",

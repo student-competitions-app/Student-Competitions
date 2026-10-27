@@ -1047,6 +1047,64 @@ html [aria-busy="true"]:not(input, select, textarea):is(button, [type="submit"],
 }
 
 
+/* Text card (components/card.html, milestone 11 contracts/components.md §4): long entered texts,
+   such as a question with its reference answer. One surface; inside it, quieter boxes stacked at
+   full width, each with a small label. A list of them has no bullets and the card gap. */
+.text-card-list {
+  display: grid;
+  gap: var(--sc-space-3);
+  margin: 0 0 var(--sc-space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.text-card-list > li {
+  margin: 0;
+  max-width: none;
+  list-style: none;
+}
+
+.text-card {
+  margin: 0 0 var(--sc-space-3);
+  padding: var(--sc-space-3);
+  background: var(--sc-surface);
+  border: var(--sc-border-width) solid var(--sc-border);
+  border-radius: var(--sc-radius-card);
+  box-shadow: var(--sc-shadow-card);
+}
+
+.text-card-list .text-card {
+  margin: 0;
+}
+
+.text-card h3 {
+  margin: 0 0 var(--sc-space-2);
+}
+
+.text-card > :last-child {
+  margin-bottom: 0;
+}
+
+.text-box {
+  margin: 0 0 var(--sc-space-2);
+  padding: var(--sc-space-2);
+  background: var(--sc-neutral-tint);
+  border-radius: var(--sc-radius-control);
+}
+
+.text-box > p {
+  max-width: none;
+  margin: 0;
+}
+
+.text-box-label {
+  margin: 0 0 var(--sc-space-1);
+  color: var(--sc-muted);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+}
+
+
 /* Data table (components/table.html, FR-027): a real table from 768 px, a card of labelled values
    per row below it. Long values wrap; nothing scrolls sideways. */
 .data-table {
@@ -1356,6 +1414,13 @@ textarea {
   border-width: var(--sc-border-strong);
 }
 
+/* A multi-line field (`textarea_field`) is wider than a single-line one, for comfortable long
+   texts, and grows only downwards. */
+textarea {
+  max-width: var(--sc-measure);
+  resize: vertical;
+}
+
 .form-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1520,6 +1585,72 @@ fieldset > legend {
 
 .select-list .row-actions .inline-form {
   display: block;
+}
+
+/* Without JavaScript, each chained list's Show button sits under its list. */
+.selectors-chained noscript button {
+  margin: var(--sc-space-1) 0 0;
+}
+
+/* Page navigation (components/pagination.html, milestone 11 contracts/components.md §1): the range
+   on its own line, then Previous, the pages and Next in a row that wraps on a phone. Every entry
+   keeps the touch target; the current page is bold with the area tabs' primary underline. */
+nav.pagination {
+  display: block;
+  margin: 0 0 var(--sc-space-3);
+}
+
+.pagination-range {
+  margin: 0 0 var(--sc-space-1);
+  color: var(--sc-muted);
+}
+
+nav.pagination ul {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--sc-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+nav.pagination li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+nav.pagination li :is(a, span) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--sc-touch-target);
+  min-height: var(--sc-touch-target);
+  margin: 0;
+  padding: var(--sc-border-accent) var(--sc-space-1) 0;
+  border-bottom: var(--sc-border-accent) solid transparent;
+  border-radius: 0;
+}
+
+nav.pagination li a {
+  font-weight: var(--sc-weight-semibold);
+  text-decoration: none;
+}
+
+nav.pagination li a:hover {
+  text-decoration: underline;
+}
+
+nav.pagination li a[aria-current="page"] {
+  border-bottom-color: var(--sc-primary);
+  color: var(--sc-text);
+  font-weight: var(--sc-weight-bold);
+}
+
+.pagination-off,
+.pagination-gap {
+  color: var(--sc-muted);
 }
 
 /* The theme switch (components/frame.html, FR-014): three secondary buttons; the current choice

@@ -78,6 +78,16 @@ table or a sequence, a unique constraint and a race, for no visible gain.
 
    The table is empty, so the new required column needs no default, and the shorter
    `reference_answer` cannot cut any value short.
+
+   **`recreate="auto"`, not `"always"`**:
+   - **On SQLite**, the column type changes and the new foreign key need a rebuild anyway. `auto`
+     rebuilds the table, and the rebuild applies `table_kwargs={"sqlite_autoincrement": True}`.
+   - **On PostgreSQL**, `auto` issues plain `ALTER TABLE` statements. `always` would copy the table
+     into a new one and drop the old one there too. That rebuilds the id sequence, the foreign key
+     and the index on the production engine, which no migration in this project has done before.
+     The sequence is the risky part, since it is owned by the dropped table.
+   - **The test**: `test_migrations` checks on PostgreSQL that the id still comes from the original
+     sequence and that ids continue past the seed samples.
 3. **Rename `teacher_profiles.can_create_competitions`** to `can_manage_competitions` in batch mode,
    keeping every value (FR-009, SC-006).
 
@@ -136,6 +146,13 @@ ready message. In this order:
 **Errors**: both fields are checked on every submission, and each error is a field error, shown
 beside its field and in the summary (FR-029, FR-039). The textareas carry `required` and
 `maxlength="2000"`, as the existing name fields do. The server stays the authority.
+
+**The browser limit is deliberately a little stricter than the rule.** `maxlength` counts before
+trimming, and counts characters outside the Basic Multilingual Plane, such as emoji, as 2. So near
+2,000 characters, a text with surrounding whitespace or emoji can be stopped in the browser although
+the server would accept it. This is accepted: it only affects texts at the very limit, the name
+fields already behave this way, and a request sent without the browser check still gets the exact
+server rule.
 
 **Removed**: the milestone 3 pydantic types (`QuestionCreate`, `QuestionUpdate`, `QuestionPublic`)
 are removed. They served the home page list and the internal service, and both are gone. Both

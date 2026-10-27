@@ -106,7 +106,9 @@ it reads the row `FOR SHARE` inside a write's transaction (R5, R7).
 **Upgrade**:
 
 1. `DELETE FROM questions`: the milestone 3 sample questions (FR-042).
-2. `batch_alter_table("questions", recreate="always", table_kwargs={"sqlite_autoincrement": True})`:
+2. `batch_alter_table("questions", recreate="auto", table_kwargs={"sqlite_autoincrement": True})`.
+   SQLite rebuilds the table and gains `AUTOINCREMENT`; PostgreSQL alters it in place and keeps its
+   id sequence (R3):
    - add `subject_id INTEGER NOT NULL`, with the FK `fk_questions_subject_id_subjects` and the
      index `ix_questions_subject_id`;
    - add `deleted_at TIMESTAMP WITH TIME ZONE NULL`;

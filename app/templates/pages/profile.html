@@ -17,7 +17,7 @@
   ("Last name", person.last_name if named else none),
   ("Roles", roles | map(attribute="label") | join(", ")),
   ("Educational institutions", true if teacher else none),
-  ("Can create competitions", ("Yes" if teacher.can_create_competitions else "No") if teacher else none),
+  ("Can manage competitions", ("Yes" if teacher.can_manage_competitions else "No") if teacher else none),
   ("Educational institution", enrolment.institution_label if enrolment else none),
   ("Class", true if enrolment else none),
   ("Year of study", enrolment.year_of_study if enrolment else none),

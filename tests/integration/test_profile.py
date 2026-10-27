@@ -58,7 +58,7 @@ def a_teacher(places: dict[str, int], email: str = OLENA) -> int:
         app.state.settings,
         email=email,
         institutions={places["kyiv"]: AccessLevel.WRITE, places["lviv"]: AccessLevel.READ},
-        can_create=True,
+        can_manage=True,
     )
 
 
@@ -105,7 +105,7 @@ def test_a_teacher_sees_everything_stored_on_their_consent(
     ):
         assert shown in main
     assert ("Roles", "Teacher") in html.details(body)
-    assert ("Can create competitions", "Yes") in html.details(body)
+    assert ("Can manage competitions", "Yes") in html.details(body)
     assert html.badges(body) == ["Deactivated"]
     assert "/profile/withdraw" in [a.href for a in html.content_links(body)]
 

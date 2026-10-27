@@ -2,8 +2,8 @@
 
 See specs/008-teacher-management-consent/research.md#d7. The texts live in the migrations, as
 `<ROLE>_CONSENT_TEXT_V<n>` constants, and the migrations are the single source of truth: this
-test reads them from the revision modules, as the `sample_questions` fixture does. Publishing a
-new version means a new migration with a new constant, and a new pin below.
+test reads them from the revision modules rather than keeping a copy that could drift. Publishing
+a new version means a new migration with a new constant, and a new pin below.
 """
 
 import hashlib

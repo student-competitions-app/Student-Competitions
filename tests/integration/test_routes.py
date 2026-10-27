@@ -14,6 +14,11 @@ for an id they cannot reach, unknown ids included (milestone 9 FR-021), so the s
 tell an allowed teacher from a denied one with every id set to `1`. For those pages it checks the
 denied roles only; `test_teacher_access.py` sweeps the same route table with real, reachable ids
 (milestone 9 research D17).
+
+The question bank's management pages (`MANAGE_PATHS`) need **Can manage competitions**, which the
+cast teacher lacks (it has no teacher profile), so they answer it "access denied" too (milestone
+11 FR-037). For those the sweep also checks the denied roles only; `test_teacher_questions.py`
+checks them with a real teacher who has the setting.
 """
 
 import re
@@ -67,7 +72,8 @@ def test_the_route_table_is_not_empty() -> None:
 
 def test_the_write_routes_are_exact() -> None:
     """Signing in and out, choosing a role, the administrator's subject, region, institution and
-    teacher actions, accepting an invitation, and the teacher's class and student actions."""
+    teacher actions, accepting an invitation, the teacher's class and student actions, and the
+    question bank's add, edit and delete."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -105,6 +111,9 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", f"{TEACHER_CLASS}/invite"),
         ("POST", "/teacher/students/{user_id:int}"),
         ("POST", "/teacher/students/{user_id:int}/remove"),
+        ("POST", "/teacher/questions"),
+        ("POST", "/teacher/questions/{question_id:int}/edit"),
+        ("POST", "/teacher/questions/{question_id:int}/delete"),
     }
 
 
@@ -245,6 +254,16 @@ TEACHER_SCOPED_PATHS = frozenset(
 """The teacher pages whose path names an object (milestone 9 research D17)."""
 
 
+MANAGE_PATHS = frozenset(
+    {
+        "/teacher/questions/new",
+        "/teacher/questions/{question_id:int}/edit",
+        "/teacher/questions/{question_id:int}/delete",
+    }
+)
+"""The question bank's pages that need Can manage competitions (milestone 11 FR-037)."""
+
+
 def test_there_are_declared_pages_to_sweep() -> None:
     assert len(declared_get_routes()) >= 5
 
@@ -253,6 +272,14 @@ def test_the_teacher_scoped_pages_are_found() -> None:
     """Guard the skip below from hiding nothing, or everything."""
     assert "/teacher/students/classes/{class_id:int}/edit" in TEACHER_SCOPED_PATHS
     assert "/teacher/students" not in TEACHER_SCOPED_PATHS
+
+
+def test_the_manage_pages_are_found() -> None:
+    """Guard the skip below: exactly the question bank's management pages, all declared."""
+    declared = {path for path, _ in declared_get_routes()}
+    assert MANAGE_PATHS <= declared
+    assert {p for p in declared if p.startswith("/teacher/questions/")} == MANAGE_PATHS
+    assert "/teacher/questions" in declared
 
 
 @pytest.mark.parametrize(("path", "allowed"), declared_get_routes())
@@ -266,12 +293,13 @@ def test_every_declared_page_admits_exactly_its_roles(
     there is no subject 1. Both prove access was granted; each page's own status is pinned by its
     own tests.
 
-    For `TEACHER_SCOPED_PATHS` the allowed teacher is not checked here: id `1` is out of reach, so
-    the page answers "access denied" (see the module docstring)."""
+    For `TEACHER_SCOPED_PATHS` and `MANAGE_PATHS` the allowed teacher is not checked here: id `1`
+    is out of reach, and the cast teacher lacks the setting, so the page answers "access denied"
+    (see the module docstring)."""
     for role, email in SINGLE_ROLE.items():
         status = client_as(email).get(_concrete(path), follow_redirects=False).status_code
         if role in allowed:
-            if path in TEACHER_SCOPED_PATHS:
+            if path in TEACHER_SCOPED_PATHS or path in MANAGE_PATHS:
                 continue
             assert status != 403, f"{role.value} GET {path}: {status}"
         else:

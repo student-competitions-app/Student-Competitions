@@ -1,8 +1,8 @@
 # Issues to fix
 
-Known problems that were found during a milestone but deliberately left out of its scope. Each one
-says where it was found, what is wrong today, and what fixing it involves, so a later milestone can
-pick it up. Remove an entry when the fix is merged.
+Known problems that were found during a milestone but deliberately left out of its scope, and
+planned cleanups that cannot be done yet. Each one says where it was found, what is there today, and
+what fixing it involves, so a later milestone can pick it up. Remove an entry when the fix is merged.
 
 ---
 
@@ -48,3 +48,43 @@ FR-050). The action is reversible with **Activate** on the same row, so the risk
 - the list's **Deactivate** is a link with `role="button"` to the new page, and no direct
   deactivate form remains on `/admin/subjects`;
 - the existing `POST` behaviour and its tests stay unchanged.
+
+---
+
+## 2. Teacher invitations still accept the old setting key
+
+| | |
+|---|---|
+| Found in | Milestone 11, `specs/011-question-bank/research.md` R12 |
+| Area | Teacher invitations (`app/services/teachers.py`, `_TeacherInvitation.details_from_payload`) |
+| Kind | Planned cleanup, not a defect |
+| Not before | 7 days after milestone 11 is deployed to production (2026-11-03 if it was deployed on 2026-10-27) |
+
+**Today**: a teacher invitation carries everything it grants inside the encrypted link, including
+the competitions setting under a key name. Milestone 11 renamed the setting, so new invitations
+write `can_manage_competitions`. Links sent before the deployment still carry
+`can_create_competitions`. So that those links keep working, `details_from_payload` accepts either
+key set: `{"institutions", "can_manage_competitions"}`, or the legacy
+`{"institutions", "can_create_competitions"}` (the constant `LEGACY_SETTING_KEY`).
+
+**Why it cannot be removed yet**: an invitation link is valid for 7 days. Until 7 days have passed
+since the deployment, a teacher may still open a link sent before it. Removing the fallback earlier
+would make that invitation invalid. After that, every such link has expired and is refused anyway,
+so the fallback is dead code.
+
+**Fix**:
+
+- In `app/services/teachers.py`, delete `LEGACY_SETTING_KEY` and its branch in
+  `details_from_payload`, so only `{"institutions", "can_manage_competitions"}` is accepted.
+- Delete `test_an_invitation_sealed_with_the_old_setting_key_is_accepted` in
+  `tests/integration/test_teacher_invitation.py`.
+- In `tests/unit/test_sealing.py`, delete `test_teacher_details_with_the_legacy_key_are_read`, and
+  add the legacy key set (`{"institutions": LINKS, "can_create_competitions": True}`) to
+  `test_other_teacher_details_are_refused`.
+- In `tests/unit/test_setting_name.py`, remove the exception for `LEGACY_SETTING_KEY` and
+  `test_the_legacy_key_is_declared_once`, so the guard forbids the old name everywhere in `app/`.
+- Delete this entry.
+
+**Tests**: the suite above, on both engines; an invitation carrying the old key is now refused as
+invalid. Accepted teachers are unaffected: the milestone 11 migration renamed the database column
+and kept every value.

@@ -71,6 +71,7 @@ from app.routers import (
     profile,
     roles,
     teacher,
+    teacher_questions,
     teacher_students,
     theme,
 )
@@ -175,6 +176,7 @@ app.include_router(roles.router)
 app.include_router(areas.router)
 app.include_router(teacher.router)
 app.include_router(teacher_students.router)
+app.include_router(teacher_questions.router)
 app.include_router(admin.router)
 app.include_router(admin_teachers.router)
 app.include_router(admin_institutions.router)

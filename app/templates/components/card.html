@@ -17,3 +17,24 @@
   {%- endif %}
 </article>
 {%- endmacro %}
+
+{#- Text card (milestone 11 contracts/components.md §4, research R10): long entered texts, such as
+    a question with its reference answer. One surface with a heading and an optional anchor `id`;
+    its body comes from `{% call %}`, one or more `text_box` sections, then any `row-actions`.
+    Several text cards go in an `<ol class="text-card-list">`. -#}
+
+{% macro text_card(heading, id=None) -%}
+<article class="text-card"{% if id %} id="{{ id }}"{% endif %}>
+  <h3>{{ heading }}</h3>
+  {{ caller() }}
+</article>
+{%- endmacro %}
+
+{#- A labelled box inside a text card. The text is escaped and keeps its line breaks; a long word
+    wraps inside the box. -#}
+{% macro text_box(label, text) -%}
+<section class="text-box">
+  <h4 class="text-box-label">{{ label }}</h4>
+  <p class="keep-lines">{{ text }}</p>
+</section>
+{%- endmacro %}

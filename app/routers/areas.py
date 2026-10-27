@@ -47,7 +47,7 @@ TEACHER_AREA = Area(
     "/teacher",
     "Teacher area",
     frozenset({Role.TEACHER}),
-    "Manage your classes and invite your students.",
+    "Manage your classes and students, and see the question bank.",
 )
 STUDENT_AREA = Area(
     "/student",

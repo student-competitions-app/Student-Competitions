@@ -1,0 +1,12 @@
+{% extends "layouts/teacher.html" %}
+{#- "Subject not found" or "Question not found" (specs/011-question-bank/research.md R6), 404. The
+    back link names no subject: the subject may be the missing thing. -#}
+{% from "components/frame.html" import back_link, page_heading %}
+
+{% block title %}{{ heading }} — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link("/teacher/questions", "Back to the questions") }}
+{{ page_heading(heading) }}
+<p>{{ text }}</p>
+{% endblock %}

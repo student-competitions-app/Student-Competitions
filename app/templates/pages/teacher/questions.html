@@ -1,0 +1,55 @@
+{% extends "layouts/teacher.html" %}
+{#- The Questions tab (specs/011-question-bank/contracts/http-routes.md §GET /teacher/questions):
+    the subject list, then exactly one of the empty states or the selected subject's questions
+    between two page navigations. -#}
+{% from "components/frame.html" import page_heading %}
+{% from "components/selectors.html" import chained_lists %}
+{% from "components/feedback.html" import empty_state %}
+{% from "components/pagination.html" import page_navigation %}
+{% from "components/card.html" import text_card, text_box %}
+{% from "components/button.html" import link_button %}
+
+{% block title %}Questions — {{ app_name }}{% endblock %}
+
+{% block scripts %}<script src="/static/js/auto-submit.js" defer></script>{% endblock %}
+
+{% block teacher_content %}
+{% set current_page = listing.paging.number if listing else 1 %}
+{% if can_manage and selected %}
+{{ page_heading("Questions", action=("Add question", "/teacher/questions/new?subject=" ~ selected.id ~ "&page=" ~ current_page)) }}
+{% else %}
+{{ page_heading("Questions") }}
+{% endif %}
+{{ chained_lists([
+  {"id": "subject", "name": "subject", "label": "Subject", "placeholder": "Choose a subject",
+   "options": subjects, "selected": selected.id if selected else none, "disabled": not subjects,
+   "carry": []},
+], "/teacher/questions") }}
+
+{% if not subjects %}
+{{ empty_state("No subjects yet", "Ask an administrator to add a subject.") }}
+{% elif not selected %}
+{{ empty_state("Select a subject", "Choose a subject in the list above to see its questions.") }}
+{% elif not listing.questions %}
+{{ empty_state("No questions yet", "Add the first question with Add question." if can_manage else none) }}
+{% else %}
+{{ page_navigation(listing.paging, page_href, "Questions", "Pages, top") }}
+<ol class="text-card-list">
+  {% for q in listing.questions %}
+  <li>
+    {% call text_card("Question " ~ q.id, id="question-" ~ q.id) %}
+    {{ text_box("Question", q.text) }}
+    {{ text_box("Reference answer", q.reference_answer) }}
+    {% if can_manage %}
+    <div class="row-actions">
+      {{- link_button("Edit", "/teacher/questions/" ~ q.id ~ "/edit?page=" ~ current_page, kind="secondary", small=True) -}}
+      {{- link_button("Delete", "/teacher/questions/" ~ q.id ~ "/delete?page=" ~ current_page, kind="destructive", outline=True, small=True) -}}
+    </div>
+    {% endif %}
+    {% endcall %}
+  </li>
+  {% endfor %}
+</ol>
+{{ page_navigation(listing.paging, page_href, "Questions", "Pages, bottom") }}
+{% endif %}
+{% endblock %}

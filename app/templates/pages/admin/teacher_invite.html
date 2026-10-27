@@ -13,7 +13,7 @@
   {{ field("email", "Email address", value=values.email, error=errors.email, type="email", attrs={"maxlength": "254", "required": True}) }}
   {% include "pages/admin/_person_names.html" %}
   {% include "pages/admin/_institution_picker.html" %}
-  {{ checkbox_field("can_create_competitions", "Can create competitions", checked=values.can_create_competitions) }}
+  {{ checkbox_field("can_manage_competitions", "Can manage competitions", checked=values.can_manage_competitions) }}
   {{ form_actions("Send invitation", cancel_href="/admin/teachers") }}
 </form>
 {% endblock %}

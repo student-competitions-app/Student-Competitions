@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.core.db import utc_now
-from app.core.sealing import seal
+from app.core.sealing import seal, unseal
 from app.core.security import SESSION_COOKIE_NAME
 from app.main import app
 from app.models import (
@@ -25,6 +25,7 @@ from app.models import (
     User,
 )
 from app.services.email import EmailMessage
+from app.services.invitations import INVITATION_PURPOSE, INVITATION_TTL
 from app.services.users import get_roles
 from tests import html
 from tests.conftest import ADMIN_EMAIL, make_institution, token_from
@@ -52,7 +53,7 @@ def invite_form(institutions: dict[str, int], **overrides: Any) -> dict[str, Any
         "last_name": "Kovalenko",
         "institution": [str(institutions["kyiv"]), str(institutions["lviv"])],
         "access": [f"{institutions['kyiv']}:write", f"{institutions['lviv']}:read"],
-        "can_create_competitions": "on",
+        "can_manage_competitions": "on",
     }
     form.update(overrides)
     return {key: value for key, value in form.items() if value is not None}
@@ -82,9 +83,10 @@ def test_the_form_offers_only_selectable_institutions_with_read_preselected(
     names = [i.name for f in html.forms(body, "main") for i in f.inputs]
     for field in ("email", "first_name", "last_name"):
         assert field in names
-    can_create = html.control(body, "can_create_competitions")
-    assert (can_create["type"], can_create["id"]) == ("checkbox", "can_create_competitions")
-    assert "checked" not in can_create
+    can_manage = html.control(body, "can_manage_competitions")
+    assert (can_manage["type"], can_manage["id"]) == ("checkbox", "can_manage_competitions")
+    assert "checked" not in can_manage
+    assert "> Can manage competitions</label>" in body
     assert "Kyiv Lyceum (Kyiv)" in body
     assert "Lviv School (Lviv)" in body
     assert "Closed School" not in body
@@ -127,7 +129,7 @@ def test_an_invitation_is_sent_opened_accepted_and_used_to_sign_in(
         "Role: Teacher",
         "Kyiv Lyceum (Kyiv) — Write",
         "Lviv School (Lviv) — Read",
-        "You will be able to create competitions.",
+        "You will be able to manage competitions and change the question bank.",
         "Nothing about you is stored unless you accept.",
         "This invitation expires on",
     ):
@@ -149,7 +151,7 @@ def test_an_invitation_is_sent_opened_accepted_and_used_to_sign_in(
         "Kovalenko",
         "Kyiv Lyceum (Kyiv) — Write",
         "Lviv School (Lviv) — Read",
-        "Can create competitions: Yes",
+        "Can manage competitions: Yes",
         "This invitation expires on ",
         " UTC.",
         "Resend",
@@ -189,7 +191,7 @@ def test_an_invitation_is_sent_opened_accepted_and_used_to_sign_in(
         }
         assert links == {institutions["kyiv"]: "write", institutions["lviv"]: "read"}
         profile = session.get(TeacherProfile, olena.id)
-        assert profile is not None and profile.can_create_competitions is True
+        assert profile is not None and profile.can_manage_competitions is True
         [record] = session.exec(select(ConsentRecord)).all()
         admin = session.exec(select(User).where(User.email == ADMIN_EMAIL)).one()
         assert record.user_id == olena.id
@@ -314,7 +316,7 @@ def test_the_picked_rows_and_levels_are_kept(
     kyiv = institutions["kyiv"]
     assert (str(kyiv), True) in picked(body)
     assert html.Option(f"{kyiv}:write", "Write", True) in access_options(body)
-    assert "checked" in html.control(body, "can_create_competitions")
+    assert "checked" in html.control(body, "can_manage_competitions")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -348,10 +350,59 @@ def test_the_new_teacher_sees_their_data_on_the_profile(
     ):
         assert shown in body
     assert ("Roles", "Teacher") in html.details(body)
-    assert ("Can create competitions", "Yes") in html.details(body)
+    assert ("Can manage competitions", "Yes") in html.details(body)
 
 
 @pytest.mark.parametrize("path", ["/", "/admin/teachers", "/profile"])
 def test_the_header_email_links_to_the_profile(admin_client: TestClient, path: str) -> None:
     body = admin_client.get(path).text
     assert ("/profile", ADMIN_EMAIL) in html.link_pairs(body, "header")
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11: the setting is "Can manage competitions"
+# ---------------------------------------------------------------------------------------------
+
+
+def test_without_the_setting_the_lines_say_no(
+    client: TestClient,
+    admin_client: TestClient,
+    outbox: list[EmailMessage],
+    institutions: dict[str, int],
+) -> None:
+    """US6-2, FR-009: the acceptance page's line and the email's explanation."""
+    admin_client.post(
+        "/admin/teachers/invite", data=invite_form(institutions, can_manage_competitions=None)
+    )
+    message = outbox[-1]
+    assert (
+        "You will not be able to manage competitions or change the question bank." in message.text
+    )
+    body = client.get(f"/invitations/{token_from(message)}").text
+    assert "Can manage competitions: No" in body
+
+
+def test_an_invitation_sealed_with_the_old_setting_key_is_accepted(
+    client: TestClient,
+    admin_client: TestClient,
+    outbox: list[EmailMessage],
+    institutions: dict[str, int],
+) -> None:
+    """US6-3, research R12: an invitation issued before milestone 11 keeps its value."""
+    admin_client.post("/admin/teachers/invite", data=invite_form(institutions))
+    key = app.state.settings.secret_key
+    payload = unseal(key, INVITATION_PURPOSE, token_from(outbox[-1]), INVITATION_TTL)
+    details = payload["details"]
+    details["can_create_competitions"] = details.pop("can_manage_competitions")
+    assert set(details) == {"institutions", "can_create_competitions"}
+    link = f"/invitations/{seal(key, INVITATION_PURPOSE, payload)}"
+    body = client.get(link).text
+    assert "Can manage competitions: Yes" in body
+    with Session(app.state.engine) as session:
+        current = session.exec(select(ConsentText).where(ConsentText.role == "teacher")).one()
+    accepted = client.post(link, data={"consent_text_id": str(current.id)}, follow_redirects=False)
+    assert accepted.status_code == 303
+    [olena] = users_with(OLENA)
+    with Session(app.state.engine) as session:
+        profile = session.get(TeacherProfile, olena.id)
+        assert profile is not None and profile.can_manage_competitions is True

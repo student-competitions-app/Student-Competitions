@@ -7,11 +7,13 @@
     (the right panel). `item_href` is a path prefix, completed with the item's id.
 
     `chained_lists`: one `GET` form per level, each submitting itself on change through the
-    existing `auto-submit.js`. A level is a mapping with `id`, `name`, `label`, `placeholder`,
+    existing `auto-submit.js`. Without JavaScript, each level shows a **Show** button inside
+    `<noscript>` that sends its form (milestone 11 research R11); it has no `name`. A level is a mapping with `id`, `name`, `label`, `placeholder`,
     `options` (`(value, text)` pairs), `selected`, `disabled`, `carry` (hidden `(name, value)`
     pairs) and `extra_options`. -#}
 
 {% from "components/badge.html" import status_badge %}
+{% from "components/button.html" import button %}
 {% from "components/form.html" import select_field %}
 
 {% macro list_detail(list_label, items, selected_id, item_href, heading_id="list-detail-heading") -%}
@@ -46,6 +48,7 @@
     <input type="hidden" name="{{ carry_name }}" value="{{ carry_value }}">
     {%- endfor %}
     {{ select_field(level.id, level.label, level.options, selected=level.selected, name=level.name, attrs={"data-auto-submit": True, "disabled": level.disabled}, placeholder=level.placeholder, extra_options=level.extra_options or ()) }}
+    <noscript>{{ button("Show", kind="secondary", small=True) }}</noscript>
   </form>
   {%- endfor %}
 </div>

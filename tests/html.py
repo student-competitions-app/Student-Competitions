@@ -311,6 +311,33 @@ def nav(body: str, label: str) -> list[Link]:
     return _links_in(navs)
 
 
+class PageEntry(NamedTuple):
+    """One entry of a page navigation: Previous, a page number, a gap (`…`) or Next."""
+
+    text: str
+    href: str | None
+    """`None` for text: an unavailable Previous or Next, or a gap."""
+    current: bool
+
+
+def pagination(body: str, label: str) -> tuple[str, list[PageEntry]] | None:
+    """The range text and the entries of `<nav class="pagination" aria-label="{label}">`, or
+    `None` when the page has no such nav."""
+    navs = [n for n in parse(body).find_all("nav") if n.attrs.get("aria-label") == label]
+    if not navs:
+        return None
+    (found,) = navs
+    assert "pagination" in found.classes()
+    (range_text,) = [p.text() for p in found.find_all("p") if "pagination-range" in p.classes()]
+    entries = []
+    for item in found.find_all("li"):
+        (inner,) = [e for e in item.children if isinstance(e, Element)]
+        href = inner.attrs.get("href") if inner.tag == "a" else None
+        current = inner.attrs.get("aria-current") == "page"
+        entries.append(PageEntry(inner.text(), href, current))
+    return range_text, entries
+
+
 def region(body: str, tag: str) -> str:
     """The inner HTML of the page's first `header`, `main` or `footer`."""
     assert tag in REGION_TAGS, f"region() takes one of {REGION_TAGS}"

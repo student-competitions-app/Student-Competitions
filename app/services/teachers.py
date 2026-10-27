@@ -8,8 +8,9 @@ else is `TeacherNotFound`. (The test cast's directly seeded teachers have no pro
 not current teachers.)
 
 These functions enforce no authorization: every route that calls them is
-`@allow_roles(Role.ADMIN)`. Access levels and the competitions setting are only stored and shown
-in this milestone (FR-013). Each change logs one line with ids and counts only.
+`@allow_roles(Role.ADMIN)`. The access levels are enforced by `app.services.teacher_access`
+(milestone 9), and so is the competitions setting (milestone 11). Each change logs one line
+with ids and counts only.
 """
 
 import logging
@@ -33,6 +34,12 @@ from app.services.users import end_all_sessions, get_roles
 logger = logging.getLogger("uvicorn.error")
 
 
+LEGACY_SETTING_KEY = "can_create_competitions"
+"""The setting's key in invitations sealed before milestone 11 (research R12). Still read, so an
+invitation issued before the deployment keeps its value. Removable 7 days after the deployment,
+when every such invitation has expired: see docs/issues-to-fix.md §2."""
+
+
 class _TeacherInvitation:
     """The teacher's `InvitableRole` (research D3). Its details are a `TeacherDetails`."""
 
@@ -44,14 +51,20 @@ class _TeacherInvitation:
                 [institution_id, details.institutions[institution_id].value]
                 for institution_id in sorted(details.institutions)
             ],
-            "can_create_competitions": details.can_create_competitions,
+            "can_manage_competitions": details.can_manage_competitions,
         }
 
     def details_from_payload(self, raw: Any) -> TeacherDetails:
-        if not isinstance(raw, dict) or set(raw) != {"institutions", "can_create_competitions"}:
+        if not isinstance(raw, dict):
             raise ValueError("not teacher details")
-        links, can_create = raw["institutions"], raw["can_create_competitions"]
-        if not isinstance(links, list) or not links or not isinstance(can_create, bool):
+        if set(raw) == {"institutions", "can_manage_competitions"}:
+            can_manage = raw["can_manage_competitions"]
+        elif set(raw) == {"institutions", LEGACY_SETTING_KEY}:
+            can_manage = raw[LEGACY_SETTING_KEY]
+        else:
+            raise ValueError("not teacher details")
+        links = raw["institutions"]
+        if not isinstance(links, list) or not links or not isinstance(can_manage, bool):
             raise ValueError("not teacher details")
         institutions: dict[int, AccessLevel] = {}
         for link in links:
@@ -63,7 +76,7 @@ class _TeacherInvitation:
             if institution_id in institutions:
                 raise ValueError("a link twice")
             institutions[institution_id] = AccessLevel(level)
-        return TeacherDetails(institutions=institutions, can_create_competitions=can_create)
+        return TeacherDetails(institutions=institutions, can_manage_competitions=can_manage)
 
     def inviter_may_invite(self, session: Session, inviter: User, details: TeacherDetails) -> bool:
         """Any active administrator may invite a teacher to any institution."""
@@ -88,16 +101,18 @@ class _TeacherInvitation:
             if institution_id in described
         ]
         lines.sort(key=lambda line: line.text.casefold())
-        if details.can_create_competitions:
+        if details.can_manage_competitions:
             lines.append(
                 DetailLine(
-                    "Can create competitions: Yes", "You will be able to create competitions."
+                    "Can manage competitions: Yes",
+                    "You will be able to manage competitions and change the question bank.",
                 )
             )
         else:
             lines.append(
                 DetailLine(
-                    "Can create competitions: No", "You will not be able to create competitions."
+                    "Can manage competitions: No",
+                    "You will not be able to manage competitions or change the question bank.",
                 )
             )
         return lines
@@ -108,7 +123,7 @@ class _TeacherInvitation:
         session.add(
             TeacherProfile(
                 user_id=user.id,
-                can_create_competitions=details.can_create_competitions,
+                can_manage_competitions=details.can_manage_competitions,
                 created_at=now,
                 updated_at=now,
             )
@@ -181,7 +196,7 @@ class TeacherView:
     last_name: str
     links: list[TeacherLink]
     """Sorted by label, ignoring case."""
-    can_create_competitions: bool
+    can_manage_competitions: bool
     consented_at: datetime | None
     """The latest teacher consent record."""
 
@@ -230,7 +245,7 @@ def _view(session: Session, user: User) -> TeacherView:
         first_name=user.first_name or "",
         last_name=user.last_name or "",
         links=links,
-        can_create_competitions=profile.can_create_competitions,
+        can_manage_competitions=profile.can_manage_competitions,
         consented_at=latest_consent_at(session, user.id, Role.TEACHER),
     )
 
@@ -262,7 +277,7 @@ def update_teacher(
     first_name: str,
     last_name: str,
     institutions: Mapping[int, AccessLevel],
-    can_create_competitions: bool,
+    can_manage_competitions: bool,
     now: datetime | None = None,
 ) -> TeacherView:
     """Save an administrator's edit of a teacher, writing only what changed (FR-039–FR-041).
@@ -312,8 +327,8 @@ def update_teacher(
         )
     profile = session.get(TeacherProfile, user_id)
     assert profile is not None
-    if profile.can_create_competitions != can_create_competitions:
-        profile.can_create_competitions = can_create_competitions
+    if profile.can_manage_competitions != can_manage_competitions:
+        profile.can_manage_competitions = can_manage_competitions
         profile.updated_at = now
         session.add(profile)
     if (user.first_name, user.last_name) != (first_name, last_name):

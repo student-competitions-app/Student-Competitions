@@ -244,6 +244,15 @@ the whole card is the link, as on the home page. Use it for entries the person c
 to frame one block (a consent record). Do not use it for a list of records: that is a data table.
 _Gallery_: [cards](/admin/components#cards).
 
+**`text_card(heading, id=None)`** with **`text_box(label, text)`** holds long entered texts, such
+as a question with its reference answer (milestone 11). The card is one surface with a heading
+("Question 57"); its body, through `{% call %}`, is one or more boxes, each a quieter tint with a
+small label, stacked at full width on every screen, then any `row-actions`. The texts keep their
+line breaks, and a long word wraps inside its box. With `id` the card is the target of a `#` link
+(`#question-57`), which lands below the pinned frame. Several text cards go in
+`<ol class="text-card-list">`. Use it, not a data table or a details list, when the values are
+paragraphs rather than short facts. _Gallery_: [cards](/admin/components#cards).
+
 ### Data table (`components/table.html`)
 
 **`data_table(columns)`** with `cell(label, value)` and `actions_cell()` is every list of records.
@@ -290,7 +299,14 @@ Every form page passes `values` (what was entered, by field id), `errors` (field
   errors.
 - **`field`**, **`select_field`** and **`checkbox_field`** give each field its label, optional
   hint, its error and the entered value.
+- **`textarea_field`** is the multi-line twin of `field`, for text that may run over several lines
+  (a question, a reference answer). It keeps the value exactly, line breaks included, is wider than
+  a single-line field (the reading measure) and resizes only downwards.
 - **`form_actions(label, cancel_href)`**: the primary button first, then **Cancel** as a link.
+  `name` and `value` go on the primary button. `secondary` (`{"label", "name", "value"}`) adds one
+  secondary save right after it, for "save and continue with another": **Save question** then
+  **Save and add one more question**. There is at most one secondary save; the primary one comes
+  first, so Enter submits it, and it leads back to the list.
 
 A message about one field's value (an invalid address, a duplicate name, a wrong code) is a field
 error. A limit, an outage or a message about the whole submission is the form error.
@@ -319,10 +335,28 @@ store. A `None` value is left out; a rich value (a list, a badge) comes through
   their educational institutions.
 - **`chained_lists(levels, action)`**: lists that narrow each other, each a `GET` form that submits
   itself on change (`auto-submit.js`) and still works without JavaScript, as region → educational
-  institution → class.
+  institution → class. Without JavaScript, each list shows a **Show** button (inside `<noscript>`,
+  so it never appears when the script runs).
 
 Reuse these for the subject and class choices of milestones 11 and 12. _Gallery_:
 [selectors](/admin/components#selectors).
+
+### Page navigation (`components/pagination.html`)
+
+**`page_navigation(paging, href, noun, label)`** moves through a long list one page at a time
+(milestone 11; the paging itself is `app/services/paging.py`). Put it both above and below the
+list, labelled "Pages, top" and "Pages, bottom", so the two landmarks can be told apart.
+
+- **The range** comes first, on its own line: "Questions 31–40 of 200".
+- **Previous** and **Next** are links; on the first or last page each is plain muted text, never a
+  disabled link.
+- **The pages**: always the first, the last, the current one and one on each side. A hidden run of
+  two or more pages becomes one `…`; a single hidden page is shown, since a gap would take the same
+  room. At most seven entries.
+- **The current page** is a link marked `aria-current="page"`, bold, with the primary underline of
+  the area tabs.
+- Every entry keeps the touch target, and it is all plain links: no JavaScript. With no item it
+  renders nothing. _Gallery_: [pagination](/admin/components#pagination).
 
 ### Icons and identity (`components/icons.html`, `components/palette.html`)
 
@@ -362,6 +396,8 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
 - **Notices** state the outcome: "Invitation sent to olena@example.org".
 - **Statuses** use one word each, everywhere: **Active** or **Deactivated**; **Read** or
   **Write**.
+- **Page navigation** says where you are as "<Noun> 31–40 of 200" (an en dash, no spaces), and
+  moves with **Previous** and **Next**.
 
 ## 8. Phone behaviour
 
@@ -373,7 +409,9 @@ Below 768 px:
   role stay in the top bar.
 - **The selectors stack**: the list above its detail, the chained lists one under another.
 - **Everything wraps**: long names, tabs and buttons wrap rather than push the page wider. No page
-  scrolls sideways at 375 px.
+  scrolls sideways at 375 px. The page navigation wraps onto more rows, each entry keeping its
+  touch target, and a long word in a text box wraps inside the box. Two save buttons wrap, each
+  with its full label.
 - **The area tabs are 44 px tall** (the touch target) and may wrap onto two rows, which keeps the
   pinned frame under a quarter of a 375 × 667 screen.
 - **Held sideways**, under 600 px tall, a phone does not pin the frame: it scrolls away, so the

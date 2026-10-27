@@ -16,6 +16,13 @@ The theme switch's forms (`/theme`) are left out: they are new in milestone 10.
 The expected records live in `form_contract.json`, generated once from the milestone 9 templates
 with `UPDATE_FORM_CONTRACT=1` and never regenerated in milestone 10: a mismatch means a template
 lost or renamed a field, so the template is fixed, not the file.
+
+Deliberate changes since (each is a contract change, recorded here):
+
+- **Milestone 11 FR-009**: the teacher forms' checkbox `can_create_competitions` was renamed
+  `can_manage_competitions`, with the setting.
+- **Milestone 11**: the question bank's pages (`teacher-question*` cases) are new, generated once
+  with `UPDATE_FORM_CONTRACT=1` for those cases only.
 """
 
 import json
@@ -48,6 +55,8 @@ from tests.conftest import (
     invite_student,
     make_class,
     make_institution,
+    make_question,
+    make_subject,
     make_teacher,
     token_from,
 )
@@ -572,6 +581,69 @@ def _(w: World) -> Response:
 def _(w: World) -> Response:
     scene = a_teacher_with_a_class(w)
     return scene.teacher.get(f"/teacher/students/{scene.student}/remove")
+
+
+def a_question_manager(world: World) -> tuple[TestClient, int, int]:
+    """Milestone 11: Olena with Can manage competitions, and Physics with one question;
+    `(browser, subject, question)`."""
+    engine, settings = application.state.engine, application.state.settings
+    institution = make_institution(engine, "Kyiv Polytechnic Institute", "Kyiv")
+    make_teacher(
+        engine, settings, email=OLENA, institutions={institution: AccessLevel.READ}, can_manage=True
+    )
+    physics = make_subject(engine, "Physics")
+    make_subject(engine, "Biology")
+    question = make_question(engine, physics, "Why?", "Because.")
+    return world.client_as(OLENA), physics, question
+
+
+@case("teacher-questions-list")
+def _(w: World) -> Response:
+    """Its GET subject form: the no-script Show button adds no named field (research R11)."""
+    browser, subject, _ = a_question_manager(w)
+    return browser.get(f"/teacher/questions?subject={subject}")
+
+
+@case("teacher-question-new")
+def _(w: World) -> Response:
+    browser, subject, _ = a_question_manager(w)
+    return browser.get(f"/teacher/questions/new?subject={subject}&page=2")
+
+
+@case("teacher-question-new-saved")
+def _(w: World) -> Response:
+    browser, subject, _ = a_question_manager(w)
+    return browser.get(f"/teacher/questions/new?subject={subject}&page=2&saved=1")
+
+
+@case("teacher-question-new-invalid")
+def _(w: World) -> Response:
+    browser, subject, _ = a_question_manager(w)
+    return browser.post(
+        "/teacher/questions",
+        data={"subject": str(subject), "page": "2", "text": "", "reference_answer": ""},
+    )
+
+
+@case("teacher-question-edit")
+def _(w: World) -> Response:
+    browser, _, question = a_question_manager(w)
+    return browser.get(f"/teacher/questions/{question}/edit?page=2")
+
+
+@case("teacher-question-edit-invalid")
+def _(w: World) -> Response:
+    browser, _, question = a_question_manager(w)
+    return browser.post(
+        f"/teacher/questions/{question}/edit",
+        data={"page": "2", "text": "", "reference_answer": ""},
+    )
+
+
+@case("teacher-question-delete")
+def _(w: World) -> Response:
+    browser, _, question = a_question_manager(w)
+    return browser.get(f"/teacher/questions/{question}/delete?page=2")
 
 
 # ---------------------------------------------------------------------------------------------

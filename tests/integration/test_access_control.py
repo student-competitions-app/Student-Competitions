@@ -500,7 +500,7 @@ def teacher_state(session: Session) -> list[list[tuple[object, ...]]]:
             for link in session.exec(select(TeacherInstitution))
         ),
         sorted(
-            (p.user_id, p.can_create_competitions, p.updated_at)
+            (p.user_id, p.can_manage_competitions, p.updated_at)
             for p in session.exec(select(TeacherProfile))
         ),
         sorted((c.id, c.user_id) for c in session.exec(select(ConsentRecord))),

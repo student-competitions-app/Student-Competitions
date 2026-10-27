@@ -29,6 +29,7 @@ from starlette.types import Scope
 from app.core.auth import allow_roles
 from app.models import AccessLevel, Role
 from app.routers.admin import ADMIN_TABS, render_admin
+from app.services.paging import Paging
 
 
 class DevelopmentOnlyRoute(APIRoute):
@@ -91,6 +92,18 @@ FIELD_ERRORS = {
     "gallery-year": "The year of study must be a whole number from 1 to 12.",
 }
 FORM_ERROR = "Too many attempts. Please try again later."
+TEXTAREA_ERROR = "Enter the question text."
+MULTILINE_TEXT = (
+    "Name the three states of matter.\n"
+    "For each, give one example from everyday life.\n\n"
+    "Explain which state has the most energy."
+)
+LONG_WORD = "Longwordwithoutbreak" * 15
+LONG_WORD_TEXT = f"A word longer than a phone screen:\n{LONG_WORD}\nThe end."
+"""Two sample texts for the text card and the textarea: several lines, and a 300-character
+unbroken word on its own line."""
+PAGINGS = (Paging.build(1, 5), Paging.build(4, 200), Paging.build(20, 200))
+"""Page navigation: page 1 of 1 (5 items), page 4 of 20 and page 20 of 20 (200 items)."""
 ONE_ROLE_USER = SampleUser("olena.kovalenko@school.example")
 TWO_ROLE_USER = SampleUser("taras.shevchenko@school.example")
 SAMPLE_TABS = (
@@ -142,6 +155,10 @@ def _samples() -> dict[str, Any]:
         "sample_tabs": SAMPLE_TABS,
         "admin_sample_tabs": ADMIN_TABS,
         "tokens": TOKENS,
+        "textarea_error": TEXTAREA_ERROR,
+        "multiline_text": MULTILINE_TEXT,
+        "long_word_text": LONG_WORD_TEXT,
+        "pagings": PAGINGS,
     }
 
 

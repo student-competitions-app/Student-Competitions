@@ -15,6 +15,9 @@ Anything else raises `NotReachable`, and a management action without Write raise
 `WriteRequired`. Unknown and unreachable are deliberately indistinguishable: the routers turn both
 errors into the same "Access denied" page, so nothing reveals whether an object exists.
 
+From milestone 11 this module also decides the **Can manage competitions** setting
+(`can_manage_competitions`), which every change to the question bank requires.
+
 The class and student services call these checks **in their own transaction**, with `lock=True`
 for writes: the link, the institution and the region are then read `FOR SHARE`, so an
 administrator who lowers the level or deactivates the institution at the same moment either
@@ -37,6 +40,7 @@ from app.models import (
     Role,
     SchoolClass,
     TeacherInstitution,
+    TeacherProfile,
     User,
 )
 from app.services.users import get_roles
@@ -88,6 +92,24 @@ def _refuse(session: Session, lock: bool, error: Exception) -> Exception:
     if lock:
         session.rollback()
     return error
+
+
+def can_manage_competitions(session: Session, teacher_id: int, *, lock: bool = False) -> bool:
+    """Whether the teacher has **Can manage competitions**: the one authority for the setting
+    (specs/011-question-bank/research.md R5, R7).
+
+    True only if the teacher has a `teacher_profiles` row and its `can_manage_competitions` is
+    true. No profile row means no setting; that covers the test cast's directly seeded teachers.
+    With `lock`, the row is read `FOR SHARE` and refreshed, so an administrator removing the
+    setting at the same moment either commits first and is seen, or waits. Never rolls back: the
+    caller decides what a `False` means.
+    """
+    statement = select(TeacherProfile).where(TeacherProfile.user_id == teacher_id)
+    if lock:
+        statement = statement.with_for_update(read=True)
+    statement = statement.execution_options(populate_existing=True)
+    profile = session.exec(statement).first()
+    return profile is not None and profile.can_manage_competitions
 
 
 def list_reachable_institutions(session: Session, teacher_id: int) -> list[ReachableInstitution]:

@@ -128,6 +128,16 @@ def test_the_teacher_area_opens_the_students_tab(scene: Scene) -> None:
     assert ("/teacher/competitions", "Competitions") in html.link_pairs(body)
 
 
+def test_the_tab_row_is_students_questions_competitions(scene: Scene) -> None:
+    """Milestone 11 US2-1, FR-010: Questions sits between Students and Competitions."""
+    body = scene.teacher.get(STUDENTS).text
+    assert [(t.href, t.text) for t in html.nav(body, "Teacher area")] == [
+        (STUDENTS, "Students"),
+        ("/teacher/questions", "Questions"),
+        ("/teacher/competitions", "Competitions"),
+    ]
+
+
 def test_competitions_is_a_placeholder(scene: Scene) -> None:
     body = scene.teacher.get("/teacher/competitions").text
     assert html.h1(body) == "Competitions"
@@ -179,13 +189,14 @@ def test_a_teacher_with_no_links_sees_disabled_lists(scene: Scene, client_as: Cl
     assert "You are not linked to any educational institution" in body
     for name in ("region", "institution", "class"):
         assert "disabled" in select_tag(body, name)
-    assert "Show</button>" not in body
+    assert body.count("Show</button>") == body.count("Show</button></noscript>")
 
 
 def test_choosing_from_a_list_opens_the_selection_at_once(
     scene: Scene, client_as: ClientAs
 ) -> None:
-    """FR-048: each list submits its own form on change; there is no Show button."""
+    """FR-048: each list submits its own form on change; its Show button is only for a browser
+    without JavaScript (milestone 11 research R11)."""
     client = client_as(TEACHER_EMAIL)
     body = client.get(STUDENTS).text
     for name in ("region", "institution", "class"):
@@ -195,6 +206,19 @@ def test_choosing_from_a_list_opens_the_selection_at_once(
     script = client.get("/static/js/auto-submit.js")
     assert script.status_code == 200
     assert "requestSubmit()" in script.text
+
+
+def test_without_javascript_each_list_has_a_show_button(scene: Scene) -> None:
+    """Milestone 11 research R11, FR-012: each list's form holds a nameless Show submit button
+    inside `<noscript>`, so the Students tab works without JavaScript again."""
+    body = scene.teacher.get(STUDENTS).text
+    forms = [f for f in html.forms(body, "main") if f.action == STUDENTS]
+    assert len(forms) == 3
+    for form in forms:
+        assert [(b.text, b.name) for b in form.buttons] == [("Show", None)]
+    noscripts = html.parse(body).find_all("noscript")
+    assert len(noscripts) == 3
+    assert all([b.text() for b in n.find_all("button")] == ["Show"] for n in noscripts)
 
 
 def test_links_to_unavailable_institutions_only_count_as_none(

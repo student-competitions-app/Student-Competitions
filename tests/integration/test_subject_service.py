@@ -24,10 +24,12 @@ from app.services.subjects import (
     create_subject,
     delete_subject,
     get_subject,
+    list_active_subjects,
     list_subjects,
     rename_subject,
     set_subject_active,
 )
+from tests.conftest import make_question, make_subject
 
 MISSING = 999
 
@@ -105,6 +107,19 @@ def test_the_list_includes_inactive_subjects(session: Session) -> None:
         ("Biology", False),
         ("Physics", True),
     ]
+
+
+def test_the_active_list_leaves_out_deactivated_subjects_and_sorts_alike(
+    session: Session,
+) -> None:
+    """Milestone 11 R11: the question bank's subject list."""
+    for name in ["physics", "Algebra", "Chemistry", "biology"]:
+        create_subject(session, name)
+    chemistry = next(s for s in list_subjects(session) if s.name == "Chemistry")
+    set_subject_active(session, chemistry.id, False)
+    assert [s.name for s in list_active_subjects(session)] == ["Algebra", "biology", "physics"]
+    active = [s for s in list_subjects(session) if s.is_active]
+    assert [s.id for s in list_active_subjects(session)] == [s.id for s in active]
 
 
 def test_ties_on_the_key_are_broken_by_id(session: Session) -> None:
@@ -237,9 +252,32 @@ def test_setting_the_current_status_writes_nothing(session: Session, active: boo
 # ---------------------------------------------------------------------------------------------
 
 
-def test_nothing_uses_a_subject_yet(session: Session) -> None:
+def test_a_never_used_subject_has_no_uses(session: Session) -> None:
     subject = create_subject(session, "Physics")
     assert count_subject_uses(session, subject.id) == 0
+
+
+def test_every_question_counts_as_a_use_deleted_ones_too(engine: Engine) -> None:
+    """Milestone 11 FR-040, SC-004: questions of another subject do not count."""
+    physics, chemistry = make_subject(engine, "Physics"), make_subject(engine, "Chemistry")
+    make_question(engine, physics)
+    make_question(engine, physics, deleted=True)
+    make_question(engine, chemistry)
+    with Session(engine) as session:
+        assert count_subject_uses(session, physics) == 2
+        assert count_subject_uses(session, chemistry) == 1
+
+
+@pytest.mark.parametrize("deleted", [False, True], ids=["listed", "only-deleted"])
+def test_a_subject_with_questions_cannot_be_deleted(engine: Engine, deleted: bool) -> None:
+    """Milestone 11 US7-1: even when every question of the subject is deleted."""
+    physics = make_subject(engine, "Physics")
+    make_question(engine, physics, deleted=deleted)
+    with Session(engine) as session:
+        with pytest.raises(SubjectInUse) as caught:
+            delete_subject(session, physics)
+        assert caught.value.uses == 1
+        assert names(session) == ["Physics"]
 
 
 def test_delete_removes_the_row_and_frees_the_name(session: Session) -> None:

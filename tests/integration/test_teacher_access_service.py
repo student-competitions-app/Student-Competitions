@@ -19,6 +19,7 @@ from app.services.teacher_access import (
     NotReachable,
     ReachableInstitution,
     WriteRequired,
+    can_manage_competitions,
     list_reachable_institutions,
     reach_class,
     reach_institution,
@@ -28,6 +29,7 @@ from app.services.teacher_access import (
 from app.services.users import reconcile_users
 from tests.conftest import (
     ADMIN_EMAIL,
+    TEACHER_EMAIL,
     make_class,
     make_institution,
     make_teacher,
@@ -274,3 +276,35 @@ def test_a_refusal_under_lock_rolls_back(engine: Engine, scene: Scene) -> None:
     with Session(engine) as session:
         stored = session.get(SchoolClass, school_class)
         assert stored is not None and stored.name == "LA-1"
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11: Can manage competitions (specs/011-question-bank/research.md R5)
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("lock", [False, True], ids=["plain", "locked"])
+def test_the_setting_is_read_from_the_profile(
+    engine: Engine, auth_settings: AuthSettings, scene: Scene, lock: bool
+) -> None:
+    manager = make_teacher(
+        engine,
+        auth_settings,
+        email="manager@example.org",
+        institutions={scene.a: AccessLevel.READ},
+        can_manage=True,
+    )
+    with Session(engine) as session:
+        assert can_manage_competitions(session, manager, lock=lock) is True
+        assert can_manage_competitions(session, scene.teacher, lock=lock) is False
+
+
+@pytest.mark.parametrize("lock", [False, True], ids=["plain", "locked"])
+def test_no_profile_means_no_setting(engine: Engine, scene: Scene, lock: bool) -> None:
+    """The test cast's seeded teachers hold the role but have no profile row."""
+    seed_roles_directly(engine, {TEACHER_EMAIL: [Role.TEACHER]})
+    with Session(engine) as session:
+        cast = session.exec(select(User).where(User.email == TEACHER_EMAIL)).one()
+        assert cast.id is not None
+        assert can_manage_competitions(session, cast.id, lock=lock) is False
+        assert can_manage_competitions(session, 999_999, lock=lock) is False

@@ -32,7 +32,7 @@ A web application for running online competitions among students, testing their 
    - last name
    - educational institution
    - the class within the educational institution; the student's year of study is the year of their class
-2. **Managing the question bank.** Edit the global list of questions used in competitions. Questions can be reused across different competitions. Each question belongs to one subject, selected from the list of subjects. For each question, the teacher adds the correct answer as text.
+2. **Managing the question bank.** Edit the global list of questions used in competitions. Questions can be reused across different competitions. Each question belongs to one subject, selected from the list of subjects. For each question, the teacher adds the correct answer as text. Only teachers allowed to manage competitions change the question bank; every other teacher can read it.
 3. **Running a competition.** The teacher selects:
    - the subject of the competition; only questions of that subject can be added to it
    - the start time and duration of the competition (usually 1 hour)
@@ -53,13 +53,13 @@ A web application for running online competitions among students, testing their 
 - The students of an educational institution are divided into classes (for example "KN-21"). Each class has a year of study, shared by all its students. A student belongs to exactly one educational institution and exactly one class in it. A teacher with Write access keeps the list of classes of that institution.
 - A teacher sees a student's data only for their own institutions, never anything about an institution the student belonged to before.
 - Only an administrator can link a teacher to an educational institution and set the access level.
-- Only a teacher whom an administrator allowed to create competitions can create them.
+- Only a teacher whom an administrator allowed to manage competitions can create competitions and change the question bank.
 
 ### Administrator
 
 - Adds and deletes teachers in the application.
 - Links a teacher to one or more educational institutions, selecting them from the list of institutions, with Read or Write access to each.
-- Decides whether a teacher can create competitions.
+- Decides whether a teacher can manage competitions: create competitions and change the question bank.
 - Is the only role that can edit the list of educational institutions.
 - Is the only role that can edit the list of subjects.
 
@@ -81,12 +81,12 @@ A web application for running online competitions among students, testing their 
 
 ### Question
 
-A question in a competition is usually 1–3 lines of text and expects a text answer. Every question belongs to one subject.
+A question in a competition is usually 1–3 lines of text and expects a text answer. Every question belongs to one subject. A deleted question is only hidden: it stays stored, but it is no longer shown in the question bank and can no longer be added to new competitions. Completed competitions keep showing it.
 
 ### Subject
 
-A subject is a knowledge area, such as mathematics or physics, that competitions test. Administrators keep the list of subjects. Every question and every competition belongs to exactly one subject, and a competition contains only questions of its own subject.
+A subject is a knowledge area, such as mathematics or physics, that competitions test. Administrators keep the list of subjects. Every question and every competition belongs to exactly one subject, and a competition contains only questions of its own subject. A subject used by any question, even a deleted one, or by any competition can only be deactivated, never deleted, so completed competitions keep showing it.
 
 ## Production usage
 
-IMPORTANT!!! No real users will be involved untill all milestones are executed. So there are no reasons to add complexity to the system to smmothly go from one milestone to another without any end-users disruptions.
+IMPORTANT!!! No real users will be involved until all milestones are executed. So there are no reasons to add complexity to the system to smoothly go from one milestone to another without any end-users disruptions.

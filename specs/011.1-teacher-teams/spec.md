@@ -58,10 +58,10 @@ yet" with a hint to create the first team with **+ Add team**. She picks **+ Add
 institution still selected and "Rockets" selected, which shows "No members in this team yet".
 
 She presses **Add students** beside the team's name. A page for "Rockets" opens with a **Class** list.
-She chooses "KN-21 (year 2)", sees its students by last name, and presses **Add** beside Taras
+She chooses "KN-21 · year 2", sees its students by last name, and presses **Add** beside Taras
 Shevchenko. She is back on the **Teams** tab with "Rockets" selected, a notice that Taras Shevchenko
-was added, and Taras listed as a member with his class "KN-21 (year 2)". She opens **Add students**
-again, chooses "KN-31 (year 3)" and adds Lesia Ukrainka. "Rockets" now lists both, by last name.
+was added, and Taras listed as a member with his class "KN-21 · year 2". She opens **Add students**
+again, chooses "KN-31 · year 3" and adds Lesia Ukrainka. "Rockets" now lists both, by last name.
 
 **Why this priority**: Teams are what milestone 12 assigns to competitions; without creating teams
 and filling them there is nothing to assign.

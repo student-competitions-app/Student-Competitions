@@ -21,7 +21,7 @@ Principle III makes tests non-negotiable. The mapping from scenarios to modules 
 - **Signed-in clients**: `admin_client` and `client_as`. Real teachers come from
   `make_teacher(engine, settings, email=..., institutions={id: AccessLevel.WRITE | READ})`, real
   students from `enrol_student(...)`, classes from `make_class(...)`, institutions from
-  `make_institution(...)`; teams and memberships from the new `make_team` / `add_member` (T011).
+  `make_institution(...)`; teams and memberships from the new `make_team` / `make_member` (T012).
 
 **Organization**: tasks are grouped by user story (US1–US9 in spec.md).
 
@@ -103,7 +103,7 @@ starting, and match their docstring style, naming, comment density and error han
 **Students** switched to `section_heading` with its markup unchanged (FR-046, research R12, R13,
 contracts/components.md). Nothing here touches the database.
 
-- [ ] T001 Pin the **Students** class heading **before** changing it, in `tests/integration/test_teacher_students.py` (research R12). Render `/teacher/students?region=…&institution=…&class=…` in four states: Write + active class, Write + deactivated class, Read + active class, Read + deactivated class. For each, extract the fragment from `<section aria-labelledby="class-heading">` up to the first `empty_state`/`data_table` output and assert it equals a literal expected string captured from the current template (`app/templates/pages/teacher/students.html` lines 47–62): the `<div class="page-heading">` with `<h2 id="class-heading">`, the `status_badge(False)` only when deactivated, **Add student** only for Write + active, and the `<div class="row-actions">` with Edit, Deactivate/Activate (a `post_button`), Delete only for Write; no `row-actions` div at all for Read. Normalise only insignificant whitespace between tags. The test must pass on the current code.
+- [ ] T001 Pin the **Students** class heading **before** changing it, in `tests/integration/test_teacher_students.py` (research R12). Render `/teacher/students?region=…&institution=…&class=…` in four states: Write + active class, Write + deactivated class, Read + active class, Read + deactivated class. For each, extract the fragment from `<section aria-labelledby="class-heading">` up to the first `empty_state`/`data_table` output and assert it equals a literal expected string captured from the current template (the `<section aria-labelledby="class-heading">` block of `app/templates/pages/teacher/students.html`): the `<div class="page-heading">` with `<h2 id="class-heading">`, the `status_badge(False)` only when deactivated, **Add student** only for Write + active, and the `<div class="row-actions">` with Edit, Deactivate/Activate (a `post_button`), Delete only for Write; no `row-actions` div at all for Read. Normalise only insignificant whitespace between tags. The test must pass on the current code.
 - [ ] T002 Add `section_heading(title, heading_id, action=None, deactivated=False)` to `app/templates/components/frame.html`, next to `page_heading`, per contracts/components.md §1:
   - emits `<div class="page-heading"><h2 id="{heading_id}">{title}[ {{ status_badge(False) }}]</h2>[{{ link_button(label, href) }}]</div>`, the title escaped, the badge only with `deactivated`, the button only when `action` is a `(label, href)` pair;
   - then, only when `caller` is defined and `caller()` rendered is not blank after `trim`, `<div class="row-actions">{{ caller() }}</div>` (render `caller()` once into a variable, then test it);
@@ -118,7 +118,7 @@ contracts/components.md). Nothing here touches the database.
   - §5 Data table: "**`row_note(text)`** stands in the actions cell where a row's action is not available, as "In this team"; muted text, never a disabled button.";
   - §7 Wording: "a row note is a short plain phrase, with no full stop".
 - [ ] T006 [P] Extend the component tests (depends on T004): `tests/integration/test_component_gallery.py` — `#section-heading` exists with its four variants (one with the badge, one without any `row-actions`, one 200-character title) and `#table` contains `class="row-note"` with "In this team"; `tests/unit/test_stylesheet.py` — `.row-note` is defined and used, uses `var(--sc-muted)`, no literal colour; add a template test (in `tests/unit/test_templates.py`) that `section_heading` leaves out the `row-actions` div for a `{% call %}` whose content is only white space or an `{% if false %}` block, and that `row_note("")` raises.
-- [ ] T007 Switch `app/templates/pages/teacher/students.html` lines 48–62 to `{% call section_heading(selected_class.label, "class-heading", ("Add student", class_path ~ "/invite") if can_write and selected_class.is_active else None, deactivated=not selected_class.is_active) %}{% if can_write %}…Edit, Deactivate/Activate, Delete exactly as today…{% endif %}{% endcall %}`, keeping `<section aria-labelledby="class-heading">` on the page. Import `section_heading` from `components/frame.html`. T001's four pins and the whole of `test_teacher_students.py`, `test_teacher_classes.py`, `test_page_patterns.py` and `test_form_contract.py` pass unchanged (depends on T001, T002).
+- [ ] T007 Switch the heading inside `<section aria-labelledby="class-heading">` of `app/templates/pages/teacher/students.html` (the `page-heading` div and the `row-actions` div) to `{% call section_heading(selected_class.label, "class-heading", ("Add student", class_path ~ "/invite") if can_write and selected_class.is_active else None, deactivated=not selected_class.is_active) %}{% if can_write %}…Edit, Deactivate/Activate, Delete exactly as today…{% endif %}{% endcall %}`, keeping `<section aria-labelledby="class-heading">` on the page. Import `section_heading` from `components/frame.html`. T001's four pins and the whole of `test_teacher_students.py`, `test_teacher_classes.py`, `test_page_patterns.py` and `test_form_contract.py` pass unchanged (depends on T001, T002).
 
 **Checkpoint**: both components are in the library, gallery and guidelines; **Students** uses
 `section_heading` and renders byte-for-byte the same heading.
@@ -166,13 +166,13 @@ suite must be green at its end.
   - `test_the_student_text_covers_every_required_topic` reads the published (rewritten) text and also requires "team memberships", "teams" and "erased";
   - update the module docstring for the rewrite rule.
   Also update `ConsentText`'s docstring in `app/models/consent.py`: "append-only" gains the one exception, student version 1 rewritten in place by the teams migration (milestone 11.1 FR-015, research R9).
-- [ ] T011 Update `tests/integration/test_migrations.py` for the new head (depends on T009): `teams` and `team_memberships` exist at head with `ix_teams_institution_id`, `uq_teams_name_key_live` (unique, partial) and `ix_team_memberships_user_id`; the existing drift (`compare_metadata`) and stairway tests pass on both engines with no change to them. (The consent rewrite cases are T082.)
+- [ ] T011 Update `tests/integration/test_migrations.py` for the new head (depends on T009): `teams` and `team_memberships` exist at head with `ix_teams_institution_id`, `uq_teams_name_key_live` (unique, partial) and `ix_team_memberships_user_id`; the existing drift (`compare_metadata`) and stairway tests pass on both engines with no change to them. (The consent rewrite cases are T055.)
 
 ### 2b. Access, read-side services and test helpers
 
-- [ ] T012 Add `make_team` and `add_member` to `tests/conftest.py` in a new "Milestone 11.1: teams" section (depends on T008):
+- [ ] T012 Add `make_team` and `make_member` to `tests/conftest.py` in a new "Milestone 11.1: teams" section (depends on T008):
   - `make_team(engine, institution_id, name="Rockets", *, deleted=False) -> int`: inserted directly with `name_key(name)`, `created_at = updated_at = utc_now()`, `deleted_at = utc_now() if deleted else None`;
-  - `add_member(engine, team_id, user_id) -> None`: a `TeamMembership` inserted directly;
+  - `make_member(engine, team_id, user_id) -> None`: a `TeamMembership` inserted directly (not `add_member`, so it never shadows `teams.add_member` in `test_team_service.py`);
   - docstrings say **test-only** and why it is harmless (a team carries no personal data; seeding skips only the reach and rule checks that `test_team_service.py` and `test_teacher_teams.py` cover), in the style of `make_class` and `make_question`.
 - [ ] T013 Add `reach_team(session, teacher_id, team_id, *, institution_id=None, write=False, lock=False) -> tuple[ReachableInstitution, Team]` to `app/services/teacher_access.py` per contracts/services.md (depends on T008):
   - read the team with `session.get(Team, team_id, with_for_update=True, populate_existing=True)` when `lock`, plain `session.get` otherwise;
@@ -190,7 +190,7 @@ suite must be green at its end.
   - `member_ids(session, team_id) -> set[int]`: every member, blocked included;
   - `is_full(session, team_id) -> bool`: `count_members(...) >= MAX_MEMBERS`;
   - `list_student_teams(session, user_id) -> list[StudentTeam]`: every team of the person, deleted included, sorted by `name_key`, ties by team id.
-- [ ] T015 Extend the access sweep's scene in `tests/integration/test_teacher_access.py` so it is ready for team routes (depends on T012): `Scene` gains `team` (a live team of `institution` holding `student` as a member, via `make_team`/`add_member`), `deleted_team`, and `other_team` (a live team of `other_institution`); `ids()` gains `"team_id": self.team` (so `{team_id}` and `{user_id}` resolve to a real team and a real member); `AREA_PAGES` gains `"/teacher/teams"`; `SNAPSHOT_TABLES` gains `"teams"` and `"team_memberships"`; `FORM` gains `"student": str(student)` (set per test from the scene). The existing sweeps stay green (no team route exists yet).
+- [ ] T015 Extend the access sweep's scene in `tests/integration/test_teacher_access.py` so it is ready for team routes (depends on T012): `Scene` gains `team` (a live team of `institution` holding `student` as a member, via `make_team`/`make_member`), `deleted_team`, and `other_team` (a live team of `other_institution`); `ids()` gains `"team_id": self.team` (so `{team_id}` and `{user_id}` resolve to a real team and a real member); `AREA_PAGES` gains `"/teacher/teams"`; `SNAPSHOT_TABLES` gains `"teams"` and `"team_memberships"`; `FORM` gains `"student": str(student)` (set per test from the scene). The existing sweeps stay green (no team route exists yet).
 - [ ] T016 Create `tests/integration/test_team_service.py` with the read-side cases (depends on T013, T014): `reach_team` returns the team and institution for Write and Read; `NotReachable` for an unknown id, a deleted team, a team of an unlinked institution, a team whose institution or region is deactivated, a mismatched `institution_id`; `WriteRequired` for Read with `write=True`; `list_teams` excludes deleted teams and sorts "alpha", "Beta", "gamma" ignoring case; `list_active_members` order (last name, then first name, case-folded, ties by id) and each `class_label`; `count_members`/`member_ids` include a member whose class is deactivated while `list_active_members` hides them; `list_student_teams` includes a deleted team with `is_deleted=True`, sorted by name ignoring case.
 
 **Checkpoint**: the suite is green on both engines; the tables exist with the rewritten consent text,
@@ -246,7 +246,7 @@ member list, the notice, the selection after every step, and that the students' 
   - the notice: a stale (TTL passed, via the `now` of `seal`/`unseal` or by monkeypatching the clock), tampered, other-team, or no-longer-listed-member token shows no notice and the page is 200;
   - Cancel and the back link on the new-team form return to `selection_path(region, institution)`; the back link on **Add students** returns to `team_path`;
   - SC-010: reloading the redirect target after create and after add repeats nothing (row counts unchanged);
-  - the Read teacher sees the tab with no "+ Add team", no Add students/Rename/Delete/Remove, the Read hint, and the member table without the Actions column (US4-2).
+  - the Read teacher's "No teams yet" shows the Read hint "A teacher with Write access to this institution creates its teams." (the full no-actions check is US4-2 in T045).
 - [ ] T029 [P] [US1] Add form-contract cases to `tests/integration/test_form_contract.py` and regenerate only those entries in `tests/integration/form_contract.json` (record that in the module docstring): `teacher-team-new`, `teacher-team-new-invalid` (empty name), `teacher-team-add-students` (with a class chosen: the hidden `student`/`class` fields of the Add buttons), `teacher-teams-selected` (the tab with a team selected: the chained-list form).
 - [ ] T030 [P] [US1] Add the new pages to `tests/integration/test_page_patterns.py`: `/teacher/teams` (each state), the new-team form, and **Add students** follow the page patterns (one `h1`, the back link where required, the busy-button and loading-feedback hooks, no inline style).
 
@@ -279,7 +279,8 @@ team stays stored with its memberships while no page lists it (spec US2).
 ### Tests for the routes
 
 - [ ] T038 [US2] Update the route tables (depends on T035–T037): `test_the_write_routes_are_exact` in `tests/integration/test_routes.py` gains `POST /teacher/teams/{team_id:int}/rename`, `/delete` and `/members/{user_id:int}/remove`; `test_the_sweeps_have_routes` in `tests/integration/test_teacher_access.py` expects `len(TEACHER_POSTS) == 13`.
-- [ ] T039 [US2] Add the US2 scenarios to `tests/integration/test_teacher_teams.py` (depends on T035–T037):
+- [ ] T039 [P] [US2] Extend `test_cross_site_teacher_actions_change_nothing` in `tests/integration/test_cross_site.py` to the team actions (FR-043; depends on T024, T026, T035–T037): seed a team with a member via `make_team`/`make_member`, then with each forged cross-site header post the new-team form (`name`), rename (`name`), delete, an addition (`student`) and a removal; each answers 403 with the refusal text, and the `teams` and `team_memberships` rows are unchanged. The docstring also names milestone 11.1 FR-043.
+- [ ] T040 [US2] Add the US2 scenarios to `tests/integration/test_teacher_teams.py` (depends on T035–T037):
   - US2-1: with Write the heading is the `section_heading` markup with **Add students** beside the name, **Rename** and **Delete** in `row-actions`, and **Remove** per member;
   - US2-2: **Rename** opens the form filled with "Rockets"; saving "Comets" returns to `team_path` showing "Comets";
   - US2-3/4: the remove confirmation names "Taras Shevchenko" and "Comets" and shows the class; confirming returns to `team_path` without Taras; Taras keeps his student role, class, enrolment, other teams, and his session still opens `/profile`;
@@ -289,7 +290,7 @@ team stays stored with its memberships while no page lists it (spec US2).
   - US2-10: a deleted only team gives "No teams yet" with its hint;
   - US2-11: Cancel and back link on rename, delete, remove and **Add students** return to `team_path`, and on the new-team form to `selection_path(region, institution)`; nothing changes;
   - SC-010: reloading after rename, remove and delete repeats nothing.
-- [ ] T040 [P] [US2] Add form-contract cases `teacher-team-rename`, `teacher-team-rename-invalid`, `teacher-team-delete`, `teacher-team-member-remove` to `tests/integration/test_form_contract.py` and regenerate only those entries in `tests/integration/form_contract.json`; add the rename form and both confirmations to `tests/integration/test_page_patterns.py`.
+- [ ] T041 [P] [US2] Add form-contract cases `teacher-team-rename`, `teacher-team-rename-invalid`, `teacher-team-delete`, `teacher-team-member-remove` to `tests/integration/test_form_contract.py` and regenerate only those entries in `tests/integration/form_contract.json`; add the rename form and both confirmations to `tests/integration/test_page_patterns.py`.
 
 **Checkpoint**: the whole tab works for a Write teacher: every endpoint exists.
 
@@ -304,8 +305,8 @@ partial index (T008–T009); this phase proves it.
 **Independent Test**: create and rename teams to names that repeat an existing name in another and
 in the same institution, in another case, before and after the existing team is deleted (spec US3).
 
-- [ ] T041 [P] [US3] Add uniqueness cases to `tests/integration/test_team_service.py`: "comets" refused when a live "Comets" exists in another institution (US3-1) and in the same institution; the `DuplicateTeamName.message` is exactly "A team named “comets” already exists." and names no institution; accepted once the other "Comets" is deleted (US3-2), and two deleted teams plus one live team may share a key; rename to another live team's name refused, to a deleted team's name accepted; case-only rename "comets" → "Comets" accepted (US3-5); **the race**: with the lookup bypassed (monkeypatch the duplicate lookup to find nothing), a second live insert is refused by `uq_teams_name_key_live` and surfaces as `DuplicateTeamName` with nothing stored, on both engines.
-- [ ] T042 [US3] Add the US3 HTTP scenarios to `tests/integration/test_teacher_teams.py`: creating "comets" in "Lviv Academy" while "Comets" lives in Kyiv gives 400, the form again with "A team named “comets” already exists." beside the field and in the error summary, the entered value kept, and no institution name in the message (US3-1); the same for rename; every invalid name (empty, only spaces, 201 characters after trimming, a control character) gives 400 with the error beside the field, in the summary and the value kept (US3-3, FR-033); "  Rockets  " is stored trimmed (US3-4); after the Kyiv team is deleted, "comets" is accepted (US3-2).
+- [ ] T042 [P] [US3] Add uniqueness cases to `tests/integration/test_team_service.py`: "comets" refused when a live "Comets" exists in another institution (US3-1) and in the same institution; the `DuplicateTeamName.message` is exactly "A team named “comets” already exists." and names no institution; accepted once the other "Comets" is deleted (US3-2), and two deleted teams plus one live team may share a key; rename to another live team's name refused, to a deleted team's name accepted; case-only rename "comets" → "Comets" accepted (US3-5); **the race**: with the lookup bypassed (monkeypatch the duplicate lookup to find nothing), a second live insert is refused by `uq_teams_name_key_live` and surfaces as `DuplicateTeamName` with nothing stored, on both engines.
+- [ ] T043 [US3] Add the US3 HTTP scenarios to `tests/integration/test_teacher_teams.py`: creating "comets" in "Lviv Academy" while "Comets" lives in Kyiv gives 400, the form again with "A team named “comets” already exists." beside the field and in the error summary, the entered value kept, and no institution name in the message (US3-1); the same for rename; every invalid name (empty, only spaces, 201 characters after trimming, a control character) gives 400 with the error beside the field, in the summary and the value kept (US3-3, FR-033); "  Rockets  " is stored trimmed (US3-4); after the Kyiv team is deleted, "comets" is accepted (US3-2).
 
 **Checkpoint**: SC-005 holds through the pages, the services and the index.
 
@@ -320,17 +321,17 @@ every route (T022–T026, T035–T037) and every service write.
 Write, Read and no link to the team's institution, including typed-in addresses and crafted forms for
 unknown, deleted and unreachable teams and students (spec US4).
 
-- [ ] T043 [US4] Extend `tests/integration/test_teacher_access.py` (depends on T038): the existing `TEACHER_GETS`/`TEACHER_POSTS` sweeps now cover the team routes with the scene's real team and member (check they do: `test_every_teacher_page_admits_a_write_teacher` lets Olena through every team page and refuses Read and unlinked on every management page; the POST sweep refuses Read, unlinked, administrator, student and administrator-as-student with the snapshot, `teams` and `team_memberships` included, unchanged); add team hand-made addresses to `hand_made(scene)`: `/teacher/teams?region=<other>&institution=<inst>`, `?institution=<inst>`, `?region=<r>&team=<team>`, `?region=<r>&institution=<inst>&team=<other_team>`, `…&team=<deleted_team>`, `…&team=999999`, `…&team=abc`, `/teacher/teams/999999/rename`, `/teacher/teams/<deleted_team>/add`, `/teacher/teams/<other_team>/delete`, `/teacher/teams/institutions/<other_institution>/new`, `/teacher/teams/<team>/add?class=<other_class>`, `/teacher/teams/<team>/members/999999/remove`.
-- [ ] T044 [US4] Add the access matrix to `tests/integration/test_teacher_teams.py`:
+- [ ] T044 [US4] Extend `tests/integration/test_teacher_access.py` (depends on T038): the existing `TEACHER_GETS`/`TEACHER_POSTS` sweeps now cover the team routes with the scene's real team and member (check they do: `test_every_teacher_page_admits_a_write_teacher` lets Olena through every team page and refuses Read and unlinked on every management page; the POST sweep refuses Read, unlinked, administrator, student and administrator-as-student with the snapshot, `teams` and `team_memberships` included, unchanged); add team hand-made addresses to `hand_made(scene)`: `/teacher/teams?region=<other>&institution=<inst>`, `?institution=<inst>`, `?region=<r>&team=<team>`, `?region=<r>&institution=<inst>&team=<other_team>`, `…&team=<deleted_team>`, `…&team=999999`, `…&team=abc`, `/teacher/teams/999999/rename`, `/teacher/teams/<deleted_team>/add`, `/teacher/teams/<other_team>/delete`, `/teacher/teams/institutions/<other_institution>/new`, `/teacher/teams/<team>/add?class=<other_class>`, `/teacher/teams/<team>/members/999999/remove`.
+- [ ] T045 [US4] Add the access matrix to `tests/integration/test_teacher_teams.py`:
   - US4-1: the administrator, a student, and an administrator using the student role get 403 on all 11 endpoints (GET and POST), naming their current role;
-  - US4-2/3, FR-024: Mykola (Read) gets 403 on all 9 *manage* endpoints with real ids and `team=new`, and sees no action on the tab; nothing changes;
+  - US4-2/3, FR-024: Mykola (Read) gets 403 on all 10 *manage* endpoints (routes 2–11 of contracts/http-routes.md) with real ids, and on `team=new`, and sees no action on the tab; nothing changes;
   - US4-4: unknown, deleted and unlinked-institution team ids, and a team whose institution or region is deactivated, get 403 in addresses and in submitted forms;
   - US4-5: a Write teacher posting `student` = a student of another institution the teacher also reaches, a blocked student, an unknown id, a teacher's id, or `"abc"` to `/members`, or removing a blocked member, gets 403 and nothing changes;
   - US4-6: open a form, confirmation or **Add students** page, then lower the link to Read / remove it / delete the team, then submit: 403 and nothing changes, for create, rename, delete, add and remove;
   - US4-7: a region, institution and team that do not belong together → 403;
   - US4-8: a teacher with Write on one institution and Read on another opening **Add students** of a team of the Read institution → 403;
   - no route answers FastAPI's 422 JSON for any malformed id or missing field.
-- [ ] T045 [US4] Add the logging check (FR-016) to `tests/integration/test_teacher_teams.py`: with `caplog` at DEBUG, walk create, rename, add, the "already" path, remove and delete; no log record contains a student's or teacher's email, first or last name, or a team name; the five service lines appear with ids only.
+- [ ] T046 [US4] Add the logging check (FR-016) to `tests/integration/test_teacher_teams.py`: with `caplog` at DEBUG, walk create, rename, add, the "already" path, remove and delete; no log record contains a student's or teacher's email, first or last name, or a team name; the five service lines appear with ids only.
 
 **Checkpoint**: SC-002 holds: 100% of denied cases refuse with nothing changed.
 
@@ -346,8 +347,8 @@ state of **Add students**.
 page and a crafted request; add an existing member twice; add a student of another institution
 (spec US5).
 
-- [ ] T046 [P] [US5] Add rule cases to `tests/integration/test_team_service.py`: the 51st addition (50 seeded with `add_member`, some in a deactivated class) raises `TeamFull` and stores nothing (FR-004, US6-3); a member re-added to a full team raises `AlreadyMember` (checked before the limit); the `IntegrityError` path: with the existing-membership lookup bypassed, a duplicate insert is refused by the primary key and surfaces as `AlreadyMember` with one row stored; moving a student to another class of the institution with `students.update_student` keeps every membership (US5-4, FR-005); on PostgreSQL only (skip on SQLite), two threads adding the 50th and 51st member to a 49-member team at once store exactly one (SC-004, research R5).
-- [ ] T047 [US5] Add the US5 HTTP scenarios to `tests/integration/test_teacher_teams.py`: with 50 members (blocked included) **Add students** says "This team already has 50 members" and shows no **Add** button, while members still show "In this team" (US5-1, FR-041); a crafted 51st addition with `class=<id>` redirects to `/teacher/teams/<id>/add?class=<id>`, which shows the full notice, and stores nothing (US5-2); with a missing or deactivated `class` it redirects to `/teacher/teams/<id>/add` without `class`; a repeated addition from two open pages lands on `team_path` with "Taras Shevchenko is already in this team." (`info`) and one row (US5-3); the same student added to two teams of the institution is in both (US5-5).
+- [ ] T047 [P] [US5] Add rule cases to `tests/integration/test_team_service.py`: the 51st addition (50 seeded with `make_member`, some in a deactivated class) raises `TeamFull` and stores nothing (FR-004, US6-3); a member re-added to a full team raises `AlreadyMember` (checked before the limit); the `IntegrityError` path: with the existing-membership lookup bypassed, a duplicate insert is refused by the primary key and surfaces as `AlreadyMember` with one row stored; moving a student to another class of the institution with `students.update_student` keeps every membership (US5-4, FR-005); on PostgreSQL only (skip on SQLite), two threads adding the 50th and 51st member to a 49-member team at once store exactly one (SC-004, research R5).
+- [ ] T048 [US5] Add the US5 HTTP scenarios to `tests/integration/test_teacher_teams.py`: with 50 members (blocked included) **Add students** says "This team already has 50 members" and shows no **Add** button, while members still show "In this team" (US5-1, FR-041); a crafted 51st addition with `class=<id>` redirects to `/teacher/teams/<id>/add?class=<id>`, which shows the full notice, and stores nothing (US5-2); with a missing or deactivated `class` it redirects to `/teacher/teams/<id>/add` without `class`; a repeated addition from two open pages lands on `team_path` with "Taras Shevchenko is already in this team." (`info`) and one row (US5-3); the same student added to two teams of the institution is in both (US5-5).
 
 **Checkpoint**: SC-004 holds through crafted requests and concurrent additions.
 
@@ -363,8 +364,8 @@ implement it; this phase proves it.
 list, the delete count and **Add students**; activate again and check the member is back and the
 membership never changed (spec US6).
 
-- [ ] T048 [US6] Add the US6 scenarios to `tests/integration/test_teacher_teams.py`: deactivating Taras's class "KN-21" (through `/teacher/students/classes/<id>/deactivate`) hides him from "Comets" with no notice, and a sealed "added" notice for him shows nothing (US6-1); the delete confirmation's "Members" counts only active members while `count_members` still counts him (US6-2, US6-3); **Add students** no longer offers "KN-21" and `?class=<KN-21>` is 403 (US6-5); activating "KN-21" lists Taras again and the `team_memberships` row is byte-for-byte the same (US6-4); a team whose only members are blocked shows "No members in this team yet" and "Members" 0 (spec Edge Cases).
-- [ ] T049 [P] [US6] Add the institution and region branches to `tests/integration/test_team_service.py`: `list_active_members` hides a member when their institution or their region is deactivated (set directly with `set_institution_active` / `set_region_active` or the admin services) and lists them again on activation; the membership row is unchanged throughout.
+- [ ] T049 [US6] Add the US6 scenarios to `tests/integration/test_teacher_teams.py`: deactivating Taras's class "KN-21" (through `/teacher/students/classes/<id>/deactivate`) hides him from "Comets" with no notice, and a sealed "added" notice for him shows nothing (US6-1); the delete confirmation's "Members" counts only active members while `count_members` still counts him (US6-2, US6-3); **Add students** no longer offers "KN-21" and `?class=<KN-21>` is 403 (US6-5); activating "KN-21" lists Taras again and the `team_memberships` row is byte-for-byte the same (US6-4); a team whose only members are blocked shows "No members in this team yet" and "Members" 0 (spec Edge Cases).
+- [ ] T050 [P] [US6] Add the institution and region branches to `tests/integration/test_team_service.py`: `list_active_members` hides a member when their institution or their region is deactivated (set directly with `set_institution_active` / `set_region_active` or the admin services) and lists them again on activation; the membership row is unchanged throughout.
 
 **Checkpoint**: FR-010 holds for class, institution and region.
 
@@ -379,11 +380,11 @@ memberships, in deleted teams too; the consent text names them (the rewrite itse
 consent, delete the data without signing in and remove the student role in turn, and check no
 membership is left; read the consent text on a student invitation (spec US7).
 
-- [ ] T050 [US7] In `app/services/students.py`, make `_StudentInvitation.revoke` first `delete(TeamMembership).where(col(TeamMembership.user_id) == user_id)`, then the enrolment and the role as today (research R7); update the module docstring to say removal, withdrawal and data deletion all erase the memberships through `revoke`, in deleted teams too, and the teams are kept.
-- [ ] T051 [US7] Add the profile's **Teams** row (research R14, contracts/http-routes.md §"The profile's Teams row"): in `app/routers/profile.py`, when `Role.STUDENT in get_roles(...)` (blocked or not), add `teams = list_student_teams(session, person.id)` to the context; in `app/templates/pages/profile.html`, a `details_list` row "Teams" holding a `<ul>` of names in the service's order with a deleted team as "<name> (deleted)", or "You are not in any team." when empty. Update the router's module docstring.
-- [ ] T052 [P] [US7] Add profile cases to `tests/integration/test_profile.py`: a student in "Rockets", "comets" (deleted) and "Alpha" sees "Alpha", "comets (deleted)", "Rockets" in that order (US7-1); a student with no team sees "You are not in any team." (US7-2); a student whose class is deactivated still sees their teams (US7-6); a teacher's and an administrator's profile has no Teams row.
-- [ ] T053 [P] [US7] Add erasure cases (US7-3, SC-007): in `tests/integration/test_consent_privacy.py`, a student in a live and a deleted team withdraws consent → no `team_memberships` row with their `user_id`, both `teams` rows unchanged; in `tests/integration/test_data_deletion.py`, the same through "Delete my data" without signing in; in `tests/integration/test_teacher_students.py`, **Remove** on **Students** erases the memberships and keeps the teams.
-- [ ] T054 [P] [US7] Add the consent text cases: in `tests/integration/test_student_invitation.py` (or wherever the shown student consent text is asserted), the invitation page shows version 1 with "team memberships", "the teachers linked to your educational institution" and the withdrawal sentence naming team memberships (US7-4); in `tests/integration/test_migrations.py`, an upgrade from `3e32707ed794` of a database holding a student consent record rewrites the student text to `STUDENT_CONSENT_TEXT_V1_REWRITE`, keeps `version = 1`, `published_at` (2026-10-19) and the row id, and leaves the record's `consent_text_id` unchanged (US7-5); a downgrade back to `3e32707ed794` restores the original wording byte for byte, and `upgrade head` brings the rewrite back.
+- [ ] T051 [US7] In `app/services/students.py`, make `_StudentInvitation.revoke` first `delete(TeamMembership).where(col(TeamMembership.user_id) == user_id)`, then the enrolment and the role as today (research R7); update the module docstring to say removal, withdrawal and data deletion all erase the memberships through `revoke`, in deleted teams too, and the teams are kept.
+- [ ] T052 [US7] Add the profile's **Teams** row (research R14, contracts/http-routes.md §"The profile's Teams row"): in `app/routers/profile.py`, when `Role.STUDENT in get_roles(...)` (blocked or not), add `teams = list_student_teams(session, person.id)` to the context; in `app/templates/pages/profile.html`, a `details_list` row "Teams" holding a `<ul>` of names in the service's order with a deleted team as "<name> (deleted)", or "You are not in any team." when empty. Update the router's module docstring.
+- [ ] T053 [P] [US7] Add profile cases to `tests/integration/test_profile.py`: a student in "Rockets", "comets" (deleted) and "Alpha" sees "Alpha", "comets (deleted)", "Rockets" in that order (US7-1); a student with no team sees "You are not in any team." (US7-2); a student whose class is deactivated still sees their teams (US7-6); a teacher's and an administrator's profile has no Teams row.
+- [ ] T054 [P] [US7] Add erasure cases (US7-3, SC-007): in `tests/integration/test_consent_privacy.py`, a student in a live and a deleted team withdraws consent → no `team_memberships` row with their `user_id`, both `teams` rows unchanged; in `tests/integration/test_data_deletion.py`, the same through "Delete my data" without signing in; in `tests/integration/test_teacher_students.py`, **Remove** on **Students** erases the memberships and keeps the teams.
+- [ ] T055 [P] [US7] Add the consent text cases: in `tests/integration/test_student_invitation.py`, the invitation page shows version 1 with "team memberships", "the teachers linked to your educational institution" and the withdrawal sentence naming team memberships (US7-4); in `tests/integration/test_migrations.py`, an upgrade from `3e32707ed794` of a database holding a student consent record rewrites the student text to `STUDENT_CONSENT_TEXT_V1_REWRITE`, keeps `version = 1`, `published_at` (2026-10-19) and the row id, and leaves the record's `consent_text_id` unchanged (US7-5); a downgrade back to `3e32707ed794` restores the original wording byte for byte, and `upgrade head` brings the rewrite back.
 
 **Checkpoint**: SC-007 holds; the consent promise covers team memberships.
 
@@ -396,8 +397,8 @@ membership is left; read the consent text on a student invitation (spec US7).
 **Independent Test**: try to delete an institution with a team, one with only deleted teams, and one
 that never had a team and has no other use (spec US8).
 
-- [ ] T055 [US8] In `app/services/institutions.py`, `count_institution_uses` adds `select(func.count()).select_from(Team).where(col(Team.institution_id) == institution_id)` (deleted teams included; import `Team` from `app.models`, not `app.services.teams`), and its docstring names teams among the uses (milestone 11.1 FR-017, research R8). `delete_institution` is unchanged.
-- [ ] T056 [P] [US8] Add cases (US8-1/2/3, SC-008): `tests/integration/test_institution_service.py` — `count_institution_uses` counts a live and a deleted team; `delete_institution` raises `InstitutionInUse` for an institution with only a deleted team and succeeds for one that never had a team; `tests/integration/test_admin_institutions.py` — the admin delete page for "Lviv Academy" (only a deleted team) answers 409 with "is in use and cannot be deleted. You can deactivate it instead."; deleting a class with students is refused as before and an empty class of an institution with teams is deleted as before (FR-018).
+- [ ] T056 [US8] In `app/services/institutions.py`, `count_institution_uses` adds `select(func.count()).select_from(Team).where(col(Team.institution_id) == institution_id)` (deleted teams included; import `Team` from `app.models`, not `app.services.teams`), and its docstring names teams among the uses (milestone 11.1 FR-017, research R8). `delete_institution` is unchanged.
+- [ ] T057 [P] [US8] Add cases (US8-1/2/3, SC-008): `tests/integration/test_institution_service.py` — `count_institution_uses` counts a live and a deleted team; `delete_institution` raises `InstitutionInUse` for an institution with only a deleted team and succeeds for one that never had a team; `tests/integration/test_admin_institutions.py` — the admin delete page for "Lviv Academy" (only a deleted team) answers 409 with "is in use and cannot be deleted. You can deactivate it instead."; deleting a class with students is refused as before and an empty class of an institution with teams is deleted as before (FR-018).
 
 **Checkpoint**: SC-008 holds.
 
@@ -410,8 +411,8 @@ that never had a team and has no other use (spec US8).
 **Independent Test**: inspect the home page as a teacher; measure the tab row at 360 px and 375 px
 and check the targets against the clearances (spec US9).
 
-- [ ] T057 [US9] Set `TEACHER_AREA.description` in `app/routers/areas.py` to "Manage your classes, students and teams, and work with the question bank and competitions." (research R16), and replace the old card text assertion in `tests/integration/test_home.py` with the new text (US9-1; replaced, not deleted: SC-011).
-- [ ] T058 [US9] Measure the four-tab row (FR-026, R15, quickstart §6) with headless Playwright, following the memory recipe (`uv run --no-project --with playwright -- python -I <script>` from the scratchpad, a copy of the database, port 8765; never add Playwright to the project): `/teacher/teams` at 360 × 640 and 375 × 667, with **Teams** current and with **Competitions** current — the frame's `getBoundingClientRect().bottom`, the tab row count, whether the page scrolls sideways; then follow the skip link, submit an empty team name and follow the error-summary link, and tab to a field, checking each target lands below the frame (US9-2, US9-3). Expected: two rows, about 158.5 px, under `--sc-frame-clearance-tabs` (176 px below 768 px). Record the numbers in `specs/011.1-teacher-teams/pr-notes.md` and in the clearance note of `docs/requirements/ui-guidelines.md`; raise the token in `app/static/css/app.css` (and its tests) only if a measurement exceeds it.
+- [ ] T058 [US9] Set `TEACHER_AREA.description` in `app/routers/areas.py` to "Manage your classes, students and teams, and work with the question bank and competitions." (research R16), and replace the old card text assertion in `tests/integration/test_home.py` with the new text (US9-1; replaced, not deleted: SC-011).
+- [ ] T059 [US9] Measure the four-tab row (FR-026, R15, quickstart §6) with headless Playwright, following the memory recipe (`uv run --no-project --with playwright -- python -I <script>` from the scratchpad, a copy of the database, port 8765; never add Playwright to the project): `/teacher/teams` at 360 × 640 and 375 × 667, with **Teams** current and with **Competitions** current — the frame's `getBoundingClientRect().bottom`, the tab row count, whether the page scrolls sideways; then follow the skip link, submit an empty team name and follow the error-summary link, and tab to a field, checking each target lands below the frame (US9-2, US9-3). Expected: two rows, about 158.5 px, under `--sc-frame-clearance-tabs` (176 px below 768 px). Record the numbers in `specs/011.1-teacher-teams/pr-notes.md` and in the clearance note of `docs/requirements/ui-guidelines.md`; raise the token in `app/static/css/app.css` (and its tests) only if a measurement exceeds it.
 
 **Checkpoint**: every story is complete.
 
@@ -419,12 +420,12 @@ and check the targets against the clearances (spec US9).
 
 ## Phase 12: Polish & Cross-Cutting Concerns
 
-- [ ] T059 [P] Take review screenshots with the same Playwright recipe into the git-ignored `screenshots/` folder: the tab in each state (Write and Read), the new-team form with an error, **Add students** with "In this team" and in the full state, both confirmations, a 200-character team name and long student names, the profile Teams row, `/admin/components#section-heading` and `#table`, and `/teacher/students` with a class selected (unchanged heading); at 1280 × 800 and 360 × 640, Light and Dark, and once with JavaScript disabled (the **Show** buttons). Check no sideways scroll (SC-009).
-- [ ] T060 [P] Update `README.md`: the teacher area's **Teams** tab (teams per institution, unique names everywhere, Write manages / Read sees, soft deletion, 50-member limit, memberships as personal data erased with the student's data), and the rewritten student consent text version 1.
-- [ ] T061 Final pass over `docs/requirements/ui-guidelines.md`: `section_heading` and `row_note` in §5, the §7 wording, §8 phone behaviour (the row note sits in the card's actions part), and the clearance note from T058, all matching the gallery.
-- [ ] T062 Run `uv run ruff check . && uv run ruff format --check . && uv run pytest`, then the same with `TEST_POSTGRES_URL` set. Everything passes on both engines; the only replaced tests are the old student consent checksum, the three-tab row and the old teacher card wording (SC-011).
-- [ ] T063 Walk through [quickstart.md](./quickstart.md) §2–§5 and §7 not already covered by T058–T059, including a real upgrade and downgrade of a copy of `data/app.db` (quickstart §2). Complete `specs/011.1-teacher-teams/pr-notes.md` for the PR description: what changed, the tab-row measurements, the `section_heading` refactor of **Students** (markup pinned), the consent text rewrite as a one-time exception with its test fence, the lossy downgrade, and the replaced tests.
-- [ ] T064 On delivery, update `docs/requirements/milestones.md`: move 11.1 from **Upcoming** to **Delivered** as a short summary in the style of the others, with `_Spec:_ [011.1-teacher-teams](../../specs/011.1-teacher-teams/spec.md)`.
+- [ ] T060 [P] Take review screenshots with the same Playwright recipe into the git-ignored `screenshots/` folder: the tab in each state (Write and Read), the new-team form with an error, **Add students** with "In this team" and in the full state, both confirmations, a 200-character team name and long student names, the profile Teams row, `/admin/components#section-heading` and `#table`, and `/teacher/students` with a class selected (unchanged heading); at 1280 × 800 and 360 × 640, Light and Dark, and once with JavaScript disabled (the **Show** buttons). Check no sideways scroll (SC-009).
+- [ ] T061 [P] Update `README.md`: the teacher area's **Teams** tab (teams per institution, unique names everywhere, Write manages / Read sees, soft deletion, 50-member limit, memberships as personal data erased with the student's data), and the rewritten student consent text version 1.
+- [ ] T062 Final pass over `docs/requirements/ui-guidelines.md`: `section_heading` and `row_note` in §5, the §7 wording, §8 phone behaviour (the row note sits in the card's actions part), and the clearance note from T059, all matching the gallery.
+- [ ] T063 Run `uv run ruff check . && uv run ruff format --check . && uv run pytest`, then the same with `TEST_POSTGRES_URL` set. Everything passes on both engines; the only replaced tests are the old student consent checksum, the three-tab row and the old teacher card wording (SC-011).
+- [ ] T064 Walk through [quickstart.md](./quickstart.md) §2–§5 and §7 not already covered by T059–T060, including a real upgrade and downgrade of a copy of `data/app.db` (quickstart §2). Complete `specs/011.1-teacher-teams/pr-notes.md` for the PR description: what changed, the tab-row measurements, the `section_heading` refactor of **Students** (markup pinned), the consent text rewrite as a one-time exception with its test fence, the lossy downgrade, and the replaced tests.
+- [ ] T065 On delivery, update `docs/requirements/milestones.md`: move 11.1 from **Upcoming** to **Delivered** as a short summary in the style of the others, with `_Spec:_ [011.1-teacher-teams](../../specs/011.1-teacher-teams/spec.md)`.
 
 ---
 
@@ -441,7 +442,7 @@ and check the targets against the clearances (spec US9).
   T021 alongside; T022 → T023; T024, T025, T026 after T021 (same router file: in sequence); T027
   after T024/T026; T028–T030 last.
 - **US2 (Phase 4)**: after US1 (it shares the router, `team_form.html` and the tab's buttons).
-  T031–T033 in sequence (same file), then T035–T037, then T038–T040.
+  T031–T033 in sequence (same file), then T035–T037, then T038–T041.
 - **US3 (Phase 5)**: after US2 (it tests rename).
 - **US4 (Phase 6)**: after US2 (it sweeps all 11 endpoints).
 - **US5 (Phase 7)**: after US1; its HTTP cases need only routes 8 and 9.
@@ -449,7 +450,7 @@ and check the targets against the clearances (spec US9).
 - **US7 (Phase 9)**: after Foundational (T014 for `list_student_teams`, T012 for the helpers).
   Independent of US1–US6; can run in parallel with them.
 - **US8 (Phase 10)**: after Foundational (T008). Independent of the other stories.
-- **US9 (Phase 11)**: T057 after Foundational; T058 after US1 (it needs `/teacher/teams` and the
+- **US9 (Phase 11)**: T058 after Foundational; T059 after US1 (it needs `/teacher/teams` and the
   four tabs) and ideally after US2.
 - **Polish (Phase 12)**: after every story.
 
@@ -482,8 +483,8 @@ and check the targets against the clearances (spec US9).
 - **Phase 1**: T002 and T003; T005 and T006.
 - **Phase 2**: T012 and T013; T010 and T011.
 - **US1**: T019 alongside the routes; T029 and T030 alongside T028.
-- **US2**: T034 alongside the routes; T040 alongside T039.
-- **Cross-story**: US7 (T050–T054), US8 (T055–T056) and T057 can run in parallel with
+- **US2**: T034 alongside the routes; T039 alongside T040; T041 alongside T040.
+- **Cross-story**: US7 (T051–T055), US8 (T056–T057) and T058 can run in parallel with
   US1→US2→US3→US4→US5→US6.
 
 ---
@@ -497,12 +498,12 @@ Task: "T020 Add Teams second to TEACHER_TABS in app/routers/teacher.py"
 Task: "T021 Create app/routers/teacher_teams.py with its helpers and notice token"
 
 # Stream B, personal data (US7):
-Task: "T050 Make STUDENT_INVITATION.revoke delete memberships in app/services/students.py"
-Task: "T051 Add the Teams row to app/routers/profile.py and app/templates/pages/profile.html"
+Task: "T051 Make STUDENT_INVITATION.revoke delete memberships in app/services/students.py"
+Task: "T052 Add the Teams row to app/routers/profile.py and app/templates/pages/profile.html"
 
 # Stream C, the institution rule and the card (US8, US9):
-Task: "T055 Count teams in count_institution_uses in app/services/institutions.py"
-Task: "T057 Set TEACHER_AREA.description in app/routers/areas.py"
+Task: "T056 Count teams in count_institution_uses in app/services/institutions.py"
+Task: "T058 Set TEACHER_AREA.description in app/routers/areas.py"
 ```
 
 ---
@@ -539,5 +540,5 @@ Task: "T057 Set TEACHER_AREA.description in app/routers/areas.py"
   validated on its own.
 - Nothing from milestone 12 is built: the **Competitions** placeholder is untouched, and teams are
   not used in competitions (FR-048).
-- The manual checks (T058, T059, T063) are part of the milestone's _Test:_ line; the suite has no
+- The manual checks (T059, T060, T064) are part of the milestone's _Test:_ line; the suite has no
   browser before milestone 16.

@@ -528,7 +528,7 @@ PostgreSQL.
   - **`test_profile.py`**: the teams row, "(deleted)", no team, and a blocked student (US7).
   - **`test_consent_privacy.py` and `test_data_deletion.py`**: withdrawal and data deletion erase
     memberships, in deleted teams too, and keep the teams (SC-007).
-  - **`conftest.py`**: `make_team` and `add_member` helpers.
+  - **`conftest.py`**: `make_team` and `make_member` helpers.
 
 **Rationale**: it follows the module split of milestones 9 and 11 (service, HTTP, sweeps). Every
 FR-047 item maps onto one of these cases.

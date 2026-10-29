@@ -107,10 +107,11 @@ expected to take two rows, a 158.5 px frame, under the 176 px clearance (R15).
   - `tests/integration/test_teacher_teams.py`.
 - Changed rule: `tests/unit/test_consent_texts.py` (the rewrite rule and the new pin).
 - Updated modules:
-  - routes, teacher access, form contract, gallery, page patterns and stylesheet;
+  - routes, teacher access, cross-site, form contract, gallery, page patterns, templates and
+    stylesheet;
   - Students (the heading pin, and a removal erasing memberships), layout and classes (four tabs);
   - home, migrations, admin institutions and the institution service;
-  - profile, consent privacy and data deletion;
+  - profile, consent privacy, data deletion and the student invitation;
   - `conftest.py`.
 - The tab-row measurement is an ad hoc Playwright step, as in milestones 10.1 and 11
   ([quickstart.md](./quickstart.md) §6).
@@ -143,8 +144,9 @@ expected to take two rows, a 158.5 px frame, under the 176 px clearance (R15).
 
 **Scale/Scope**:
 
-- **Data and services**: 1 migration, 2 new models, 1 new service module, 4 changed service or
-  router modules (`teacher_access`, `students`, `institutions`, `profile`).
+- **Data and services**: 1 migration, 2 new models, 1 new service module, 3 changed service modules
+  (`teacher_access`, `students`, `institutions`), and 5 changed router or app modules (`teacher`,
+  `areas`, `profile`, `admin_components`, `main`).
 - **Routes and pages**: 1 new router with 11 endpoints, and 5 new page templates.
 - **Components**: 2 new component macros and 1 CSS rule.
 - **Changed templates and modules**: about 5 (Students, profile, gallery, tabs, teacher card).
@@ -240,10 +242,11 @@ tests/
 ├── integration/test_team_service.py     # NEW
 ├── integration/test_teacher_teams.py    # NEW: the tab, end to end
 ├── unit/test_consent_texts.py           # rewrite rule, new pin, SUPERSEDED
-└── (updated) test_routes, test_teacher_access, test_form_contract + form_contract.json,
-    test_component_gallery, test_page_patterns, test_stylesheet, test_teacher_students,
-    test_layout, test_teacher_classes, test_home, test_migrations, test_admin_institutions,
-    test_institution_service, test_profile, test_consent_privacy, test_data_deletion, conftest.py
+└── (updated) test_routes, test_teacher_access, test_cross_site, test_form_contract +
+    form_contract.json, test_component_gallery, test_page_patterns, test_templates,
+    test_stylesheet, test_teacher_students, test_layout, test_teacher_classes, test_home,
+    test_migrations, test_admin_institutions, test_institution_service, test_profile,
+    test_consent_privacy, test_data_deletion, test_student_invitation, conftest.py
 
 docs/requirements/ui-guidelines.md   # section_heading, row_note, clearance note (measured)
 README.md                            # the Teams tab

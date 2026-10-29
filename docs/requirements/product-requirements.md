@@ -38,7 +38,7 @@ A web application for running online competitions among students, testing their 
    - the subject of the competition; only questions of that subject can be added to it
    - the start time and duration of the competition (usually 1 hour)
    - the list of questions
-   - the participating teams (a team usually has up to 10 members)
+   - the participating teams (a team usually has fewer than 10 members, at most 50)
 5. **Viewing competitions.** The teacher can view the list of all competitions, both past and planned. For upcoming competitions, the teacher can edit the participating teams, the title and the list of questions, according to their access rights.
 
 #### Teacher access rights to competitions
@@ -86,7 +86,7 @@ A question in a competition is usually 1–3 lines of text and expects a text an
 
 ### Team
 
-A team is a named group of students of one educational institution, put together by a teacher without changing their classes. Teams are the participants of competitions. A team belongs to one institution and never moves to another. Its name is unique across all institutions. A student can belong to several teams of their institution, but to each team only once. A deleted team is only hidden: it stays stored with all its members, but it is no longer shown when managing teams or competitions and can no longer join new competitions. Completed competitions keep showing it. An institution that holds any team, even a deleted one, cannot be deleted.
+A team is a named group of students of one educational institution, put together by a teacher without changing their classes. Teams are the participants of competitions. A team belongs to one institution and never moves to another. Its name is unique across all institutions. A student can belong to several teams of their institution, but to each team only once. A team has at most 50 members. A deleted team is only hidden: it stays stored with all its members, but it is no longer shown when managing teams or competitions and can no longer join new competitions. Completed competitions keep showing it. An institution that holds any team, even a deleted one, cannot be deleted.
 
 ### Subject
 

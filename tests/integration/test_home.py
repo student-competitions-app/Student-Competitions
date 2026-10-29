@@ -339,11 +339,14 @@ def test_the_unavailable_message_is_kept(
     assert UNAVAILABLE_NOTICE in html.notices(response.text)
 
 
-def test_the_teacher_card_mentions_the_question_bank(client_as: ClientAs) -> None:
-    """US8-4, FR-044."""
+def test_the_teacher_card_names_students_teams_the_question_bank_and_competitions(
+    client_as: ClientAs,
+) -> None:
+    """Milestone 11.1 US9-1, FR-027 (replacing milestone 11's card text, SC-011)."""
     body = client_as(TEACHER_EMAIL).get("/").text
     assert (
         "/teacher",
         "Teacher area",
-        "Manage your classes and students, and see the question bank.",
+        "Manage your classes, students and teams, and work with the question bank and "
+        "competitions.",
     ) in area_cards(body)

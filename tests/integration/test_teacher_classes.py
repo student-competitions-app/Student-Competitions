@@ -128,11 +128,13 @@ def test_the_teacher_area_opens_the_students_tab(scene: Scene) -> None:
     assert ("/teacher/competitions", "Competitions") in html.link_pairs(body)
 
 
-def test_the_tab_row_is_students_questions_competitions(scene: Scene) -> None:
-    """Milestone 11 US2-1, FR-010: Questions sits between Students and Competitions."""
+def test_the_tab_row_is_students_teams_questions_competitions(scene: Scene) -> None:
+    """Milestone 11.1 US1-1, FR-025: Teams sits between Students and Questions (replacing the
+    milestone 11 three-tab row, SC-011)."""
     body = scene.teacher.get(STUDENTS).text
     assert [(t.href, t.text) for t in html.nav(body, "Teacher area")] == [
         (STUDENTS, "Students"),
+        ("/teacher/teams", "Teams"),
         ("/teacher/questions", "Questions"),
         ("/teacher/competitions", "Competitions"),
     ]

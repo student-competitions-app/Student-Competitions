@@ -16,7 +16,7 @@ from app.core.db import utc_now
 from app.core.sealing import seal
 from app.core.security import SESSION_COOKIE_NAME
 from app.main import app
-from app.models import AccessLevel, ConsentRecord, Enrolment, Role, User
+from app.models import AccessLevel, ConsentRecord, Enrolment, Role, Team, TeamMembership, User
 from app.routers.data_deletion import LINK_EXPIRED, LINK_INVALID
 from app.services.consent import erase_personal_data
 from app.services.email import EmailMessage
@@ -33,7 +33,9 @@ from tests.conftest import (
     invite_and_accept,
     make_class,
     make_institution,
+    make_member,
     make_teacher,
+    make_team,
     token_from,
 )
 
@@ -293,3 +295,32 @@ def test_a_student_deletes_their_data_and_their_enrolment(
         assert get_roles(session, user_id) == ()
         records = session.exec(select(ConsentRecord).where(ConsentRecord.user_id == user_id))
         assert len(records.all()) == 1
+
+
+def test_deleting_the_data_erases_every_team_membership_and_keeps_the_teams(
+    client: TestClient, outbox: list[EmailMessage], school: int
+) -> None:
+    """Milestone 11.1 US7-3, FR-014, SC-007: without signing in, in a live and a deleted team."""
+    engine, settings = app.state.engine, app.state.settings
+    make_teacher(engine, settings, email=OLENA, institutions={school: AccessLevel.WRITE})
+    class_id = make_class(engine, school, "KN-21")
+    user_id = enrol_student(
+        engine, settings, email="taras@example.org", class_id=class_id, inviter_email=OLENA
+    )
+    live, deleted = make_team(engine, school), make_team(engine, school, "Comets", deleted=True)
+    for team in (live, deleted):
+        make_member(engine, team, user_id)
+    with Session(engine) as session:
+        teams_before = sorted(
+            (t.id, t.name, t.updated_at, t.deleted_at) for t in session.exec(select(Team))
+        )
+    request_link(client, "taras@example.org")
+    link = f"/data-deletion/confirm/{token_from(outbox[-1])}"
+    assert client.post(link, follow_redirects=False).status_code == 303
+    with Session(engine) as session:
+        left = session.exec(select(TeamMembership).where(TeamMembership.user_id == user_id))
+        assert left.all() == []
+        teams_after = sorted(
+            (t.id, t.name, t.updated_at, t.deleted_at) for t in session.exec(select(Team))
+        )
+    assert teams_after == teams_before

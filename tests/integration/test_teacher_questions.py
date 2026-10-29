@@ -246,11 +246,13 @@ def denied(response: Any) -> None:
 
 
 def test_the_tab_row_and_the_area_address(scene: Scene) -> None:
-    """US2-1, FR-010: three tabs, Questions current here; `/teacher` still opens Students."""
+    """US2-1, FR-010: Questions current here; `/teacher` still opens Students. Four tabs since
+    milestone 11.1 (FR-025, replacing the three-tab row, SC-011)."""
     body = scene.reader.get(TAB).text
     tabs = html.nav(body, "Teacher area")
     assert [(t.href, t.text) for t in tabs] == [
         ("/teacher/students", "Students"),
+        ("/teacher/teams", "Teams"),
         (TAB, "Questions"),
         ("/teacher/competitions", "Competitions"),
     ]

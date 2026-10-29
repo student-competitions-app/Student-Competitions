@@ -49,6 +49,7 @@ router.
 def selection_path(region_id: int, institution_id: int, team_id: int | None = None) -> str:
     """/teacher/teams?region=<r>&institution=<i>[&team=<t>]"""
 
+
 def team_path(institution: ReachableInstitution, team_id: int) -> str:
     """selection_path(institution.region_id, institution.id, team_id)"""
 ```

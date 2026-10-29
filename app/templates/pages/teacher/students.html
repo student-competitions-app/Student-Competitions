@@ -1,8 +1,7 @@
 {% extends "layouts/teacher.html" %}
-{% from "components/frame.html" import page_heading %}
+{% from "components/frame.html" import page_heading, section_heading %}
 {% from "components/selectors.html" import chained_lists %}
 {% from "components/table.html" import data_table, cell, actions_cell %}
-{% from "components/badge.html" import status_badge %}
 {% from "components/button.html" import link_button, post_button %}
 {% from "components/feedback.html" import notice, empty_state %}
 
@@ -45,12 +44,8 @@
 {% if selected_class %}
 {% set class_path = "/teacher/students/classes/" ~ selected_class.id %}
 <section aria-labelledby="class-heading">
-  <div class="page-heading">
-    <h2 id="class-heading">{{ selected_class.label }}{% if not selected_class.is_active %} {{ status_badge(False) }}{% endif %}</h2>
-    {% if can_write and selected_class.is_active %}{{ link_button("Add student", class_path ~ "/invite") }}{% endif %}
-  </div>
-  {% if can_write %}
-  <div class="row-actions">
+  {% call section_heading(selected_class.label, "class-heading", ("Add student", class_path ~ "/invite") if can_write and selected_class.is_active else None, deactivated=not selected_class.is_active) %}
+    {%- if can_write -%}
     {{- link_button("Edit", class_path ~ "/edit", kind="secondary", outline=True, small=True) -}}
     {%- if selected_class.is_active -%}
     {{- link_button("Deactivate", class_path ~ "/deactivate", kind="destructive", outline=True, small=True) -}}
@@ -58,8 +53,8 @@
     {{- post_button(class_path ~ "/activate", "Activate", kind="secondary", outline=True, small=True) -}}
     {%- endif -%}
     {{- link_button("Delete", class_path ~ "/delete", kind="destructive", outline=True, small=True) -}}
-  </div>
-  {% endif %}
+    {%- endif -%}
+  {% endcall %}
   {% if message %}{{ empty_state(message, hints.get(message)) }}{% endif %}
   {% if students %}
   {% set selection = "?region=" ~ selected_region ~ "&institution=" ~ selected_institution.id ~ "&class=" ~ selected_class.id %}

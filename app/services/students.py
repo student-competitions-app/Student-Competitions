@@ -7,6 +7,10 @@ research D9, D12, D16. A student has two things, always written and deleted toge
 student joins the milestone 8 flow as its second invitable role: invitation, acceptance, cut-offs,
 erasure and data deletion work unchanged (FR-024).
 
+From milestone 11.1 a student may also hold team memberships, personal data like the class.
+`revoke` erases them too, in deleted teams as well, so removal on Students, withdrawal and data
+deletion all take them away; the teams are kept (specs/011.1-teacher-teams research R7, FR-014).
+
 Every function that acts for a teacher checks the teacher's reach through
 `app.services.teacher_access`, in its own transaction, under lock for a change (research D5); the
 routes are `@allow_roles(Role.TEACHER)`. Each change logs one line with ids only.
@@ -28,6 +32,7 @@ from app.models import (
     Role,
     SchoolClass,
     TeacherInstitution,
+    TeamMembership,
     User,
     UserRole,
 )
@@ -107,6 +112,10 @@ class _StudentInvitation:
         session.flush()
 
     def revoke(self, session: Session, user_id: int) -> None:
+        """Take the student's data away: their team memberships first, in deleted teams too, so a
+        reader under the same lock never sees a membership without an enrolment (milestone 11.1
+        research R7); then the enrolment and the role. The teams themselves are kept."""
+        session.execute(delete(TeamMembership).where(col(TeamMembership.user_id) == user_id))
         session.execute(delete(Enrolment).where(col(Enrolment.user_id) == user_id))
         session.execute(
             delete(UserRole).where(

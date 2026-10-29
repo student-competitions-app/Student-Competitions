@@ -28,7 +28,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
-from app.models import Enrolment, Institution, Region, SchoolClass, TeacherInstitution
+from app.models import Enrolment, Institution, Region, SchoolClass, TeacherInstitution, Team
 from app.schemas.names import clean_name, name_key
 from app.services.availability import sign_out_students_below
 from app.services.regions import RegionNotFound, get_region
@@ -280,8 +280,10 @@ def set_institution_active(
 
 
 def count_institution_uses(session: Session, institution_id: int) -> int:
-    """How many records refer to the institution: its teacher links (milestone 8 FR-012), plus
-    the enrolments in its classes, blocked students included (milestone 9 FR-007, research D14).
+    """How many records refer to the institution: its teacher links (milestone 8 FR-012), the
+    enrolments in its classes, blocked students included (milestone 9 FR-007, research D14), and
+    its teams, deleted ones included (milestone 11.1 FR-017, research R8). Teams are counted on
+    the model directly: this module sits below `app.services.teams`.
 
     Classes alone do not count: a class with no student is deleted with its institution. This is
     the single place that decides whether an institution may be deleted (FR-038). Do not rely on
@@ -299,7 +301,10 @@ def count_institution_uses(session: Session, institution_id: int) -> int:
         .join(SchoolClass, col(SchoolClass.id) == col(Enrolment.class_id))
         .where(col(SchoolClass.institution_id) == institution_id)
     ).one()
-    return links + enrolments
+    teams = session.exec(
+        select(func.count()).select_from(Team).where(col(Team.institution_id) == institution_id)
+    ).one()
+    return links + enrolments + teams
 
 
 def delete_institution(session: Session, region_id: int, institution_id: int) -> None:

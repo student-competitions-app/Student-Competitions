@@ -73,6 +73,7 @@ from app.routers import (
     teacher,
     teacher_questions,
     teacher_students,
+    teacher_teams,
     theme,
 )
 from app.services.database_status import record_boot
@@ -176,6 +177,7 @@ app.include_router(roles.router)
 app.include_router(areas.router)
 app.include_router(teacher.router)
 app.include_router(teacher_students.router)
+app.include_router(teacher_teams.router)
 app.include_router(teacher_questions.router)
 app.include_router(admin.router)
 app.include_router(admin_teachers.router)

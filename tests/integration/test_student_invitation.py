@@ -382,6 +382,23 @@ def invited(scene: Scene, outbox: list[EmailMessage]) -> str:
     return f"/invitations/{token_from(outbox[-1])}"
 
 
+def test_the_consent_text_names_team_memberships_and_is_still_version_1(
+    scene: Scene, client: TestClient, outbox: list[EmailMessage]
+) -> None:
+    """Milestone 11.1 US7-4, FR-015: what is stored, who sees it, and what withdrawal erases."""
+    text = html.text(client.get(invited(scene, outbox)).text, "main")
+    for shown in (
+        "and your team memberships: the teams of your educational institution that you belong to",
+        "Your data, including your teams, is seen by the teachers linked to your educational "
+        "institution",
+        "Your names, your email address, your class and your team memberships are then erased",
+    ):
+        assert shown in text
+    with Session(app.state.engine) as session:
+        (row,) = session.exec(select(ConsentText).where(ConsentText.role == "student")).all()
+    assert (row.version, row.published_at.date().isoformat()) == (1, "2026-10-19")
+
+
 def test_the_acceptance_page_shows_everything_and_changes_nothing(
     scene: Scene, client: TestClient, outbox: list[EmailMessage]
 ) -> None:
@@ -398,7 +415,8 @@ def test_the_acceptance_page_shows_everything_and_changes_nothing(
         LAST,
         "Educational institution: Kyiv Polytechnic Institute (Kyiv)",
         "Class: KN-21 · year 2",
-        "and your class, which also records your educational institution and your year of study",
+        "your class, which also records your educational institution and your year of study, and "
+        "your team memberships",
         "If you are already a teacher or a student, your current names are kept.",
         "I agree",
     ):
@@ -459,7 +477,7 @@ def test_the_student_signs_in_and_sees_their_profile(
         FIRST,
         LAST,
         " UTC · Student · version 1",
-        "and your class, which also records",
+        "your class, which also records",
         "Corrections to student data are made by a teacher of your educational institution.",
     ):
         assert shown in html.text(body, "main")

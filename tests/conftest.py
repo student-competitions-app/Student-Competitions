@@ -46,7 +46,17 @@ from app.core.db import create_db_engine, utc_now
 from app.core.migrations import alembic_config
 from app.core.security import SESSION_COOKIE_NAME, sign_cookie_value
 from app.main import app
-from app.models import AccessLevel, Question, Region, Role, SchoolClass, User, UserRole
+from app.models import (
+    AccessLevel,
+    Question,
+    Region,
+    Role,
+    SchoolClass,
+    Team,
+    TeamMembership,
+    User,
+    UserRole,
+)
 from app.schemas.names import name_key
 from app.schemas.students import StudentDetails
 from app.schemas.teachers import TeacherDetails
@@ -661,3 +671,44 @@ def make_question(
         db_session.commit()
         assert question.id is not None
         return question.id
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11.1: teams
+# ---------------------------------------------------------------------------------------------
+
+
+def make_team(
+    engine: Engine, institution_id: int, name: str = "Rockets", *, deleted: bool = False
+) -> int:
+    """A team of the institution, inserted directly (deleted when `deleted`); returns its id.
+
+    **Test-only**, but harmless: a team carries no personal data, and seeding it skips only the
+    reach and name checks that `test_team_service.py` and `test_teacher_teams.py` cover.
+    """
+    now = utc_now()
+    with Session(engine) as db_session:
+        team = Team(
+            institution_id=institution_id,
+            name=name,
+            name_key=name_key(name),
+            created_at=now,
+            updated_at=now,
+            deleted_at=now if deleted else None,
+        )
+        db_session.add(team)
+        db_session.commit()
+        assert team.id is not None
+        return team.id
+
+
+def make_member(engine: Engine, team_id: int, user_id: int) -> None:
+    """A membership, inserted directly rather than through `teams.add_member`, so a test of the
+    service never relies on the code it checks.
+
+    **Test-only**: it skips the reach, institution and limit checks, which
+    `test_team_service.py` covers; a test can thus seed a full team or a blocked member at once.
+    """
+    with Session(engine) as db_session:
+        db_session.add(TeamMembership(team_id=team_id, user_id=user_id, created_at=utc_now()))
+        db_session.commit()

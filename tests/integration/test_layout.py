@@ -164,10 +164,11 @@ PAGE_KINDS = [
     (ADMIN_EMAIL, "/admin/subjects"),
     (ADMIN_EMAIL, "/profile"),
     (TEACHER_EMAIL, "/teacher/students"),
+    (TEACHER_EMAIL, "/teacher/teams"),
 ]
 """Every kind of page: public, "not found", signed in, the administrator and the teacher areas."""
 
-AREA_PAGES = {"/admin/subjects", "/teacher/students"}
+AREA_PAGES = {"/admin/subjects", "/teacher/students", "/teacher/teams"}
 
 
 def page(client: TestClient, client_as: ClientAs, email: str | None, path: str) -> str:

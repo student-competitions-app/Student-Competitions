@@ -19,15 +19,27 @@ from sqlalchemy import Engine, MetaData, select
 from sqlmodel import Session
 
 from app.main import app
-from app.models import AccessLevel, Enrolment, Institution, Role, SchoolClass
+from app.models import (
+    AccessLevel,
+    Enrolment,
+    Institution,
+    Role,
+    SchoolClass,
+    Team,
+    TeamMembership,
+)
 from app.services.consent import current_consent_text
 from app.services.email import EmailDeliveryError, EmailMessage
 from app.services.users import get_user_by_email
 from tests.conftest import (
     ADMIN_EMAIL,
     ClientAs,
+    enrol_student,
+    make_class,
     make_institution,
+    make_member,
     make_teacher,
+    make_team,
     sign_in_directly,
     token_from,
 )
@@ -379,3 +391,49 @@ def test_no_student_flow_logs_an_address_a_name_or_a_link(
         r"Class deleted: id=\d+ institution_id=\d+",
     ):
         assert any(re.match(expected, text) for text in messages), expected
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11.1: team memberships are erased with the student's data
+# ---------------------------------------------------------------------------------------------
+
+
+def team_rows() -> list[tuple[object, ...]]:
+    with Session(app.state.engine) as session:
+        return sorted(
+            (t.id, t.institution_id, t.name, t.updated_at, t.deleted_at)
+            for t in session.exec(select(Team)).scalars()
+        )
+
+
+def memberships_of(user_id: int) -> list[int]:
+    with Session(app.state.engine) as session:
+        statement = select(TeamMembership.team_id).where(TeamMembership.user_id == user_id)
+        return sorted(session.exec(statement).scalars())
+
+
+def test_withdrawal_erases_every_team_membership_and_keeps_the_teams(
+    client: TestClient,
+) -> None:
+    """Milestone 11.1 US7-3, FR-014, SC-007: in a live and in a deleted team."""
+    engine, settings = app.state.engine, app.state.settings
+    school = make_institution(engine, "School 5", "Kyiv")
+    make_teacher(engine, settings, email=TEACHER, institutions={school: AccessLevel.WRITE})
+    class_id = make_class(engine, school, "KN-21", 2)
+    student_id = enrol_student(
+        engine, settings, email=STUDENT, class_id=class_id, inviter_email=TEACHER
+    )
+    other_id = enrol_student(
+        engine, settings, email="other@example.org", class_id=class_id, inviter_email=TEACHER
+    )
+    live, deleted = make_team(engine, school), make_team(engine, school, "Comets", deleted=True)
+    for team in (live, deleted):
+        make_member(engine, team, student_id)
+    make_member(engine, live, other_id)
+    teams_before = team_rows()
+    browser = TestClient(app)
+    sign_in_directly(browser, STUDENT)
+    assert browser.post("/profile/withdraw", follow_redirects=False).status_code == 303
+    assert memberships_of(student_id) == []
+    assert memberships_of(other_id) == [live]
+    assert team_rows() == teams_before

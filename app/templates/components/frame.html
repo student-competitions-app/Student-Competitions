@@ -6,6 +6,7 @@
 
 {% from "components/icons.html" import logo_mark, icon %}
 {% from "components/button.html" import button, link_button %}
+{% from "components/badge.html" import status_badge %}
 
 {% macro top_bar(user=current_user, role=current_role, roles=user_roles) -%}
 <header class="top-bar">
@@ -95,4 +96,24 @@
   {{ link_button(action[0], action[1]) }}
   {%- endif %}
 </div>
+{%- endmacro %}
+
+{#- The heading of a section that is one selected item, such as the selected class on Students
+    (milestone 11.1 contracts/components.md §1, FR-046, research R12). At most one primary button
+    beside the title, `action` as `(label, href)`; `deactivated` adds the status badge inside the
+    `h2`. The item's other actions, small outline secondary or destructive buttons, come through
+    `{% call %}` and sit in a row below; the row is left out when the call block renders only
+    white space, so a page may wrap its buttons in an `{% if %}`. The page owns the
+    `<section aria-labelledby="{heading_id}">` around the heading and its content. -#}
+{% macro section_heading(title, heading_id, action=None, deactivated=False) -%}
+{%- set row = caller() | trim if caller is defined else "" -%}
+<div class="page-heading">
+  <h2 id="{{ heading_id }}">{{ title }}{% if deactivated %} {{ status_badge(False) }}{% endif %}</h2>
+  {%- if action %}
+  {{ link_button(action[0], action[1]) }}
+  {%- endif %}
+</div>
+{%- if row %}
+<div class="row-actions">{{ row }}</div>
+{%- endif %}
 {%- endmacro %}

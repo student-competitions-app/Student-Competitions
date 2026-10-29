@@ -1,0 +1,73 @@
+{% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import page_heading, section_heading %}
+{% from "components/selectors.html" import chained_lists %}
+{% from "components/table.html" import data_table, cell, actions_cell %}
+{% from "components/button.html" import link_button %}
+{% from "components/feedback.html" import notice as notice_box, empty_state %}
+
+{% block title %}Teams — {{ app_name }}{% endblock %}
+
+{% block scripts %}<script src="/static/js/auto-submit.js" defer></script>{% endblock %}
+
+{% block teacher_content %}
+{{ page_heading("Teams") }}
+{% if notice %}{{ notice_box(notice[0], notice[1]) }}{% endif %}
+{% set no_links = not regions %}
+{% set opts = namespace(institutions=[], teams=[]) %}
+{% for i in institutions %}{% set opts.institutions = opts.institutions + [(i.id, i.label)] %}{% endfor %}
+{% for t in teams %}{% set opts.teams = opts.teams + [(t.id, t.name)] %}{% endfor %}
+{{ chained_lists([
+  {"id": "region", "name": "region", "label": "Region", "placeholder": "Select a region",
+   "options": regions, "selected": selected_region, "disabled": no_links, "carry": []},
+  {"id": "institution", "name": "institution", "label": "Educational institution",
+   "placeholder": "Select an educational institution", "options": opts.institutions,
+   "selected": selected_institution.id if selected_institution else none,
+   "disabled": no_links or selected_region is none,
+   "carry": [("region", selected_region)] if selected_region is not none else []},
+  {"id": "team", "name": "team", "label": "Team", "placeholder": "Select a team",
+   "options": opts.teams, "selected": selected_team.id if selected_team else none,
+   "disabled": no_links or not selected_institution,
+   "carry": [("region", selected_region), ("institution", selected_institution.id)] if selected_institution else [],
+   "extra_options": [("new", "+ Add team")] if can_write else []},
+], "/teacher/teams") }}
+
+{#- The one-line next step under each empty message (contracts/http-routes.md §1). -#}
+{% set hints = {
+  "You are not linked to any educational institution": "Ask an administrator to link you to an educational institution.",
+  "Select a region to continue": "Choose a region in the first list.",
+  "Select an educational institution to continue": "Choose an educational institution in the second list.",
+  "No teams yet": "Create the first team with + Add team." if can_write else "A teacher with Write access to this institution creates its teams.",
+  "Select a team to see its members": "Choose a team in the third list.",
+  "No members in this team yet": "Add the first student with Add students." if can_write else none,
+} %}
+
+{% if selected_team %}
+{% set team_path = "/teacher/teams/" ~ selected_team.id %}
+<section aria-labelledby="team-heading">
+  {% call section_heading(selected_team.name, "team-heading", ("Add students", team_path ~ "/add") if can_write else None) %}
+    {%- if can_write -%}
+    {{- link_button("Rename", team_path ~ "/rename", kind="secondary", outline=True, small=True) -}}
+    {{- link_button("Delete", team_path ~ "/delete", kind="destructive", outline=True, small=True) -}}
+    {%- endif -%}
+  {% endcall %}
+  {% if message %}{{ empty_state(message, hints.get(message)) }}{% endif %}
+  {% if members %}
+  {% call data_table(["Name", "Class", "Actions"] if can_write else ["Name", "Class"]) %}
+  {% for m in members %}
+  <tr>
+    {{ cell("Name", m.last_name ~ " " ~ m.first_name) }}
+    {{ cell("Class", m.class_label) }}
+    {% if can_write %}
+    {% call actions_cell() %}
+    {{- link_button("Remove", team_path ~ "/members/" ~ m.user_id ~ "/remove", kind="destructive", outline=True, small=True) -}}
+    {% endcall %}
+    {% endif %}
+  </tr>
+  {% endfor %}
+  {% endcall %}
+  {% endif %}
+</section>
+{% elif message %}
+{{ empty_state(message, hints.get(message)) }}
+{% endif %}
+{% endblock %}

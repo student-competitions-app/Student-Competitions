@@ -24,6 +24,7 @@ from app.models import (
     Region,
     Role,
     SchoolClass,
+    Team,
     User,
     UserRole,
 )
@@ -1236,3 +1237,28 @@ def test_an_institution_with_an_enrolled_student_is_in_use(
     assert response.status_code == 409
     assert IN_USE.format("Academy") in response.text
     assert (institutions(session), stored_classes(session)) == before
+
+
+def test_an_institution_with_only_a_deleted_team_is_in_use(
+    admin_client: TestClient, session: Session
+) -> None:
+    """Milestone 11.1 US8-1, FR-017: refused as "in use", suggesting deactivation."""
+    lviv = add_region(session, "Lviv")
+    academy = add_institution(session, lviv, "Lviv Academy")
+    now = utc_now()
+    session.add(
+        Team(
+            institution_id=academy,
+            name="Comets",
+            name_key="comets",
+            created_at=now,
+            updated_at=now,
+            deleted_at=now,
+        )
+    )
+    session.commit()
+    before = institutions(session)
+    response = post(admin_client, f"{institution_path(lviv, academy)}/delete")
+    assert response.status_code == 409
+    assert IN_USE.format("Lviv Academy") in response.text
+    assert institutions(session) == before

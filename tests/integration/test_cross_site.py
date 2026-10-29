@@ -14,7 +14,17 @@ import app.core.auth as auth
 from app.core.sealing import seal
 from app.core.security import SESSION_COOKIE_NAME, hash_token
 from app.main import app
-from app.models import AccessLevel, ConsentRecord, Role, SchoolClass, User, UserRole, UserSession
+from app.models import (
+    AccessLevel,
+    ConsentRecord,
+    Role,
+    SchoolClass,
+    Team,
+    TeamMembership,
+    User,
+    UserRole,
+    UserSession,
+)
 from app.services.consent import current_consent_text
 from app.services.email import EmailMessage
 from app.services.institutions import create_institution, list_institutions
@@ -25,11 +35,14 @@ from tests.conftest import (
     ADMIN_EMAIL,
     ADMIN_STUDENT_EMAIL,
     ClientAs,
+    enrol_student,
     invite,
     invite_and_accept,
     make_class,
     make_institution,
+    make_member,
     make_teacher,
+    make_team,
     sign_in_directly,
 )
 
@@ -227,7 +240,8 @@ def test_cross_site_consent_writes_change_nothing(
 def test_cross_site_teacher_actions_change_nothing(
     client_as: ClientAs, session: Session, outbox: list[EmailMessage], forged: dict[str, str]
 ) -> None:
-    """Milestone 9 FR-055: a class create and a student invitation from another site."""
+    """Milestone 9 FR-055: a class create and a student invitation from another site; milestone
+    11.1 FR-043: every team action too (create, rename, delete, add and remove)."""
     school = make_institution(app.state.engine, "Kyiv Polytechnic Institute", "Kyiv")
     make_teacher(
         app.state.engine,
@@ -236,8 +250,21 @@ def test_cross_site_teacher_actions_change_nothing(
         institutions={school: AccessLevel.WRITE},
     )
     class_id = make_class(app.state.engine, school, "KN-21")
+    taras, lesia = (
+        enrol_student(
+            app.state.engine,
+            app.state.settings,
+            email=email,
+            class_id=class_id,
+            inviter_email="olena@example.org",
+        )
+        for email in ("taras@example.org", "lesia@example.org")
+    )
+    team = make_team(app.state.engine, school)
+    make_member(app.state.engine, team, taras)
     teacher = client_as("olena@example.org")
     sent = len(outbox)
+    teams_before = team_state(session)
     attempts = [
         (
             f"/teacher/students/institutions/{school}/classes",
@@ -245,8 +272,13 @@ def test_cross_site_teacher_actions_change_nothing(
         ),
         (
             f"/teacher/students/classes/{class_id}/invite",
-            {"email": "taras@example.org", "first_name": "Taras", "last_name": "Shevchenko"},
+            {"email": "ivan@example.org", "first_name": "Ivan", "last_name": "Franko"},
         ),
+        (f"/teacher/teams/institutions/{school}/new", {"name": "Comets"}),
+        (f"/teacher/teams/{team}/rename", {"name": "Comets"}),
+        (f"/teacher/teams/{team}/delete", {}),
+        (f"/teacher/teams/{team}/members", {"student": str(lesia)}),
+        (f"/teacher/teams/{team}/members/{taras}/remove", {}),
     ]
     for path, data in attempts:
         response = teacher.post(path, data=data, headers=forged, follow_redirects=False)
@@ -254,7 +286,19 @@ def test_cross_site_teacher_actions_change_nothing(
         assert REFUSED in response.text
     session.expire_all()
     assert [row.name for row in session.exec(select(SchoolClass))] == ["KN-21"]
+    assert team_state(session) == teams_before
     assert len(outbox) == sent
+
+
+def team_state(session: Session) -> tuple[list[tuple[object, ...]], list[tuple[int, int]]]:
+    """Every `teams` row and every membership, as stored."""
+    session.expire_all()
+    teams = sorted(
+        (t.id, t.name, t.institution_id, t.updated_at, t.deleted_at)
+        for t in session.exec(select(Team))
+    )
+    members = sorted((m.team_id, m.user_id) for m in session.exec(select(TeamMembership)))
+    return teams, members
 
 
 @pytest.mark.parametrize("forged", CROSS_SITE_HEADERS)

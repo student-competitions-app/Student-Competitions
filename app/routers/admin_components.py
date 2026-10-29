@@ -102,6 +102,19 @@ LONG_WORD = "Longwordwithoutbreak" * 15
 LONG_WORD_TEXT = f"A word longer than a phone screen:\n{LONG_WORD}\nThe end."
 """Two sample texts for the text card and the textarea: several lines, and a 300-character
 unbroken word on its own line."""
+LONG_SECTION_TITLE = (
+    "This robotics and programming olympiad team of the Kyiv Polytechnic Institute, which meets"
+    " every Thursday after classes in the main buildings and prepares students for the regional"
+    " and national rounds"
+)
+"""A 200-character section title, the longest a team or class name may be, to show the wrap."""
+CLASS_STUDENTS = (
+    ("Shevchenko Taras", "add"),
+    ("Ukrainka Lesia", "in-team"),
+    ("Franko Ivan", "none"),
+)
+"""The rows of "Students of KN-21 · year 2": `(name, what the actions cell holds)`, for the row
+note: an Add button, the note, or nothing (a full team), which on a phone has no actions part."""
 PAGINGS = (Paging.build(1, 5), Paging.build(4, 200), Paging.build(20, 200))
 """Page navigation: page 1 of 1 (5 items), page 4 of 20 and page 20 of 20 (200 items)."""
 ONE_ROLE_USER = SampleUser("olena.kovalenko@school.example")
@@ -158,6 +171,8 @@ def _samples() -> dict[str, Any]:
         "textarea_error": TEXTAREA_ERROR,
         "multiline_text": MULTILINE_TEXT,
         "long_word_text": LONG_WORD_TEXT,
+        "long_section_title": LONG_SECTION_TITLE,
+        "class_students": CLASS_STUDENTS,
         "pagings": PAGINGS,
     }
 

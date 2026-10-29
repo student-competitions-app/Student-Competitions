@@ -3,12 +3,12 @@
     one section per component family, every variant, from the sample data of
     app/routers/admin_components.py. A new component or variant is added here, to the library
     and to docs/requirements/ui-guidelines.md in the same change (FR-045). -#}
-{% from "components/frame.html" import top_bar, user_menu, theme_switch, area_tabs, back_link, page_heading, loading_bar with context %}
+{% from "components/frame.html" import top_bar, user_menu, theme_switch, area_tabs, back_link, page_heading, section_heading, loading_bar with context %}
 {% from "components/icons.html" import logo_mark, icon %}
 {% from "components/palette.html" import swatch %}
 {% from "components/button.html" import button, link_button, post_button %}
 {% from "components/card.html" import card, text_card, text_box %}
-{% from "components/table.html" import data_table, cell, actions_cell %}
+{% from "components/table.html" import data_table, cell, actions_cell, row_note %}
 {% from "components/badge.html" import badge, status_badge, access_badge %}
 {% from "components/feedback.html" import notice, empty_state %}
 {% from "components/form.html" import error_summary, field, textarea_field, select_field, checkbox_field, form_actions %}
@@ -59,6 +59,34 @@
   <h3>Page heading, with and without an action</h3>
   <div class="page-heading"><h2>Subjects</h2>{{ link_button("Create subject", "/admin/components#frame") }}</div>
   <div class="page-heading"><h2>Educational institutions</h2></div>
+</section>
+
+<section id="section-heading" aria-labelledby="section-heading-heading">
+  <h2 id="section-heading-heading">Section heading</h2>
+  <p>The heading of a section that is one selected item: at most one primary button beside the title, and the item's other actions as small buttons in a row below it.</p>
+  <h3>An action and row actions</h3>
+  <section aria-labelledby="gallery-section-actions">
+    {% call section_heading("KN-21 · year 2", "gallery-section-actions", ("Add student", "/admin/components#section-heading")) %}
+    {{- link_button("Edit", "/admin/components#section-heading", kind="secondary", outline=True, small=True) -}}
+    {{- link_button("Delete", "/admin/components#section-heading", kind="destructive", outline=True, small=True) -}}
+    {% endcall %}
+  </section>
+  <h3>Deactivated, with row actions</h3>
+  <section aria-labelledby="gallery-section-deactivated">
+    {% call section_heading("KN-11 · year 1", "gallery-section-deactivated", deactivated=True) %}
+    {{- link_button("Edit", "/admin/components#section-heading", kind="secondary", outline=True, small=True) -}}
+    {{- post_button("/admin/components", "Activate", kind="secondary", outline=True, small=True) -}}
+    {{- link_button("Delete", "/admin/components#section-heading", kind="destructive", outline=True, small=True) -}}
+    {% endcall %}
+  </section>
+  <h3>No actions (Read access)</h3>
+  <section aria-labelledby="gallery-section-read">
+    {{ section_heading("Rockets", "gallery-section-read") }}
+  </section>
+  <h3>A 200-character title</h3>
+  <section aria-labelledby="gallery-section-long">
+    {{ section_heading(long_section_title, "gallery-section-long", ("Add students", "/admin/components#section-heading")) }}
+  </section>
 </section>
 
 <section id="loading" aria-labelledby="loading-heading">
@@ -136,6 +164,21 @@
   {% endfor %}
   {% endcall %}
   <p>Narrow the window below 768 px to see each row as a card of labelled values.</p>
+  <h3>A row note in place of an action</h3>
+  {% call data_table(["Name", "Actions"], caption="Students of KN-21 · year 2") %}
+  {% for name, action in class_students %}
+  <tr>
+    {{ cell("Name", name) }}
+    {% call actions_cell() %}
+    {%- if action == "in-team" -%}
+    {{- row_note("In this team") -}}
+    {%- elif action == "add" -%}
+    {{- post_button("/admin/components", "Add", kind="secondary", outline=True, small=True) -}}
+    {%- endif -%}
+    {% endcall %}
+  </tr>
+  {% endfor %}
+  {% endcall %}
   <h3>An empty list</h3>
   {{ empty_state("No subjects yet", "Create the first subject with Create subject.") }}
 </section>

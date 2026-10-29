@@ -43,16 +43,22 @@ institution.
 ```python
 MAX_MEMBERS = 50
 
+
 class DuplicateTeamName(ValueError):
     """A live team in any institution already has this name, ignoring case."""
+
     # message = f"A team named “{entered_name}” already exists."  (the entered name, R2)
+
 
 class AlreadyMember(ValueError):
     """The student is already in the team; nothing was stored."""
+
     # carries team_id, user_id
+
 
 class TeamFull(ValueError):
     """The team already holds MAX_MEMBERS memberships, blocked ones included; nothing was stored."""
+
 
 @dataclass(frozen=True)
 class TeamView:
@@ -60,12 +66,14 @@ class TeamView:
     institution_id: int
     name: str
 
+
 @dataclass(frozen=True)
 class MemberRow:
     user_id: int
     first_name: str
     last_name: str
-    class_label: str        # ClassView.label: "KN-21 · year 2"
+    class_label: str  # ClassView.label: "KN-21 · year 2"
+
 
 @dataclass(frozen=True)
 class StudentTeam:
@@ -189,7 +197,10 @@ unchanged: an `IntegrityError` is already reported as "in use".
 ```python
 def seal_member_notice(settings: AuthSettings, team_id: int, user_id: int, outcome: str) -> str: ...
 def member_notice(
-    session: Session, settings: AuthSettings, token: str | None, team_id: int,
+    session: Session,
+    settings: AuthSettings,
+    token: str | None,
+    team_id: int,
 ) -> tuple[str, str] | None:
     """(text, kind) for a valid, fresh token of this team whose student is a listed member;
     None for anything else (research R11)."""

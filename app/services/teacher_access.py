@@ -9,7 +9,8 @@ See specs/009-classes-students-management/research.md D5 and contracts/services.
   institution is available (it and its region are active);
 - **reachable class**: any class, active or deactivated, of a reachable institution;
 - **reachable student**: a person holding the student role whose enrolment's class is available
-  and belongs to a reachable institution.
+  and belongs to a reachable institution;
+- **reachable team** (milestone 11.1): a live team (not deleted) of a reachable institution.
 
 Anything else raises `NotReachable`, and a management action without Write raises
 `WriteRequired`. Unknown and unreachable are deliberately indistinguishable: the routers turn both
@@ -41,6 +42,7 @@ from app.models import (
     SchoolClass,
     TeacherInstitution,
     TeacherProfile,
+    Team,
     User,
 )
 from app.services.users import get_roles
@@ -249,3 +251,37 @@ def reach_student(
         session, teacher_id, school_class.institution_id, write=write, lock=lock
     )
     return institution, school_class, user
+
+
+def reach_team(
+    session: Session,
+    teacher_id: int,
+    team_id: int,
+    *,
+    institution_id: int | None = None,
+    write: bool = False,
+    lock: bool = False,
+) -> tuple[ReachableInstitution, Team]:
+    """The live team, if its institution is reachable and, when given, is `institution_id`
+    (specs/011.1-teacher-teams/research.md R4).
+
+    `NotReachable` for an unknown team, a deleted team (`deleted_at` set), a team of another
+    institution than `institution_id`, or an institution the teacher may not reach.
+    `WriteRequired` when `write` is set and the level is Read.
+
+    With `lock`, the team row is read `FOR UPDATE` (refreshed) first, then the link, institution
+    and region `FOR SHARE` through `reach_institution`. That is the first lock of every team
+    change (research R5). Rolls back before raising when it took a lock.
+    """
+    if lock:
+        team = session.get(Team, team_id, with_for_update=True, populate_existing=True)
+    else:
+        team = session.get(Team, team_id)
+    if team is None or team.deleted_at is not None:
+        raise _refuse(session, lock, NotReachable())
+    if institution_id is not None and team.institution_id != institution_id:
+        raise _refuse(session, lock, NotReachable())
+    institution = reach_institution(
+        session, teacher_id, team.institution_id, write=write, lock=lock
+    )
+    return institution, team

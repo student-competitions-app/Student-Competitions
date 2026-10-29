@@ -263,3 +263,15 @@ def test_the_busy_spinner_takes_the_button_colour() -> None:
     ]
     assert len(filters) == 1
     assert re.search(r"filter:\s*none", filters[0])
+
+
+def test_the_row_note_is_muted_text() -> None:
+    """Milestone 11.1 contracts/components.md §2: `.row-note` is defined, used by the
+    `row_note` component only, and takes its colour from the muted token."""
+    assert "row-note" in defined_classes(APP_CSS)
+    assert {p.relative_to(TEMPLATES).as_posix() for p in used_classes()["row-note"]} == {
+        "components/table.html"
+    }
+    (body,) = [body for selector, body in _rules(APP_CSS) if selector == ".row-note"]
+    assert re.search(r"color:\s*var\(--sc-muted\)", body)
+    assert not re.search(r"#[0-9a-fA-F]{3,8}\b|\b\d+(?:\.\d+)?px\b", body)

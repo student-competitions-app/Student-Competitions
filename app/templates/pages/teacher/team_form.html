@@ -1,0 +1,16 @@
+{% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/form.html" import error_summary, field, form_actions %}
+
+{% block title %}{{ heading }} — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(cancel, back_text) }}
+{{ page_heading(heading) }}
+{{ error_summary(errors, order=["name"]) }}
+<p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
+<form method="post" action="{{ action }}">
+  {{ field("name", "Name", value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
+  {{ form_actions("Save", cancel_href=cancel) }}
+</form>
+{% endblock %}

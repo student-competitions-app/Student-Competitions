@@ -72,8 +72,8 @@ def test_the_route_table_is_not_empty() -> None:
 
 def test_the_write_routes_are_exact() -> None:
     """Signing in and out, choosing a role, the administrator's subject, region, institution and
-    teacher actions, accepting an invitation, the teacher's class and student actions, and the
-    question bank's add, edit and delete."""
+    teacher actions, accepting an invitation, the teacher's class and student actions, the
+    question bank's add, edit and delete, and the teacher's team actions (milestone 11.1)."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -114,6 +114,11 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/teacher/questions"),
         ("POST", "/teacher/questions/{question_id:int}/edit"),
         ("POST", "/teacher/questions/{question_id:int}/delete"),
+        ("POST", "/teacher/teams/institutions/{institution_id:int}/new"),
+        ("POST", "/teacher/teams/{team_id:int}/rename"),
+        ("POST", "/teacher/teams/{team_id:int}/delete"),
+        ("POST", "/teacher/teams/{team_id:int}/members"),
+        ("POST", "/teacher/teams/{team_id:int}/members/{user_id:int}/remove"),
     }
 
 
@@ -249,9 +254,10 @@ def declared_get_routes() -> list[tuple[str, frozenset[Role]]]:
 TEACHER_SCOPED_PATHS = frozenset(
     path
     for path, _ in declared_get_routes()
-    if path.startswith("/teacher/students/") and "{" in path
+    if path.startswith(("/teacher/students/", "/teacher/teams/")) and "{" in path
 )
-"""The teacher pages whose path names an object (milestone 9 research D17)."""
+"""The teacher pages whose path names an object (milestone 9 research D17), the Teams tab's
+included (milestone 11.1)."""
 
 
 MANAGE_PATHS = frozenset(
@@ -272,6 +278,8 @@ def test_the_teacher_scoped_pages_are_found() -> None:
     """Guard the skip below from hiding nothing, or everything."""
     assert "/teacher/students/classes/{class_id:int}/edit" in TEACHER_SCOPED_PATHS
     assert "/teacher/students" not in TEACHER_SCOPED_PATHS
+    assert "/teacher/teams/{team_id:int}/add" in TEACHER_SCOPED_PATHS
+    assert "/teacher/teams" not in TEACHER_SCOPED_PATHS
 
 
 def test_the_manage_pages_are_found() -> None:

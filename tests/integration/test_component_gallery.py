@@ -34,6 +34,7 @@ GALLERY = "/admin/components"
 SECTIONS = {
     "identity": ["Student Competitions", "--sc-page", "--sc-accent", "Heading 1", "Small text"],
     "frame": ["Account menu", "Switch to", "Light", "Dark", "Device", "Back to the frame"],
+    "section-heading": ["KN-21 · year 2", "Add student", "Deactivated", "Activate", "Rockets"],
     "loading": ["Loading bar", "Busy button", "Send invitation"],
     "buttons": ["Primary button", "Secondary link", "Destructive form", "Destructive outline"],
     "cards": [
@@ -45,7 +46,15 @@ SECTIONS = {
         "Reference answer",
         "Longwordwithoutbreak" * 15,
     ],
-    "table": ["Physics", "Deactivated", "Rename", "Activate", "No subjects yet"],
+    "table": [
+        "Physics",
+        "Deactivated",
+        "Rename",
+        "Activate",
+        "Students of KN-21 · year 2",
+        "In this team",
+        "No subjects yet",
+    ],
     "badges": ["Active", "Deactivated", "Read", "Write"],
     "empty-states": ["No subjects yet", "Select a region"],
     "notices": ["Invitation sent to", "no longer valid", "temporarily unavailable"],
@@ -124,6 +133,66 @@ def test_the_loading_section_shows_both_components_in_their_loading_state(
         return parent is not None
 
     assert not any(in_form(b) for b in busy)
+
+
+def gallery_section(body: str, section_id: str) -> html.Element:
+    (found,) = [s for s in sections(body) if s.attrs["id"] == section_id]
+    return found
+
+
+def test_the_section_heading_variants(admin_client: TestClient) -> None:
+    """Milestone 11.1 contracts/components.md §1: four headings, each an `h2` in a page heading,
+    one with the badge, one with no action and no row, and one with a 200-character title."""
+    section = gallery_section(admin_client.get(GALLERY).text, "section-heading")
+    variants = [
+        s for s in section.find_all("section") if s.attrs.get("aria-labelledby", "").startswith("g")
+    ]
+    assert len(variants) == 4
+    for variant in variants:
+        (heading,) = variant.find_all("h2")
+        assert heading.attrs["id"] == variant.attrs["aria-labelledby"]
+        assert heading.parent is not None and "page-heading" in heading.parent.classes()
+
+    def in_div(variant: html.Element, div_class: str, tags: tuple[str, ...]) -> list[list[str]]:
+        found = [d for d in variant.find_all("div") if div_class in d.classes()]
+        return [[e.text() for e in d.iter() if e.tag in tags] for d in found]
+
+    def badges(variant: html.Element) -> list[str]:
+        (heading,) = variant.find_all("h2")
+        return [e.text() for e in heading.iter() if "badge" in e.classes()]
+
+    actions, deactivated, read, long = variants
+    assert in_div(actions, "page-heading", ("a",)) == [["Add student"]]
+    assert in_div(actions, "row-actions", ("a", "button")) == [["Edit", "Delete"]]
+    assert badges(actions) == []
+    assert in_div(deactivated, "page-heading", ("a",)) == [[]]
+    assert in_div(deactivated, "row-actions", ("a", "button")) == [["Edit", "Activate", "Delete"]]
+    assert badges(deactivated) == ["Deactivated"]
+    assert in_div(read, "page-heading", ("a",)) == [[]]
+    assert in_div(read, "row-actions", ("a", "button")) == []
+    (title,) = long.find_all("h2")
+    assert len(title.text()) == 200
+    assert in_div(long, "page-heading", ("a",)) == [["Add students"]]
+    assert in_div(long, "row-actions", ("a", "button")) == []
+
+
+def test_the_row_note_stands_in_the_actions_cell(admin_client: TestClient) -> None:
+    """Milestone 11.1 contracts/components.md §2: one row with Add, one with the note."""
+    body = admin_client.get(GALLERY).text
+    section = gallery_section(body, "table")
+    notes = [s for s in section.find_all("span") if "row-note" in s.classes()]
+    assert [n.text() for n in notes] == ["In this team"]
+    (note,) = notes
+    assert note.parent is not None and note.parent.tag == "td"
+    assert "row-actions" in note.parent.classes()
+    assert html.outer_html(body, note) == '<span class="row-note">In this team</span>'
+    (table,) = [t for t in section.find_all("table") if "Students of KN-21" in t.text()]
+    cells = [td for td in table.find_all("td") if "row-actions" in td.classes()]
+    assert [(td.text(), td.children == []) for td in cells] == [
+        ("Add", False),
+        ("In this team", False),
+        ("", True),
+    ]
 
 
 def test_the_page_navigation_variants(admin_client: TestClient) -> None:

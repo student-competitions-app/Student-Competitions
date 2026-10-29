@@ -6,6 +6,7 @@ a deactivated "KN-11"), Read to "Lviv Academy". Students are real: invited and a
 runs on both engines.
 """
 
+import re
 from dataclasses import dataclass
 
 import pytest
@@ -21,6 +22,8 @@ from app.models import (
     Institution,
     InvitationCutoff,
     Role,
+    Team,
+    TeamMembership,
     User,
     UserSession,
 )
@@ -35,7 +38,9 @@ from tests.conftest import (
     invite_student,
     make_class,
     make_institution,
+    make_member,
     make_teacher,
+    make_team,
 )
 
 OLENA = "olena@example.org"
@@ -181,6 +186,82 @@ def test_read_access_lists_students_without_actions(scene: Scene) -> None:
     body = scene.teacher.get(path).text
     assert "Franko Ivan" in [row["Name"] for row in html.table_rows(body)]
     assert f"/teacher/students/{user_id}" not in body
+
+
+# ---------------------------------------------------------------------------------------------
+# The class heading (milestone 11.1 FR-046, research R12)
+# ---------------------------------------------------------------------------------------------
+
+
+def class_heading(body: str) -> str:
+    """The selected class's heading: from its `<section>` up to the first empty state or table,
+    with the white space between tags removed and nothing else changed."""
+    start = body.index('<section aria-labelledby="class-heading">')
+    ends = [
+        found
+        for found in (
+            body.find('<div class="empty-state">', start),
+            body.find('<table class="data-table">', start),
+        )
+        if found != -1
+    ]
+    return re.sub(r">\s+<", "><", body[start : min(ends)]).strip()
+
+
+SECTION = '<section aria-labelledby="class-heading">'
+BADGE = ' <span class="badge badge-muted">Deactivated</span>'
+
+
+def write_row(class_id: int, active: bool) -> str:
+    path = f"/teacher/students/classes/{class_id}"
+    status = (
+        f'<a href="{path}/deactivate" role="button" class="destructive outline small">'
+        "Deactivate</a>"
+        if active
+        else f'<form method="post" action="{path}/activate" class="inline-form">'
+        '<button type="submit" class="secondary outline small">Activate</button></form>'
+    )
+    return (
+        '<div class="row-actions">'
+        f'<a href="{path}/edit" role="button" class="secondary outline small">Edit</a>'
+        f"{status}"
+        f'<a href="{path}/delete" role="button" class="destructive outline small">Delete</a>'
+        "</div>"
+    )
+
+
+def test_the_class_heading_markup_is_pinned_with_write(scene: Scene) -> None:
+    """Milestone 11.1 FR-046: the heading is unchanged by the `section_heading` component, with
+    Write, for an active and a deactivated class."""
+    active = class_heading(scene.teacher.get(scene.selection(scene.kn21)).text)
+    assert active == (
+        f'{SECTION}<div class="page-heading"><h2 id="class-heading">KN-21 · year 2</h2>'
+        f'<a href="/teacher/students/classes/{scene.kn21}/invite" role="button">Add student</a>'
+        f"</div>{write_row(scene.kn21, True)}"
+    )
+    deactivated = class_heading(scene.teacher.get(scene.selection(scene.kn11)).text)
+    assert deactivated == (
+        f'{SECTION}<div class="page-heading"><h2 id="class-heading">KN-11 · year 1{BADGE}</h2>'
+        f"</div>{write_row(scene.kn11, False)}"
+    )
+
+
+def test_the_class_heading_markup_is_pinned_with_read(scene: Scene) -> None:
+    """Milestone 11.1 FR-046: with Read, the title (and the badge) only, and no row at all."""
+    hidden = make_class(app.state.engine, scene.b, "LA-0", 1, active=False)
+    with Session(app.state.engine) as session:
+        lviv = session.get(Institution, scene.b)
+        assert lviv is not None
+        region = lviv.region_id
+    path = f"/teacher/students?region={region}&institution={scene.b}&class="
+    active = class_heading(scene.teacher.get(f"{path}{scene.other_class}").text)
+    assert active == (
+        f'{SECTION}<div class="page-heading"><h2 id="class-heading">LA-1 · year 1</h2></div>'
+    )
+    deactivated = class_heading(scene.teacher.get(f"{path}{hidden}").text)
+    assert deactivated == (
+        f'{SECTION}<div class="page-heading"><h2 id="class-heading">LA-0 · year 1{BADGE}</h2></div>'
+    )
 
 
 # ---------------------------------------------------------------------------------------------
@@ -337,6 +418,25 @@ def test_removing_a_teacher_and_student_keeps_the_teacher(scene: Scene) -> None:
     assert count(UserSession, user_id=user_id) == 0
     with Session(engine) as session:
         assert get_roles(session, user_id) == (Role.TEACHER,)
+
+
+def test_removing_a_student_erases_their_team_memberships(scene: Scene) -> None:
+    """Milestone 11.1 US7-3, FR-014: in a live and a deleted team; the teams stay."""
+    engine = app.state.engine
+    user_id = student("taras@example.org", scene.kn21)
+    other = student("lesia@example.org", scene.kn21, "Lesia", "Ukrainka")
+    live, deleted = make_team(engine, scene.a), make_team(engine, scene.a, "Comets", deleted=True)
+    for team in (live, deleted):
+        make_member(engine, team, user_id)
+    make_member(engine, live, other)
+    with Session(engine) as session:
+        teams_before = sorted((t.id, t.name, t.deleted_at) for t in session.exec(select(Team)))
+    assert remove(scene, user_id).status_code == 303
+    with Session(engine) as session:
+        members = sorted((m.team_id, m.user_id) for m in session.exec(select(TeamMembership)))
+        teams_after = sorted((t.id, t.name, t.deleted_at) for t in session.exec(select(Team)))
+    assert members == [(live, other)]
+    assert teams_after == teams_before
 
 
 @pytest.mark.parametrize("also_teacher", [False, True], ids=["inactive", "still-active"])

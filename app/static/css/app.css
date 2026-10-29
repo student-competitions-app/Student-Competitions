@@ -1163,6 +1163,12 @@ div.row-actions > * + * {
   margin-bottom: 0;
 }
 
+/* A row note (components/table.html, milestone 11.1 research R13): muted text where a row's
+   action is not available, at the row's own text size. */
+.row-note {
+  color: var(--sc-muted);
+}
+
 @media (min-width: 768px) {
   .data-table {
     background: var(--sc-surface);
@@ -1247,6 +1253,12 @@ div.row-actions > * + * {
     padding-top: var(--sc-space-2);
     border-top: var(--sc-border-width) solid var(--sc-border);
     white-space: normal;
+  }
+
+  /* A row with no action available (a full team on Add students, milestone 11.1) has no
+     actions part at all, rather than an empty one under a rule. */
+  .data-table td.row-actions:empty {
+    display: none;
   }
 
   .row-actions > * + * {

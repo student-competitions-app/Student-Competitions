@@ -12,6 +12,7 @@ from app.models.region import Region
 from app.models.school_class import SchoolClass
 from app.models.subject import Subject
 from app.models.teacher import AccessLevel, TeacherInstitution, TeacherProfile
+from app.models.team import Team, TeamMembership
 from app.models.user import ALL_ROLES, Role, User
 from app.models.user_role import UserRole
 from app.models.user_session import UserSession
@@ -34,6 +35,8 @@ __all__ = [
     "Subject",
     "TeacherInstitution",
     "TeacherProfile",
+    "Team",
+    "TeamMembership",
     "User",
     "UserRole",
     "UserSession",

@@ -23,6 +23,7 @@ from app.models import (
     Role,
     SchoolClass,
     TeacherInstitution,
+    Team,
     User,
     UserRole,
 )
@@ -506,6 +507,56 @@ def test_links_and_enrolments_are_counted_together(session: Session, kyiv: Regio
     enrol_a_student(session, class_id, "a@example.org")
     enrol_a_student(session, class_id, "b@example.org")
     assert count_institution_uses(session, institution.id) == 3
+
+
+def add_team(session: Session, institution_id: int, name: str, deleted: bool = False) -> int:
+    """A team inserted directly (milestone 11.1); its id."""
+    now = utc_now()
+    team = Team(
+        institution_id=institution_id,
+        name=name,
+        name_key=name_key(name),
+        created_at=now,
+        updated_at=now,
+        deleted_at=now if deleted else None,
+    )
+    session.add(team)
+    session.commit()
+    assert team.id is not None
+    return team.id
+
+
+def test_every_team_is_a_use_deleted_ones_included(session: Session, kyiv: Region) -> None:
+    """Milestone 11.1 FR-017, research R8."""
+    institution = create_institution(session, kyiv.id, "Academy")
+    other = create_institution(session, kyiv.id, "College")
+    add_team(session, institution.id, "Rockets")
+    add_team(session, institution.id, "Comets", deleted=True)
+    add_team(session, other.id, "Elsewhere")
+    assert count_institution_uses(session, institution.id) == 2
+
+
+def test_an_institution_with_only_a_deleted_team_cannot_be_deleted(
+    session: Session, kyiv: Region
+) -> None:
+    """Milestone 11.1 US8-1, SC-008: nothing is deleted, its empty class included."""
+    institution = create_institution(session, kyiv.id, "Academy")
+    add_class(session, institution, "KN-21")
+    add_team(session, institution.id, "Comets", deleted=True)
+    before = (all_rows(session), class_ids(session))
+    with pytest.raises(InstitutionInUse) as caught:
+        delete_institution(session, kyiv.id, institution.id)
+    assert caught.value.uses == 1
+    assert (all_rows(session), class_ids(session)) == before
+
+
+def test_an_institution_that_never_had_a_team_is_deleted(session: Session, kyiv: Region) -> None:
+    """Milestone 11.1 US8-2: teams of another institution play no part."""
+    institution = create_institution(session, kyiv.id, "Academy")
+    other = create_institution(session, kyiv.id, "College")
+    add_team(session, other.id, "Rockets", deleted=True)
+    delete_institution(session, kyiv.id, institution.id)
+    assert names(session, kyiv) == ["College"]
 
 
 @pytest.mark.parametrize(

@@ -32,7 +32,9 @@ from tests.conftest import (
     enrol_student,
     make_class,
     make_institution,
+    make_member,
     make_teacher,
+    make_team,
 )
 from tests.integration.test_routes import ALL_ROUTES
 
@@ -40,7 +42,7 @@ OLENA = "olena@example.org"
 PETRO = "petro@example.org"
 IRYNA = "iryna@example.org"
 
-AREA_PAGES = {"/teacher", "/teacher/students", "/teacher/competitions"}
+AREA_PAGES = {"/teacher", "/teacher/students", "/teacher/teams", "/teacher/competitions"}
 """The teacher pages that name no object; every other teacher page is a management page."""
 
 QUESTIONS_TAB = "/teacher/questions"
@@ -59,7 +61,15 @@ TEACHER_POSTS = sorted(
     if "POST" in methods and path.startswith("/teacher") and not path.startswith(QUESTIONS_TAB)
 )
 
-SNAPSHOT_TABLES = ("classes", "enrolments", "users", "user_roles", "consent_records")
+SNAPSHOT_TABLES = (
+    "classes",
+    "enrolments",
+    "users",
+    "user_roles",
+    "consent_records",
+    "teams",
+    "team_memberships",
+)
 
 
 @dataclass(frozen=True)
@@ -75,12 +85,18 @@ class Scene:
     other_region: int
     other_institution: int
     other_class: int
+    team: int
+    """A live team of `institution`, with `student` as its member (milestone 11.1)."""
+    deleted_team: int
+    other_team: int
+    """A live team of `other_institution`."""
 
     def ids(self) -> dict[str, int]:
         return {
             "institution_id": self.institution,
             "class_id": self.school_class,
             "user_id": self.student,
+            "team_id": self.team,
         }
 
     def concrete(self, path: str) -> str:
@@ -118,6 +134,8 @@ def scene(client: TestClient, client_as: ClientAs) -> Scene:
         first="Oksana",
         last="Moroz",
     )
+    team = make_team(engine, institution, "Rockets")
+    make_member(engine, team, student)
     return Scene(
         writer=client_as(OLENA),
         reader=client_as(PETRO),
@@ -130,6 +148,9 @@ def scene(client: TestClient, client_as: ClientAs) -> Scene:
         other_region=region_of(other),
         other_institution=other,
         other_class=other_class,
+        team=team,
+        deleted_team=make_team(engine, institution, "Comets", deleted=True),
+        other_team=make_team(engine, other, "Dolphins"),
     )
 
 
@@ -145,8 +166,8 @@ def snapshot(engine: Engine) -> dict[str, list[tuple[Any, ...]]]:
 
 def test_the_sweeps_have_routes() -> None:
     """Guard the parametrized sweeps from passing vacuously."""
-    assert len(TEACHER_GETS) >= 9
-    assert len(TEACHER_POSTS) == 8
+    assert len(TEACHER_GETS) >= 15
+    assert len(TEACHER_POSTS) == 13
 
 
 # ---------------------------------------------------------------------------------------------
@@ -188,7 +209,7 @@ def test_every_teacher_action_is_refused_to_everyone_else(
 ) -> None:
     """US9-1, US9-2, US9-3, FR-020: and nothing changes."""
     url = scene.concrete(path)
-    data = {**FORM, "class_id": str(scene.second_class)}
+    data = {**FORM, "class_id": str(scene.second_class), "student": str(scene.student)}
     others = {
         "Read teacher": scene.reader,
         "unlinked teacher": scene.outsider,
@@ -228,6 +249,28 @@ def hand_made(scene: Scene) -> list[str]:
         f"{base}/classes/{scene.other_class}/edit",
         f"{base}/institutions/{scene.other_institution}/classes/new",
         f"{base}/999999",
+        *team_hand_made(scene),
+    ]
+
+
+def team_hand_made(scene: Scene) -> list[str]:
+    """Milestone 11.1 US4-4, US4-7, FR-022: the Teams tab's broken chains and out-of-reach ids."""
+    base = "/teacher/teams"
+    selected = f"{base}?region={scene.region}&institution={scene.institution}"
+    return [
+        f"{base}?region={scene.other_region}&institution={scene.institution}",
+        f"{base}?institution={scene.institution}",
+        f"{base}?region={scene.region}&team={scene.team}",
+        f"{selected}&team={scene.other_team}",
+        f"{selected}&team={scene.deleted_team}",
+        f"{selected}&team=999999",
+        f"{selected}&team=abc",
+        f"{base}/999999/rename",
+        f"{base}/{scene.deleted_team}/add",
+        f"{base}/{scene.other_team}/delete",
+        f"{base}/institutions/{scene.other_institution}/new",
+        f"{base}/{scene.team}/add?class={scene.other_class}",
+        f"{base}/{scene.team}/members/999999/remove",
     ]
 
 

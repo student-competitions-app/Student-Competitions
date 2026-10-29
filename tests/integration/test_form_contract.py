@@ -23,6 +23,8 @@ Deliberate changes since (each is a contract change, recorded here):
   `can_manage_competitions`, with the setting.
 - **Milestone 11**: the question bank's pages (`teacher-question*` cases) are new, generated once
   with `UPDATE_FORM_CONTRACT=1` for those cases only.
+- **Milestone 11.1**: the Teams tab's pages (`teacher-team*` cases) are new, generated once with
+  `UPDATE_FORM_CONTRACT=1` for those cases only.
 """
 
 import json
@@ -55,9 +57,11 @@ from tests.conftest import (
     invite_student,
     make_class,
     make_institution,
+    make_member,
     make_question,
     make_subject,
     make_teacher,
+    make_team,
     token_from,
 )
 from tests.integration.test_login_flow import code_from
@@ -644,6 +648,77 @@ def _(w: World) -> Response:
 def _(w: World) -> Response:
     browser, _, question = a_question_manager(w)
     return browser.get(f"/teacher/questions/{question}/delete?page=2")
+
+
+def a_team(world: World) -> tuple[TeacherScene, int]:
+    """Milestone 11.1: the class scene, with a team "Rockets" holding its student."""
+    scene = a_teacher_with_a_class(world)
+    team = make_team(application.state.engine, scene.institution)
+    make_member(application.state.engine, team, scene.student)
+    return scene, team
+
+
+@case("teacher-teams-selected")
+def _(w: World) -> Response:
+    """The three GET lists, with the team selected."""
+    scene, team = a_team(w)
+    return scene.teacher.get(
+        f"/teacher/teams?region={scene.region}&institution={scene.institution}&team={team}"
+    )
+
+
+@case("teacher-team-new")
+def _(w: World) -> Response:
+    scene, _ = a_team(w)
+    return scene.teacher.get(f"/teacher/teams/institutions/{scene.institution}/new")
+
+
+@case("teacher-team-new-invalid")
+def _(w: World) -> Response:
+    scene, _ = a_team(w)
+    return scene.teacher.post(
+        f"/teacher/teams/institutions/{scene.institution}/new", data={"name": ""}
+    )
+
+
+@case("teacher-team-add-students")
+def _(w: World) -> Response:
+    """With a class chosen: the hidden `student` and `class` of each Add."""
+    scene, team = a_team(w)
+    enrol_student(
+        application.state.engine,
+        application.state.settings,
+        email="lesia@example.org",
+        class_id=scene.school_class,
+        inviter_email=OLENA,
+        first="Lesia",
+        last="Ukrainka",
+    )
+    return scene.teacher.get(f"/teacher/teams/{team}/add?class={scene.school_class}")
+
+
+@case("teacher-team-rename")
+def _(w: World) -> Response:
+    scene, team = a_team(w)
+    return scene.teacher.get(f"/teacher/teams/{team}/rename")
+
+
+@case("teacher-team-rename-invalid")
+def _(w: World) -> Response:
+    scene, team = a_team(w)
+    return scene.teacher.post(f"/teacher/teams/{team}/rename", data={"name": ""})
+
+
+@case("teacher-team-delete")
+def _(w: World) -> Response:
+    scene, team = a_team(w)
+    return scene.teacher.get(f"/teacher/teams/{team}/delete")
+
+
+@case("teacher-team-member-remove")
+def _(w: World) -> Response:
+    scene, team = a_team(w)
+    return scene.teacher.get(f"/teacher/teams/{team}/members/{scene.student}/remove")
 
 
 # ---------------------------------------------------------------------------------------------

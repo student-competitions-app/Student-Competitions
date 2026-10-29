@@ -1,0 +1,43 @@
+{% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/selectors.html" import chained_lists %}
+{% from "components/table.html" import data_table, cell, actions_cell, row_note %}
+{% from "components/button.html" import post_button %}
+{% from "components/feedback.html" import notice, empty_state %}
+
+{% block title %}Add students to “{{ team.name }}” — {{ app_name }}{% endblock %}
+
+{% block scripts %}<script src="/static/js/auto-submit.js" defer></script>{% endblock %}
+
+{% block teacher_content %}
+{% set add_path = "/teacher/teams/" ~ team.id ~ "/add" %}
+{{ back_link(back, "Back to “" ~ team.name ~ "”") }}
+{{ page_heading("Add students to “" ~ team.name ~ "”") }}
+{% if full %}{{ notice("This team already has 50 members", "info") }}{% endif %}
+{% set opts = namespace(classes=[]) %}
+{% for c in classes %}{% set opts.classes = opts.classes + [(c.id, c.label)] %}{% endfor %}
+{{ chained_lists([
+  {"id": "class", "name": "class", "label": "Class", "placeholder": "Select a class",
+   "options": opts.classes, "selected": selected_class.id if selected_class else none,
+   "disabled": false, "carry": []},
+], add_path) }}
+
+{% if message %}
+{{ empty_state(message, "Choose a class in the list." if not selected_class else none) }}
+{% else %}
+{% call data_table(["Name", "Actions"]) %}
+{% for s in students %}
+<tr>
+  {{ cell("Name", s.last_name ~ " " ~ s.first_name) }}
+  {% call actions_cell() %}
+  {%- if s.user_id in members -%}
+  {{- row_note("In this team") -}}
+  {%- elif not full -%}
+  {{- post_button("/teacher/teams/" ~ team.id ~ "/members", "Add", kind="secondary", outline=True, small=True, hidden={"student": s.user_id, "class": selected_class.id}) -}}
+  {%- endif -%}
+  {% endcall %}
+</tr>
+{% endfor %}
+{% endcall %}
+{% endif %}
+{% endblock %}

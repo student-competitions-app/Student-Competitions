@@ -19,6 +19,10 @@ class ConsentText(SQLModel, table=True):
     Append-only: rows are inserted by migrations only, and nothing updates or deletes them; a
     test pins each published text's SHA-256. The current text of a role is the row with the
     highest `version`.
+
+    One exception, once: the teams migration rewrote student version 1 in place, keeping its id,
+    version and date, to name team memberships (milestone 11.1 FR-015,
+    specs/011.1-teacher-teams/research.md R9). The test refuses any other rewrite.
     """
 
     __tablename__ = "consent_texts"

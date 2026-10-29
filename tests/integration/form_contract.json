@@ -1075,5 +1075,157 @@
       ],
       "method": "get"
     }
+  ],
+  "teacher-team-add-students": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/teams/{id}/add",
+      "buttons": [],
+      "fields": [
+        "class"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/teams/{id}/members",
+      "buttons": [],
+      "fields": [
+        "class",
+        "student"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-team-delete": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/teams/{id}/delete",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-team-member-remove": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/teams/{id}/members/{id}/remove",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-team-new": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/teams/institutions/{id}/new",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-team-new-invalid": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/teams/institutions/{id}/new",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-team-rename": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/teams/{id}/rename",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-team-rename-invalid": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/teams/{id}/rename",
+      "buttons": [],
+      "fields": [
+        "name"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-teams-selected": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/teams",
+      "buttons": [],
+      "fields": [
+        "institution",
+        "region",
+        "team"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/teams",
+      "buttons": [],
+      "fields": [
+        "institution",
+        "region"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/teams",
+      "buttons": [],
+      "fields": [
+        "region"
+      ],
+      "method": "get"
+    }
   ]
 }

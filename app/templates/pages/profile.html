@@ -21,6 +21,7 @@
   ("Educational institution", enrolment.institution_label if enrolment else none),
   ("Class", true if enrolment else none),
   ("Year of study", enrolment.year_of_study if enrolment else none),
+  ("Teams", true if teams is not none else none),
 ]) %}
 {% if label == "Educational institutions" %}
 <ul>
@@ -30,6 +31,16 @@
 </ul>
 {% elif label == "Class" %}
 {{ enrolment.class_name }}{% if not enrolment.is_available %} {{ status_badge(False) }}{% endif %}
+{% elif label == "Teams" %}
+{% if teams %}
+<ul>
+  {% for team in teams %}
+  <li>{{ team.name }}{% if team.is_deleted %} (deleted){% endif %}</li>
+  {% endfor %}
+</ul>
+{% else %}
+You are not in any team.
+{% endif %}
 {% endif %}
 {% endcall %}
 {% if enrolment %}<p>Corrections to student data are made by a teacher of your educational institution.</p>{% endif %}

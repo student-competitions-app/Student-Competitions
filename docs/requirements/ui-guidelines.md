@@ -176,6 +176,9 @@ scrolls away with the page.
 focus; a form control keeps `--sc-field-clearance`, so its label and error stay in view (WCAG 2.2,
 2.4.11). The clearances are the tallest frames measured, plus room to spare: a new tab, a longer
 tab label or a taller top bar must be measured again at 360 px and 375 px width against them.
+Last measured in milestone 11.1, with the teacher area's four tabs (Students, Teams, Questions,
+Competitions): they wrap onto two rows at 360 × 640 and 375 × 667, and the frame ends at 158.5 px,
+the same as the administrator area's, under the 176 px of `--sc-frame-clearance-tabs`.
 
 **The loading feedback**: the base layout loads one script, `loading-feedback.js`, on every page.
 It shows the loading bar and the busy button (section 5) while the next page is on its way. Pages
@@ -211,13 +214,31 @@ The full contract, with parameters and emitted markup, is
   is "Back to {parent}": "Back to the subjects", "Back to “Kyiv”".
 - **`page_heading(title, action=None)`**: the page's `h1`, with at most one primary link button
   beside it, for example `page_heading("Subjects", ("Create subject", "/admin/subjects/new"))`.
+- **`section_heading(title, heading_id, action=None, deactivated=False)`**: the `h2` of a section
+  that is one selected item, such as the selected class on **Students** or the selected team on
+  **Teams**. At most one primary link button beside the title, and the item's other actions as
+  small outline buttons in a row below it (through `{% call %}`; the row is left out when it is
+  empty). The page wraps the heading and its content in `<section aria-labelledby="…">`.
+
+  ```jinja
+  <section aria-labelledby="team-heading">
+    {% call section_heading(team.name, "team-heading", ("Add students", add_href) if can_write else None) %}
+    {%- if can_write -%}
+    {{- link_button("Rename", rename_href, kind="secondary", outline=True, small=True) -}}
+    {{- link_button("Delete", delete_href, kind="destructive", outline=True, small=True) -}}
+    {%- endif -%}
+    {% endcall %}
+    …the section's content…
+  </section>
+  ```
 - **`loading_bar(active=False)`**: rendered by the layout as the frame's last child; never called
   by a page. A thin primary line hanging just under the frame. `loading-feedback.js` shows it when
   a link to another page of the application is followed or a form is sent, and the next page has
   not arrived within 200 ms. It starts for nothing else: not for a link opened in a new tab, a link
   to another site, a `#` link or a form the browser refuses. With reduced motion it stands still.
 
-_Gallery_: [frame](/admin/components#frame), [loading feedback](/admin/components#loading).
+_Gallery_: [frame](/admin/components#frame), [section heading](/admin/components#section-heading),
+[loading feedback](/admin/components#loading).
 
 ### Buttons (`components/button.html`)
 
@@ -269,6 +290,9 @@ never scrolls sideways. An empty list renders `empty_state` instead of a table.
 </tr>
 {% endcall %}
 ```
+
+**`row_note(text)`** stands in the actions cell where a row's action is not available, as "In this
+team"; muted text, never a disabled button.
 
 _Gallery_: [table](/admin/components#table).
 
@@ -396,6 +420,7 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
 - **Notices** state the outcome: "Invitation sent to olena@example.org".
 - **Statuses** use one word each, everywhere: **Active** or **Deactivated**; **Read** or
   **Write**.
+- **Row notes** are a short plain phrase, with no full stop: "In this team".
 - **Page navigation** says where you are as "<Noun> 31–40 of 200" (an en dash, no spaces), and
   moves with **Previous** and **Next**.
 
@@ -404,7 +429,8 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
 Below 768 px:
 
 - **Tables become cards**: each row a card of labelled values, the actions last, in equal parts
-  of the card's width.
+  of the card's width. A row note sits in the card's actions part, where a button would be; a row
+  with no action at all has no actions part.
 - **The user menu folds** to its account icon, read as "Account menu"; the product name and the
   role stay in the top bar.
 - **The selectors stack**: the list above its detail, the chained lists one under another.

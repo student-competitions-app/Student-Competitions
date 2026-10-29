@@ -28,3 +28,11 @@
 {% macro actions_cell() -%}
 <td class="row-actions" data-label="">{{ caller() }}</td>
 {%- endmacro %}
+
+{#- A row note (milestone 11.1 contracts/components.md §2, research R13): muted text in the actions
+    cell where the row's action is not available, as "In this team". Never a badge and never a
+    disabled button. The text is required, as a badge's is. -#}
+{% macro row_note(text) -%}
+{%- if not text %}{{ template_error("row_note: the text is required") }}{% endif -%}
+<span class="row-note">{{ text }}</span>
+{%- endmacro %}

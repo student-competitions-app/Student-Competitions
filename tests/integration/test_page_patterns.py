@@ -628,6 +628,99 @@ def test_the_question_not_found_pages(
 
 
 # ---------------------------------------------------------------------------------------------
+# Milestone 11.1: the Teams tab
+# ---------------------------------------------------------------------------------------------
+
+
+def a_team_scene(w: contract.World) -> tuple[contract.TeacherScene, int, str]:
+    """The form contract's team: `(scene, team, the tab with the team selected)`."""
+    scene, team = contract.a_team(w)
+    tab = f"/teacher/teams?region={scene.region}&institution={scene.institution}"
+    return scene, team, f"{tab}&team={team}"
+
+
+def test_an_invalid_team_name_is_summarised(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The new-team and the rename form, with the value kept."""
+    scene, team, _ = a_team_scene(world(client, client_as, outbox, monkeypatch))
+    for path in (
+        f"/teacher/teams/institutions/{scene.institution}/new",
+        f"/teacher/teams/{team}/rename",
+    ):
+        response = scene.teacher.post(path, data={"name": "  "})
+        assert response.status_code == 400, path
+        assert_form_errors(response.text, {"name": "Enter a name."}, values={"name": "  "})
+
+
+def test_the_team_confirmations(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scene, team, selected = a_team_scene(world(client, client_as, outbox, monkeypatch))
+    cases = [
+        (f"/teacher/teams/{team}/delete", "Delete team “Rockets”?", "Delete"),
+        (
+            f"/teacher/teams/{team}/members/{scene.student}/remove",
+            "Remove Taras Shevchenko from team “Rockets”?",
+            "Remove",
+        ),
+    ]
+    for path, question, verb in cases:
+        assert_confirmation(scene.teacher.get(path).text, question, verb, selected, action=path)
+
+
+def test_team_pages_link_back_to_the_tab(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scene, team, selected = a_team_scene(world(client, client_as, outbox, monkeypatch))
+    new = scene.teacher.get(f"/teacher/teams/institutions/{scene.institution}/new").text
+    assert_back_link(
+        new,
+        f"/teacher/teams?region={scene.region}&institution={scene.institution}",
+        "Back to Teams",
+    )
+    for path in (
+        f"/teacher/teams/{team}/rename",
+        f"/teacher/teams/{team}/delete",
+        f"/teacher/teams/{team}/add",
+        f"/teacher/teams/{team}/members/{scene.student}/remove",
+    ):
+        assert_back_link(scene.teacher.get(path).text, selected, "Back to “Rockets”")
+
+
+def test_the_team_pages_have_one_heading_and_at_most_one_primary_action(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scene, team, selected = a_team_scene(world(client, client_as, outbox, monkeypatch))
+    tab = selected.rsplit("&team=", 1)[0]
+    for path, primary in (
+        ("/teacher/teams", []),
+        (tab, []),
+        (selected, ["Add students"]),
+        (f"/teacher/teams/institutions/{scene.institution}/new", ["Save"]),
+        (f"/teacher/teams/{team}/rename", ["Save"]),
+        (f"/teacher/teams/{team}/add?class={scene.school_class}", []),
+    ):
+        body = scene.teacher.get(path).text
+        assert html.h1(body), path
+        assert primary_actions(body) == primary, path
+
+
+def test_the_team_actions_look_like_buttons(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scene, team, selected = a_team_scene(world(client, client_as, outbox, monkeypatch))
+    links = {a.href: a for a in html.content_links(scene.teacher.get(selected).text)}
+    for href in (
+        f"/teacher/teams/{team}/add",
+        f"/teacher/teams/{team}/rename",
+        f"/teacher/teams/{team}/delete",
+        f"/teacher/teams/{team}/members/{scene.student}/remove",
+    ):
+        assert links[href].attrs.get("role") == "button", href
+
+
+# ---------------------------------------------------------------------------------------------
 # User story 4: the remaining public pages
 # ---------------------------------------------------------------------------------------------
 

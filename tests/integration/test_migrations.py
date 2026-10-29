@@ -10,7 +10,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Iterator
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
@@ -46,6 +46,8 @@ APPLICATION_TABLES = {
     "invitation_cutoffs",
     "classes",
     "enrolments",
+    "teams",
+    "team_memberships",
 }
 
 
@@ -621,3 +623,201 @@ def test_postgresql_keeps_the_question_id_sequence(
             {"s": subject_id},
         ).scalar_one()
     assert new_id > largest_sample
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11.1: teams, and the student consent text rewritten in place
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/011.1-teacher-teams/data-model.md §7 and research R2, R9.
+
+BEFORE_TEAMS = "3e32707ed794"
+
+
+def test_the_teams_tables_at_head(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    inspector = inspect(migration_engine)
+    columns = {c["name"]: c["nullable"] for c in inspector.get_columns("teams")}
+    assert columns == {
+        "id": False,
+        "institution_id": False,
+        "name": False,
+        "name_key": False,
+        "created_at": False,
+        "updated_at": False,
+        "deleted_at": True,
+    }
+    indexes = {
+        i["name"]: (i["column_names"], bool(i["unique"])) for i in inspector.get_indexes("teams")
+    }
+    assert indexes == {
+        "ix_teams_institution_id": (["institution_id"], False),
+        "uq_teams_name_key_live": (["name_key"], True),
+    }
+    [foreign_key] = inspector.get_foreign_keys("teams")
+    assert foreign_key["name"] == "fk_teams_institution_id_institutions"
+    memberships = inspector.get_pk_constraint("team_memberships")
+    assert (memberships["name"], memberships["constrained_columns"]) == (
+        "pk_team_memberships",
+        ["team_id", "user_id"],
+    )
+    assert {i["name"]: i["column_names"] for i in inspector.get_indexes("team_memberships")} == {
+        "ix_team_memberships_user_id": ["user_id"]
+    }
+    assert sorted(fk["name"] for fk in inspector.get_foreign_keys("team_memberships")) == [
+        "fk_team_memberships_team_id_teams",
+        "fk_team_memberships_user_id_users",
+    ]
+
+
+regions_t = sa.table(
+    "regions",
+    sa.column("id", sa.Integer()),
+    sa.column("name", sa.String()),
+    sa.column("name_key", sa.String()),
+    sa.column("is_active", sa.Boolean()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("updated_at", sa.DateTime(timezone=True)),
+)
+institutions_t = sa.table(
+    "institutions",
+    sa.column("id", sa.Integer()),
+    sa.column("region_id", sa.Integer()),
+    sa.column("name", sa.String()),
+    sa.column("name_key", sa.String()),
+    sa.column("is_active", sa.Boolean()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("updated_at", sa.DateTime(timezone=True)),
+)
+teams_t = sa.table(
+    "teams",
+    sa.column("id", sa.Integer()),
+    sa.column("institution_id", sa.Integer()),
+    sa.column("name", sa.String()),
+    sa.column("name_key", sa.String()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("updated_at", sa.DateTime(timezone=True)),
+    sa.column("deleted_at", sa.DateTime(timezone=True)),
+)
+
+
+def add_institution(connection: Connection) -> int:
+    now = utc_now()
+    stamps = {"is_active": True, "created_at": now, "updated_at": now}
+    region_id = connection.execute(
+        regions_t.insert().values(name="Kyiv", name_key="kyiv", **stamps).returning(regions_t.c.id)
+    ).scalar_one()
+    return connection.execute(
+        institutions_t.insert()
+        .values(region_id=region_id, name="KPI", name_key="kpi", **stamps)
+        .returning(institutions_t.c.id)
+    ).scalar_one()
+
+
+def test_the_live_name_index_is_partial(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Research R2: any number of deleted teams share a key with each other and with one live
+    team; a second live team with the key is refused."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+
+    def comets(institution_id: int, deleted: datetime | None) -> sa.Insert:
+        now = utc_now()
+        return teams_t.insert().values(
+            institution_id=institution_id,
+            name="Comets",
+            name_key="comets",
+            created_at=now,
+            updated_at=now,
+            deleted_at=deleted,
+        )
+
+    with migration_engine.begin() as connection:
+        institution_id = add_institution(connection)
+        for deleted in (utc_now(), utc_now(), None):
+            connection.execute(comets(institution_id, deleted))
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(comets(institution_id, None))
+    with migration_engine.connect() as connection:
+        assert connection.execute(text("SELECT count(*) FROM teams")).scalar_one() == 3
+
+
+consent_texts_t = sa.table(
+    "consent_texts",
+    sa.column("id", sa.Integer()),
+    sa.column("role", sa.String()),
+    sa.column("version", sa.Integer()),
+    sa.column("text", sa.Text()),
+    sa.column("published_at", sa.DateTime(timezone=True)),
+)
+consent_records_t = sa.table(
+    "consent_records",
+    sa.column("id", sa.Integer()),
+    sa.column("user_id", sa.Integer()),
+    sa.column("consent_text_id", sa.Integer()),
+    sa.column("accepted_at", sa.DateTime(timezone=True)),
+    sa.column("inviter_id", sa.Integer()),
+    sa.column("invitation_issued_at", sa.DateTime(timezone=True)),
+)
+
+
+def student_text(engine: Engine) -> tuple[int, int, str, datetime]:
+    with engine.connect() as connection:
+        row = connection.execute(
+            sa.select(
+                consent_texts_t.c.id,
+                consent_texts_t.c.version,
+                consent_texts_t.c.text,
+                consent_texts_t.c.published_at,
+            ).where(consent_texts_t.c.role == "student")
+        ).one()
+    return row[0], row[1], row[2], row[3]
+
+
+def test_the_student_text_is_rewritten_in_place_and_back(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Milestone 11.1 US7-5, FR-015, research R9: the same row, version 1, published
+    2026-10-19, with every consent record still pointing at it; the downgrade restores the
+    original wording byte for byte, and the upgrade brings the rewrite back."""
+    module = ScriptDirectory.from_config(alembic_config()).get_revision("09cbcbe472be").module
+    rewrite, original = (
+        module.STUDENT_CONSENT_TEXT_V1_REWRITE,
+        module._STUDENT_CONSENT_TEXT_V1_ORIGINAL,
+    )
+    run_alembic(monkeypatch, empty_database_url, "upgrade", BEFORE_TEAMS)
+    text_id, version, text_before, published = student_text(migration_engine)
+    assert (version, text_before) == (1, original)
+    with migration_engine.begin() as connection:
+        teacher = add_m8_user(connection, "olena@example.com", True, "teacher")
+        student = add_m8_user(connection, "taras@example.com", True, "student")
+        now = utc_now()
+        record_id = connection.execute(
+            consent_records_t.insert()
+            .values(
+                user_id=student,
+                consent_text_id=text_id,
+                accepted_at=now,
+                inviter_id=teacher,
+                invitation_issued_at=now,
+            )
+            .returning(consent_records_t.c.id)
+        ).scalar_one()
+
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    assert student_text(migration_engine) == (text_id, 1, rewrite, published)
+    assert published.date().isoformat() == "2026-10-19"
+    with migration_engine.connect() as connection:
+        pointed = connection.execute(
+            sa.select(consent_records_t.c.consent_text_id).where(
+                consent_records_t.c.id == record_id
+            )
+        ).scalar_one()
+    assert pointed == text_id
+
+    run_alembic(monkeypatch, empty_database_url, "downgrade", BEFORE_TEAMS)
+    assert student_text(migration_engine) == (text_id, 1, original, published)
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    assert student_text(migration_engine)[2] == rewrite

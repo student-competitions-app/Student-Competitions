@@ -1,7 +1,8 @@
 """User story 4: a person sees their profile and withdraws consent.
 
 See specs/008-teacher-management-consent/spec.md US4 (scenarios 1–8), FR-043–FR-047 and
-contracts/http-routes.md §4. Every case runs on both engines.
+contracts/http-routes.md §4, and for the student's teams specs/011.1-teacher-teams US7. Every case
+runs on both engines.
 """
 
 import pytest
@@ -36,7 +37,9 @@ from tests.conftest import (
     invite_and_accept,
     make_class,
     make_institution,
+    make_member,
     make_teacher,
+    make_team,
     sign_in_directly,
 )
 
@@ -274,7 +277,7 @@ def test_a_student_sees_their_enrolment_and_record(
         "Taras",
         "Shevchenko",
         " UTC · Student · version 1",
-        "and your class, which also records",
+        "your class, which also records",
         STUDENT_NOTE,
     ):
         assert shown in main
@@ -361,3 +364,59 @@ def test_a_teacher_and_student_withdraws_both_roles(
         assert get_roles(session, student_id) == ()
         assert session.get(Enrolment, student_id) is None
     assert person(student_id).is_active is False
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 11.1: the student's teams (FR-013, research R14)
+# ---------------------------------------------------------------------------------------------
+
+
+def teams_row(body: str) -> list[str] | str | None:
+    """The items of the profile's Teams row, its plain text when it has no list, or `None` when
+    the row is missing."""
+    for dl in html.parse(body).find_all("dl"):
+        children = [c for c in dl.children if isinstance(c, html.Element)]
+        for term, value in zip(children, children[1:], strict=False):
+            if term.tag == "dt" and term.text() == "Teams" and value.tag == "dd":
+                items = value.find_all("li")
+                return [item.text() for item in items] if items else value.text()
+    return None
+
+
+def test_a_student_sees_their_teams_sorted_with_deleted_ones_marked(
+    places: dict[str, int], client: TestClient
+) -> None:
+    """US7-1."""
+    student_id, _, _ = a_student(places)
+    engine = app.state.engine
+    for name, deleted in (("Rockets", False), ("comets", True), ("Alpha", False)):
+        make_member(engine, make_team(engine, places["kyiv"], name, deleted=deleted), student_id)
+    make_team(engine, places["kyiv"], "Beta")
+    body = signed_in(TARAS).get("/profile").text
+    assert teams_row(body) == ["Alpha", "comets (deleted)", "Rockets"]
+
+
+def test_a_student_with_no_team_says_so(places: dict[str, int], client: TestClient) -> None:
+    """US7-2."""
+    a_student(places)
+    assert teams_row(signed_in(TARAS).get("/profile").text) == "You are not in any team."
+
+
+def test_a_blocked_student_still_sees_their_teams(
+    places: dict[str, int], client: TestClient
+) -> None:
+    """US7-6: shown as a teacher, since a blocked student cannot sign in as a student."""
+    a_teacher(places, email=TARAS)
+    student_id, teacher_id, class_id = a_student(places)
+    make_member(app.state.engine, make_team(app.state.engine, places["kyiv"]), student_id)
+    with Session(app.state.engine) as session:
+        set_class_active(session, teacher_id, class_id, False)
+    assert teams_row(signed_in(TARAS, Role.TEACHER).get("/profile").text) == ["Rockets"]
+
+
+def test_a_teacher_and_an_administrator_have_no_teams_row(
+    places: dict[str, int], client: TestClient
+) -> None:
+    a_teacher(places)
+    assert teams_row(signed_in(OLENA).get("/profile").text) is None
+    assert teams_row(signed_in(ADMIN_EMAIL).get("/profile").text) is None

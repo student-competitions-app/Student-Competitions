@@ -1,0 +1,17 @@
+{% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import back_link %}
+{% from "components/details.html" import details_list %}
+{% from "components/confirmation.html" import confirmation %}
+
+{% block title %}Delete team “{{ team.name }}” — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(cancel, "Back to “" ~ team.name ~ "”") }}
+{% call confirmation("Delete team “" ~ team.name ~ "”?", none, "/teacher/teams/" ~ team.id ~ "/delete", "Delete", cancel) %}
+{{ details_list([
+  ("Educational institution", institution.name ~ " (" ~ institution.region_name ~ ")"),
+  ("Members", members | string),
+]) }}
+<p>The team will be hidden and can no longer join new competitions. Its members keep their accounts, classes and other teams. A deleted team cannot be restored.</p>
+{% endcall %}
+{% endblock %}

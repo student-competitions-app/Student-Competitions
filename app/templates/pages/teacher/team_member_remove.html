@@ -1,0 +1,14 @@
+{% extends "layouts/teacher.html" %}
+{% from "components/frame.html" import back_link %}
+{% from "components/details.html" import details_list %}
+{% from "components/confirmation.html" import confirmation %}
+
+{% block title %}Remove {{ member.first_name }} {{ member.last_name }} from team “{{ team.name }}” — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(cancel, "Back to “" ~ team.name ~ "”") }}
+{% call confirmation("Remove " ~ member.first_name ~ " " ~ member.last_name ~ " from team “" ~ team.name ~ "”?", none, "/teacher/teams/" ~ team.id ~ "/members/" ~ member.user_id ~ "/remove", "Remove", cancel) %}
+{{ details_list([("Class", member.class_label)]) }}
+<p>They stay in their class and keep their account and their other teams.</p>
+{% endcall %}
+{% endblock %}

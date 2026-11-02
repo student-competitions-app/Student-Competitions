@@ -17,8 +17,9 @@ denied roles only; `test_teacher_access.py` sweeps the same route table with rea
 
 The question bank's management pages (`MANAGE_PATHS`) need **Can manage competitions**, which the
 cast teacher lacks (it has no teacher profile), so they answer it "access denied" too (milestone
-11 FR-037). For those the sweep also checks the denied roles only; `test_teacher_questions.py`
-checks them with a real teacher who has the setting.
+11 FR-037), and so do the competitions' add, edit and cancel pages (milestone 12.1). For those the
+sweep also checks the denied roles only; `test_teacher_questions.py` and
+`test_teacher_competitions.py` check them with a real teacher who has the setting.
 """
 
 import re
@@ -73,7 +74,8 @@ def test_the_route_table_is_not_empty() -> None:
 def test_the_write_routes_are_exact() -> None:
     """Signing in and out, choosing a role, the administrator's subject, region, institution and
     teacher actions, accepting an invitation, the teacher's class and student actions, the
-    question bank's add, edit and delete, and the teacher's team actions (milestone 11.1)."""
+    question bank's add, edit and delete, the teacher's team actions (milestone 11.1), and the
+    competitions' add, edit and cancel (milestone 12.1)."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -119,6 +121,9 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/teacher/teams/{team_id:int}/delete"),
         ("POST", "/teacher/teams/{team_id:int}/members"),
         ("POST", "/teacher/teams/{team_id:int}/members/{user_id:int}/remove"),
+        ("POST", "/teacher/competitions"),
+        ("POST", "/teacher/competitions/{competition_id:int}/edit"),
+        ("POST", "/teacher/competitions/{competition_id:int}/cancel"),
     }
 
 
@@ -265,9 +270,13 @@ MANAGE_PATHS = frozenset(
         "/teacher/questions/new",
         "/teacher/questions/{question_id:int}/edit",
         "/teacher/questions/{question_id:int}/delete",
+        "/teacher/competitions/new",
+        "/teacher/competitions/{competition_id:int}/edit",
+        "/teacher/competitions/{competition_id:int}/cancel",
     }
 )
-"""The question bank's pages that need Can manage competitions (milestone 11 FR-037)."""
+"""The pages that need Can manage competitions: the question bank's (milestone 11 FR-037) and the
+competitions' (milestone 12.1 FR-042)."""
 
 
 def test_there_are_declared_pages_to_sweep() -> None:
@@ -283,11 +292,14 @@ def test_the_teacher_scoped_pages_are_found() -> None:
 
 
 def test_the_manage_pages_are_found() -> None:
-    """Guard the skip below: exactly the question bank's management pages, all declared."""
+    """Guard the skip below: exactly the question bank's and the competitions' management pages,
+    all declared."""
     declared = {path for path, _ in declared_get_routes()}
     assert MANAGE_PATHS <= declared
-    assert {p for p in declared if p.startswith("/teacher/questions/")} == MANAGE_PATHS
+    managed = ("/teacher/questions/", "/teacher/competitions/")
+    assert {p for p in declared if p.startswith(managed)} == MANAGE_PATHS
     assert "/teacher/questions" in declared
+    assert "/teacher/competitions" in declared
 
 
 @pytest.mark.parametrize(("path", "allowed"), declared_get_routes())

@@ -48,6 +48,7 @@ from app.core.security import SESSION_COOKIE_NAME, sign_cookie_value
 from app.main import app
 from app.models import (
     AccessLevel,
+    Competition,
     Question,
     Region,
     Role,
@@ -712,3 +713,42 @@ def make_member(engine: Engine, team_id: int, user_id: int) -> None:
     with Session(engine) as db_session:
         db_session.add(TeamMembership(team_id=team_id, user_id=user_id, created_at=utc_now()))
         db_session.commit()
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.1: competitions
+# ---------------------------------------------------------------------------------------------
+
+
+def make_competition(
+    engine: Engine,
+    subject_id: int,
+    name: str = "Spring round",
+    *,
+    starts_at: datetime,
+    cancelled: bool = False,
+    stopped: bool = False,
+) -> int:
+    """A competition of the subject, inserted directly (cancelled or stopped when asked); returns
+    its id. `starts_at` is an aware UTC whole minute.
+
+    **Test-only**, but harmless: a competition carries no personal data; this is the only way to
+    store a **Finished** competition before stopping exists, and seeding skips only the setting,
+    name and start checks that `test_competition_service.py` covers.
+    """
+    now = utc_now()
+    with Session(engine) as db_session:
+        competition = Competition(
+            subject_id=subject_id,
+            name=name,
+            name_key=name_key(name),
+            starts_at=starts_at,
+            cancelled_at=now if cancelled else None,
+            stopped_at=now if stopped else None,
+            created_at=now,
+            updated_at=now,
+        )
+        db_session.add(competition)
+        db_session.commit()
+        assert competition.id is not None
+        return competition.id

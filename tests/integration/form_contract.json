@@ -740,6 +740,123 @@
       "method": "post"
     }
   ],
+  "teacher-competition-cancel": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/cancel",
+      "buttons": [],
+      "fields": [
+        "page",
+        "status",
+        "subject"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-competition-edit": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/edit",
+      "buttons": [],
+      "fields": [
+        "name",
+        "page",
+        "start_date",
+        "start_time",
+        "status",
+        "subject",
+        "time_zone"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-competition-new": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions",
+      "buttons": [],
+      "fields": [
+        "name",
+        "page",
+        "start_date",
+        "start_time",
+        "status",
+        "subject",
+        "time_zone"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-competition-new-invalid": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions",
+      "buttons": [],
+      "fields": [
+        "name",
+        "page",
+        "start_date",
+        "start_time",
+        "status",
+        "subject",
+        "time_zone"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-competition-refused": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-competitions": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions",
+      "buttons": [],
+      "fields": [
+        "status",
+        "subject"
+      ],
+      "method": "get"
+    },
+    {
+      "action": "/teacher/competitions",
+      "buttons": [],
+      "fields": [
+        "subject"
+      ],
+      "method": "get"
+    }
+  ],
   "teacher-invitation": [
     {
       "action": "/invitations/{token}",

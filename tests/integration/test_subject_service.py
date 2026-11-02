@@ -6,6 +6,7 @@ the `session` fixture, so the case-insensitive uniqueness and the order are prov
 
 import logging
 from collections.abc import Callable
+from datetime import timedelta
 
 import pytest
 from sqlalchemy import Engine
@@ -29,7 +30,7 @@ from app.services.subjects import (
     rename_subject,
     set_subject_active,
 )
-from tests.conftest import make_question, make_subject
+from tests.conftest import make_competition, make_question, make_subject
 
 MISSING = 999
 
@@ -278,6 +279,26 @@ def test_a_subject_with_questions_cannot_be_deleted(engine: Engine, deleted: boo
             delete_subject(session, physics)
         assert caught.value.uses == 1
         assert names(session) == ["Physics"]
+
+
+@pytest.mark.parametrize("end", ["upcoming", "cancelled", "finished"])
+def test_a_subject_with_a_competition_cannot_be_deleted(engine: Engine, end: str) -> None:
+    """Milestone 12.1 FR-039: a competition in any status is a use; another subject's is not."""
+    physics, chemistry = make_subject(engine, "Physics"), make_subject(engine, "Chemistry")
+    make_competition(
+        engine,
+        physics,
+        starts_at=utc_now() + timedelta(days=1),
+        cancelled=end == "cancelled",
+        stopped=end == "finished",
+    )
+    with Session(engine) as session:
+        assert count_subject_uses(session, physics) == 1
+        assert count_subject_uses(session, chemistry) == 0
+        with pytest.raises(SubjectInUse) as caught:
+            delete_subject(session, physics)
+        assert caught.value.uses == 1
+        assert names(session) == ["Chemistry", "Physics"]
 
 
 def test_delete_removes_the_row_and_frees_the_name(session: Session) -> None:

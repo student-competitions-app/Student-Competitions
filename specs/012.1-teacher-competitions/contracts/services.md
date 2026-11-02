@@ -20,38 +20,44 @@ class CompetitionStatus(StrEnum):
     CANCELLED = "cancelled"
 
     @property
-    def label(self) -> str: ...        # "Upcoming", "In progress", "Finished", "Cancelled"
+    def label(self) -> str: ...  # "Upcoming", "In progress", "Finished", "Cancelled"
+
 
 def parse_status_filter(raw: str | None) -> CompetitionStatus | None:
     """A status from the address; anything else is None, meaning All."""
+
 
 @dataclass(frozen=True)
 class CompetitionView:
     id: int
     subject_id: int
     name: str
-    starts_at: datetime        # UTC
+    starts_at: datetime  # UTC
     status: CompetitionStatus
+
 
 @dataclass(frozen=True)
 class CompetitionPage:
-    competitions: list[CompetitionView]   # one page, sorted
+    competitions: list[CompetitionView]  # one page, sorted
     paging: Paging
-    subject_total: int                    # visible competitions of the subject, any status
+    subject_total: int  # visible competitions of the subject, any status
+
 
 @dataclass(frozen=True)
 class SubjectChoices:
-    active: list[Subject]                 # sorted by name_key, then id
-    deactivated: list[Subject]            # deactivated, with a finished competition; same order
+    active: list[Subject]  # sorted by name_key, then id
+    deactivated: list[Subject]  # deactivated, with a finished competition; same order
+
     def is_offered(self, subject_id: int) -> bool: ...
     def get(self, subject_id: int) -> Subject | None: ...
     @property
     def only(self) -> Subject | None: ...  # the single offered subject, if exactly one
 
+
 @dataclass(frozen=True)
 class Landing:
     page: int
-    competition_id: int | None   # the row to show at its anchor; None for the empty state
+    competition_id: int | None  # the row to show at its anchor; None for the empty state
 ```
 
 ### Errors

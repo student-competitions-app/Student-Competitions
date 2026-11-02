@@ -140,10 +140,12 @@ def test_the_tab_row_is_students_teams_questions_competitions(scene: Scene) -> N
     ]
 
 
-def test_competitions_is_a_placeholder(scene: Scene) -> None:
+def test_competitions_is_the_competitions_list(scene: Scene) -> None:
+    """Milestone 12.1 replaced the placeholder with the competitions list (SC-010)."""
     body = scene.teacher.get("/teacher/competitions").text
     assert html.h1(body) == "Competitions"
-    assert "Competitions will arrive in a later milestone." in body
+    assert "Competitions will arrive in a later milestone." not in body
+    assert [o.text for o in html.options(body, "subject")][:1] == ["Choose a subject"]
     current = [t for t in html.nav(body, "Teacher area") if t.attrs.get("aria-current") == "page"]
     assert [(t.href, t.text) for t in current] == [("/teacher/competitions", "Competitions")]
     assert (f"{STUDENTS}", "Students") in html.link_pairs(body)

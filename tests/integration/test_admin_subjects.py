@@ -5,17 +5,26 @@ The messages are asserted verbatim. Every test runs once per engine; the `sessio
 the same database the application serves, so tests can arrange and inspect rows directly.
 """
 
+from datetime import timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 from httpx2 import Response
 from sqlmodel import Session
 
 import app.services.subjects
+from app.core.db import utc_now
 from app.main import app as application
 from app.models import AccessLevel
 from app.services.subjects import list_subjects, set_subject_active
 from tests import html as dom
-from tests.conftest import ClientAs, make_institution, make_question, make_teacher
+from tests.conftest import (
+    ClientAs,
+    make_competition,
+    make_institution,
+    make_question,
+    make_teacher,
+)
 
 DUPLICATE = "A subject named “{}” already exists."
 CONTROL = "The name cannot contain tabs, line breaks or other control characters."
@@ -413,6 +422,27 @@ def test_a_subject_with_questions_cannot_be_deleted(
     create(admin_client, "Physics")
     sid = subject_id(session, "Physics")
     make_question(application.state.engine, sid, deleted=deleted)
+    before = snapshot(session)
+    response = post(admin_client, f"/admin/subjects/{sid}/delete")
+    assert response.status_code == 409
+    assert IN_USE.format("Physics") in response.text
+    assert snapshot(session) == before
+
+
+@pytest.mark.parametrize("end", ["upcoming", "cancelled", "finished"])
+def test_a_subject_with_a_competition_cannot_be_deleted(
+    admin_client: TestClient, session: Session, end: str
+) -> None:
+    """Milestone 12.1 FR-039, US9: a competition in any status makes the subject in use."""
+    create(admin_client, "Physics")
+    sid = subject_id(session, "Physics")
+    make_competition(
+        application.state.engine,
+        sid,
+        starts_at=utc_now() + timedelta(days=1),
+        cancelled=end == "cancelled",
+        stopped=end == "finished",
+    )
     before = snapshot(session)
     response = post(admin_client, f"/admin/subjects/{sid}/delete")
     assert response.status_code == 409

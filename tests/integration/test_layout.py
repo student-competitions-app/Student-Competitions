@@ -1,7 +1,8 @@
 """The page frame: the top bar and its user menu (specs/010-design-system-ui-guidelines FR-018,
 FR-019, US2-2, US2-3, US6; contracts/components.md §1), and from milestone 10.1 the one frame
 block and the loading script on every page (specs/010.1-loading-feedback-pinned-frame FR-001,
-FR-012, FR-019, FR-020; contracts/components.md §1).
+FR-012, FR-019, FR-020; contracts/components.md §1), and from milestone 12.1 the time-zone script
+after it (specs/012.1-teacher-competitions contracts/components.md §7).
 
 The user menu is a native `<details>`, so it opens without JavaScript. It holds, in order, the
 email linking to the profile, the role switch (only for a person with several roles who has
@@ -188,6 +189,29 @@ def test_every_page_loads_the_script_once(
 
 def test_the_script_is_served(client: TestClient) -> None:
     response = client.get(SCRIPT_SRC)
+    assert response.status_code == 200
+    assert "javascript" in response.headers["content-type"]
+
+
+ZONE_SCRIPT_SRC = "/static/js/time-zone.js"
+
+
+@pytest.mark.parametrize(("email", "path"), [*PAGE_KINDS, (TEACHER_EMAIL, "/teacher/competitions")])
+def test_every_page_loads_the_time_zone_script_once_after_the_loading_script(
+    client: TestClient, client_as: ClientAs, email: str | None, path: str
+) -> None:
+    """Milestone 12.1 FR-020, contracts/components.md §7: one deferred script from the base
+    layout, in the head, right after `loading-feedback.js`."""
+    (head,) = html.parse(page(client, client_as, email, path)).find_all("head")
+    sources = [e.attrs.get("src") for e in head.find_all("script") if e.attrs.get("src")]
+    assert sources.count(ZONE_SCRIPT_SRC) == 1
+    assert sources.index(ZONE_SCRIPT_SRC) == sources.index(SCRIPT_SRC) + 1
+    scripts = [e.attrs for e in head.find_all("script") if e.attrs.get("src") == ZONE_SCRIPT_SRC]
+    assert scripts == [{"src": ZONE_SCRIPT_SRC, "defer": ""}]
+
+
+def test_the_time_zone_script_is_served(client: TestClient) -> None:
+    response = client.get(ZONE_SCRIPT_SRC)
     assert response.status_code == 200
     assert "javascript" in response.headers["content-type"]
 

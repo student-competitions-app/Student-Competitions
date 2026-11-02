@@ -15,3 +15,15 @@
 {% macro access_badge(level) -%}
 {%- if level == "write" %}{{ badge("Write", "info") }}{% else %}{{ badge("Read", "neutral") }}{% endif -%}
 {%- endmacro %}
+
+{#- A competition's status (milestone 12.1 contracts/components.md §3): one word and an existing
+    kind each. It takes the status enum or its value; anything else is refused. -#}
+{% macro competition_status_badge(status) -%}
+{%- set value = status | string -%}
+{%- if value == "upcoming" %}{{ badge("Upcoming", "info") }}
+{%- elif value == "in_progress" %}{{ badge("In progress", "success") }}
+{%- elif value == "finished" %}{{ badge("Finished", "neutral") }}
+{%- elif value == "cancelled" %}{{ badge("Cancelled", "muted") }}
+{%- else %}{{ template_error("competition_status_badge: unknown status " ~ value) }}
+{%- endif -%}
+{%- endmacro %}

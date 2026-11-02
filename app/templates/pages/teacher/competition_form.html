@@ -1,0 +1,25 @@
+{% extends "layouts/teacher.html" %}
+{#- The add form, or with `competition` the edit form (specs/012.1-teacher-competitions/contracts/
+    http-routes.md §2, §4). The subject is named as text, never offered as a control: a
+    competition keeps its subject for ever. The start is read in the zone named under it, which
+    the hidden `time_zone` field carries. -#}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/form.html" import error_summary, field, date_time_fields, form_actions %}
+
+{% set heading = "Edit competition “" ~ competition.name ~ "”" if competition else "Add competition" %}
+{% block title %}{{ heading }} — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(back, "Back to the competitions") }}
+{{ page_heading(heading) }}
+{{ error_summary(errors, order=field_order) }}
+<p>Subject: {{ subject.name }}</p>
+<form method="post" action="{{ '/teacher/competitions/' ~ competition.id ~ '/edit' if competition else '/teacher/competitions' }}">
+  <input type="hidden" name="subject" value="{{ subject.id }}">
+  <input type="hidden" name="status" value="{{ status_value }}">
+  <input type="hidden" name="page" value="{{ page }}">
+  {{ field("name", "Name", value=values.name, error=errors.name, hint="Up to 200 characters.", attrs={"required": True, "maxlength": "200"}) }}
+  {{ date_time_fields("start", "Start", values, errors, zone_label) }}
+  {{ form_actions("Save competition", cancel_href=back) }}
+</form>
+{% endblock %}

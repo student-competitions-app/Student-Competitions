@@ -80,6 +80,12 @@ jobs:
       - name: Build the image
         run: docker build --build-arg APP_COMMIT=${{ github.sha }} -t student-competitions:ci .
 
+      # Times are converted with Python's zoneinfo, which reads the system time-zone database
+      # (Debian's tzdata in the image). A base image without it would fail here, not in
+      # production (specs/012.1-teacher-competitions/research.md R4).
+      - name: The image has the time-zone database
+        run: docker run --rm --entrypoint python student-competitions:ci -c "import zoneinfo; zoneinfo.ZoneInfo('Europe/Kyiv')"
+
       # On Render a missing DATABASE_URL must fail the release, not fall back to a throw-away
       # SQLite file inside the container (FR-004).
       - name: Refuse to start on Render without a database

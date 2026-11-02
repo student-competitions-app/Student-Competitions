@@ -2,6 +2,7 @@
 complete. Alembic's `env.py` and the drift test rely on that; a new model must be added here."""
 
 from app.models.boot_counter import BootCounter
+from app.models.competition import Competition
 from app.models.consent import ConsentRecord, ConsentText, InvitationCutoff
 from app.models.enrolment import Enrolment
 from app.models.institution import Institution
@@ -21,6 +22,7 @@ __all__ = [
     "ALL_ROLES",
     "AccessLevel",
     "BootCounter",
+    "Competition",
     "ConsentRecord",
     "ConsentText",
     "Enrolment",

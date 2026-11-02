@@ -59,7 +59,10 @@
 <textarea id="{{ id }}" name="{{ name or id }}" rows="{{ rows }}"{{ _described(id, hint, error) }}{{ _attrs(attrs) }}>{% if text.startswith("\n") %}{{ "\n" }}{% endif %}{{ text }}</textarea>
 {%- endmacro %}
 
-{% macro select_field(id, label, options, selected=None, error=None, hint=None, name=None, attrs={}, placeholder=None, extra_options=()) -%}
+{#- `groups` (milestone 12.1 contracts/components.md §6): `(label, options)` pairs, each rendered as
+    an `<optgroup>` after the plain options and before `extra_options`, a selected value inside
+    one marked as in the plain options. -#}
+{% macro select_field(id, label, options, selected=None, error=None, hint=None, name=None, attrs={}, placeholder=None, extra_options=(), groups=()) -%}
 <label for="{{ id }}">{{ label }}</label>
 {{ _messages(id, hint, error) }}
 <select id="{{ id }}" name="{{ name or id }}"{{ _described(id, hint, error) }}{{ _attrs(attrs) }}>
@@ -69,10 +72,36 @@
   {%- for value, text in options %}
   <option value="{{ value }}"{% if selected is not none and value | string == selected | string %} selected{% endif %}>{{ text }}</option>
   {%- endfor %}
+  {%- for group_label, group_options in groups %}
+  <optgroup label="{{ group_label }}">
+    {%- for value, text in group_options %}
+    <option value="{{ value }}"{% if selected is not none and value | string == selected | string %} selected{% endif %}>{{ text }}</option>
+    {%- endfor %}
+  </optgroup>
+  {%- endfor %}
   {%- for value, text in extra_options %}
   <option value="{{ value }}">{{ text }}</option>
   {%- endfor %}
 </select>
+{%- endmacro %}
+
+{#- A date and a time entered as a pair (milestone 12.1 contracts/components.md §2, research R15):
+    "<legend> date" (`<prefix>_date`, `type="date"`) and "<legend> time" (`<prefix>_time`,
+    `type="time"`), each with its own error and its value as typed, through `field`. The hint under
+    the time names the zone the pair is read in, and the hidden `time_zone` carries it with the
+    form, so the server reads the entry in the zone it was shown in. `zone_label` is an IANA name
+    or `UTC`. Side by side from 768 px, stacked below. -#}
+{% macro date_time_fields(prefix, legend, values, errors, zone_label) -%}
+<fieldset class="date-time-fields">
+  <legend>{{ legend }}</legend>
+  <div>
+    {{ field(prefix ~ "_date", legend ~ " date", value=values[prefix ~ "_date"], error=errors[prefix ~ "_date"], type="date", attrs={"required": True}) }}
+  </div>
+  <div>
+    {{ field(prefix ~ "_time", legend ~ " time", value=values[prefix ~ "_time"], error=errors[prefix ~ "_time"], hint="Time zone: " ~ zone_label, type="time", attrs={"required": True}) }}
+  </div>
+  <input type="hidden" name="time_zone" value="{{ zone_label }}">
+</fieldset>
 {%- endmacro %}
 
 {% macro checkbox_field(id, label, checked=False, name=None, value=None, hint=None, attrs={}) -%}

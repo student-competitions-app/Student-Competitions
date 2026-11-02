@@ -4,9 +4,9 @@ See specs/006-admin-area/data-model.md#1-subject--table-subjects-new. Only admin
 or change subjects. Names are validated by `app.schemas.subject` before they reach this model;
 `name_key` is what makes names unique ignoring case, enforced by the database on both engines.
 
-Nothing refers to subjects yet. Milestones 9 (questions) and 10 (competitions) add references,
-and each must extend `app.services.subjects.count_subject_uses`, so a subject in use can never be
-deleted.
+Questions refer to subjects from milestone 11, and competitions from milestone 12.1. Every table
+that refers to subjects is counted by `app.services.subjects.count_subject_uses`, so a subject in
+use can never be deleted.
 """
 
 from datetime import datetime

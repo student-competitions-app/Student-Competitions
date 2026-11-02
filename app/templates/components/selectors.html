@@ -10,7 +10,8 @@
     existing `auto-submit.js`. Without JavaScript, each level shows a **Show** button inside
     `<noscript>` that sends its form (milestone 11 research R11); it has no `name`. A level is a mapping with `id`, `name`, `label`, `placeholder`,
     `options` (`(value, text)` pairs), `selected`, `disabled`, `carry` (hidden `(name, value)`
-    pairs) and `extra_options`. -#}
+    pairs), `extra_options` and `groups` (`(label, options)` pairs, each an `<optgroup>`,
+    milestone 12.1). -#}
 
 {% from "components/badge.html" import status_badge %}
 {% from "components/button.html" import button %}
@@ -47,7 +48,7 @@
     {%- for carry_name, carry_value in level.carry %}
     <input type="hidden" name="{{ carry_name }}" value="{{ carry_value }}">
     {%- endfor %}
-    {{ select_field(level.id, level.label, level.options, selected=level.selected, name=level.name, attrs={"data-auto-submit": True, "disabled": level.disabled}, placeholder=level.placeholder, extra_options=level.extra_options or ()) }}
+    {{ select_field(level.id, level.label, level.options, selected=level.selected, name=level.name, attrs={"data-auto-submit": True, "disabled": level.disabled}, placeholder=level.placeholder, extra_options=level.extra_options or (), groups=level.groups or ()) }}
     <noscript>{{ button("Show", kind="secondary", small=True) }}</noscript>
   </form>
   {%- endfor %}

@@ -1,0 +1,69 @@
+{% extends "layouts/teacher.html" %}
+{#- The Competitions tab (specs/012.1-teacher-competitions/contracts/http-routes.md §1): the subject
+    list, then exactly one of the empty states or the chosen subject's status list and
+    competitions, between two page navigations. The row menu and Add competition show only with
+    the setting and an active subject (`can_add`). -#}
+{% from "components/frame.html" import page_heading %}
+{% from "components/selectors.html" import chained_lists %}
+{% from "components/feedback.html" import empty_state, notice %}
+{% from "components/pagination.html" import page_navigation %}
+{% from "components/table.html" import data_table, cell, actions_cell %}
+{% from "components/badge.html" import competition_status_badge %}
+{% from "components/menu.html" import actions_menu, menu_link %}
+{% from "components/time.html" import local_time with context %}
+
+{% block title %}Competitions — {{ app_name }}{% endblock %}
+
+{% block scripts %}<script src="/static/js/auto-submit.js" defer></script>{% endblock %}
+
+{% block teacher_content %}
+{% if can_add %}
+{{ page_heading("Competitions", action=("Add competition", "/teacher/competitions/new?" ~ return_query)) }}
+{% else %}
+{{ page_heading("Competitions") }}
+{% endif %}
+{% set subject_level = {"id": "subject", "name": "subject", "label": "Subject", "placeholder": "Choose a subject",
+   "options": subjects, "groups": groups, "selected": selected.id if selected else none,
+   "disabled": not (subjects or groups), "carry": []} %}
+{% if selected %}
+{% set status_level = {"id": "status", "name": "status", "label": "Status", "placeholder": none,
+   "options": status_options, "selected": status.value if status else "", "disabled": false,
+   "carry": [("subject", selected.id)]} %}
+{{ chained_lists([subject_level, status_level], "/teacher/competitions") }}
+{% else %}
+{{ chained_lists([subject_level], "/teacher/competitions") }}
+{% endif %}
+
+{% if not (subjects or groups) %}
+{{ empty_state("No subjects yet", "Ask an administrator to add a subject.") }}
+{% elif not selected %}
+{{ empty_state("Select a subject", "Choose a subject in the list above to see its competitions.") }}
+{% else %}
+{% if notice_text %}{{ notice(notice_text, "success") }}{% endif %}
+{% if listing.subject_total == 0 %}
+{{ empty_state("No competitions yet", "Add the first competition with Add competition." if can_add else none) }}
+{% elif not listing.competitions %}
+{{ empty_state("No competitions with this status", "Choose another status, or All.") }}
+{% else %}
+{{ page_navigation(listing.paging, page_href, "Competitions", "Pages, top") }}
+{% call data_table(["Name", "Start", "Status", "Actions"]) %}
+{% for c in listing.competitions %}
+<tr id="competition-{{ c.id }}">
+  {{ cell("Name", c.name) }}
+  {% call cell("Start") %}{{ local_time(c.starts_at) }}{% endcall %}
+  {% call cell("Status") %}{{ competition_status_badge(c.status) }}{% endcall %}
+  {% call actions_cell() %}
+  {%- if can_add -%}
+  {%- call actions_menu(c.name) -%}
+  {%- if c.status == "upcoming" %}{{ menu_link("Edit", "/teacher/competitions/" ~ c.id ~ "/edit?" ~ return_query) }}{% endif -%}
+  {%- if c.status in ("upcoming", "in_progress") %}{{ menu_link("Cancel competition", "/teacher/competitions/" ~ c.id ~ "/cancel?" ~ return_query, destructive=True) }}{% endif -%}
+  {%- endcall -%}
+  {%- endif -%}
+  {% endcall %}
+</tr>
+{% endfor %}
+{% endcall %}
+{{ page_navigation(listing.paging, page_href, "Competitions", "Pages, bottom") }}
+{% endif %}
+{% endif %}
+{% endblock %}

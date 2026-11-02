@@ -1130,6 +1130,12 @@ html [aria-busy="true"]:not(input, select, textarea):is(button, [type="submit"],
   vertical-align: middle;
 }
 
+/* A time in a table (components/time.html, milestone 12.1) stays on one line, so a row is no
+   taller than its name needs. */
+.data-table time {
+  white-space: nowrap;
+}
+
 .row-actions {
   white-space: nowrap;
 }
@@ -1174,7 +1180,24 @@ div.row-actions > * + * {
     background: var(--sc-surface);
     border: var(--sc-border-width) solid var(--sc-border);
     border-radius: var(--sc-radius-card);
-    overflow: hidden;
+  }
+
+  /* The corner cells carry the card's radius, rather than the table clipping its content with
+     `overflow: hidden`, so an open actions menu is never cut off (milestone 12.1 research R14). */
+  .data-table thead th:first-child {
+    border-top-left-radius: var(--sc-radius-card);
+  }
+
+  .data-table thead th:last-child {
+    border-top-right-radius: var(--sc-radius-card);
+  }
+
+  .data-table tbody tr:last-child td:first-child {
+    border-bottom-left-radius: var(--sc-radius-card);
+  }
+
+  .data-table tbody tr:last-child td:last-child {
+    border-bottom-right-radius: var(--sc-radius-card);
   }
 
   .data-table th {
@@ -1273,6 +1296,153 @@ div.row-actions > * + * {
 
   .row-actions .inline-form {
     display: block;
+  }
+}
+
+/* The actions menu (components/menu.html, milestone 12.1 research R14): a native <details>, like
+   the user menu. The button is a small outline secondary button with a chevron; the panel is a
+   surface card under it, aligned to its right edge, above the following rows but under the pinned
+   frame (z-index 3). Every entry is a full touch target. */
+.actions-menu {
+  position: relative;
+  display: inline-block;
+  margin: 0;
+  white-space: normal;
+}
+
+.actions-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sc-space-1);
+  min-height: var(--sc-touch-target);
+  padding: var(--sc-space-1) var(--sc-space-2);
+  border: var(--sc-border-width) solid var(--sc-border);
+  border-radius: var(--sc-radius-control);
+  background: transparent;
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Pico colours a summary as an accordion's; the menu button keeps the text colour in every
+   state, and takes the focus ring of the other controls. */
+details.actions-menu > summary:not([role]),
+details.actions-menu > summary:not([role]):focus,
+details.actions-menu[open] > summary:not([role]):not(:focus) {
+  color: var(--sc-text);
+}
+
+details.actions-menu > summary:not([role]):hover {
+  background: var(--sc-neutral-tint);
+  border-color: var(--sc-muted);
+}
+
+details.actions-menu > summary:not([role]):focus-visible {
+  outline: none;
+  color: var(--sc-text);
+  box-shadow: 0 0 0 0.25rem var(--sc-focus-ring);
+}
+
+.actions-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.actions-menu > summary::after {
+  display: block;
+  float: none;
+  width: var(--sc-space-1);
+  height: var(--sc-space-1);
+  margin: 0;
+  background: none;
+  border-right: var(--sc-border-strong) solid currentColor;
+  border-bottom: var(--sc-border-strong) solid currentColor;
+  transform: translateY(-0.125rem) rotate(45deg);
+}
+
+details.actions-menu[open] > summary::after {
+  transform: translateY(0.125rem) rotate(-135deg);
+}
+
+details.actions-menu[open] > summary {
+  margin-bottom: 0;
+}
+
+.actions-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--sc-space-1));
+  z-index: 2;
+  width: max-content;
+  min-width: 12rem;
+  max-width: calc(100vw - 2 * var(--sc-space-2));
+  margin: 0;
+  padding: var(--sc-space-1) 0;
+  list-style: none;
+  background: var(--sc-surface);
+  color: var(--sc-text);
+  border: var(--sc-border-width) solid var(--sc-border);
+  border-radius: var(--sc-radius-card);
+  box-shadow: var(--sc-shadow-menu);
+  font-size: var(--sc-text-body);
+  text-align: left;
+}
+
+.actions-menu-panel li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.actions-menu-link {
+  display: flex;
+  align-items: center;
+  min-height: var(--sc-touch-target);
+  padding-inline: var(--sc-space-2);
+  color: var(--sc-text);
+  font-weight: var(--sc-weight-semibold);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.actions-menu-link:hover {
+  background: var(--sc-neutral-tint);
+  color: var(--sc-text);
+}
+
+.actions-menu-link:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 0.25rem var(--sc-focus-ring);
+}
+
+.actions-menu-link-destructive,
+.actions-menu-link-destructive:hover {
+  color: var(--sc-danger);
+}
+
+/* On a phone card the menu takes the whole actions part, and its panel stays within the card. */
+@media (width < 768px) {
+  .data-table td.row-actions .actions-menu {
+    position: static;
+    display: block;
+  }
+
+  .data-table td.row-actions .actions-menu > summary {
+    width: 100%;
+  }
+
+  .data-table td.row-actions {
+    position: relative;
+  }
+
+  .data-table td.row-actions .actions-menu-panel {
+    left: 0;
+    right: 0;
+    width: auto;
+    min-width: 0;
+    max-width: none;
   }
 }
 
@@ -1465,6 +1635,29 @@ textarea {
 fieldset > legend {
   margin-bottom: var(--sc-space-1);
   font-weight: var(--sc-weight-semibold);
+}
+
+/* A date and a time entered as a pair (components/form.html `date_time_fields`, milestone 12.1
+   research R15): no frame of its own; from 768 px the two fields stand side by side, their inputs
+   aligned on one line, and below it they stack. */
+.date-time-fields {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+@media (min-width: 768px) {
+  .date-time-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--sc-space-3);
+    align-items: end;
+    max-width: var(--sc-form-width);
+  }
+
+  .date-time-fields > legend {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Confirmations (components/confirmation.html, FR-032). */

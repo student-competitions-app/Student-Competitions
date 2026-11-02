@@ -18,7 +18,9 @@ is not one of the tabs.
 """
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
@@ -117,6 +119,34 @@ CLASS_STUDENTS = (
 note: an Add button, the note, or nothing (a full team), which on a phone has no actions part."""
 PAGINGS = (Paging.build(1, 5), Paging.build(4, 200), Paging.build(20, 200))
 """Page navigation: page 1 of 1 (5 items), page 4 of 20 and page 20 of 20 (200 items)."""
+SAMPLE_MOMENT = datetime(2027, 3, 14, 8, 0, tzinfo=UTC)
+"""A start: 14 March 2027, 08:00 UTC, which is 10:00 in Kyiv."""
+KYIV = ZoneInfo("Europe/Kyiv")
+LONG_COMPETITION_NAME = (
+    "Regional robotics and programming olympiad for the lyceums of Kyiv, the spring round, with"
+    " the practical tasks, the written theory part and the team presentations of the projects"
+    " done this past winter"
+)
+"""A 200-character competition name, the longest allowed, to show the wrap in a menu row."""
+COMPETITION_STATUSES = ("upcoming", "in_progress", "finished", "cancelled")
+SUBJECT_GROUPS = (("Deactivated subjects", [(7, "Astronomy")]),)
+"""A subject list's option group, as the Competitions tab offers deactivated subjects."""
+DATE_TIME_VALUES = {
+    "gallery-start-empty_date": "",
+    "gallery-start-empty_time": "",
+    "gallery-start-filled_date": "2027-03-14",
+    "gallery-start-filled_time": "10:00",
+    "gallery-start-errors_date": "2027-02-30",
+    "gallery-start-errors_time": "03:30",
+}
+DATE_TIME_ERRORS = {
+    "gallery-start-errors_date": "Enter a real start date.",
+    "gallery-start-errors_time": (
+        "There is no 03:30 on 28 March 2027 in Europe/Kyiv because the clocks go forward."
+        " Enter another time."
+    ),
+}
+"""The date and time pair: empty, filled in a zone, and with a date error and the gap error."""
 ONE_ROLE_USER = SampleUser("olena.kovalenko@school.example")
 TWO_ROLE_USER = SampleUser("taras.shevchenko@school.example")
 SAMPLE_TABS = (
@@ -174,6 +204,13 @@ def _samples() -> dict[str, Any]:
         "long_section_title": LONG_SECTION_TITLE,
         "class_students": CLASS_STUDENTS,
         "pagings": PAGINGS,
+        "sample_moment": SAMPLE_MOMENT,
+        "kyiv": KYIV,
+        "long_competition_name": LONG_COMPETITION_NAME,
+        "competition_statuses": COMPETITION_STATUSES,
+        "subject_groups": SUBJECT_GROUPS,
+        "date_time_values": DATE_TIME_VALUES,
+        "date_time_errors": DATE_TIME_ERRORS,
     }
 
 

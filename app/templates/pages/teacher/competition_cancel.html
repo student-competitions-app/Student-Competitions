@@ -1,0 +1,15 @@
+{% extends "layouts/teacher.html" %}
+{#- The cancel confirmation (specs/012.1-teacher-competitions/contracts/http-routes.md §6): it names
+    the competition, its subject and its start in the browser's zone. The link back keeps the
+    competition: Keep competition. -#}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation %}
+{% from "components/time.html" import local_time with context %}
+
+{% block title %}Cancel competition “{{ competition.name }}” — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(back, "Back to the competitions") }}
+{% set question %}Cancel competition “{{ competition.name }}” of {{ subject.name }}, starting {{ local_time(competition.starts_at) }}?{% endset %}
+{{ confirmation(question, "The competition will be marked Cancelled and stays in the list. It cannot be edited, started or restored.", "/teacher/competitions/" ~ competition.id ~ "/cancel", "Cancel competition", back, hidden={"subject": subject.id, "status": status_value, "page": page}, back_label="Keep competition") }}
+{% endblock %}

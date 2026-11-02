@@ -275,3 +275,33 @@ def test_the_row_note_is_muted_text() -> None:
     (body,) = [body for selector, body in _rules(APP_CSS) if selector == ".row-note"]
     assert re.search(r"color:\s*var\(--sc-muted\)", body)
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b|\b\d+(?:\.\d+)?px\b", body)
+
+
+def test_the_table_does_not_clip_an_open_menu() -> None:
+    """Milestone 12.1 research R14: `.data-table` rounds its corner cells instead of clipping its
+    content, so an open actions menu is never cut off."""
+    for selector, body in _rules(APP_CSS):
+        if selector.strip() == ".data-table":
+            assert not re.search(r"overflow\s*:\s*hidden", body), body
+    corners = {
+        selector
+        for selector, body in _rules(APP_CSS)
+        if selector.startswith(".data-table") and "radius" in body
+    }
+    assert {
+        ".data-table thead th:first-child",
+        ".data-table thead th:last-child",
+        ".data-table tbody tr:last-child td:first-child",
+        ".data-table tbody tr:last-child td:last-child",
+    } <= corners
+
+
+def test_the_actions_menu_classes_belong_to_the_menu_component() -> None:
+    """Milestone 12.1 contracts/components.md §1: the menu's classes are used by
+    `components/menu.html` only, and its entries keep the touch target."""
+    for name in ("actions-menu", "actions-menu-panel", "actions-menu-link"):
+        assert {p.relative_to(TEMPLATES).as_posix() for p in used_classes()[name]} == {
+            "components/menu.html"
+        }, name
+    (body,) = [body for selector, body in _rules(APP_CSS) if selector == ".actions-menu-link"]
+    assert re.search(r"min-height:\s*var\(--sc-touch-target\)", body)

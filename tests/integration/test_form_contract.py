@@ -25,6 +25,8 @@ Deliberate changes since (each is a contract change, recorded here):
   with `UPDATE_FORM_CONTRACT=1` for those cases only.
 - **Milestone 11.1**: the Teams tab's pages (`teacher-team*` cases) are new, generated once with
   `UPDATE_FORM_CONTRACT=1` for those cases only.
+- **Milestone 12.1**: the Competitions tab's pages (`teacher-competition*` cases) are new,
+  generated once with `UPDATE_FORM_CONTRACT=1` for those cases only.
 """
 
 import json
@@ -32,6 +34,7 @@ import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -56,6 +59,7 @@ from tests.conftest import (
     invite,
     invite_student,
     make_class,
+    make_competition,
     make_institution,
     make_member,
     make_question,
@@ -719,6 +723,77 @@ def _(w: World) -> Response:
 def _(w: World) -> Response:
     scene, team = a_team(w)
     return scene.teacher.get(f"/teacher/teams/{team}/members/{scene.student}/remove")
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.1: the Competitions tab
+# ---------------------------------------------------------------------------------------------
+
+
+def a_competition_manager(world: World, *, cancelled: bool = False) -> tuple[TestClient, int, int]:
+    """Olena with Can manage competitions, and Chemistry with one upcoming competition (or a
+    cancelled one); `(browser, subject, competition)`."""
+    engine, settings = application.state.engine, application.state.settings
+    institution = make_institution(engine, "Kyiv Polytechnic Institute", "Kyiv")
+    make_teacher(
+        engine, settings, email=OLENA, institutions={institution: AccessLevel.READ}, can_manage=True
+    )
+    chemistry = make_subject(engine, "Chemistry")
+    make_subject(engine, "Physics")
+    start = datetime(2100, 3, 14, 8, 0, tzinfo=UTC)
+    competition = make_competition(engine, chemistry, starts_at=start, cancelled=cancelled)
+    browser = world.client_as(OLENA)
+    browser.cookies.set("sc_time_zone", "Europe/Kyiv")
+    return browser, chemistry, competition
+
+
+@case("teacher-competitions")
+def _(w: World) -> Response:
+    """Its two GET forms, subject and status: the no-script Show buttons add no named field."""
+    browser, subject, _ = a_competition_manager(w)
+    return browser.get(f"/teacher/competitions?subject={subject}&status=upcoming&page=2")
+
+
+@case("teacher-competition-new")
+def _(w: World) -> Response:
+    browser, subject, _ = a_competition_manager(w)
+    return browser.get(f"/teacher/competitions/new?subject={subject}&status=upcoming&page=2")
+
+
+@case("teacher-competition-new-invalid")
+def _(w: World) -> Response:
+    browser, subject, _ = a_competition_manager(w)
+    return browser.post(
+        "/teacher/competitions",
+        data={
+            "subject": str(subject),
+            "status": "upcoming",
+            "page": "2",
+            "name": "",
+            "start_date": "",
+            "start_time": "",
+            "time_zone": "Europe/Kyiv",
+        },
+    )
+
+
+@case("teacher-competition-edit")
+def _(w: World) -> Response:
+    browser, subject, competition = a_competition_manager(w)
+    return browser.get(f"/teacher/competitions/{competition}/edit?subject={subject}&page=2")
+
+
+@case("teacher-competition-cancel")
+def _(w: World) -> Response:
+    browser, subject, competition = a_competition_manager(w)
+    return browser.get(f"/teacher/competitions/{competition}/cancel?subject={subject}&page=2")
+
+
+@case("teacher-competition-refused")
+def _(w: World) -> Response:
+    """A refusal has no form of its own; the page keeps the frame's forms."""
+    browser, subject, competition = a_competition_manager(w, cancelled=True)
+    return browser.get(f"/teacher/competitions/{competition}/cancel?subject={subject}")
 
 
 # ---------------------------------------------------------------------------------------------

@@ -11,14 +11,14 @@ A web application for running online competitions among students, testing their 
 - Takes part in competitions as a member of a team, by answering questions in writing.
 - Cannot edit their own profile.
 - Can view the list of competitions they have taken part in, with results:
-  - title
+  - name
   - subject
   - date
   - start time
   - final score
   - place
 - Can view the list of upcoming competitions they are scheduled to take part in:
-  - title
+  - name
   - subject
   - date and time
 
@@ -36,15 +36,15 @@ A web application for running online competitions among students, testing their 
 3. **Managing the question bank.** Edit the global list of questions used in competitions. Questions can be reused across different competitions. Each question belongs to one subject, selected from the list of subjects. For each question, the teacher adds the correct answer as text. Only teachers allowed to manage competitions change the question bank; every other teacher can read it.
 4. **Running a competition.** The teacher selects:
    - the subject of the competition; only questions of that subject can be added to it
-   - the start time and duration of the competition (usually 1 hour)
+   - the name and the start date and time of the competition; a competition has no duration and runs until a teacher stops it
    - the list of questions
    - the participating teams (a team usually has fewer than 10 members, at most 50)
-5. **Viewing competitions.** The teacher can view the list of all competitions, both past and planned. For upcoming competitions, the teacher can edit the participating teams, the title and the list of questions, according to their access rights.
+5. **Viewing competitions.** The teacher can view the list of all competitions, both past and planned. A teacher allowed to manage competitions can edit the name, the start, the participating teams and the list of questions of any upcoming competition, stop any competition in progress, and cancel any competition that is not finished (see [Competition statuses](#competition-statuses)).
 
 #### Teacher access rights to competitions
 
-- **Edit** — a teacher can edit all competitions they created. A teacher can edit access rights of other teachers for their own competitions.
 - **Read** — every teacher has read access to all competitions.
+- **Manage** — a teacher whom an administrator allowed to manage competitions creates, edits, stops and cancels any competition, whoever created it. There are no access rights per competition.
 
 #### Teacher access to students
 
@@ -54,13 +54,13 @@ A web application for running online competitions among students, testing their 
 - The students of an educational institution are divided into classes (for example "KN-21"). Each class has a year of study, shared by all its students. A student belongs to exactly one educational institution and exactly one class in it. A teacher with Write access keeps the list of classes of that institution.
 - A teacher sees a student's data only for their own institutions, never anything about an institution the student belonged to before.
 - Only an administrator can link a teacher to an educational institution and set the access level.
-- Only a teacher whom an administrator allowed to manage competitions can create competitions and change the question bank.
+- Only a teacher whom an administrator allowed to manage competitions can create and manage competitions and change the question bank.
 
 ### Administrator
 
 - Adds and deletes teachers in the application.
 - Links a teacher to one or more educational institutions, selecting them from the list of institutions, with Read or Write access to each.
-- Decides whether a teacher can manage competitions: create competitions and change the question bank.
+- Decides whether a teacher can manage competitions: create, edit, stop and cancel any competition, and change the question bank.
 - Is the only role that can edit the list of educational institutions.
 - Is the only role that can edit the list of subjects.
 
@@ -75,10 +75,17 @@ A web application for running online competitions among students, testing their 
 
 ### How a competition works
 
-- A teacher organizes a competition in one subject for a specific date and time with a specific duration (usually one hour).
+- A teacher organizes a competition in one subject for a specific date and time. A competition has no duration: it starts on its own at its start time and runs until a teacher stops it.
 - Teams take part in a competition: the students of the participating teams answer the given questions in writing (text).
 - Answers are evaluated using AI. The input for evaluation is the question text and the correct answer prepared in advance by the teacher. Each answer is assigned a score.
 - The winner is the student with the highest total score, calculated as the sum of scores across all questions in the competition.
+
+### Competition statuses
+
+- **Upcoming** — before its start. Only an upcoming competition can be edited.
+- **In progress** — from its start, reached on its own with nobody acting, until a teacher stops it. Students answer questions only while their competition is in progress.
+- **Finished** — after a teacher allowed to manage competitions stops it. A finished competition cannot be cancelled; its results can always be reviewed.
+- **Cancelled** — after a teacher allowed to manage competitions cancels it, which is possible in any status except **Finished**. Cancelling is final: a cancelled competition never changes again and cannot be restored.
 
 ### Question
 
@@ -90,7 +97,7 @@ A team is a named group of students of one educational institution, put together
 
 ### Subject
 
-A subject is a knowledge area, such as mathematics or physics, that competitions test. Administrators keep the list of subjects. Every question and every competition belongs to exactly one subject, and a competition contains only questions of its own subject. A subject used by any question, even a deleted one, or by any competition can only be deactivated, never deleted, so completed competitions keep showing it.
+A subject is a knowledge area, such as mathematics or physics, that competitions test. Administrators keep the list of subjects. Every question and every competition belongs to exactly one subject, and a competition contains only questions of its own subject. A subject used by any question, even a deleted one, or by any competition can only be deactivated, never deleted, so completed competitions keep showing it. Deactivating a subject hides its questions and every one of its competitions that is not finished, and they cannot be opened until it is activated again; its finished competitions stay available, read-only, so their results can still be reviewed.
 
 ## Production usage
 

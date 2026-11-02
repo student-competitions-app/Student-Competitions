@@ -1,0 +1,11 @@
+{#- Local time (milestone 12.1 contracts/components.md §4, research R10). A stored UTC moment in the
+    browser's zone: "14 March 2027, 10:00"; with no zone known, the UTC value labelled "UTC". The
+    `datetime` attribute always holds the UTC value. Import it `with context`: `zone` defaults to
+    the request's `time_zone` (set by `app.core.templates`); the gallery passes it to show each
+    variant. In a heading, capture the heading with `{% set … %}…{% endset %}` and pass it on;
+    never build it as a string in Python. -#}
+
+{% macro local_time(moment, zone=time_zone) -%}
+{%- if moment is none %}{{ template_error("local_time: the moment is required") }}{% endif -%}
+<time datetime="{{ utc_iso(moment) }}">{{ format_local_time(moment, zone) }}</time>
+{%- endmacro %}

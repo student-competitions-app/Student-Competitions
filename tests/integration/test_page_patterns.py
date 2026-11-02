@@ -762,3 +762,123 @@ def test_the_deletion_confirmation(client: TestClient, outbox: list[Any]) -> Non
 @pytest.mark.parametrize("path", ["/data-deletion", "/data-deletion/requested"])
 def test_the_deletion_request_pages_link_back_to_sign_in(client: TestClient, path: str) -> None:
     assert_back_link(client.get(path).text, "/login", "Back to sign in")
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.1: the Competitions tab
+# ---------------------------------------------------------------------------------------------
+
+
+def test_an_invalid_competition_is_summarised_in_field_order(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The add and the edit form: the name, the start date, then the start time; every value
+    kept."""
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, competition = contract.a_competition_manager(w)
+    data = {
+        "subject": str(subject),
+        "status": "",
+        "page": "1",
+        "name": " ",
+        "start_date": "2100-02-30",
+        "start_time": "25:00",
+        "time_zone": "Europe/Kyiv",
+    }
+    added = browser.post("/teacher/competitions", data=data)
+    edited = browser.post(f"/teacher/competitions/{competition}/edit", data=data)
+    for response in (added, edited):
+        assert response.status_code == 400
+        assert_form_errors(
+            response.text,
+            {
+                "name": "Enter a name.",
+                "start_date": "Enter a real start date.",
+                "start_time": "Enter a real start time.",
+            },
+            values={"name": " ", "start_date": "2100-02-30", "start_time": "25:00"},
+        )
+
+
+def test_the_competition_confirmation(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A confirmation whose link back reads Keep competition, after the back link."""
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, competition = contract.a_competition_manager(w)
+    path = f"/teacher/competitions/{competition}/cancel"
+    body = browser.get(f"{path}?subject={subject}&page=2").text
+    back = f"/teacher/competitions?subject={subject}&page=2#competition-{competition}"
+    assert html.h1(body) == (
+        "Cancel competition “Spring round” of Chemistry, starting 14 March 2100, 10:00?"
+    )
+    ((form, button),) = [
+        (f, b)
+        for f in html.forms(body, "main")
+        for b in f.buttons
+        if b.text == "Cancel competition"
+    ]
+    assert (form.method, form.action) == ("post", path)
+    assert "destructive" in button.attrs.get("class", "").split()
+    assert (back, "Keep competition") in html.link_pairs(body, "main")
+    assert_back_link(body, back, "Back to the competitions")
+
+
+def test_the_competition_refusal(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, competition = contract.a_competition_manager(w, cancelled=True)
+    response = browser.get(f"/teacher/competitions/{competition}/cancel?subject={subject}")
+    assert response.status_code == 409
+    body = response.text
+    back = f"/teacher/competitions?subject={subject}#competition-{competition}"
+    assert_back_link(body, back, "Back to the competitions")
+    assert html.h1(body) == "Cancel competition “Spring round”?"
+    sections = [
+        s for s in html.parse(body).find_all("section") if "confirmation-refused" in s.classes()
+    ]
+    assert len(sections) == 1
+    assert html.notices(body) == [("status", "“Spring round” is already cancelled.")]
+    assert [b for f in html.forms(body, "main") for b in f.buttons] == []
+
+
+def test_competition_pages_link_back_to_the_list(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The add page to the page it came from; the edit and cancel pages to the competition."""
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, competition = contract.a_competition_manager(w)
+    back = "Back to the competitions"
+    listed = f"/teacher/competitions?subject={subject}&status=upcoming&page=3"
+    query = f"subject={subject}&status=upcoming&page=3"
+    assert_back_link(browser.get(f"/teacher/competitions/new?{query}").text, listed, back)
+    for path in ("edit", "cancel"):
+        body = browser.get(f"/teacher/competitions/{competition}/{path}?{query}").text
+        assert_back_link(body, f"{listed}#competition-{competition}", back)
+
+
+def test_the_competition_pages_have_at_most_one_primary_action(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, competition = contract.a_competition_manager(w)
+    assert primary_actions(browser.get(f"/teacher/competitions?subject={subject}").text) == [
+        "Add competition"
+    ]
+    for path in (f"new?subject={subject}", f"{competition}/edit?subject={subject}"):
+        body = browser.get(f"/teacher/competitions/{path}").text
+        assert html.h1(body)
+        assert primary_actions(body) == ["Save competition"]
+
+
+def test_competition_statuses_are_badges(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Never coloured text: each status is a badge with its word."""
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, _ = contract.a_competition_manager(w, cancelled=True)
+    body = browser.get(f"/teacher/competitions?subject={subject}").text
+    assert html.badges(body) == ["Cancelled"]
+    (cell,) = [r["Status"] for r in html.table_rows(body)]
+    assert cell == "Cancelled"

@@ -7,9 +7,9 @@ Tabs are ordinary links: no script (FR-047).
 
 `GET /teacher` keeps milestone 5's address (the home page links to it through
 `areas.TEACHER_AREA`) and sends the browser on to the first tab. The Students tab lives in
-`app.routers.teacher_students`, the Teams tab in `app.routers.teacher_teams` (milestone 11.1) and
-the Questions tab in `app.routers.teacher_questions` (milestone 11); Competitions is a placeholder
-until milestone 12.
+`app.routers.teacher_students`, the Teams tab in `app.routers.teacher_teams` (milestone 11.1), the
+Questions tab in `app.routers.teacher_questions` (milestone 11) and the Competitions tab in
+`app.routers.teacher_competitions` (milestone 12.1).
 """
 
 from dataclasses import dataclass
@@ -21,7 +21,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.core.auth import allow_roles
 from app.core.config import APP_NAME
 from app.core.templates import templates
-from app.models import Role
 from app.routers.areas import TEACHER_AREA
 
 router = APIRouter()
@@ -69,18 +68,3 @@ def render_teacher(
 def teacher_area() -> RedirectResponse:
     """The area's own address opens its first tab (FR-047)."""
     return RedirectResponse(TEACHER_TABS[0].path, status_code=303)
-
-
-@router.get("/teacher/competitions", response_class=HTMLResponse)
-@allow_roles(Role.TEACHER)
-def competitions_page(request: Request) -> HTMLResponse:
-    """A placeholder: a heading and one sentence, no actions (FR-059)."""
-    return render_teacher(
-        request,
-        "pages/teacher/placeholder.html",
-        "competitions",
-        {
-            "heading": "Competitions",
-            "note": "Competitions will arrive in a later milestone.",
-        },
-    )

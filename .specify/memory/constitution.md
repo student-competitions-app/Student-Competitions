@@ -70,8 +70,12 @@ The application has three roles — student, teacher, administrator — with rig
 - Teachers MUST only see and manage students of the educational institutions they are linked
   to; only administrators can link teachers to institutions and edit the institution list.
 - Competition rights MUST follow the product rules: every teacher can read all competitions;
-  only the creator (and teachers the creator grants edit rights) can edit one; only upcoming
-  competitions are editable.
+  only teachers whom an administrator allowed to manage competitions can create, edit, stop or
+  cancel one, and each of them can manage every competition, whoever created it (there are no
+  per-competition rights); only upcoming competitions are editable; any competition that is not
+  finished can be cancelled, and a cancelled competition never changes again.
+- Competitions of a deactivated subject MUST be hidden and inaccessible unless they are
+  finished; finished ones stay available read-only, so their results can be reviewed.
 - Students MUST only access their own profile (read-only), their own answers and results,
   and competitions they are assigned to.
 - The administrator list MUST come from deployment configuration, not from the UI.
@@ -121,9 +125,14 @@ provider outages and manipulation.
   Alembic migration in `migrations/` — no `create_all()` in production paths.
 - Code and migrations MUST run on both SQLite (local/tests) and PostgreSQL (production);
   database-specific features require justification in `plan.md`.
-- All timestamps MUST be stored timezone-aware in UTC and converted only for display.
-- Competition time windows (start time + duration) MUST be enforced server-side on every
-  read of questions and every answer submission.
+- All timestamps MUST be stored timezone-aware in UTC; times a person enters in their own
+  time zone MUST be converted to UTC on the server before they are stored or compared, and
+  converted back only for display.
+- A competition has a start time and no duration: it is upcoming before its start, in progress
+  from its start until a teacher stops it, then finished; or cancelled. Its status MUST be
+  derived on the server from the stored start and the stored stop or cancel, and enforced
+  server-side on every read of questions and every answer submission: students read questions
+  and submit answers only while the competition is in progress.
 - Results (scores, totals, places, best answers) MUST be persisted, and deletions MUST NOT
   silently orphan or destroy historical competition results.
 
@@ -248,4 +257,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-10-24
+**Version**: 2.0.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-02

@@ -84,6 +84,23 @@ W3C/WAI *Making Content Usable*, objective 6 (help users avoid mistakes and know
 them). Touch targets follow Material Design and the Apple Human Interface Guidelines: at least 44
 by 44 px.
 
+### Works before the script runs
+
+- Every page is complete as server-rendered HTML: links, forms and `<details>` menus do the work,
+  so reading, navigating and submitting never depend on JavaScript. Our tests check this baseline
+  without a browser.
+- JavaScript only enhances: it saves a click, shows progress or converts a value for display. A
+  script must not be the only way to reach a page, send a form or see a value.
+- When the script does not run, the page must stay usable, not polished: a plain **Show** button,
+  a time shown in UTC and labelled "UTC", a full page load instead of a partial update.
+- This rule applies to every page, so a milestone does not repeat it. It describes what happens
+  without the script only where the baseline is not obvious from this rule and the component
+  used.
+
+_Sources_: the GOV.UK Service Manual on progressive enhancement (about 1 in 100 visits run no
+JavaScript, mostly because a script failed to load, not because it was turned off); school
+networks and filters that block scripts, and weak phone connections.
+
 ## 3. Tokens
 
 **Use a token; never a literal.** Every colour, size and length is a `--sc-*` custom property,
@@ -180,9 +197,14 @@ Last measured in milestone 11.1, with the teacher area's four tabs (Students, Te
 Competitions): they wrap onto two rows at 360 × 640 and 375 × 667, and the frame ends at 158.5 px,
 the same as the administrator area's, under the 176 px of `--sc-frame-clearance-tabs`.
 
-**The loading feedback**: the base layout loads one script, `loading-feedback.js`, on every page.
-It shows the loading bar and the busy button (section 5) while the next page is on its way. Pages
-add nothing; without JavaScript, links and forms work as before.
+**The scripts**: the base layout loads two scripts on every page, each with `defer`, and pages add
+nothing; without JavaScript, links and forms work as before.
+
+- **`loading-feedback.js`** shows the loading bar and the busy button (section 5) while the next
+  page is on its way.
+- **`time-zone.js`** (milestone 12.1) writes the browser's time zone, such as `Europe/Kyiv`, to the
+  `sc_time_zone` cookie, so the server shows times in it (see **Local time** in section 5). It sends
+  nothing and reloads nothing; without it, times are shown in UTC, labelled "UTC".
 
 **Inside `<main>`**, in order: the back link (on every page below an area's main page), the page
 heading, the error summary or a notice, then the content. A page has one `h1`; sections are `h2`.
@@ -294,13 +316,47 @@ never scrolls sideways. An empty list renders `empty_state` instead of a table.
 **`row_note(text)`** stands in the actions cell where a row's action is not available, as "In this
 team"; muted text, never a disabled button.
 
+From 768 px the table's corner cells carry the card's radius; the table itself does not clip its
+content (`overflow: hidden`), so an open actions menu is never cut off.
+
 _Gallery_: [table](/admin/components#table).
+
+### Actions menu (`components/menu.html`)
+
+**`actions_menu(item_name, label="Actions")`** with **`menu_link(label, href, destructive=False)`**
+puts a row's actions behind one button, in the row's actions cell, when the row has more actions
+than fit a phone card (the **Competitions** tab, milestone 12.1). It is a native `<details>`, like
+the user menu, so it opens and closes without JavaScript.
+
+```jinja
+{% call actions_cell() %}
+{%- call actions_menu(c.name) -%}
+{% if c.status == "upcoming" %}{{ menu_link("Edit", edit_href) }}{% endif %}
+{{ menu_link("Cancel competition", cancel_href, destructive=True) }}
+{%- endcall -%}
+{% endcall %}
+```
+
+- **The button** reads "Actions" and is announced "Actions for “Spring round”"; the item name is
+  required. It is a small outline secondary button with a chevron, a full touch target.
+- **The entries** are links to a form or a confirmation page, never a `POST`, so every destructive
+  action still goes through its confirmation. A destructive entry is in the danger colour. Each
+  entry is 44 px tall and as wide as the panel; a long label wraps.
+- **The panel** opens under the button, aligned to its right edge, over the rows below and under the
+  pinned frame. The menus of a page are one group (`name="row-actions"`): where the browser supports
+  it, opening one closes the others.
+- **An empty menu is no menu**: when the call block renders only white space, nothing is emitted,
+  so a row with no action has an empty actions cell, which a phone card hides.
+
+_Gallery_: [actions menu](/admin/components#actions-menu).
 
 ### Badges (`components/badge.html`)
 
 **`status_badge(is_active)`** gives **Active** or **Deactivated**; **`access_badge(level)`**
-gives **Read** or **Write**. **`badge(text, kind)`** is for a new status with its own word; an
-empty text is refused. Use a badge for every status, never coloured text or "(deactivated)".
+gives **Read** or **Write**; **`competition_status_badge(status)`** (milestone 12.1) gives
+**Upcoming** (`info`), **In progress** (`success`), **Finished** (`neutral`) or **Cancelled**
+(`muted`), and refuses any other value. **`badge(text, kind)`** is for a new status with its own
+word; an empty text is refused. Use a badge for every status, never coloured text or "(deactivated)".
 _Gallery_: [badges](/admin/components#badges).
 
 ### Feedback (`components/feedback.html`)
@@ -314,6 +370,21 @@ _Gallery_: [badges](/admin/components#badges).
 
 _Gallery_: [notices](/admin/components#notices), [empty states](/admin/components#empty-states).
 
+### Local time (`components/time.html`)
+
+**`local_time(moment, zone=time_zone)`** (milestone 12.1) shows a stored time in the person's time
+zone: `<time datetime="2027-03-14T08:00Z">14 March 2027, 10:00</time>`. The zone comes from the
+`sc_time_zone` cookie, which `time-zone.js` writes; when no zone is known, the time is the UTC
+value labelled "UTC": "14 March 2027, 08:00 UTC". Import it `with context`. Every stored time is
+UTC and every conversion is on the server; the browser only says which zone it is in.
+
+**A time inside a heading** (a confirmation's question): capture the heading with
+`{% set question %}Cancel competition “{{ c.name }}”, starting {{ local_time(c.starts_at) }}?{% endset %}`
+and pass `question` on. It is still template content, escaped by autoescape; never build it as a
+string in Python. The page's `<title>` leaves the time out.
+
+_Gallery_: [time](/admin/components#time).
+
 ### Forms (`components/form.html`)
 
 Every form page passes `values` (what was entered, by field id), `errors` (field id → message) and
@@ -323,6 +394,15 @@ Every form page passes `values` (what was entered, by field id), `errors` (field
   errors.
 - **`field`**, **`select_field`** and **`checkbox_field`** give each field its label, optional
   hint, its error and the entered value.
+- **`select_field(..., groups=())`** also takes option groups, `(label, options)` pairs, each an
+  `<optgroup>` after the plain options, as "Deactivated subjects" on **Competitions**.
+- **`date_time_fields(prefix, legend, values, errors, zone_label)`** (milestone 12.1) is a date and
+  a time entered as a pair, in a `<fieldset>` with the legend ("Start"): "Start date"
+  (`type="date"`, `<prefix>_date`) and "Start time" (`type="time"`, `<prefix>_time`), each with its
+  own error. The hint under the time names the zone the entry is read in, "Time zone:
+  Europe/Kyiv", and a hidden `time_zone` field carries it, so the server reads the entry in the
+  zone the form was shown in. Side by side from 768 px, stacked below. The browser's own pickers do
+  the rest.
 - **`textarea_field`** is the multi-line twin of `field`, for text that may run over several lines
   (a question, a reference answer). It keeps the value exactly, line breaks included, is wider than
   a single-line field (the reading measure) and resizes only downwards.
@@ -338,9 +418,10 @@ _Gallery_: [forms](/admin/components#forms).
 
 ### Confirmations (`components/confirmation.html`)
 
-- **`confirmation(question, consequence, action, verb, cancel_href)`**: the question names the
-  item ("Delete “Physics”?"), the consequence says what happens, the destructive button repeats
-  the verb, then **Cancel**.
+- **`confirmation(question, consequence, action, verb, cancel_href, back_label="Cancel")`**: the
+  question names the item ("Delete “Physics”?"), the consequence says what happens, the destructive
+  button repeats the verb, then **Cancel**. When the verb itself is "Cancel …", the link back says
+  what is kept instead: **Cancel competition** and **Keep competition** (`back_label`).
 - **`refusal(question, reason, back_href, back_text)`**: when the action cannot be done, with the
   reason ("is in use") and the alternative, through `{% call %}` (**Deactivate**).
 
@@ -360,7 +441,8 @@ store. A `None` value is left out; a rich value (a list, a badge) comes through
 - **`chained_lists(levels, action)`**: lists that narrow each other, each a `GET` form that submits
   itself on change (`auto-submit.js`) and still works without JavaScript, as region → educational
   institution → class. Without JavaScript, each list shows a **Show** button (inside `<noscript>`,
-  so it never appears when the script runs).
+  so it never appears when the script runs). A level may carry `groups`, `(label, options)` pairs
+  shown as option groups after its plain options (milestone 12.1).
 
 Reuse these for the subject and class choices of milestones 11 and 12. _Gallery_:
 [selectors](/admin/components#selectors).
@@ -418,8 +500,13 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
   subject with Create subject."; "Select a region" / "Choose a region from the list to see its
   educational institutions."
 - **Notices** state the outcome: "Invitation sent to olena@example.org".
-- **Statuses** use one word each, everywhere: **Active** or **Deactivated**; **Read** or
-  **Write**.
+- **Statuses** use one short term each, everywhere: **Active** or **Deactivated**; **Read** or
+  **Write**; **Upcoming**, **In progress**, **Finished** or **Cancelled**.
+- **Times** read "14 March 2027, 10:00" in the person's zone (the day without a leading zero, the
+  month in full, a 24-hour clock), and "14 March 2027, 10:00 UTC" when the zone is not known. A form
+  names its zone under the time field: "Time zone: Europe/Kyiv".
+- **Menus**: the button reads "Actions" and is announced "Actions for “<item>”"; the entries are
+  verbs, as buttons are: **Edit**, **Cancel competition**.
 - **Row notes** are a short plain phrase, with no full stop: "In this team".
 - **Page navigation** says where you are as "<Noun> 31–40 of 200" (an en dash, no spaces), and
   moves with **Previous** and **Next**.
@@ -430,7 +517,8 @@ Below 768 px:
 
 - **Tables become cards**: each row a card of labelled values, the actions last, in equal parts
   of the card's width. A row note sits in the card's actions part, where a button would be; a row
-  with no action at all has no actions part.
+  with no action at all has no actions part. An actions menu takes the whole actions part, and its
+  panel opens within the card, each entry 44 px tall.
 - **The user menu folds** to its account icon, read as "Account menu"; the product name and the
   role stay in the top bar.
 - **The selectors stack**: the list above its detail, the chained lists one under another.
@@ -488,6 +576,13 @@ would drop its value from the form); and that it stays small. `tests/integration
 checks that every kind of page loads it once and has the one frame block with a hidden bar. How the
 bar, the busy button and the pinned frame behave in a browser is checked by hand from the
 milestone 10.1 quickstart, until end-to-end tests arrive in milestone 16.
+
+`tests/unit/test_time_zone_script.py` reads `time-zone.js` as text (milestone 12.1). It checks that
+the script imports, fetches and stores nothing but the one cookie and names no other site; that it
+writes only `sc_time_zone`, with `Path=/`, `SameSite=Lax`, a one-year `Max-Age` and `Secure` over
+HTTPS; that it checks the zone name before writing it; and that it stays small.
+`tests/integration/test_layout.py` checks that every kind of page loads it once, after
+`loading-feedback.js`.
 
 `tests/integration/test_page_patterns.py` checks the patterns page by page (error summaries,
 confirmations, back links, badges, link buttons), and `tests/html.py` lets tests query pages by

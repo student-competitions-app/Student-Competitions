@@ -11,8 +11,8 @@ write is one committed unit of work, rolled back on error. Names are cleaned her
 
 Each successful change logs one line with the subject id only; a no-op logs nothing.
 
-References: questions count as uses from milestone 11 (`count_subject_uses`), and competitions
-add theirs in milestone 12.
+References: every question (from milestone 11) and every competition (from milestone 12.1) of a
+subject counts as a use (`count_subject_uses`).
 """
 
 import logging
@@ -22,7 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
-from app.models import Question, Subject
+from app.models import Competition, Question, Subject
 from app.schemas.subject import clean_subject_name, subject_name_key
 
 logger = logging.getLogger("uvicorn.error")
@@ -152,14 +152,19 @@ def set_subject_active(session: Session, subject_id: int, active: bool) -> Subje
 def count_subject_uses(session: Session, subject_id: int) -> int:
     """How many records refer to the subject.
 
-    From milestone 11, every question of the subject counts, deleted ones too: milestone 15 shows
-    the questions of past competitions, so a deleted question still needs its subject
-    (specs/011-question-bank/research.md R16, FR-040). Competitions add their count in milestone
-    12. Do not rely on the foreign key alone: it is the backstop on PostgreSQL, but SQLite does not
-    enforce foreign keys in this application, so there the count is the rule.
+    Every question of the subject counts, deleted ones too: milestone 15 shows the questions of
+    past competitions, so a deleted question still needs its subject
+    (specs/011-question-bank/research.md R16, FR-040). Every competition of the subject counts
+    too, in any status, cancelled and finished ones included: they are never deleted
+    (specs/012.1-teacher-competitions research R11, FR-039). Do not rely on the foreign key alone:
+    it is the backstop on PostgreSQL, but SQLite does not enforce foreign keys in this
+    application, so there the count is the rule.
     """
-    statement = select(func.count()).select_from(Question).where(Question.subject_id == subject_id)
-    return session.exec(statement).one()
+    questions = select(func.count()).select_from(Question).where(Question.subject_id == subject_id)
+    competitions = (
+        select(func.count()).select_from(Competition).where(Competition.subject_id == subject_id)
+    )
+    return session.exec(questions).one() + session.exec(competitions).one()
 
 
 def delete_subject(session: Session, subject_id: int) -> None:

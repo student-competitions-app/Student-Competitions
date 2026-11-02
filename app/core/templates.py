@@ -20,6 +20,11 @@ role switch and the logout form without each handler passing them (FR-031, FR-01
 The theme choice reaches every template the same way, through `_theme` (milestone 10 research
 D5–D6): `theme` is the browser's choice, rendered by the layout as `data-theme`, and
 `theme_return` is where the theme switch sends the browser back to.
+
+The browser's time zone reaches every template the same way, through `_time_zone` (milestone 12.1
+research R4, R10): `time_zone` is the zone named by the `sc_time_zone` cookie, or `None` when none
+is known. `format_local_time` and `utc_iso` are globals, so the `local_time` component shows a
+stored time in that zone, or in UTC labelled so.
 """
 
 from datetime import datetime
@@ -32,6 +37,7 @@ from jinja2 import TemplateRuntimeError
 
 from app.core.config import APP_NAME, APP_VERSION, COMMIT_SHA
 from app.core.theme import read_theme
+from app.core.time_zone import format_local_time, read_time_zone, utc_iso
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 
@@ -66,7 +72,14 @@ def _theme(request: Request) -> dict[str, Any]:
     }
 
 
-templates = Jinja2Templates(directory=TEMPLATES_DIR, context_processors=[_current_user, _theme])
+def _time_zone(request: Request) -> dict[str, Any]:
+    """`time_zone` for every template: the browser's zone, or `None` when none is known."""
+    return {"time_zone": read_time_zone(request)}
+
+
+templates = Jinja2Templates(
+    directory=TEMPLATES_DIR, context_processors=[_current_user, _theme, _time_zone]
+)
 
 
 def utc(value: datetime | None, form: str = "time") -> str:
@@ -91,6 +104,8 @@ def template_error(message: str) -> None:
 
 
 templates.env.globals["template_error"] = template_error
+templates.env.globals["format_local_time"] = format_local_time
+templates.env.globals["utc_iso"] = utc_iso
 
 templates.env.globals["app_name"] = APP_NAME
 templates.env.globals["app_version"] = APP_VERSION

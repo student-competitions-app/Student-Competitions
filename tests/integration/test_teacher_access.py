@@ -50,15 +50,27 @@ QUESTIONS_TAB = "/teacher/questions"
 not institution links, so `test_teacher_questions.py` sweeps it with real subject and question
 ids and teachers with and without the setting."""
 
+COMPETITIONS_TAB = "/teacher/competitions"
+"""Milestone 12.1's tab, likewise: its access rule is the competitions setting, so
+`test_teacher_competitions.py` sweeps its pages and actions with real subject and competition ids
+and teachers with and without the setting. The list itself names no object and stays in the
+sweep of area pages."""
+
 TEACHER_GETS = sorted(
     path
     for path, methods, _ in ALL_ROUTES
-    if "GET" in methods and path.startswith("/teacher") and not path.startswith(QUESTIONS_TAB)
+    if "GET" in methods
+    and path.startswith("/teacher")
+    and not path.startswith(QUESTIONS_TAB)
+    and not path.startswith(COMPETITIONS_TAB + "/")
 )
 TEACHER_POSTS = sorted(
     path
     for path, methods, _ in ALL_ROUTES
-    if "POST" in methods and path.startswith("/teacher") and not path.startswith(QUESTIONS_TAB)
+    if "POST" in methods
+    and path.startswith("/teacher")
+    and not path.startswith(QUESTIONS_TAB)
+    and not path.startswith(COMPETITIONS_TAB)
 )
 
 SNAPSHOT_TABLES = (

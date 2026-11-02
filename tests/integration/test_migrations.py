@@ -48,6 +48,7 @@ APPLICATION_TABLES = {
     "enrolments",
     "teams",
     "team_memberships",
+    "competitions",
 }
 
 
@@ -821,3 +822,137 @@ def test_the_student_text_is_rewritten_in_place_and_back(
     assert student_text(migration_engine) == (text_id, 1, original, published)
     run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
     assert student_text(migration_engine)[2] == rewrite
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.1: competitions
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/012.1-teacher-competitions/data-model.md §7 and research R1, R3.
+
+COMPETITIONS_REVISION = "72e46cb10175"
+
+subjects_t = sa.table(
+    "subjects",
+    sa.column("id", sa.Integer()),
+    sa.column("name", sa.String()),
+    sa.column("name_key", sa.String()),
+    sa.column("is_active", sa.Boolean()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("updated_at", sa.DateTime(timezone=True)),
+)
+competitions_t = sa.table(
+    "competitions",
+    sa.column("id", sa.Integer()),
+    sa.column("subject_id", sa.Integer()),
+    sa.column("name", sa.String()),
+    sa.column("name_key", sa.String()),
+    sa.column("starts_at", sa.DateTime(timezone=True)),
+    sa.column("cancelled_at", sa.DateTime(timezone=True)),
+    sa.column("stopped_at", sa.DateTime(timezone=True)),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("updated_at", sa.DateTime(timezone=True)),
+)
+
+
+def add_subject(connection: Connection, name: str) -> int:
+    now = utc_now()
+    return connection.execute(
+        subjects_t.insert()
+        .values(name=name, name_key=name.casefold(), is_active=True, created_at=now, updated_at=now)
+        .returning(subjects_t.c.id)
+    ).scalar_one()
+
+
+def spring_round(
+    subject_id: int, cancelled: datetime | None = None, stopped: datetime | None = None
+) -> sa.Insert:
+    now = utc_now()
+    return competitions_t.insert().values(
+        subject_id=subject_id,
+        name="Spring round",
+        name_key="spring round",
+        starts_at=now,
+        cancelled_at=cancelled,
+        stopped_at=stopped,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def test_the_head_is_the_competitions_revision() -> None:
+    assert head_revision() == COMPETITIONS_REVISION
+
+
+def test_the_competitions_table_at_head(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    inspector = inspect(migration_engine)
+    columns = {c["name"]: c["nullable"] for c in inspector.get_columns("competitions")}
+    assert columns == {
+        "id": False,
+        "subject_id": False,
+        "name": False,
+        "name_key": False,
+        "starts_at": False,
+        "cancelled_at": True,
+        "stopped_at": True,
+        "created_at": False,
+        "updated_at": False,
+    }
+    indexes = {
+        i["name"]: (i["column_names"], bool(i["unique"]))
+        for i in inspector.get_indexes("competitions")
+    }
+    assert indexes == {
+        "ix_competitions_subject_id": (["subject_id"], False),
+        "uq_competitions_subject_name_live": (["subject_id", "name_key"], True),
+    }
+    [foreign_key] = inspector.get_foreign_keys("competitions")
+    assert foreign_key["name"] == "fk_competitions_subject_id_subjects"
+    checks = [c["name"] for c in inspector.get_check_constraints("competitions")]
+    assert checks == ["ck_competitions_one_end"]
+
+
+def test_the_live_competition_name_index_is_partial(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Research R3: within a subject, any number of cancelled or stopped competitions share a key
+    with one live competition; a second live one is refused; another subject is free."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        chemistry = add_subject(connection, "Chemistry")
+        physics = add_subject(connection, "Physics")
+        connection.execute(spring_round(chemistry, cancelled=utc_now()))
+        connection.execute(spring_round(chemistry, cancelled=utc_now()))
+        connection.execute(spring_round(chemistry, stopped=utc_now()))
+        connection.execute(spring_round(chemistry))
+        connection.execute(spring_round(physics))
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(spring_round(chemistry))
+    with migration_engine.connect() as connection:
+        count = connection.execute(text("SELECT count(*) FROM competitions")).scalar_one()
+        assert count == 5
+
+
+def test_a_competition_is_never_both_cancelled_and_finished(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Research R1: the check constraint `ck_competitions_one_end`."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        chemistry = add_subject(connection, "Chemistry")
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(spring_round(chemistry, cancelled=utc_now(), stopped=utc_now()))
+
+
+def test_the_downgrade_drops_the_competitions_table(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        connection.execute(spring_round(add_subject(connection, "Chemistry")))
+    run_alembic(monkeypatch, empty_database_url, "downgrade", "09cbcbe472be")
+    assert "competitions" not in inspect(migration_engine).get_table_names()
+    assert "subjects" in inspect(migration_engine).get_table_names()

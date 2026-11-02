@@ -55,7 +55,18 @@ SECTIONS = {
         "In this team",
         "No subjects yet",
     ],
-    "badges": ["Active", "Deactivated", "Read", "Write"],
+    "actions-menu": ["Actions", "for “Spring final”", "Edit", "Cancel competition", "Autumn round"],
+    "time": ["14 March 2027, 10:00", "14 March 2027, 08:00 UTC"],
+    "badges": [
+        "Active",
+        "Deactivated",
+        "Read",
+        "Write",
+        "Upcoming",
+        "In progress",
+        "Finished",
+        "Cancelled",
+    ],
     "empty-states": ["No subjects yet", "Select a region"],
     "notices": ["Invitation sent to", "no longer valid", "temporarily unavailable"],
     "forms": [
@@ -69,10 +80,27 @@ SECTIONS = {
         "Enter the question text.",
         "Save question",
         "Save and add one more question",
+        "Start date",
+        "Start time",
+        "Time zone: Europe/Kyiv",
+        "Enter a real start date.",
+        "There is no 03:30 on 28 March 2027 in Europe/Kyiv because the clocks go forward.",
     ],
-    "confirmations": ["Delete “Physics”?", "is in use and cannot be deleted", "Deactivate"],
+    "confirmations": [
+        "Delete “Physics”?",
+        "is in use and cannot be deleted",
+        "Deactivate",
+        "Keep competition",
+    ],
     "details": ["Email", "Olena", "Teacher, Student"],
-    "selectors": ["Regions", "Kyiv", "Educational institutions in “Kyiv”", "+ Add class", "Show"],
+    "selectors": [
+        "Regions",
+        "Kyiv",
+        "Educational institutions in “Kyiv”",
+        "+ Add class",
+        "Show",
+        "Astronomy",
+    ],
     "pagination": [
         "Questions 1–5 of 5",
         "Questions 31–40 of 200",
@@ -248,6 +276,84 @@ def test_the_two_button_form_and_the_textareas(admin_client: TestClient) -> None
         '<textarea id="gallery-text-filled" name="gallery-text-filled" rows="6">Name the three'
         " states of matter.\nFor each" in body
     )
+
+
+def test_the_actions_menu_variants(admin_client: TestClient) -> None:
+    """Milestone 12.1 contracts/components.md §1: an open menu with a plain and a destructive
+    entry, a closed one for a 200-character name, and a row with no action and no menu."""
+    body = admin_client.get(GALLERY).text
+    section = gallery_section(body, "actions-menu")
+    menus = [d for d in section.find_all("details") if "actions-menu" in d.classes()]
+    assert [m.attrs.get("name") for m in menus] == ["row-actions", "row-actions"]
+    assert ["open" in m.attrs for m in menus] == [True, False]
+    summaries = [m.find_all("summary")[0].text() for m in menus]
+    assert summaries[0] == "Actions for “Spring final”"
+    assert summaries[1].startswith("Actions for “Regional robotics")
+    assert len(summaries[1]) == len("Actions for “”") + 200
+    links = [(a.text(), a.classes()) for a in menus[0].find_all("a")]
+    assert links == [
+        ("Edit", ["actions-menu-link"]),
+        ("Cancel competition", ["actions-menu-link", "actions-menu-link-destructive"]),
+    ]
+    cells = [td for td in section.find_all("td") if "row-actions" in td.classes()]
+    assert cells[-1].children == []
+
+
+def test_the_local_time_variants(admin_client: TestClient) -> None:
+    """Milestone 12.1 contracts/components.md §4: the same moment with a zone and without."""
+    section = gallery_section(admin_client.get(GALLERY).text, "time")
+    times = [(t.attrs.get("datetime"), t.text()) for t in section.find_all("time")]
+    assert times == [
+        ("2027-03-14T08:00Z", "14 March 2027, 10:00"),
+        ("2027-03-14T08:00Z", "14 March 2027, 08:00 UTC"),
+    ]
+
+
+def test_the_date_and_time_pair(admin_client: TestClient) -> None:
+    """Milestone 12.1 contracts/components.md §2: a date and a time field, the zone hint and the
+    hidden zone, each error beside its field."""
+    body = admin_client.get(GALLERY).text
+    section = gallery_section(body, "forms")
+    pairs = [f for f in section.find_all("fieldset") if "date-time-fields" in f.classes()]
+    assert len(pairs) == 3
+    for fieldset in pairs:
+        assert fieldset.find_all("legend")[0].text() == "Start"
+        inputs = [(i.attrs.get("type"), "required" in i.attrs) for i in fieldset.find_all("input")]
+        assert inputs == [("date", True), ("time", True), ("hidden", False)]
+    filled = pairs[1]
+    assert [i.attrs.get("value") for i in filled.find_all("input")] == [
+        "2027-03-14",
+        "10:00",
+        "Europe/Kyiv",
+    ]
+    assert "Time zone: Europe/Kyiv" in filled.text()
+    assert html.field_error(body, "gallery-start-errors_date") == "Enter a real start date."
+    assert html.field_error(body, "gallery-start-errors_time") == (
+        "There is no 03:30 on 28 March 2027 in Europe/Kyiv because the clocks go forward."
+        " Enter another time."
+    )
+
+
+def test_the_confirmation_with_a_back_label(admin_client: TestClient) -> None:
+    """Milestone 12.1 contracts/components.md §5: a time in the question, and **Keep
+    competition** as the link back."""
+    section = gallery_section(admin_client.get(GALLERY).text, "confirmations")
+    (keep,) = [c for c in section.find_all("section") if "Keep competition" in c.text()]
+    assert keep.find_all("h1")[0].text() == (
+        "Cancel competition “Spring final” of Chemistry, starting 14 March 2027, 10:00?"
+    )
+    assert len(keep.find_all("time")) == 1
+    assert [a.text() for a in keep.find_all("a")] == ["Keep competition"]
+
+
+def test_the_option_group(admin_client: TestClient) -> None:
+    """Milestone 12.1 contracts/components.md §6: a deactivated subject in its group, selected."""
+    section = gallery_section(admin_client.get(GALLERY).text, "selectors")
+    (group,) = section.find_all("optgroup")
+    assert group.attrs.get("label") == "Deactivated subjects"
+    assert [(o.text(), "selected" in o.attrs) for o in group.find_all("option")] == [
+        ("Astronomy", True)
+    ]
 
 
 def test_the_gallery_is_no_tab(admin_client: TestClient) -> None:

@@ -9,13 +9,15 @@
 {% from "components/button.html" import button, link_button, post_button %}
 {% from "components/card.html" import card, text_card, text_box %}
 {% from "components/table.html" import data_table, cell, actions_cell, row_note %}
-{% from "components/badge.html" import badge, status_badge, access_badge %}
+{% from "components/badge.html" import badge, status_badge, access_badge, competition_status_badge %}
 {% from "components/feedback.html" import notice, empty_state %}
-{% from "components/form.html" import error_summary, field, textarea_field, select_field, checkbox_field, form_actions %}
+{% from "components/form.html" import error_summary, field, textarea_field, select_field, checkbox_field, form_actions, date_time_fields %}
 {% from "components/confirmation.html" import confirmation, refusal %}
 {% from "components/details.html" import details_list %}
 {% from "components/selectors.html" import list_detail, chained_lists %}
 {% from "components/pagination.html" import page_navigation %}
+{% from "components/menu.html" import actions_menu, menu_link %}
+{% from "components/time.html" import local_time with context %}
 
 {% block title %}Components — {{ app_name }}{% endblock %}
 
@@ -183,11 +185,58 @@
   {{ empty_state("No subjects yet", "Create the first subject with Create subject.") }}
 </section>
 
+<section id="actions-menu" aria-labelledby="actions-menu-heading">
+  <h2 id="actions-menu-heading">Actions menu</h2>
+  <p>A row's actions behind one button, in the row's actions cell. It opens and closes without JavaScript; opening one closes the others where the browser supports it. The first menu is shown open, over the rows below it; a row with no action has no menu.</p>
+  {% call data_table(["Name", "Start", "Status", "Actions"]) %}
+  <tr>
+    {{ cell("Name", "Spring final") }}
+    {% call cell("Start") %}{{ local_time(sample_moment, zone=kyiv) }}{% endcall %}
+    {% call cell("Status") %}{{ competition_status_badge("upcoming") }}{% endcall %}
+    {% call actions_cell() %}
+    {%- call actions_menu("Spring final", open=True) -%}
+    {{ menu_link("Edit", "/admin/components#actions-menu") }}
+    {{ menu_link("Cancel competition", "/admin/components#actions-menu", destructive=True) }}
+    {%- endcall -%}
+    {% endcall %}
+  </tr>
+  <tr>
+    {{ cell("Name", long_competition_name) }}
+    {% call cell("Start") %}{{ local_time(sample_moment, zone=kyiv) }}{% endcall %}
+    {% call cell("Status") %}{{ competition_status_badge("in_progress") }}{% endcall %}
+    {% call actions_cell() %}
+    {%- call actions_menu(long_competition_name) -%}
+    {{ menu_link("Cancel competition", "/admin/components#actions-menu", destructive=True) }}
+    {%- endcall -%}
+    {% endcall %}
+  </tr>
+  <tr>
+    {{ cell("Name", "Autumn round") }}
+    {% call cell("Start") %}{{ local_time(sample_moment, zone=kyiv) }}{% endcall %}
+    {% call cell("Status") %}{{ competition_status_badge("cancelled") }}{% endcall %}
+    {% call actions_cell() %}{%- call actions_menu("Autumn round") %}{% endcall -%}{% endcall %}
+  </tr>
+  {% endcall %}
+</section>
+
+<section id="time" aria-labelledby="time-heading">
+  <h2 id="time-heading">Local time</h2>
+  <p>A stored time in the person's time zone, and in UTC, labelled so, when the zone is not known.</p>
+  <ul>
+    <li>{{ local_time(sample_moment, zone=kyiv) }}</li>
+    <li>{{ local_time(sample_moment, zone=none) }}</li>
+  </ul>
+</section>
+
 <section id="badges" aria-labelledby="badges-heading">
   <h2 id="badges-heading">Badges</h2>
   <div class="button-row">
     {{ status_badge(True) }} {{ status_badge(False) }}
     {% for level in access_levels %}{{ access_badge(level) }} {% endfor %}
+  </div>
+  <h3>Competition statuses</h3>
+  <div class="button-row">
+    {% for status in competition_statuses %}{{ competition_status_badge(status) }} {% endfor %}
   </div>
 </section>
 
@@ -218,6 +267,10 @@
   {{ textarea_field("gallery-text-filled", "Reference answer", value=multiline_text) }}
   {{ textarea_field("gallery-text-error", "Question text", value="", error=textarea_error) }}
   {{ form_actions("Save question", cancel_href="/admin/components#forms", name="then", value="list", secondary={"label": "Save and add one more question", "name": "then", "value": "another"}) }}
+  <h3>A date and a time</h3>
+  {{ date_time_fields("gallery-start-empty", "Start", date_time_values, date_time_errors, "UTC") }}
+  {{ date_time_fields("gallery-start-filled", "Start", date_time_values, date_time_errors, "Europe/Kyiv") }}
+  {{ date_time_fields("gallery-start-errors", "Start", date_time_values, date_time_errors, "Europe/Kyiv") }}
 </section>
 
 <section id="confirmations" aria-labelledby="confirmations-heading">
@@ -226,6 +279,10 @@
   {% call refusal("Delete “Mathematics”?", "“Mathematics” is in use and cannot be deleted. You can deactivate it instead.", "/admin/components#confirmations", "Back to the subjects") %}
   {{ post_button("/admin/components", "Deactivate", kind="destructive") }}
   {% endcall %}
+  <h3>A custom back label</h3>
+  <p>When the verb itself is "Cancel …", the link back says what is kept.</p>
+  {% set gallery_question %}Cancel competition “Spring final” of Chemistry, starting {{ local_time(sample_moment, zone=kyiv) }}?{% endset %}
+  {{ confirmation(gallery_question, "The competition will be marked Cancelled and stays in the list. It cannot be edited, started or restored.", "/admin/components", "Cancel competition", "/admin/components#confirmations", back_label="Keep competition") }}
 </section>
 
 <section id="details" aria-labelledby="details-heading">
@@ -250,6 +307,10 @@
     {"id": "gallery-region", "name": "region", "label": "Region", "placeholder": "Select a region", "options": [(1, "Kyiv"), (2, "Lviv")], "selected": 1, "disabled": false, "carry": []},
     {"id": "gallery-institution", "name": "institution", "label": "Educational institution", "placeholder": "Select an educational institution", "options": [(1, "Kyiv Polytechnic Institute — Write")], "selected": 1, "disabled": false, "carry": [("region", 1)]},
     {"id": "gallery-class", "name": "class", "label": "Class", "placeholder": "Select a class", "options": classes, "selected": none, "disabled": false, "carry": [("region", 1), ("institution", 1)], "extra_options": [("new", "+ Add class")]},
+  ], "/admin/components") }}
+  <h3>A list with an option group</h3>
+  {{ chained_lists([
+    {"id": "gallery-subject", "name": "subject", "label": "Subject", "placeholder": "Choose a subject", "options": [(1, "Physics"), (2, "Mathematics")], "selected": 7, "disabled": false, "carry": [], "groups": subject_groups},
   ], "/admin/components") }}
 </section>
 

@@ -195,8 +195,8 @@ check the errors, the kept values and that nothing is stored.
 
 1. **Given** a name that is empty or only spaces, longer than 200 characters after trimming, or
    containing a control character, **When** the form is saved, **Then** nothing is stored and the
-   form is shown again with the subject-name error beside the field and in the summary, and with the
-   entered values.
+   form is shown again with the name error (the subject-name messages of milestone 6) beside the
+   field and in the summary, and with the entered values.
 2. **Given** spaces around the name, **When** it is saved, **Then** the stored name is trimmed.
 3. **Given** an upcoming or in-progress competition of the same subject has the same name ignoring
    case, **When** the form is saved, **Then** it is refused with "A competition named “…” already
@@ -736,8 +736,9 @@ check that existing confirmations and chained lists render as before.
   competitions change in any way, including through repeated or concurrent requests.
 - **SC-006**: 100% of competitions show **In progress** from the first request after their start,
   with no one acting.
-- **SC-007**: After 100% of the creates, edits, cancellations, cancels and refusals covered by the
-  tests, the teacher lands on the subject, status, page and row this specification names.
+- **SC-007**: After 100% of the creates, edits, cancellations, uses of **Cancel** or **Keep
+  competition**, and refusals covered by the tests, the teacher lands on the subject, status, page
+  and row this specification names.
 - **SC-008**: The tab and its pages are usable at 360 px width with no sideways page scrolling, and
   every actions menu entry is at least 44 px tall and reachable by keyboard.
 - **SC-009**: Reloading the page after any successful change never repeats it.

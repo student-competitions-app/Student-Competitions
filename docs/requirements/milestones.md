@@ -142,7 +142,6 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
     3. The subject: an unknown one, or a deactivated one with no finished competition, shows "not found".
     4. The competition: an unknown one, one of another subject than the one in the address, or one hidden because its subject is deactivated, shows "not found".
     5. The status: the refusals above.
-
     Every change is a form submission with the cross-site request check, and no log line contains an email, a name or a competition name.
     _Components:_ the pages are built from existing components: the chained-list selector (for the subject and for the status), data tables, page navigation, notices, empty states with a hint, form fields with an error summary, confirmations, refusals, back links and `badge(text, kind)`. The following are new or changed. Each is added to the component library, `/admin/components` and the UI guidelines first, and only then used:
     - the actions menu: a `<details>` element like the user menu, with 44 px entries that stay reachable on a phone card and by keyboard;
@@ -151,7 +150,6 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
     - the local-time display: the `<time>` element with the server-formatted text, and the "UTC" label when no zone is known;
     - `confirmation()` gains an optional label for its way back, by default **Cancel**, for when "Cancel" would read as the destructive verb itself (here **Keep competition**);
     - the chained-list selector gains option groups (here "Deactivated subjects").
-
     The UI guidelines also gain the competition statuses in their wording patterns, and their "one word each" rule for statuses becomes "one short term each" (**In progress**). The time-zone script is a new small file in `app/static/js/`, loaded by the base layout so the cookie is set on the first page after sign-in, with no build step and no new dependency. The server converts times with Python's standard time-zone support, and the plan confirms that the runtime image carries the time-zone database.
     _Out of scope:_ duration (a competition has none), questions and teams in a competition, stopping a competition (reaching **Finished**), deleting and restoring a competition, a reason for cancelling, rights per competition, the student's view (milestone 13), and results (milestone 15).
     _Test:_

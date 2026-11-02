@@ -84,6 +84,23 @@ W3C/WAI *Making Content Usable*, objective 6 (help users avoid mistakes and know
 them). Touch targets follow Material Design and the Apple Human Interface Guidelines: at least 44
 by 44 px.
 
+### Works before the script runs
+
+- Every page is complete as server-rendered HTML: links, forms and `<details>` menus do the work,
+  so reading, navigating and submitting never depend on JavaScript. Our tests check this baseline
+  without a browser.
+- JavaScript only enhances: it saves a click, shows progress or converts a value for display. A
+  script must not be the only way to reach a page, send a form or see a value.
+- When the script does not run, the page must stay usable, not polished: a plain **Show** button,
+  a time shown in UTC and labelled "UTC", a full page load instead of a partial update.
+- This rule applies to every page, so a milestone does not repeat it. It describes what happens
+  without the script only where the baseline is not obvious from this rule and the component
+  used.
+
+_Sources_: the GOV.UK Service Manual on progressive enhancement (about 1 in 100 visits run no
+JavaScript, mostly because a script failed to load, not because it was turned off); school
+networks and filters that block scripts, and weak phone connections.
+
 ## 3. Tokens
 
 **Use a token; never a literal.** Every colour, size and length is a `--sc-*` custom property,

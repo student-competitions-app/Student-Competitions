@@ -74,6 +74,11 @@ The application has three roles — student, teacher, administrator — with rig
   cancel one, and each of them can manage every competition, whoever created it (there are no
   per-competition rights); only upcoming competitions are editable; any competition that is not
   finished can be cancelled, and a cancelled competition never changes again.
+- Deleting a team is the one exception to these rules: the deletion, done by a teacher with
+  Write access to the team's institution, MUST take the team out of every competition that is
+  not finished (upcoming, in progress and cancelled), with or without the right to manage
+  competitions. A deleted team MUST stay only in finished competitions, so their record stays
+  complete.
 - Competitions of a deactivated subject MUST be hidden and inaccessible unless they are
   finished; finished ones stay available read-only, so their results can be reviewed.
 - Students MUST only access their own profile (read-only), their own answers and results,
@@ -257,4 +262,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 2.0.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-02
+**Version**: 2.1.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-05

@@ -23,7 +23,7 @@ gate cannot drift apart.
 
 | Job | Steps | Timeout | Requirement |
 |---|---|---|---|
-| `quality` | checkout → `astral-sh/setup-uv` (cache on) → `uv sync --locked` → `uv run ruff check .` → `uv run ruff format --check .` → `uv run pytest` | 10 min | FR-013, FR-014, FR-018, FR-019 |
+| `quality` | checkout → `astral-sh/setup-uv` (cache on) → `uv sync --locked` → `uv run ruff check .` → `uv run ruff format --check .` → `uv run pytest` | 20 min (10 until milestone 12.2) | FR-013, FR-014, FR-018, FR-019 |
 | `image` | checkout → `docker build --build-arg APP_COMMIT=${{ github.sha }} -t student-competitions:ci .` → run the container with a mapped port → assert `GET /healthz` is `200` with `status == "ok"` and `commit == github.sha` → assert `GET /` is `200` and contains the application name → stop the container | 15 min | FR-011, US4 |
 
 Both jobs run on `ubuntu-latest`, in parallel, with workflow-level `permissions: contents: read`.

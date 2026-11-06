@@ -408,7 +408,9 @@ Shared properties, each tied to a requirement:
   **`uv sync --locked`**, which fails if `uv.lock` does not match `pyproject.toml` — FR-018's
   "exact dependency versions the repository pins", enforced rather than assumed.
 - **`timeout-minutes`** on every job (10 for `quality`, 15 for `image`, 20 for `deploy`) — FR-019
-  and the "checks time out or hang" edge case. The run ends reported, not hung.
+  and the "checks time out or hang" edge case. The run ends reported, not hung. _Updated
+  2026-11-06_: `quality` is now 20, since the suite, run on both engines, passed 10 minutes in
+  milestone 12.2; the bound, not its value, is what FR-019 asks for.
 - `permissions: contents: read` at workflow level — least privilege; nothing in this pipeline
   writes to the repository.
 - `concurrency` on `ci.yml` keyed by ref with `cancel-in-progress: true`: a new push to a pull

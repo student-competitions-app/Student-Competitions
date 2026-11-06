@@ -22,19 +22,25 @@ withdrawal and data deletion all erase them, in deleted teams too (R7).
 
 The lookups check no reach: their callers do.
 
-**For milestone 12**: only a team that `reach_team` returns, a live team of an institution the
-teacher is linked to (Read or Write), may be added to a competition.
+**Competitions** (milestone 12.2, research R4, R5): any live team of an active institution in an
+active region may be added to a competition by a teacher with **Can manage competitions**, linked
+to its institution or not (`app.services.competition_entries`). Deleting a team takes it out of
+every competition that is not finished, the exception constitution v2.1.0 Principle IV allows;
+finished competitions keep it, so their record stays complete.
 """
 
 import logging
+from collections.abc import Collection
 from dataclasses import dataclass
 
-from sqlalchemy import func
+from sqlalchemy import delete, func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
 from app.models import (
+    Competition,
+    CompetitionTeam,
     Enrolment,
     Institution,
     Region,
@@ -171,6 +177,30 @@ def list_active_members(session: Session, team_id: int) -> list[MemberRow]:
     )
 
 
+def count_active_members(session: Session, team_ids: Collection[int]) -> dict[int, int]:
+    """The number of active members of each team, in one grouped query over the chain of
+    `list_active_members` (class, institution and region all active), so a team shows the number
+    its own page lists (milestone 11.1; milestone 12.2 research R13). A team with no active
+    member is absent from the result: read it as 0. No query for no ids."""
+    if not team_ids:
+        return {}
+    statement = (
+        select(TeamMembership.team_id, func.count())
+        .join(Enrolment, col(Enrolment.user_id) == col(TeamMembership.user_id))
+        .join(SchoolClass, col(SchoolClass.id) == col(Enrolment.class_id))
+        .join(Institution, col(Institution.id) == col(SchoolClass.institution_id))
+        .join(Region, col(Region.id) == col(Institution.region_id))
+        .where(
+            col(TeamMembership.team_id).in_(team_ids),
+            col(SchoolClass.is_active),
+            col(Institution.is_active),
+            col(Region.is_active),
+        )
+        .group_by(TeamMembership.team_id)
+    )
+    return {team_id: count for team_id, count in session.exec(statement)}
+
+
 def count_members(session: Session, team_id: int) -> int:
     """Every membership of the team, blocked members included: what the limit counts (FR-004)."""
     statement = (
@@ -280,16 +310,35 @@ def rename_team(session: Session, teacher_id: int, team_id: int, raw_name: str) 
 
 
 def delete_team(session: Session, teacher_id: int, team_id: int) -> TeamView:
-    """Mark the team deleted. Only `deleted_at` is written: the name, the institution,
-    `updated_at` and every membership stay as they are (FR-007, FR-009). A deleted team is out of
-    reach, so a second deletion is `NotReachable`."""
+    """Mark the team deleted, and take it out of every competition that is not finished
+    (upcoming, in progress and cancelled), in the same transaction (milestone 12.2 FR-040,
+    research R5); finished competitions keep it. Of the team, only `deleted_at` is written: the
+    name, the institution, `updated_at` and every membership stay as they are (FR-007, FR-009).
+    The setting **Can manage competitions** is not needed. A deleted team is out of reach, so a
+    second deletion is `NotReachable`.
+
+    The team row is locked `FOR UPDATE` first (`reach_team`), and an addition to a competition
+    reads it `FOR SHARE`, so the two are serialised: an addition committed first is removed
+    here, and one that waits sees the deletion (FR-037)."""
     _, team = reach_team(session, teacher_id, team_id, write=True, lock=True)
     members = count_members(session, team_id)
     team.deleted_at = utc_now()
     session.add(team)
+    unfinished = select(Competition.id).where(col(Competition.stopped_at).is_(None))
+    withdrawn = session.execute(
+        delete(CompetitionTeam).where(
+            col(CompetitionTeam.team_id) == team_id,
+            col(CompetitionTeam.competition_id).in_(unfinished),
+        )
+    )
     view = TeamView.from_row(team)
     session.commit()
-    logger.info("Team deleted: id=%d members=%d", team_id, members)
+    logger.info(
+        "Team deleted: id=%d members=%d competitions=%d",
+        team_id,
+        members,
+        withdrawn.rowcount,  # type: ignore[attr-defined]
+    )
     return view
 
 

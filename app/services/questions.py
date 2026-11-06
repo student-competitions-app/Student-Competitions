@@ -16,9 +16,10 @@ needs only the teacher role, which the routes check.
 - **Deletion is soft**: it sets `deleted_at` and nothing else. A deleted question is never listed
   and can never be edited or deleted again.
 
-**Contract for milestone 12** (enforced there): a question may join a new competition only if
-`deleted_at IS NULL` and it belongs to the competition's subject. `get_question` already gives the
-first rule.
+**Competitions** (milestone 12.2, research R3, R6): a competition copies a question's text and
+reference answer when it is added (`app.services.competition_entries`) and keeps the copy whatever
+happens to the bank row afterwards, so editing or deleting a question here never changes a
+competition. A deleted question, or one of another subject, can no longer be added.
 
 Every function takes an open session first; the caller owns it. Input arrives already cleaned by
 `app.schemas.question`. Each successful change logs one line with ids only.

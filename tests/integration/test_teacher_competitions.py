@@ -71,14 +71,26 @@ GAP = (
     " Enter another time."
 )
 
+ENTRY_ROUTES = (f"{TAB}/{{competition_id:int}}/questions", f"{TAB}/{{competition_id:int}}/teams")
+"""A competition's questions and teams (milestone 12.2), swept in
+`test_teacher_competition_entries.py` with their own order of checks."""
 COMPETITION_ROUTES = sorted(
     (method, path)
     for path, methods, _ in ALL_ROUTES
-    if path.startswith(TAB)
+    if path.startswith(TAB) and not path.startswith(ENTRY_ROUTES)
     for method in methods
     if method in ("GET", "POST")
 )
 MANAGE_ROUTES = [route for route in COMPETITION_ROUTES if route != ("GET", TAB)]
+
+
+def lists(competition: int, query: str) -> list[tuple[str, str]]:
+    """The menu entries every teacher gets on every row since milestone 12.2 (FR-001, FR-002):
+    the competition's **Questions** and **Teams**, with the list's context."""
+    return [
+        ("Questions", f"{TAB}/{competition}/questions?{query}"),
+        ("Teams", f"{TAB}/{competition}/teams?{query}"),
+    ]
 
 
 def at(day: int, hour: int = 10, minute: int = 0, month: int = 3) -> datetime:
@@ -409,6 +421,7 @@ def test_creating_lands_at_the_competition_with_the_notice(scene: Scene) -> None
             "Upcoming",
             [
                 ("Edit", f"{TAB}/{competition}/edit?subject={scene.chemistry}"),
+                *lists(competition, f"subject={scene.chemistry}"),
                 ("Cancel competition", f"{TAB}/{competition}/cancel?subject={scene.chemistry}"),
             ],
             "Actions for “Spring round”",
@@ -660,17 +673,19 @@ def test_no_subjects_yet(scene: Scene) -> None:
     assert add_button(body) == []
 
 
-def test_without_the_setting_no_add_and_no_menus(scene: Scene) -> None:
-    """US2-9, US2-13."""
-    make_competition(scene.engine, scene.chemistry, starts_at=at(14))
-    make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
+def test_without_the_setting_no_add_and_read_only_menus(scene: Scene) -> None:
+    """US2-9, US2-13. Replaced by milestone 12.2 FR-002 (SC-009): a teacher without the setting
+    no longer gets rows with no menu, but a menu with only **Questions** and **Teams**."""
+    spring = make_competition(scene.engine, scene.chemistry, starts_at=at(14))
+    running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
     body = listed(scene, browser=scene.reader)
     assert add_button(body) == []
+    query = f"subject={scene.chemistry}"
     assert [(r.name, r.menu, r.menu_label) for r in rows(body)] == [
-        ("Spring round", [], None),
-        ("Running", [], None),
+        ("Spring round", lists(spring, query), "Actions for “Spring round”"),
+        ("Running", lists(running, query), "Actions for “Running”"),
     ]
-    assert len(rows(listed(scene))[0].menu) == 2
+    assert len(rows(listed(scene))[0].menu) == 4
 
 
 def test_an_unknown_status_reads_as_all(scene: Scene) -> None:
@@ -1041,7 +1056,12 @@ def test_cancelling_lands_at_it_with_the_notice(scene: Scene, start: str) -> Non
     body = follow(scene.manager, response)
     assert success_notices(body) == ["Competition “Spring final” was cancelled"]
     (row,) = rows(body)
-    assert (row.status, row.menu, row.menu_label) == ("Cancelled", [], None)
+    # Replaced by milestone 12.2 FR-002 (SC-009): a cancelled row keeps a read-only menu.
+    assert (row.status, row.menu, row.menu_label) == (
+        "Cancelled",
+        lists(competition, f"subject={scene.chemistry}"),
+        "Actions for “Spring final”",
+    )
     assert stored(scene.engine, competition).cancelled_at == NOW
 
 
@@ -1129,7 +1149,11 @@ def test_a_cancelled_name_is_free_again(scene: Scene) -> None:
     cancel(scene.manager, competition, scene.chemistry)
     assert create(scene.manager, scene.chemistry, "Spring round").status_code == 303
     body = listed(scene, "&status=cancelled")
-    assert [(r.id, r.status, r.menu) for r in rows(body)] == [(competition, "Cancelled", [])]
+    # Replaced by milestone 12.2 FR-002 (SC-009): a cancelled row keeps a read-only menu.
+    query = f"subject={scene.chemistry}&status=cancelled"
+    assert [(r.id, r.status, r.menu) for r in rows(body)] == [
+        (competition, "Cancelled", lists(competition, query))
+    ]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1138,15 +1162,16 @@ def test_a_cancelled_name_is_free_again(scene: Scene) -> None:
 
 
 def test_a_started_competition_is_in_progress(scene: Scene) -> None:
-    """US6-1, US6-2: nothing is written when the start passes; the menu offers only Cancel
-    competition."""
+    """US6-1, US6-2: nothing is written when the start passes; the menu offers no Edit, only the
+    competition's lists (milestone 12.2) and Cancel competition."""
     competition = make_competition(scene.engine, scene.chemistry, starts_at=at(1, 10))
     before = snapshot(scene.engine)
     scene.clock(timedelta(hours=1))
     (row,) = rows(listed(scene))
     assert row.status == "In progress"
     assert row.menu == [
-        ("Cancel competition", f"{TAB}/{competition}/cancel?subject={scene.chemistry}")
+        *lists(competition, f"subject={scene.chemistry}"),
+        ("Cancel competition", f"{TAB}/{competition}/cancel?subject={scene.chemistry}"),
     ]
     assert [r.id for r in rows(listed(scene, "&status=in_progress"))] == [competition]
     assert rows(listed(scene, "&status=upcoming")) == []
@@ -1192,7 +1217,11 @@ def test_cancelled_and_finished_competitions_cannot_be_edited(
     """US6-4."""
     competition = make_competition(scene.engine, scene.chemistry, starts_at=at(14), **{end: True})
     (row,) = rows(listed(scene))
-    assert (row.menu, row.menu_label) == ([], None)
+    # Replaced by milestone 12.2 FR-002 (SC-009): no Edit, but a read-only menu.
+    assert (row.menu, row.menu_label) == (
+        lists(competition, f"subject={scene.chemistry}"),
+        "Actions for “Spring round”",
+    )
     before = snapshot(scene.engine)
     back = f"{TAB}?subject={scene.chemistry}#competition-{competition}"
     url = f"{TAB}/{competition}/edit?subject={scene.chemistry}"
@@ -1582,8 +1611,14 @@ def test_a_deactivated_subject_lists_only_its_finished_competitions(
         "astronomy",
         "Chemistry",
     ]
+    # Replaced by milestone 12.2 FR-002 (SC-009): a finished row of a deactivated subject keeps
+    # a read-only menu.
     assert [(r.id, r.status, r.menu) for r in rows(body)] == [
-        (deactivated.finished, "Finished", [])
+        (
+            deactivated.finished,
+            "Finished",
+            lists(deactivated.finished, f"subject={scene.chemistry}"),
+        )
     ]
     assert add_button(body) == []
     assert [o.text for o in html.options(body, "status")][0] == "All"

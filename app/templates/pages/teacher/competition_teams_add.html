@@ -1,0 +1,54 @@
+{% extends "layouts/teacher.html" %}
+{#- "Add teams" (specs/012.2-competition-questions-teams/contracts/http-routes.md §7): the Region
+    list (a chained list that carries the context and `back`, never `p`, so choosing a region
+    opens its first page), then exactly one of the empty states or the region's teams between two
+    page navigations, each with Add or "Already in this competition". The region is never
+    repeated in the rows. -#}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/selectors.html" import chained_lists %}
+{% from "components/feedback.html" import empty_state, notice as notice_box %}
+{% from "components/pagination.html" import page_navigation %}
+{% from "components/table.html" import data_table, cell, actions_cell, row_note %}
+{% from "components/button.html" import post_button %}
+
+{% block title %}Add teams to “{{ competition.name }}” — {{ app_name }}{% endblock %}
+
+{% block scripts %}<script src="/static/js/auto-submit.js" defer></script>{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(back_href, "Back to the teams") }}
+{{ page_heading("Add teams to “" ~ competition.name ~ "”") }}
+{% if notice %}{{ notice_box(notice[0], notice[1]) }}{% endif %}
+{{ chained_lists([
+  {"id": "region", "name": "region", "label": "Region", "placeholder": "Choose a region",
+   "options": regions, "selected": selected.id if selected else none, "disabled": not regions,
+   "carry": [("subject", hidden.subject), ("status", hidden.status), ("page", hidden.page), ("back", back)]},
+], "/teacher/competitions/" ~ competition.id ~ "/teams/add") }}
+
+{% if not regions %}
+{{ empty_state("No teams yet") }}
+{% elif not selected %}
+{{ empty_state("Select a region", "Choose a region in the list above to see its teams.") }}
+{% elif not listing.teams %}
+{{ empty_state("No teams in this region yet", "Choose another region.") }}
+{% else %}
+{{ page_navigation(listing.paging, page_href, "Teams", "Pages, top") }}
+{% call data_table(["Team", "Educational institution", "Active members", "Actions"]) %}
+{% for t in listing.teams %}
+<tr id="team-{{ t.team_id }}">
+  {{ cell("Team", t.name) }}
+  {{ cell("Educational institution", t.institution_name) }}
+  {{ cell("Active members", t.active_members) }}
+  {% call actions_cell() %}
+  {%- if t.team_id in in_competition -%}
+  {{ row_note("Already in this competition") }}
+  {%- else -%}
+  {{ post_button("/teacher/competitions/" ~ competition.id ~ "/teams", "Add", kind="secondary", outline=True, small=True, hidden=dict(hidden, back=back, region=selected.id, p=listing.paging.number, team=t.team_id)) }}
+  {%- endif -%}
+  {% endcall %}
+</tr>
+{% endfor %}
+{% endcall %}
+{{ page_navigation(listing.paging, page_href, "Teams", "Pages, bottom") }}
+{% endif %}
+{% endblock %}

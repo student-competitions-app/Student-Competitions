@@ -11,6 +11,7 @@ runs on PostgreSQL only.
 import logging
 import threading
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -23,6 +24,8 @@ from app.core.config import AuthSettings
 from app.core.db import utc_now
 from app.models import (
     AccessLevel,
+    Competition,
+    CompetitionTeam,
     Enrolment,
     Institution,
     Role,
@@ -33,6 +36,7 @@ from app.models import (
     UserSession,
 )
 from app.schemas.names import InvalidName
+from app.services.competition_entries import EntryNotFound, add_team
 from app.services.institutions import set_institution_active
 from app.services.regions import set_region_active
 from app.services.sessions import create_session
@@ -46,6 +50,7 @@ from app.services.teams import (
     StudentTeam,
     TeamFull,
     add_member,
+    count_active_members,
     count_members,
     create_team,
     delete_team,
@@ -61,9 +66,12 @@ from app.services.teams import (
 from app.services.users import reconcile_users
 from tests.conftest import (
     ADMIN_EMAIL,
+    add_competition_team,
     make_class,
+    make_competition,
     make_institution,
     make_member,
+    make_subject,
     make_teacher,
     make_team,
     seed_roles_directly,
@@ -293,6 +301,30 @@ def test_the_counts_include_a_blocked_member_whom_the_list_hides(
         assert not is_full(session, team)
 
 
+def test_the_active_members_are_counted_per_team(engine: Engine, scene: Scene) -> None:
+    """Milestone 12.2 research R13: one grouped count over the chain `list_active_members` uses,
+    so a member of a deactivated class, institution or region is not counted, and a team with no
+    active member is absent (read as 0)."""
+    team = make_team(engine, scene.a)
+    empty = make_team(engine, scene.a, "Novas")
+    blocked_class = make_class(engine, scene.a, "KN-41", 4)
+    for n, class_id in enumerate((scene.kn21, scene.kn21, scene.kn31)):
+        make_member(engine, team, enrolled(engine, f"active{n}@example.org", class_id))
+    for n, class_id in enumerate((blocked_class, scene.lyceum, scene.odesa)):
+        make_member(engine, team, enrolled(engine, f"blocked{n}@example.org", class_id))
+    set_class(engine, blocked_class, False)
+    with Session(engine) as session:
+        set_institution_active(session, region_of(engine, scene.a2), scene.a2, False)
+        set_region_active(session, region_of(engine, scene.c), False)
+    with Session(engine) as session:
+        assert count_active_members(session, [team, empty]) == {team: 3}
+        assert count_active_members(session, []) == {}
+        assert count_active_members(session, [team])[team] == len(
+            list_active_members(session, team)
+        )
+        assert count_members(session, team) == 6
+
+
 def test_a_students_teams_include_deleted_ones(engine: Engine, scene: Scene) -> None:
     """FR-013, US7-1."""
     taras = enrolled(engine, "taras@example.org", scene.kn21)
@@ -501,7 +533,114 @@ def test_a_deletion_sets_only_the_deletion_time(
     assert {name: rows for name, rows in changed.items() if name != "teams"} == {
         name: rows for name, rows in before.items() if name != "teams"
     }
-    assert [r.getMessage() for r in caplog.records] == [f"Team deleted: id={team} members=2"]
+    assert [r.getMessage() for r in caplog.records] == [
+        f"Team deleted: id={team} members=2 competitions=0"
+    ]
+
+
+def competitions_of(engine: Engine, team_id: int) -> set[int]:
+    """The competitions the team takes part in."""
+    with Session(engine) as session:
+        statement = select(CompetitionTeam.competition_id).where(CompetitionTeam.team_id == team_id)
+        return set(session.exec(statement))
+
+
+def one_of_each_status(engine: Engine) -> dict[str, int]:
+    """A competition of each status: upcoming, in progress, cancelled and finished (milestone
+    12.2), stored directly."""
+    subject = make_subject(engine, "Chemistry")
+    now = utc_now().replace(second=0, microsecond=0)
+    later, earlier = now + timedelta(days=7), now - timedelta(hours=1)
+    return {
+        "upcoming": make_competition(engine, subject, "Spring", starts_at=later),
+        "in_progress": make_competition(engine, subject, "Winter", starts_at=earlier),
+        "cancelled": make_competition(engine, subject, "Autumn", starts_at=later, cancelled=True),
+        "finished": make_competition(engine, subject, "Summer", starts_at=earlier, stopped=True),
+    }
+
+
+def test_a_deletion_takes_the_team_out_of_every_competition_not_finished(
+    engine: Engine, scene: Scene, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Milestone 12.2 FR-040, US8-1, US8-2, research R5: by a teacher with Write and without Can
+    manage competitions; only the finished competition keeps it, and another team's links stay.
+    The log line holds ids and counts only."""
+    team = make_team(engine, scene.a, "Comets")
+    other = make_team(engine, scene.a, "Novas")
+    statuses = one_of_each_status(engine)
+    for competition in statuses.values():
+        add_competition_team(engine, competition, team)
+        add_competition_team(engine, competition, other)
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"), Session(engine) as session:
+        delete_team(session, scene.teacher, team)
+    assert competitions_of(engine, team) == {statuses["finished"]}
+    assert competitions_of(engine, other) == set(statuses.values())
+    assert [r.getMessage() for r in caplog.records] == [
+        f"Team deleted: id={team} members=0 competitions=3"
+    ]
+    assert "Comets" not in caplog.text
+
+
+def test_a_deletion_racing_an_addition_leaves_no_unfinished_competition(
+    engine: Engine, scene: Scene, auth_settings: AuthSettings, database_url: str
+) -> None:
+    """Milestone 12.2 FR-037, SC-005, research R5: the deletion's `FOR UPDATE` on the team and
+    the addition's `FOR SHARE` serialise them: the addition is stored first and then removed, or
+    it sees the deletion and is not found. PostgreSQL only."""
+    if not database_url.startswith("postgresql"):
+        pytest.skip("row locks are a PostgreSQL behaviour")
+    manager = make_teacher(
+        engine,
+        auth_settings,
+        email="manager@example.org",
+        institutions={scene.c: AccessLevel.READ},
+        can_manage=True,
+    )
+    competition = one_of_each_status(engine)["upcoming"]
+    with Session(engine) as session:
+        subject_id = session.exec(
+            select(Competition.subject_id).where(Competition.id == competition)
+        ).one()
+    region = region_of(engine, scene.a)
+    for attempt in range(3):
+        team = make_team(engine, scene.a, f"Race {attempt}")
+        barrier = threading.Barrier(2)
+        outcomes: dict[str, str] = {}
+
+        def adding(
+            team_id: int = team,
+            barrier: threading.Barrier = barrier,
+            outcomes: dict[str, str] = outcomes,
+        ) -> None:
+            with Session(engine) as session:
+                barrier.wait()
+                try:
+                    add_team(session, manager, competition, subject_id, region, team_id)
+                except EntryNotFound:
+                    outcomes["add"] = "not found"
+                except BaseException as error:  # noqa: BLE001 — reported below
+                    outcomes["add"] = repr(error)
+                else:
+                    outcomes["add"] = "added"
+
+        def deleting(
+            team_id: int = team,
+            barrier: threading.Barrier = barrier,
+            outcomes: dict[str, str] = outcomes,
+        ) -> None:
+            with Session(engine) as session:
+                barrier.wait()
+                delete_team(session, scene.teacher, team_id)
+                outcomes["delete"] = "deleted"
+
+        threads = [threading.Thread(target=adding), threading.Thread(target=deleting)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+        assert outcomes["delete"] == "deleted"
+        assert outcomes["add"] in ("added", "not found")
+        assert competitions_of(engine, team) == set()
 
 
 def test_a_deleted_team_cannot_be_changed_again(engine: Engine, scene: Scene) -> None:

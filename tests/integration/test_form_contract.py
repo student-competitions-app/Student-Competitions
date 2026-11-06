@@ -27,6 +27,10 @@ Deliberate changes since (each is a contract change, recorded here):
   `UPDATE_FORM_CONTRACT=1` for those cases only.
 - **Milestone 12.1**: the Competitions tab's pages (`teacher-competition*` cases) are new,
   generated once with `UPDATE_FORM_CONTRACT=1` for those cases only.
+- **Milestone 12.2**: a competition's questions and teams (`teacher-competition-questions*`,
+  `-teams*`, `-entry-*` cases) are new, generated once with `UPDATE_FORM_CONTRACT=1` for those
+  cases only. The new menu entries of `teacher-competitions` are links, not forms, so that case
+  is unchanged.
 """
 
 import json
@@ -41,7 +45,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from httpx2 import Response
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 import app.services.institutions
 import app.services.subjects
@@ -55,6 +59,8 @@ from tests.conftest import (
     ADMIN_STUDENT_EMAIL,
     TEACHER_STUDENT_EMAIL,
     ClientAs,
+    add_competition_question,
+    add_competition_team,
     enrol_student,
     invite,
     invite_student,
@@ -794,6 +800,95 @@ def _(w: World) -> Response:
     """A refusal has no form of its own; the page keeps the frame's forms."""
     browser, subject, competition = a_competition_manager(w, cancelled=True)
     return browser.get(f"/teacher/competitions/{competition}/cancel?subject={subject}")
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.2: a competition's questions and teams
+# ---------------------------------------------------------------------------------------------
+
+
+@dataclass
+class Entries:
+    browser: TestClient
+    base: str
+    """The competition's address."""
+    context: str
+    """The competitions list's subject, status and page."""
+    question: int
+    """A question in the competition."""
+    team: int
+    """A team in the competition."""
+    region: int
+    """Kyiv, where both teams are."""
+
+
+def competition_entries(world: World, *, cancelled: bool = False) -> Entries:
+    """`a_competition_manager`'s competition holding a question and a team of Kyiv, with another
+    question and team to add."""
+    browser, subject, competition = a_competition_manager(world, cancelled=cancelled)
+    engine = application.state.engine
+    with Session(engine) as session:
+        (institution,) = session.exec(select(Institution)).all()
+        assert institution.id is not None
+    question = make_question(engine, subject, "Comets?")
+    team = make_team(engine, institution.id, "Comets")
+    make_question(engine, subject, "Novas?")
+    make_team(engine, institution.id, "Novas")
+    add_competition_question(engine, competition, question)
+    add_competition_team(engine, competition, team)
+    return Entries(
+        browser,
+        f"/teacher/competitions/{competition}",
+        f"subject={subject}&status=upcoming&page=2",
+        question,
+        team,
+        institution.region_id,
+    )
+
+
+@case("teacher-competition-questions")
+def _(w: World) -> Response:
+    """Its Remove entries are links: only the frame's forms."""
+    e = competition_entries(w)
+    return e.browser.get(f"{e.base}/questions?{e.context}")
+
+
+@case("teacher-competition-questions-add")
+def _(w: World) -> Response:
+    e = competition_entries(w)
+    return e.browser.get(f"{e.base}/questions/add?{e.context}&back=2")
+
+
+@case("teacher-competition-teams")
+def _(w: World) -> Response:
+    e = competition_entries(w)
+    return e.browser.get(f"{e.base}/teams?{e.context}")
+
+
+@case("teacher-competition-teams-add")
+def _(w: World) -> Response:
+    """With a region chosen: the Region `GET` form and the Add forms."""
+    e = competition_entries(w)
+    return e.browser.get(f"{e.base}/teams/add?{e.context}&back=2&region={e.region}")
+
+
+@case("teacher-competition-entry-remove-question")
+def _(w: World) -> Response:
+    e = competition_entries(w)
+    return e.browser.get(f"{e.base}/questions/{e.question}/remove?{e.context}&back=2")
+
+
+@case("teacher-competition-entry-remove-team")
+def _(w: World) -> Response:
+    e = competition_entries(w)
+    return e.browser.get(f"{e.base}/teams/{e.team}/remove?{e.context}&back=2")
+
+
+@case("teacher-competition-entry-refused")
+def _(w: World) -> Response:
+    """A refusal has no form of its own; the page keeps the frame's forms."""
+    e = competition_entries(w, cancelled=True)
+    return e.browser.get(f"{e.base}/questions/add?{e.context}")
 
 
 # ---------------------------------------------------------------------------------------------

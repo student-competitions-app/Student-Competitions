@@ -1,0 +1,16 @@
+{#- Region group (milestone 12.2 contracts/components.md §1, research R15): one list grouped by a
+    parent and paged across groups, such as a competition's teams by region. A bordered box with
+    an `h2` header, "Kyiv · 14 teams" ("Lviv · 1 team"), over the `data_table` the page writes
+    inside the `{% call %}`; on a phone the table's rows become labelled cards inside the box. The
+    name is shown as stored, with no word added; `total` counts the group's items across all
+    pages, so a group that continues on the next page repeats its header with the same total and
+    gets another `heading_id` there (unique on the page). Never a table caption for this. -#}
+
+{% macro region_group(name, total, heading_id) -%}
+{%- if not name %}{{ template_error("region_group: the name is required") }}{% endif -%}
+{%- if total < 1 %}{{ template_error("region_group: the total must be at least 1") }}{% endif -%}
+<section class="region-group" aria-labelledby="{{ heading_id }}">
+  <h2 class="region-group-header" id="{{ heading_id }}">{{ name }} · {{ total }} {{ "team" if total == 1 else "teams" }}</h2>
+  {{ caller() }}
+</section>
+{%- endmacro %}

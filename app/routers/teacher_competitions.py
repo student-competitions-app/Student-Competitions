@@ -8,8 +8,9 @@ redirects with a 303 (Post/Redirect/Get), so a reload never repeats a change. An
 shown again with every error and every value as typed.
 
 **Every teacher reads every competition; only a teacher with Can manage competitions changes
-them.** The list shows **Add competition** and the row menus only with the setting and an active
-subject. Every other route is a *manage* route.
+them.** The list shows **Add competition**, and **Edit** and **Cancel competition** in the row
+menus, only with the setting and an active subject; every row has a menu with the competition's
+**Questions** and **Teams** (milestone 12.2). Every other route is a *manage* route.
 
 **Order of checks** (http-routes.md §Order of checks): the role (`@allow_roles`); then, on a
 manage route, the setting, first thing in the handler, before any value is parsed, so a teacher
@@ -26,6 +27,12 @@ was shown in as a hidden field, and the start is read in that zone, not the cook
 looked up, a status and a page that were parsed, ids. **The notice after a change** travels as a
 sealed, 10-minute token holding the competition's id and the outcome, so no name ever reaches an
 address or a log line (FR-046, research R12). Nothing here logs; the service logs ids.
+
+**Shared with milestone 12.2**: `teacher_competition_entries`, the router of a competition's
+questions and teams, imports the public helpers here (`list_path`, `list_query`, `parse_id`,
+`offered_subject`, `find_competition`, `not_found`, `require_manage`, `can_manage`,
+`teacher_id`, `redirect`, `settings_of` and the not-found texts), so both build the same
+addresses and answer the same way.
 """
 
 from datetime import timedelta
@@ -112,7 +119,7 @@ NOTICES = {
 """The success notice of each outcome; the name is read when the list is shown."""
 
 
-def _query(subject_id: int, status: CompetitionStatus | None = None, page: int = 1) -> str:
+def list_query(subject_id: int, status: CompetitionStatus | None = None, page: int = 1) -> str:
     """`subject=3&status=upcoming&page=2`, leaving out the status for All and the page for 1."""
     query = f"subject={subject_id}"
     if status is not None:
@@ -131,7 +138,7 @@ def list_path(
 ) -> str:
     """The list of `subject_id` filtered by `status` at `page`, with the sealed `notice`, scrolled
     to `anchor`'s competition when given."""
-    path = f"{TAB_PATH}?{_query(subject_id, status, page)}"
+    path = f"{TAB_PATH}?{list_query(subject_id, status, page)}"
     if notice:
         path += f"&notice={notice}"
     if anchor is not None:
@@ -139,38 +146,38 @@ def list_path(
     return path
 
 
-def _parse_id(raw: str | None) -> int | None:
+def parse_id(raw: str | None) -> int | None:
     """An id from the address or a form: an ASCII integer up to `MAX_ID`, else `None`."""
     if raw is None or not raw.isascii() or not raw.isdigit() or int(raw) > MAX_ID:
         return None
     return int(raw)
 
 
-def _settings(request: Request) -> AuthSettings:
+def settings_of(request: Request) -> AuthSettings:
     return request.app.state.settings
 
 
-def _teacher(request: Request) -> int:
+def teacher_id(request: Request) -> int:
     user: User = request.state.user
     assert user.id is not None
     return user.id
 
 
-def _can_manage(request: Request, session: SessionDep) -> bool:
-    return can_manage_competitions(session, _teacher(request))
+def can_manage(request: Request, session: SessionDep) -> bool:
+    return can_manage_competitions(session, teacher_id(request))
 
 
-def _require_manage(request: Request, session: SessionDep) -> None:
+def require_manage(request: Request, session: SessionDep) -> None:
     """The milestone 5 403 page for a teacher without the setting (FR-042)."""
-    if not _can_manage(request, session):
+    if not can_manage(request, session):
         raise AccessDenied(Role.TEACHER)
 
 
-def _redirect(path: str) -> RedirectResponse:
+def redirect(path: str) -> RedirectResponse:
     return RedirectResponse(path, status_code=303)
 
 
-def _not_found(request: Request, page: tuple[str, str]) -> HTMLResponse:
+def not_found(request: Request, page: tuple[str, str]) -> HTMLResponse:
     heading, text = page
     return render_teacher(
         request,
@@ -181,19 +188,21 @@ def _not_found(request: Request, page: tuple[str, str]) -> HTMLResponse:
     )
 
 
-def _offered(choices: SubjectChoices, raw: str | None) -> Subject | None:
+def offered_subject(choices: SubjectChoices, raw: str | None) -> Subject | None:
     """The offered subject `raw` names, else `None`."""
-    subject_id = _parse_id(raw)
+    subject_id = parse_id(raw)
     return choices.get(subject_id) if subject_id is not None else None
 
 
 def _active_subject(session: Session, raw: str | None) -> Subject | None:
     """The offered subject `raw` names, if it is active: where a competition can be added."""
-    subject = _offered(offered_subjects(session), raw)
+    subject = offered_subject(offered_subjects(session), raw)
     return subject if subject is not None and subject.is_active else None
 
 
-def _competition(session: Session, competition_id: int, subject: Subject) -> CompetitionView | None:
+def find_competition(
+    session: Session, competition_id: int, subject: Subject
+) -> CompetitionView | None:
     if competition_id > MAX_ID:
         return None
     assert subject.id is not None
@@ -211,7 +220,7 @@ def _competition(session: Session, competition_id: int, subject: Subject) -> Com
 def _notice_token(request: Request, competition_id: int, outcome: str) -> str:
     """The `notice` value for the list after a change: the id and the outcome only."""
     payload = {"competition": competition_id, "outcome": outcome}
-    return seal(_settings(request).secret_key, COMPETITION_NOTICE_PURPOSE, payload)
+    return seal(settings_of(request).secret_key, COMPETITION_NOTICE_PURPOSE, payload)
 
 
 def _read_notice(
@@ -223,7 +232,7 @@ def _read_notice(
         return None
     try:
         payload = unseal(
-            _settings(request).secret_key,
+            settings_of(request).secret_key,
             COMPETITION_NOTICE_PURPOSE,
             token,
             COMPETITION_NOTICE_TTL,
@@ -233,7 +242,7 @@ def _read_notice(
     competition_id, outcome = payload.get("competition"), payload.get("outcome")
     if type(competition_id) is not int or outcome not in NOTICES:
         return None
-    competition = _competition(session, competition_id, subject)
+    competition = find_competition(session, competition_id, subject)
     if competition is None:
         return None
     return NOTICES[outcome].format(name=competition.name)
@@ -263,11 +272,11 @@ def competitions_page(
     if not subject:
         selected = choices.only
     else:
-        selected = _offered(choices, subject)
+        selected = offered_subject(choices, subject)
         if selected is None:
-            return _not_found(request, SUBJECT_NOT_FOUND)
+            return not_found(request, SUBJECT_NOT_FOUND)
     status_filter = parse_status_filter(status)
-    can_manage = _can_manage(request, session)
+    manages = can_manage(request, session)
     context: dict[str, Any] = {
         "subjects": [(s.id, s.name) for s in choices.active],
         "groups": (
@@ -278,7 +287,7 @@ def competitions_page(
         "selected": selected,
         "status": status_filter,
         "status_options": STATUS_OPTIONS,
-        "can_manage": can_manage,
+        "can_manage": manages,
         "can_add": False,
         "listing": None,
         "notice_text": None,
@@ -288,10 +297,10 @@ def competitions_page(
         listing = competition_page(session, selected, status_filter, parse_page(page))
         context |= {
             "listing": listing,
-            "can_add": can_manage and selected.is_active,
+            "can_add": manages and selected.is_active,
             "notice_text": _read_notice(request, session, notice, selected),
-            "return_query": _query(selected.id, status_filter, listing.paging.number),
-            "page_href": f"{TAB_PATH}?{_query(selected.id, status_filter)}&page=",
+            "return_query": list_query(selected.id, status_filter, listing.paging.number),
+            "page_href": f"{TAB_PATH}?{list_query(selected.id, status_filter)}&page=",
         }
     return render_teacher(request, "pages/teacher/competitions.html", TAB, context)
 
@@ -355,6 +364,8 @@ def _refused(
             "question": question,
             "reason": reason,
             "back": list_path(subject.id, status, page, anchor=competition_id),
+            "back_link_text": "Back to the competitions",
+            "back_text": "Back to competitions",
         },
         status_code=409,
     )
@@ -420,10 +431,10 @@ def new_competition_page(
     page: str | None = Query(None),
 ) -> HTMLResponse:
     """The empty add form, in the browser's zone (FR-019–FR-021)."""
-    _require_manage(request, session)
+    require_manage(request, session)
     selected = _active_subject(session, subject)
     if selected is None:
-        return _not_found(request, SUBJECT_NOT_FOUND)
+        return not_found(request, SUBJECT_NOT_FOUND)
     values = {"name": "", "start_date": "", "start_time": ""}
     zone_label = zone_name(read_time_zone(request))
     return _form(
@@ -446,10 +457,10 @@ def create_competition_action(
 ) -> Response:
     """Adds the competition and lands at it in the list with status All, on its page, with the
     notice (FR-024–FR-026)."""
-    _require_manage(request, session)
+    require_manage(request, session)
     selected = _active_subject(session, subject)
     if selected is None:
-        return _not_found(request, SUBJECT_NOT_FOUND)
+        return not_found(request, SUBJECT_NOT_FOUND)
     assert selected.id is not None
     status_filter, return_page = parse_status_filter(status), parse_page(page)
     zone_label = _submitted_zone(time_zone)
@@ -457,11 +468,11 @@ def create_competition_action(
     errors, starts_at = _field_errors(name, start_date, start_time, zone_label)
     if not errors:
         try:
-            created = create_competition(session, _teacher(request), selected.id, name, starts_at)
+            created = create_competition(session, teacher_id(request), selected.id, name, starts_at)
         except ManageRequired:
             raise AccessDenied(Role.TEACHER) from None
         except SubjectUnavailable:
-            return _not_found(request, SUBJECT_NOT_FOUND)
+            return not_found(request, SUBJECT_NOT_FOUND)
         except (InvalidName, DuplicateCompetitionName) as refused:
             errors["name"] = refused.message
         except StartNotInFuture:
@@ -469,7 +480,7 @@ def create_competition_action(
         else:
             landing = locate(session, selected, None, created.id)
             notice = _notice_token(request, created.id, "added")
-            return _redirect(list_path(selected.id, None, landing.page, created.id, notice))
+            return redirect(list_path(selected.id, None, landing.page, created.id, notice))
     return _form(
         request,
         selected,
@@ -494,13 +505,13 @@ def edit_competition_page(
 ) -> HTMLResponse:
     """The edit form of an upcoming competition, filled with its name and its start in the
     browser's zone; the refusal for any other status (FR-027–FR-032)."""
-    _require_manage(request, session)
-    selected = _offered(offered_subjects(session), subject)
+    require_manage(request, session)
+    selected = offered_subject(offered_subjects(session), subject)
     if selected is None:
-        return _not_found(request, SUBJECT_NOT_FOUND)
-    competition = _competition(session, competition_id, selected)
+        return not_found(request, SUBJECT_NOT_FOUND)
+    competition = find_competition(session, competition_id, selected)
     if competition is None:
-        return _not_found(request, COMPETITION_NOT_FOUND)
+        return not_found(request, COMPETITION_NOT_FOUND)
     status_filter, return_page = parse_status_filter(status), parse_page(page)
     if competition.status is not CompetitionStatus.UPCOMING:
         return _edit_refused(
@@ -537,14 +548,14 @@ def update_competition_action(
     """Saves the name and the start, and lands at the competition on the page that now holds it,
     with the same status, with the notice. Only these fields are read: a `subject` of another
     subject fails the competition check, so a competition never changes subject (FR-001)."""
-    _require_manage(request, session)
-    selected = _offered(offered_subjects(session), subject)
+    require_manage(request, session)
+    selected = offered_subject(offered_subjects(session), subject)
     if selected is None:
-        return _not_found(request, SUBJECT_NOT_FOUND)
+        return not_found(request, SUBJECT_NOT_FOUND)
     assert selected.id is not None
-    competition = _competition(session, competition_id, selected)
+    competition = find_competition(session, competition_id, selected)
     if competition is None:
-        return _not_found(request, COMPETITION_NOT_FOUND)
+        return not_found(request, COMPETITION_NOT_FOUND)
     status_filter, return_page = parse_status_filter(status), parse_page(page)
     if competition.status is not CompetitionStatus.UPCOMING:
         return _edit_refused(
@@ -556,12 +567,12 @@ def update_competition_action(
     if not errors:
         try:
             update_competition(
-                session, _teacher(request), competition_id, selected.id, name, starts_at
+                session, teacher_id(request), competition_id, selected.id, name, starts_at
             )
         except ManageRequired:
             raise AccessDenied(Role.TEACHER) from None
         except CompetitionNotFound:
-            return _not_found(request, COMPETITION_NOT_FOUND)
+            return not_found(request, COMPETITION_NOT_FOUND)
         except NotEditable as refused:
             return _edit_refused(
                 request, competition, refused.status, selected, status_filter, return_page
@@ -573,7 +584,7 @@ def update_competition_action(
         else:
             landing = locate(session, selected, status_filter, competition_id)
             notice = _notice_token(request, competition_id, "saved")
-            return _redirect(
+            return redirect(
                 list_path(selected.id, status_filter, landing.page, landing.competition_id, notice)
             )
     return _form(
@@ -606,14 +617,14 @@ def cancel_competition_page(
 ) -> HTMLResponse:
     """The confirmation, naming the competition, its subject and its start (FR-033); the
     refusal for a cancelled or finished competition (FR-036)."""
-    _require_manage(request, session)
-    selected = _offered(offered_subjects(session), subject)
+    require_manage(request, session)
+    selected = offered_subject(offered_subjects(session), subject)
     if selected is None:
-        return _not_found(request, SUBJECT_NOT_FOUND)
+        return not_found(request, SUBJECT_NOT_FOUND)
     assert selected.id is not None
-    competition = _competition(session, competition_id, selected)
+    competition = find_competition(session, competition_id, selected)
     if competition is None:
-        return _not_found(request, COMPETITION_NOT_FOUND)
+        return not_found(request, COMPETITION_NOT_FOUND)
     status_filter, return_page = parse_status_filter(status), parse_page(page)
     if competition.status in CANCEL_REFUSALS:
         return _cancel_refused(
@@ -646,14 +657,14 @@ def cancel_competition_action(
     """Cancels the competition for good and lands where it was in the filtered list: at it while
     the filter shows it, else at the row that took its place, else the one before it, else the
     empty state (FR-034, research R13)."""
-    _require_manage(request, session)
-    selected = _offered(offered_subjects(session), subject)
+    require_manage(request, session)
+    selected = offered_subject(offered_subjects(session), subject)
     if selected is None:
-        return _not_found(request, SUBJECT_NOT_FOUND)
+        return not_found(request, SUBJECT_NOT_FOUND)
     assert selected.id is not None
-    competition = _competition(session, competition_id, selected)
+    competition = find_competition(session, competition_id, selected)
     if competition is None:
-        return _not_found(request, COMPETITION_NOT_FOUND)
+        return not_found(request, COMPETITION_NOT_FOUND)
     status_filter, return_page = parse_status_filter(status), parse_page(page)
     if competition.status in CANCEL_REFUSALS:
         return _cancel_refused(
@@ -661,17 +672,17 @@ def cancel_competition_action(
         )
     try:
         landing = cancel_competition(
-            session, _teacher(request), competition_id, selected.id, status_filter
+            session, teacher_id(request), competition_id, selected.id, status_filter
         )
     except ManageRequired:
         raise AccessDenied(Role.TEACHER) from None
     except CompetitionNotFound:
-        return _not_found(request, COMPETITION_NOT_FOUND)
+        return not_found(request, COMPETITION_NOT_FOUND)
     except NotCancellable as refused:
         return _cancel_refused(
             request, competition, refused.status, selected, status_filter, return_page
         )
     notice = _notice_token(request, competition_id, "cancelled")
-    return _redirect(
+    return redirect(
         list_path(selected.id, status_filter, landing.page, landing.competition_id, notice)
     )

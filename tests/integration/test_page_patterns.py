@@ -882,3 +882,100 @@ def test_competition_statuses_are_badges(
     assert html.badges(body) == ["Cancelled"]
     (cell,) = [r["Status"] for r in html.table_rows(body)]
     assert cell == "Cancelled"
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.2: a competition's questions and teams
+# ---------------------------------------------------------------------------------------------
+
+
+def entries_world(
+    client: TestClient,
+    client_as: ClientAs,
+    outbox: list[Any],
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    cancelled: bool = False,
+) -> contract.Entries:
+    return contract.competition_entries(
+        world(client, client_as, outbox, monkeypatch), cancelled=cancelled
+    )
+
+
+def test_a_competitions_lists_follow_the_page_patterns(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A back link to the competitions list, one heading with at most one primary action, the
+    details list with the status as a badge; the teams in region groups, never a caption."""
+    e = entries_world(client, client_as, outbox, monkeypatch)
+    listed = f"/teacher/competitions?{e.context}#competition-{e.base.rsplit('/', 1)[1]}"
+    for kind, action in (("questions", "Add question"), ("teams", "Add team")):
+        body = e.browser.get(f"{e.base}/{kind}?{e.context}").text
+        assert_back_link(body, listed, "Back to the competitions")
+        assert len(html.parse(body).find_all("h1")) == 1
+        assert primary_actions(body) == [action]
+        assert [term for term, _ in html.details(body)] == ["Subject", "Start", "Status"]
+        assert html.badges(body) == ["Upcoming"]
+    teams = e.browser.get(f"{e.base}/teams?{e.context}").text
+    groups = [s for s in html.parse(teams).find_all("section") if "region-group" in s.classes()]
+    assert len(groups) == 1
+    assert "<caption" not in teams
+
+
+def test_the_add_pages_follow_the_page_patterns(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A back link to the competition's list at `back`; the list between two page navigations;
+    every Add a submit button inside a `POST` form, never disabled and with no inline script, so
+    the milestone 10.1 busy button keeps it from being sent twice (FR-049)."""
+    e = entries_world(client, client_as, outbox, monkeypatch)
+    for kind, query in (("questions", ""), ("teams", f"&region={e.region}")):
+        body = e.browser.get(f"{e.base}/{kind}/add?{e.context}&back=2{query}").text
+        assert_back_link(body, f"{e.base}/{kind}?{e.context}&p=2", f"Back to the {kind}")
+        assert html.pagination(body, "Pages, top") is not None
+        assert html.pagination(body, "Pages, bottom") is not None
+        adds = [(f, b) for f in html.forms(body, "main") for b in f.buttons if b.text == "Add"]
+        assert adds
+        for form, button in adds:
+            assert (form.method, form.action) == ("post", f"{e.base}/{kind}")
+            assert button.attrs.get("type") == "submit"
+            assert "disabled" not in button.attrs
+            assert not any(name.startswith("on") for name in button.attrs)
+        assert primary_actions(body) == []
+
+
+def test_the_remove_confirmations(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    e = entries_world(client, client_as, outbox, monkeypatch)
+    for kind, entry, question in (
+        ("questions", e.question, f"Remove question {e.question} from “Spring round”?"),
+        (
+            "teams",
+            e.team,
+            "Remove team “Comets” of Kyiv Polytechnic Institute, Kyiv from “Spring round”?",
+        ),
+    ):
+        body = e.browser.get(f"{e.base}/{kind}/{entry}/remove?{e.context}&back=2").text
+        cancel = f"{e.base}/{kind}?{e.context}&p=2#{kind[:-1]}-{entry}"
+        assert_confirmation(body, question, "Remove", cancel, f"{e.base}/{kind}/{entry}/remove")
+        assert_back_link(body, cancel, f"Back to the {kind}")
+
+
+def test_the_entries_refusal_reads_back_to_the_competition(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The 12.1 refusals keep "Back to competitions" (`test_the_competition_refusal`)."""
+    e = entries_world(client, client_as, outbox, monkeypatch, cancelled=True)
+    response = e.browser.get(f"{e.base}/teams/add?{e.context}&back=2")
+    assert response.status_code == 409
+    body = response.text
+    back = f"{e.base}/teams?{e.context}&p=2"
+    assert_back_link(body, back, "Back to the teams")
+    assert html.h1(body) == "Change the teams of “Spring round”?"
+    sections = [
+        s for s in html.parse(body).find_all("section") if "confirmation-refused" in s.classes()
+    ]
+    assert len(sections) == 1
+    assert (back, "Back to the competition") in html.link_pairs(body, "main")
+    assert [b for f in html.forms(body, "main") for b in f.buttons] == []

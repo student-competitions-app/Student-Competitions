@@ -651,7 +651,12 @@ def test_delete_asks_then_hides_the_team_and_keeps_everything(scene: Scene) -> N
         ("Educational institution", "Kyiv Polytechnic Institute (Kyiv)"),
         ("Members", "1"),
     ]
-    assert "The team will be hidden and can no longer join new competitions." in page
+    # Replaced by milestone 12.2 FR-041 (SC-009): the first sentence names the competitions.
+    assert (
+        "The team will be hidden and taken out of every competition that has not finished. It can"
+        " no longer join new competitions. Its members keep their accounts, classes and other"
+        " teams. A deleted team cannot be restored." in html.text(page, "main")
+    )
     assert (scene.tab(team), "Back to “Comets”") in html.link_pairs(page, "main")
     before, row = snapshot(), team_row(team)
     response = scene.olena.post(f"{TAB}/{team}/delete", follow_redirects=False)
@@ -1035,7 +1040,7 @@ def test_no_log_line_names_anyone(scene: Scene, caplog: pytest.LogCaptureFixture
         f"Team renamed: id={team}",
         f"Team member added: team_id={team} user_id={scene.taras}",
         f"Team member removed: team_id={team} user_id={scene.taras}",
-        f"Team deleted: id={team} members=0",
+        f"Team deleted: id={team} members=0 competitions=0",
     ]
 
 

@@ -74,8 +74,9 @@ def test_the_route_table_is_not_empty() -> None:
 def test_the_write_routes_are_exact() -> None:
     """Signing in and out, choosing a role, the administrator's subject, region, institution and
     teacher actions, accepting an invitation, the teacher's class and student actions, the
-    question bank's add, edit and delete, the teacher's team actions (milestone 11.1), and the
-    competitions' add, edit and cancel (milestone 12.1)."""
+    question bank's add, edit and delete, the teacher's team actions (milestone 11.1), the
+    competitions' add, edit and cancel (milestone 12.1), and a competition's questions and teams
+    (milestone 12.2)."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -124,6 +125,10 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/teacher/competitions"),
         ("POST", "/teacher/competitions/{competition_id:int}/edit"),
         ("POST", "/teacher/competitions/{competition_id:int}/cancel"),
+        ("POST", "/teacher/competitions/{competition_id:int}/questions"),
+        ("POST", "/teacher/competitions/{competition_id:int}/questions/{question_id:int}/remove"),
+        ("POST", "/teacher/competitions/{competition_id:int}/teams"),
+        ("POST", "/teacher/competitions/{competition_id:int}/teams/{team_id:int}/remove"),
     }
 
 
@@ -273,10 +278,24 @@ MANAGE_PATHS = frozenset(
         "/teacher/competitions/new",
         "/teacher/competitions/{competition_id:int}/edit",
         "/teacher/competitions/{competition_id:int}/cancel",
+        "/teacher/competitions/{competition_id:int}/questions/add",
+        "/teacher/competitions/{competition_id:int}/questions/{question_id:int}/remove",
+        "/teacher/competitions/{competition_id:int}/teams/add",
+        "/teacher/competitions/{competition_id:int}/teams/{team_id:int}/remove",
     }
 )
-"""The pages that need Can manage competitions: the question bank's (milestone 11 FR-037) and the
-competitions' (milestone 12.1 FR-042)."""
+"""The pages that need Can manage competitions: the question bank's (milestone 11 FR-037), the
+competitions' (milestone 12.1 FR-042), and the add pages and remove confirmations of a
+competition's questions and teams (milestone 12.2 FR-045)."""
+
+ENTRY_READ_PATHS = frozenset(
+    {
+        "/teacher/competitions/{competition_id:int}/questions",
+        "/teacher/competitions/{competition_id:int}/teams",
+    }
+)
+"""A competition's questions and teams (milestone 12.2): every teacher reads them, so they are
+swept with the cast teacher allowed; id 1 names no competition and answers 404, not 403."""
 
 
 def test_there_are_declared_pages_to_sweep() -> None:
@@ -293,11 +312,12 @@ def test_the_teacher_scoped_pages_are_found() -> None:
 
 def test_the_manage_pages_are_found() -> None:
     """Guard the skip below: exactly the question bank's and the competitions' management pages,
-    all declared."""
+    all declared, besides a competition's two lists, which every teacher reads."""
     declared = {path for path, _ in declared_get_routes()}
     assert MANAGE_PATHS <= declared
+    assert ENTRY_READ_PATHS <= declared
     managed = ("/teacher/questions/", "/teacher/competitions/")
-    assert {p for p in declared if p.startswith(managed)} == MANAGE_PATHS
+    assert {p for p in declared if p.startswith(managed)} - ENTRY_READ_PATHS == MANAGE_PATHS
     assert "/teacher/questions" in declared
     assert "/teacher/competitions" in declared
 

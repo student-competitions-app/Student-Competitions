@@ -147,6 +147,27 @@ DATE_TIME_ERRORS = {
     ),
 }
 """The date and time pair: empty, filled in a zone, and with a date error and the gap error."""
+LONG_REGION_NAME = (
+    "Autonomous Republic of the long names, the region that tests how a heading of two hundred"
+    " characters wraps inside its box on a phone screen and on a wide desktop screen, with no"
+    " sideways scroll at all"
+)
+"""A 200-character region name, the longest allowed, to show the region group's header wrap."""
+REGION_GROUPS = (
+    (
+        "Kyiv",
+        14,
+        (
+            ("Comets", "Kyiv Polytechnic Institute", 4, "remove"),
+            ("Novas", "Kyiv Lyceum No. 142", 0, "remove"),
+            ("Rockets", "School No. 5", 7, "deleted"),
+        ),
+    ),
+    ("Lviv", 1, (("Lions", "Lviv Lyceum No. 3", 5, "already"),)),
+    (LONG_REGION_NAME, 3, (("Stars", "School No. 12", 2, "remove"),)),
+)
+"""Region groups: `(name, total, rows)`, each row `(team, institution, active members, what the
+actions cell holds)`: Remove, the "(deleted)" note, or "Already in this competition"."""
 ONE_ROLE_USER = SampleUser("olena.kovalenko@school.example")
 TWO_ROLE_USER = SampleUser("taras.shevchenko@school.example")
 SAMPLE_TABS = (
@@ -211,6 +232,7 @@ def _samples() -> dict[str, Any]:
         "subject_groups": SUBJECT_GROUPS,
         "date_time_values": DATE_TIME_VALUES,
         "date_time_errors": DATE_TIME_ERRORS,
+        "region_groups": REGION_GROUPS,
     }
 
 

@@ -780,6 +780,52 @@
       "method": "post"
     }
   ],
+  "teacher-competition-entry-refused": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-competition-entry-remove-question": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/questions/{id}/remove",
+      "buttons": [],
+      "fields": [
+        "back",
+        "page",
+        "status",
+        "subject"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-competition-entry-remove-team": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/teams/{id}/remove",
+      "buttons": [],
+      "fields": [
+        "back",
+        "page",
+        "status",
+        "subject"
+      ],
+      "method": "post"
+    }
+  ],
   "teacher-competition-new": [
     {
       "action": "/logout",
@@ -824,12 +870,83 @@
       "method": "post"
     }
   ],
+  "teacher-competition-questions": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-competition-questions-add": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/questions",
+      "buttons": [],
+      "fields": [
+        "back",
+        "p",
+        "page",
+        "question",
+        "status",
+        "subject"
+      ],
+      "method": "post"
+    }
+  ],
   "teacher-competition-refused": [
     {
       "action": "/logout",
       "buttons": [],
       "fields": [],
       "method": "post"
+    }
+  ],
+  "teacher-competition-teams": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-competition-teams-add": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/teams",
+      "buttons": [],
+      "fields": [
+        "back",
+        "p",
+        "page",
+        "region",
+        "status",
+        "subject",
+        "team"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/teams/add",
+      "buttons": [],
+      "fields": [
+        "back",
+        "page",
+        "region",
+        "status",
+        "subject"
+      ],
+      "method": "get"
     }
   ],
   "teacher-competitions": [

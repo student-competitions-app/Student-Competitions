@@ -1,0 +1,42 @@
+{% extends "layouts/teacher.html" %}
+{#- "Add questions" (specs/012.2-competition-questions-teams/contracts/http-routes.md §2): the
+    subject's listed questions, newest first, ten per page, between two page navigations; each
+    with Add, or "Already in this competition" when the competition holds it. The way back leads
+    to the page of the competition's questions the teacher came from (`back`). -#}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/feedback.html" import empty_state, notice as notice_box %}
+{% from "components/pagination.html" import page_navigation %}
+{% from "components/card.html" import text_card, text_box %}
+{% from "components/table.html" import row_note %}
+{% from "components/button.html" import post_button %}
+
+{% block title %}Add questions to “{{ competition.name }}” — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(back_href, "Back to the questions") }}
+{{ page_heading("Add questions to “" ~ competition.name ~ "”") }}
+{% if notice %}{{ notice_box(notice[0], notice[1]) }}{% endif %}
+{% if not listing.questions %}
+{{ empty_state("No questions in this subject yet") }}
+{% else %}
+{{ page_navigation(listing.paging, page_href, "Questions", "Pages, top") }}
+<ol class="text-card-list">
+  {% for q in listing.questions %}
+  <li>
+    {% call text_card("Question " ~ q.id, id="question-" ~ q.id) %}
+    {{ text_box("Question", q.text) }}
+    {{ text_box("Reference answer", q.reference_answer) }}
+    <div class="row-actions">
+      {%- if q.id in in_competition -%}
+      {{ row_note("Already in this competition") }}
+      {%- else -%}
+      {{ post_button("/teacher/competitions/" ~ competition.id ~ "/questions", "Add", kind="secondary", outline=True, small=True, hidden=dict(hidden, back=back, p=listing.paging.number, question=q.id)) }}
+      {%- endif -%}
+    </div>
+    {% endcall %}
+  </li>
+  {% endfor %}
+</ol>
+{{ page_navigation(listing.paging, page_href, "Questions", "Pages, bottom") }}
+{% endif %}
+{% endblock %}

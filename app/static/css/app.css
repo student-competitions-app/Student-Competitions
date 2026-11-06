@@ -1299,6 +1299,54 @@ div.row-actions > * + * {
   }
 }
 
+/* Region group (components/group.html, milestone 12.2 research R15): one box per region of a list
+   grouped by region, its header over the data table of the region's rows. The table inside drops
+   its own border, so the box has one; the header lines up with the table's cells, and a long
+   name wraps. Below 768 px the rows stay labelled cards, inside the box. */
+.region-group {
+  margin: 0 0 var(--sc-space-3);
+  background: var(--sc-surface);
+  border: var(--sc-border-width) solid var(--sc-border);
+  border-radius: var(--sc-radius-card);
+}
+
+.region-group + .region-group {
+  margin-top: var(--sc-space-3);
+}
+
+.region-group-header {
+  margin: 0;
+  padding: var(--sc-space-2);
+  overflow-wrap: anywhere;
+}
+
+.region-group .data-table {
+  margin-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .region-group .data-table {
+    background: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .region-group .data-table thead th {
+    border-top: var(--sc-border-width) solid var(--sc-border);
+  }
+
+  .region-group .data-table thead th:first-child,
+  .region-group .data-table thead th:last-child {
+    border-radius: 0;
+  }
+}
+
+@media (width < 768px) {
+  .region-group .data-table {
+    padding: 0 var(--sc-space-2);
+  }
+}
+
 /* The actions menu (components/menu.html, milestone 12.1 research R14): a native <details>, like
    the user menu. The button is a small outline secondary button with a chevron; the panel is a
    surface card under it, aligned to its right edge, above the following rows but under the pinned

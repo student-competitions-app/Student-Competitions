@@ -77,6 +77,42 @@ def test_row_note_without_text_is_refused() -> None:
 
 
 # ---------------------------------------------------------------------------------------------
+# Milestone 12.2: the region group (specs/012.2-competition-questions-teams contracts/
+# components.md §1)
+# ---------------------------------------------------------------------------------------------
+
+GROUP = '{% from "components/group.html" import region_group %}'
+
+
+def test_region_group_with_several_teams() -> None:
+    source = (
+        GROUP
+        + '{% call region_group("Kyiv <north>", 14, "region-7-p2") %}<table></table>{% endcall %}'
+    )
+    assert render(source) == (
+        '<section class="region-group" aria-labelledby="region-7-p2">\n'
+        '  <h2 class="region-group-header" id="region-7-p2">Kyiv &lt;north&gt; · 14 teams</h2>\n'
+        "  <table></table>\n"
+        "</section>"
+    )
+
+
+def test_region_group_with_one_team() -> None:
+    source = GROUP + '{% call region_group("Lviv", 1, "r") %}{% endcall %}'
+    assert ">Lviv · 1 team</h2>" in render(source)
+
+
+def test_region_group_needs_a_name() -> None:
+    with pytest.raises(TemplateRuntimeError, match="region_group: the name is required"):
+        render(GROUP + '{% call region_group("", 3, "r") %}{% endcall %}')
+
+
+def test_region_group_needs_a_total_of_at_least_one() -> None:
+    with pytest.raises(TemplateRuntimeError, match="region_group: the total must be at least 1"):
+        render(GROUP + '{% call region_group("Kyiv", 0, "r") %}{% endcall %}')
+
+
+# ---------------------------------------------------------------------------------------------
 # Milestone 12.1 components (specs/012.1-teacher-competitions contracts/components.md §1–§6)
 # ---------------------------------------------------------------------------------------------
 

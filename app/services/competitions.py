@@ -29,9 +29,9 @@ line with ids only, never a name; a no-op and a refusal log nothing (FR-046).
 
 **Contract for later milestones**: stopping writes `stopped_at` with a conditional update on
 `cancelled_at IS NULL AND stopped_at IS NULL AND starts_at <= :now`; the questions and teams of a
-competition may change only while `status_of` is Upcoming, with the same lock and
-conditional-update pattern; students (milestone 13) may answer only while it is In progress and
-visible.
+competition may change only while `status_of` is Upcoming, under the competition's lock
+(`lock_competition`), which `app.services.competition_entries` (milestone 12.2) is the first to
+use; students (milestone 13) may answer only while it is In progress and visible.
 """
 
 import logging
@@ -47,7 +47,7 @@ from sqlmodel import Session, col, select
 from app.core.db import utc_now
 from app.models import Competition, Subject
 from app.schemas.names import InvalidName, clean_name, name_key
-from app.services.paging import PAGE_SIZE, Paging
+from app.services.paging import Paging, landing_index
 from app.services.subjects import list_active_subjects
 from app.services.teacher_access import can_manage_competitions
 
@@ -218,15 +218,8 @@ def landing(rows: Sequence[CompetitionView], competition_id: int, old_index: int
     """The landing on `rows`, the sorted list after a change: the competition itself if listed;
     else the row that took its place (`old_index`), else the row before it; else the empty state
     (R13). The page is `index // PAGE_SIZE + 1`, so a page that empties leads to the previous
-    one."""
-    ids = [row.id for row in rows]
-    if competition_id in ids:
-        index = ids.index(competition_id)
-        return Landing(index // PAGE_SIZE + 1, competition_id)
-    if old_index is None or not rows:
-        return Landing(1, None)
-    index = min(old_index, len(rows) - 1)
-    return Landing(index // PAGE_SIZE + 1, rows[index].id)
+    one (`paging.landing_index`)."""
+    return Landing(*landing_index([row.id for row in rows], competition_id, old_index))
 
 
 def _view(row: Competition, now: datetime) -> CompetitionView:
@@ -323,11 +316,29 @@ def _find(
     return row, subject
 
 
+def lock_competition(
+    session: Session, competition_id: int, subject_id: int
+) -> tuple[Competition, Subject]:
+    """The competition `FOR UPDATE`, then its subject `FOR SHARE`, both refreshed, if the
+    competition belongs to `subject_id` and is visible; `CompetitionNotFound`, after a rollback,
+    otherwise. The first step of every change to a competition or to its questions and teams,
+    so a change and a cancellation never interleave."""
+    return _find(session, competition_id, subject_id, lock=True)
+
+
 def get_competition(session: Session, competition_id: int, subject_id: int) -> CompetitionView:
     """The competition, with its status now, if it belongs to `subject_id` and is visible;
     `CompetitionNotFound` otherwise."""
     row, _ = _find(session, competition_id, subject_id, lock=False)
     return _view(row, utc_now())
+
+
+def subject_id_of(session: Session, competition_id: int) -> int | None:
+    """The competition's subject id, or `None` for an unknown id. Only for the fallback of an
+    address that names no subject (milestone 12.2 spec Edge Cases): the caller then checks the
+    subject and the competition as usual."""
+    row = session.get(Competition, competition_id)
+    return row.subject_id if row is not None else None
 
 
 def locate(
@@ -435,7 +446,7 @@ def update_competition(
     `NotEditable`, `StartNotInFuture`, `InvalidName` or `DuplicateCompetitionName`; nothing
     changes then."""
     _require_manage(session, teacher_id)
-    row, _ = _find(session, competition_id, subject_id, lock=True)
+    row, _ = lock_competition(session, competition_id, subject_id)
     now = utc_now()
     status = status_of(row, now)
     if status is not CompetitionStatus.UPCOMING:
@@ -489,7 +500,7 @@ def cancel_competition(
     still shows it; else the row now at `i`, else the one before it, else the empty state.
     """
     _require_manage(session, teacher_id)
-    row, subject = _find(session, competition_id, subject_id, lock=True)
+    row, subject = lock_competition(session, competition_id, subject_id)
     now = utc_now()
     current = status_of(row, now)
     if current in (CompetitionStatus.CANCELLED, CompetitionStatus.FINISHED):

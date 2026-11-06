@@ -25,6 +25,7 @@ from app.services.regions import (
     create_region,
     delete_region,
     get_region,
+    list_active_regions,
     list_regions,
     rename_region,
     set_region_active,
@@ -99,6 +100,15 @@ def test_the_list_ignores_case_and_includes_deactivated_regions(session: Session
         ("Lviv", True),
         ("Odesa", True),
     ]
+
+
+def test_the_active_list_leaves_out_deactivated_regions(session: Session) -> None:
+    """Milestone 12.2 research R14: the Region list of "Add teams", sorted as the full list."""
+    add_region(session, "Odesa")
+    add_region(session, "kyiv", active=False)
+    add_region(session, "lviv")
+    add_region(session, "Dnipro")
+    assert [r.name for r in list_active_regions(session)] == ["Dnipro", "lviv", "Odesa"]
 
 
 def test_get_returns_the_region(session: Session) -> None:

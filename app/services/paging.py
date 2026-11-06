@@ -1,13 +1,17 @@
-"""Paging: the page number from an address, and the model behind the page navigation component.
+"""Paging: the page number from an address, the model behind the page navigation component, and
+where a list lands after a row leaves it.
 
 See specs/011-question-bank/research.md R9 and contracts/services.md §services/paging. Pure, no
 I/O. The logic belongs to the page navigation component (`components/pagination.html`), not to
-questions: milestones 12 and 15 page their lists with it too.
+questions: milestones 12 and 15 page their lists with it too, and `landing_index` is shared by the
+cancellation of a competition (milestone 12.1) and the removal of a competition's question or team
+(milestone 12.2, research R11).
 
 A page number past the end is clamped to the last page rather than redirected, so the address
 keeps what was typed and the navigation marks the real page.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from math import ceil
 
@@ -72,6 +76,22 @@ class Paging:
             links=_links(number, last),
             offset=offset,
         )
+
+
+def landing_index(
+    ids: Sequence[int], kept_id: int | None, old_index: int | None
+) -> tuple[int, int | None]:
+    """`(page, id)` to land on in `ids`, a sorted list after a change: `kept_id` itself if it is
+    still listed; else the row that took the place of the one that left (`old_index`), else the
+    row before it; else `(1, None)`, the empty state (no `old_index`, or nothing left). The page
+    is `index // PAGE_SIZE + 1`, so a page that empties leads to the previous one."""
+    if kept_id is not None and kept_id in ids:
+        index = list(ids).index(kept_id)
+        return index // PAGE_SIZE + 1, kept_id
+    if old_index is None or not ids:
+        return 1, None
+    index = min(old_index, len(ids) - 1)
+    return index // PAGE_SIZE + 1, ids[index]
 
 
 def _links(number: int, last: int) -> tuple[PageLink, ...]:

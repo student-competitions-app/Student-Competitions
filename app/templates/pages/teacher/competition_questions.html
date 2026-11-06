@@ -1,0 +1,47 @@
+{% extends "layouts/teacher.html" %}
+{#- A competition's questions (specs/012.2-competition-questions-teams/contracts/http-routes.md §1):
+    the subject, the start and the status under the heading, then the copies in the order of
+    adding, ten per page, between two page navigations. Add question and Remove only for a teacher
+    who can make changes (`can_change`); a question deleted from the bank is marked. -#}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/details.html" import details_list %}
+{% from "components/feedback.html" import empty_state, notice as notice_box %}
+{% from "components/pagination.html" import page_navigation %}
+{% from "components/card.html" import text_card, text_box %}
+{% from "components/table.html" import row_note %}
+{% from "components/button.html" import link_button %}
+{% from "components/badge.html" import competition_status_badge %}
+{% from "components/time.html" import local_time with context %}
+
+{% block title %}Questions of “{{ competition.name }}” — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(back, "Back to the competitions") }}
+{{ page_heading("Questions of “" ~ competition.name ~ "”", action=("Add question", add_href) if can_change else none) }}
+{% set start %}{{ local_time(competition.starts_at) }}{% endset %}
+{% set badge %}{{ competition_status_badge(competition.status) }}{% endset %}
+{{ details_list([("Subject", subject.name), ("Start", start), ("Status", badge)]) }}
+{% if notice %}{{ notice_box(notice[0], notice[1]) }}{% endif %}
+{% if not listing.questions %}
+{{ empty_state("No questions in this competition yet", "Add questions with Add question." if can_change else none) }}
+{% else %}
+{{ page_navigation(listing.paging, page_href, "Questions", "Pages, top") }}
+<ol class="text-card-list">
+  {% for q in listing.questions %}
+  <li>
+    {% call text_card("Question " ~ q.question_id, id="question-" ~ q.question_id) %}
+    {{ text_box("Question", q.text) }}
+    {{ text_box("Reference answer", q.reference_answer) }}
+    {% if q.deleted_from_bank or can_change %}
+    <div class="row-actions">
+      {%- if q.deleted_from_bank %}{{ row_note("Deleted from the question bank") }}{% endif -%}
+      {%- if can_change %}{{ link_button("Remove", remove_hrefs[q.question_id], kind="destructive", outline=True, small=True) }}{% endif -%}
+    </div>
+    {% endif %}
+    {% endcall %}
+  </li>
+  {% endfor %}
+</ol>
+{{ page_navigation(listing.paging, page_href, "Questions", "Pages, bottom") }}
+{% endif %}
+{% endblock %}

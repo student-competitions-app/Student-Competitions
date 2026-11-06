@@ -880,10 +880,6 @@ def spring_round(
     )
 
 
-def test_the_head_is_the_competitions_revision() -> None:
-    assert head_revision() == COMPETITIONS_REVISION
-
-
 def test_the_competitions_table_at_head(
     monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
 ) -> None:
@@ -956,3 +952,178 @@ def test_the_downgrade_drops_the_competitions_table(
     run_alembic(monkeypatch, empty_database_url, "downgrade", "09cbcbe472be")
     assert "competitions" not in inspect(migration_engine).get_table_names()
     assert "subjects" in inspect(migration_engine).get_table_names()
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.2: a competition's questions and teams
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/012.2-competition-questions-teams/data-model.md §1–§2, §5 and research R1.
+
+COMPETITION_ENTRIES_REVISION = "59c636929942"
+
+competition_questions_t = sa.table(
+    "competition_questions",
+    sa.column("id", sa.Integer()),
+    sa.column("competition_id", sa.Integer()),
+    sa.column("question_id", sa.Integer()),
+    sa.column("text", sa.String()),
+    sa.column("reference_answer", sa.String()),
+    sa.column("added_at", sa.DateTime(timezone=True)),
+)
+competition_teams_t = sa.table(
+    "competition_teams",
+    sa.column("competition_id", sa.Integer()),
+    sa.column("team_id", sa.Integer()),
+    sa.column("added_at", sa.DateTime(timezone=True)),
+)
+bank_questions_t = sa.table(
+    "questions",
+    sa.column("id", sa.Integer()),
+    sa.column("subject_id", sa.Integer()),
+    sa.column("text", sa.String()),
+    sa.column("reference_answer", sa.String()),
+    sa.column("created_at", sa.DateTime(timezone=True)),
+    sa.column("updated_at", sa.DateTime(timezone=True)),
+)
+"""`questions` at head, with `subject_id`; `questions_t` above has only the columns of every
+revision."""
+
+
+def test_the_head_is_the_competition_entries_revision() -> None:
+    """Milestone 12.2 follows milestone 12.1's revision."""
+    assert head_revision() == COMPETITION_ENTRIES_REVISION
+    script = ScriptDirectory.from_config(alembic_config())
+    assert script.get_revision(COMPETITION_ENTRIES_REVISION).down_revision == (
+        COMPETITIONS_REVISION
+    )
+
+
+def test_the_competition_entry_tables_at_head(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    inspector = inspect(migration_engine)
+    columns = {c["name"]: c["nullable"] for c in inspector.get_columns("competition_questions")}
+    assert columns == {
+        "id": False,
+        "competition_id": False,
+        "question_id": False,
+        "text": False,
+        "reference_answer": False,
+        "added_at": False,
+    }
+    uniques = {
+        u["name"]: u["column_names"]
+        for u in inspector.get_unique_constraints("competition_questions")
+    }
+    assert uniques == {
+        "uq_competition_questions_competition_id_question_id": ["competition_id", "question_id"]
+    }
+    assert sorted(fk["name"] for fk in inspector.get_foreign_keys("competition_questions")) == [
+        "fk_competition_questions_competition_id_competitions",
+        "fk_competition_questions_question_id_questions",
+    ]
+    columns = {c["name"]: c["nullable"] for c in inspector.get_columns("competition_teams")}
+    assert columns == {"competition_id": False, "team_id": False, "added_at": False}
+    key = inspector.get_pk_constraint("competition_teams")
+    assert (key["name"], key["constrained_columns"]) == (
+        "pk_competition_teams",
+        ["competition_id", "team_id"],
+    )
+    assert {i["name"]: i["column_names"] for i in inspector.get_indexes("competition_teams")} == {
+        "ix_competition_teams_team_id": ["team_id"]
+    }
+    assert sorted(fk["name"] for fk in inspector.get_foreign_keys("competition_teams")) == [
+        "fk_competition_teams_competition_id_competitions",
+        "fk_competition_teams_team_id_teams",
+    ]
+
+
+def _seed_entries(connection: Connection) -> tuple[int, int, int, int]:
+    """Two competitions of one subject, a question of it and a team: their ids."""
+    now = utc_now()
+    chemistry = add_subject(connection, "Chemistry")
+    first = connection.execute(spring_round(chemistry).returning(competitions_t.c.id)).scalar_one()
+    second = connection.execute(
+        spring_round(chemistry, cancelled=now).returning(competitions_t.c.id)
+    ).scalar_one()
+    question = connection.execute(
+        bank_questions_t.insert()
+        .values(
+            subject_id=chemistry,
+            text="Why?",
+            reference_answer="Because.",
+            created_at=now,
+            updated_at=now,
+        )
+        .returning(bank_questions_t.c.id)
+    ).scalar_one()
+    team = connection.execute(
+        teams_t.insert()
+        .values(
+            institution_id=add_institution(connection),
+            name="Comets",
+            name_key="comets",
+            created_at=now,
+            updated_at=now,
+        )
+        .returning(teams_t.c.id)
+    ).scalar_one()
+    return first, second, question, team
+
+
+def _copy(competition_id: int, question_id: int) -> sa.Insert:
+    return competition_questions_t.insert().values(
+        competition_id=competition_id,
+        question_id=question_id,
+        text="Why?",
+        reference_answer="Because.",
+        added_at=utc_now(),
+    )
+
+
+def _link(competition_id: int, team_id: int) -> sa.Insert:
+    return competition_teams_t.insert().values(
+        competition_id=competition_id, team_id=team_id, added_at=utc_now()
+    )
+
+
+def test_a_question_and_a_team_at_most_once_per_competition(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Research R1, FR-035: the unique constraint and the primary key refuse a second copy or
+    link in the same competition; another competition is free."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        first, second, question, team = _seed_entries(connection)
+        connection.execute(_copy(first, question))
+        connection.execute(_copy(second, question))
+        connection.execute(_link(first, team))
+        connection.execute(_link(second, team))
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(_copy(first, question))
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(_link(first, team))
+    with migration_engine.connect() as connection:
+        copies = connection.execute(text("SELECT count(*) FROM competition_questions"))
+        links = connection.execute(text("SELECT count(*) FROM competition_teams"))
+        assert (copies.scalar_one(), links.scalar_one()) == (2, 2)
+
+
+def test_the_downgrade_drops_the_competition_entry_tables(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        first, _, question, team = _seed_entries(connection)
+        connection.execute(_copy(first, question))
+        connection.execute(_link(first, team))
+    run_alembic(monkeypatch, empty_database_url, "downgrade", COMPETITIONS_REVISION)
+    tables = inspect(migration_engine).get_table_names()
+    assert "competition_questions" not in tables
+    assert "competition_teams" not in tables
+    with migration_engine.connect() as connection:
+        for table in ("competitions", "questions", "teams"):
+            count = connection.execute(text(f"SELECT count(*) FROM {table}")).scalar_one()
+            assert count == (2 if table == "competitions" else 1), table

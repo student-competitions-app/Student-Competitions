@@ -7,7 +7,7 @@ every list of 1–12 pages and of 200 pages, against the rule stated independent
 
 import pytest
 
-from app.services.paging import MAX_PAGE, PAGE_SIZE, Paging, parse_page
+from app.services.paging import MAX_PAGE, PAGE_SIZE, Paging, landing_index, parse_page
 
 
 @pytest.mark.parametrize(
@@ -120,3 +120,40 @@ def test_every_page_follows_the_gap_rule(page: int, last: int) -> None:
     current = [link for link in paging.links if link.current]
     assert len(current) == 1
     assert current[0].number == paging.number == page
+
+
+# ---------------------------------------------------------------------------------------------
+# landing_index (milestone 12.2 research R11; the 12.1 cancellation landing goes through it too)
+# ---------------------------------------------------------------------------------------------
+
+IDS = list(range(101, 126))
+"""25 ids: pages of 10, 10 and 5."""
+
+
+def test_landing_on_the_kept_id() -> None:
+    assert landing_index(IDS, 113, 2) == (2, 113)
+    assert landing_index(IDS, 101, None) == (1, 101)
+
+
+def test_landing_on_the_row_that_took_its_place() -> None:
+    after = [i for i in IDS if i != 113]
+    assert landing_index(after, 113, 12) == (2, 114)
+    assert landing_index(after, None, 12) == (2, 114)
+
+
+def test_landing_on_the_row_before_when_the_last_one_left() -> None:
+    after = IDS[:-1]
+    assert landing_index(after, None, 24) == (3, 124)
+
+
+def test_landing_on_the_previous_page_when_a_page_empties() -> None:
+    """11 ids, the one at index 10 (alone on page 2) removed: page 1 at the id now at index 9."""
+    after = IDS[:10]
+    assert landing_index(after, None, 10) == (1, IDS[9])
+
+
+def test_landing_on_the_empty_state() -> None:
+    assert landing_index([], None, 0) == (1, None)
+    assert landing_index([], 101, 0) == (1, None)
+    assert landing_index(IDS, 999, None) == (1, None)
+    assert landing_index(IDS, None, None) == (1, None)

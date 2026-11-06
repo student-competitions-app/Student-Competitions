@@ -19,7 +19,7 @@ import logging
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
 from app.models import Institution, Region
@@ -62,6 +62,13 @@ def list_regions(session: Session) -> list[Region]:
     collation: this way SQLite and PostgreSQL give the same order (research D6).
     """
     regions = session.exec(select(Region)).all()
+    return sorted(regions, key=lambda region: (region.name_key, region.id))
+
+
+def list_active_regions(session: Session) -> list[Region]:
+    """The active regions, sorted as `list_regions` sorts them: the **Region** list of "Add
+    teams" (milestone 12.2 research R14)."""
+    regions = session.exec(select(Region).where(col(Region.is_active))).all()
     return sorted(regions, key=lambda region: (region.name_key, region.id))
 
 

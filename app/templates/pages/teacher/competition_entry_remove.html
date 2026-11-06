@@ -1,0 +1,14 @@
+{% extends "layouts/teacher.html" %}
+{#- The remove confirmation of a competition's question or team
+    (specs/012.2-competition-questions-teams/contracts/http-routes.md §4, §9): the question names
+    the entry and the competition, the consequence says what stays, the destructive Remove sends
+    the removal, and Cancel returns to the page of the list it came from, at the entry. -#}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation %}
+
+{% block title %}{{ question }} — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(cancel_href, back_link_text) }}
+{{ confirmation(question, consequence, action, "Remove", cancel_href, hidden=hidden) }}
+{% endblock %}

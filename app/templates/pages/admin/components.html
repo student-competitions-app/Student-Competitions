@@ -9,6 +9,7 @@
 {% from "components/button.html" import button, link_button, post_button %}
 {% from "components/card.html" import card, text_card, text_box %}
 {% from "components/table.html" import data_table, cell, actions_cell, row_note %}
+{% from "components/group.html" import region_group %}
 {% from "components/badge.html" import badge, status_badge, access_badge, competition_status_badge %}
 {% from "components/feedback.html" import notice, empty_state %}
 {% from "components/form.html" import error_summary, field, textarea_field, select_field, checkbox_field, form_actions, date_time_fields %}
@@ -185,9 +186,37 @@
   {{ empty_state("No subjects yet", "Create the first subject with Create subject.") }}
 </section>
 
+<section id="region-group" aria-labelledby="region-group-heading">
+  <h2 id="region-group-heading">Region group</h2>
+  <p>One list grouped by region and paged across the groups: a box per region, its header naming the region as stored and how many items it holds across all pages, over a data table of its rows on this page. A region that continues on the next page shows its header again there, with the same total.</p>
+  {% for name, total, rows in region_groups %}
+  {% call region_group(name, total, "gallery-region-" ~ loop.index) %}
+  {% call data_table(["Team", "Educational institution", "Active members", "Actions"]) %}
+  {% for team, institution, members, action in rows %}
+  <tr>
+    {{ cell("Team", team) }}
+    {{ cell("Educational institution", institution) }}
+    {{ cell("Active members", members) }}
+    {% call actions_cell() %}
+    {%- if action == "deleted" -%}
+    {{- row_note("(deleted)") -}}
+    {%- elif action == "already" -%}
+    {{- row_note("Already in this competition") -}}
+    {%- else -%}
+    {{- link_button("Remove", "/admin/components#region-group", kind="destructive", outline=True, small=True) -}}
+    {%- endif -%}
+    {% endcall %}
+  </tr>
+  {% endfor %}
+  {% endcall %}
+  {% endcall %}
+  {% endfor %}
+  <p>Narrow the window below 768 px to see the rows as labelled cards inside each box.</p>
+</section>
+
 <section id="actions-menu" aria-labelledby="actions-menu-heading">
   <h2 id="actions-menu-heading">Actions menu</h2>
-  <p>A row's actions behind one button, in the row's actions cell. It opens and closes without JavaScript; opening one closes the others where the browser supports it. The first menu is shown open, over the rows below it; a row with no action has no menu.</p>
+  <p>A row's actions behind one button, in the row's actions cell. It opens and closes without JavaScript; opening one closes the others where the browser supports it. The first menu is shown open, over the rows below it, with every entry a competition can have: Edit, Questions, Teams, then the destructive Cancel competition; the last row has only the entries every teacher gets.</p>
   {% call data_table(["Name", "Start", "Status", "Actions"]) %}
   <tr>
     {{ cell("Name", "Spring final") }}
@@ -196,6 +225,8 @@
     {% call actions_cell() %}
     {%- call actions_menu("Spring final", open=True) -%}
     {{ menu_link("Edit", "/admin/components#actions-menu") }}
+    {{ menu_link("Questions", "/admin/components#actions-menu") }}
+    {{ menu_link("Teams", "/admin/components#actions-menu") }}
     {{ menu_link("Cancel competition", "/admin/components#actions-menu", destructive=True) }}
     {%- endcall -%}
     {% endcall %}
@@ -206,6 +237,8 @@
     {% call cell("Status") %}{{ competition_status_badge("in_progress") }}{% endcall %}
     {% call actions_cell() %}
     {%- call actions_menu(long_competition_name) -%}
+    {{ menu_link("Questions", "/admin/components#actions-menu") }}
+    {{ menu_link("Teams", "/admin/components#actions-menu") }}
     {{ menu_link("Cancel competition", "/admin/components#actions-menu", destructive=True) }}
     {%- endcall -%}
     {% endcall %}
@@ -214,7 +247,12 @@
     {{ cell("Name", "Autumn round") }}
     {% call cell("Start") %}{{ local_time(sample_moment, zone=kyiv) }}{% endcall %}
     {% call cell("Status") %}{{ competition_status_badge("cancelled") }}{% endcall %}
-    {% call actions_cell() %}{%- call actions_menu("Autumn round") %}{% endcall -%}{% endcall %}
+    {% call actions_cell() %}
+    {%- call actions_menu("Autumn round") -%}
+    {{ menu_link("Questions", "/admin/components#actions-menu") }}
+    {{ menu_link("Teams", "/admin/components#actions-menu") }}
+    {%- endcall -%}
+    {% endcall %}
   </tr>
   {% endcall %}
 </section>

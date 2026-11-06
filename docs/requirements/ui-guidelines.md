@@ -321,6 +321,32 @@ content (`overflow: hidden`), so an open actions menu is never cut off.
 
 _Gallery_: [table](/admin/components#table).
 
+### Region group (`components/group.html`)
+
+**`region_group(name, total, heading_id)`** is one list grouped by a parent and paged across the
+groups, such as a competition's teams by region (milestone 12.2). Each group on the page is a box
+with a header over the `data_table` of its rows on that page, written in the `{% call %}` block.
+
+```jinja
+{% call region_group("Kyiv", 14, "region-7-p2") %}
+  {% call data_table(["Team", "Educational institution", "Active members", "Actions"]) %}
+    <tr id="team-31">…</tr>
+  {% endcall %}
+{% endcall %}
+```
+
+- **The header** reads "<name> · <n> teams", or "<name> · 1 team" for one: the name as it is
+  stored, with no word added, and the group's total across all pages, not the rows on this page.
+  It is the section's `h2`, which labels it (`heading_id`); a long name wraps.
+- **The next page**: a group that continues there shows its header again, with the same total.
+  Every `heading_id` is unique on the page, so a group repeated on another page gets another one
+  (`region-7-p2`).
+- **Never a table caption for this**: the header is the group's heading, and the table inside keeps
+  its own look, without a second border.
+- **On a phone** the table's rows become labelled cards inside the box, with no sideways scroll.
+
+The name is required and the total is at least 1. _Gallery_: [region group](/admin/components#region-group).
+
 ### Actions menu (`components/menu.html`)
 
 **`actions_menu(item_name, label="Actions")`** with **`menu_link(label, href, destructive=False)`**
@@ -331,15 +357,19 @@ the user menu, so it opens and closes without JavaScript.
 ```jinja
 {% call actions_cell() %}
 {%- call actions_menu(c.name) -%}
-{% if c.status == "upcoming" %}{{ menu_link("Edit", edit_href) }}{% endif %}
-{{ menu_link("Cancel competition", cancel_href, destructive=True) }}
+{% if can_add and c.status == "upcoming" %}{{ menu_link("Edit", edit_href) }}{% endif %}
+{{ menu_link("Questions", questions_href) }}
+{{ menu_link("Teams", teams_href) }}
+{% if can_add and c.status in ("upcoming", "in_progress") %}{{ menu_link("Cancel competition", cancel_href, destructive=True) }}{% endif %}
 {%- endcall -%}
 {% endcall %}
 ```
 
 - **The button** reads "Actions" and is announced "Actions for “Spring round”"; the item name is
   required. It is a small outline secondary button with a chevron, a full touch target.
-- **The entries** are links to a form or a confirmation page, never a `POST`, so every destructive
+- **The entries** come in a fixed order, each where it is available: on the **Competitions** tab
+  **Edit**, **Questions**, **Teams**, **Cancel competition** (milestone 12.2).
+- **Every entry** is a link to a page (a list, a form or a confirmation), never a `POST`, so every destructive
   action still goes through its confirmation. A destructive entry is in the danger colour. Each
   entry is 44 px tall and as wide as the panel; a long label wraps.
 - **The panel** opens under the button, aligned to its right edge, over the rows below and under the
@@ -505,9 +535,13 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
 - **Times** read "14 March 2027, 10:00" in the person's zone (the day without a leading zero, the
   month in full, a 24-hour clock), and "14 March 2027, 10:00 UTC" when the zone is not known. A form
   names its zone under the time field: "Time zone: Europe/Kyiv".
-- **Menus**: the button reads "Actions" and is announced "Actions for “<item>”"; the entries are
-  verbs, as buttons are: **Edit**, **Cancel competition**.
-- **Row notes** are a short plain phrase, with no full stop: "In this team".
+- **Menus**: the button reads "Actions" and is announced "Actions for “<item>”"; an entry that does
+  something is a verb (**Edit**, **Cancel competition**); an entry that only opens a page is named
+  by that page (**Questions**, **Teams**); a destructive entry is always a verb.
+- **Row notes** are a short plain phrase, with no full stop: "In this team", "Already in this
+  competition", "Deleted from the question bank", "(deleted)". A row note may also mark a record
+  the row can no longer act on, such as a deleted team in a finished competition; a *status*
+  (Active, Upcoming…) still takes a badge.
 - **Page navigation** says where you are as "<Noun> 31–40 of 200" (an en dash, no spaces), and
   moves with **Previous** and **Next**.
 

@@ -49,6 +49,8 @@ from app.main import app
 from app.models import (
     AccessLevel,
     Competition,
+    CompetitionQuestion,
+    CompetitionTeam,
     Question,
     Region,
     Role,
@@ -752,3 +754,55 @@ def make_competition(
         db_session.commit()
         assert competition.id is not None
         return competition.id
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.2: a competition's questions and teams
+# ---------------------------------------------------------------------------------------------
+
+
+def add_competition_question(
+    engine: Engine,
+    competition_id: int,
+    question_id: int,
+    *,
+    text: str | None = None,
+    reference_answer: str | None = None,
+) -> int:
+    """A copy of the bank question in the competition, inserted directly, with the bank's text and
+    reference answer unless given; returns the copy's id (its place in the order of adding).
+
+    **Test-only**, but harmless: no personal data; it skips the setting, status and entry checks
+    that `test_competition_entries_service.py` covers, and is the only way to give a **Finished**
+    or **Cancelled** competition questions.
+    """
+    with Session(engine) as db_session:
+        question = db_session.get(Question, question_id)
+        assert question is not None, "the question must exist"
+        copy = CompetitionQuestion(
+            competition_id=competition_id,
+            question_id=question_id,
+            text=question.text if text is None else text,
+            reference_answer=(
+                question.reference_answer if reference_answer is None else reference_answer
+            ),
+            added_at=utc_now(),
+        )
+        db_session.add(copy)
+        db_session.commit()
+        assert copy.id is not None
+        return copy.id
+
+
+def add_competition_team(engine: Engine, competition_id: int, team_id: int) -> None:
+    """The team in the competition, inserted directly.
+
+    **Test-only**, but harmless: no personal data; it skips the setting, status and entry checks
+    that `test_competition_entries_service.py` covers, and is the only way to give a **Finished**
+    or **Cancelled** competition teams.
+    """
+    with Session(engine) as db_session:
+        db_session.add(
+            CompetitionTeam(competition_id=competition_id, team_id=team_id, added_at=utc_now())
+        )
+        db_session.commit()

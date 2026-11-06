@@ -1,13 +1,15 @@
 {% extends "layouts/teacher.html" %}
-{#- An edit or a cancellation the competition's status refuses (specs/012.1-teacher-competitions/
-    contracts/http-routes.md §4, §6), 409: the question, the reason, and the way back to the
-    competition. -#}
+{#- A change the competition's status refuses, 409: an edit or a cancellation
+    (specs/012.1-teacher-competitions/contracts/http-routes.md §4, §6), or a change of its
+    questions or teams (specs/012.2-competition-questions-teams/contracts/http-routes.md §Refusal).
+    The question, the reason, and the way back; the route names both links (`back_link_text`,
+    `back_text`). -#}
 {% from "components/frame.html" import back_link %}
 {% from "components/confirmation.html" import refusal %}
 
 {% block title %}{{ question }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back, "Back to the competitions") }}
-{{ refusal(question, reason, back, "Back to competitions") }}
+{{ back_link(back, back_link_text) }}
+{{ refusal(question, reason, back, back_text) }}
 {% endblock %}

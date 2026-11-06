@@ -16,7 +16,9 @@ jobs:
   quality:
     name: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 20 minutes: the suite runs every database test on both engines and grows with each
+    # milestone, and outgrew 10 minutes in milestone 12.2 (specs/002 contracts/pipeline.md).
+    timeout-minutes: 20
     # A disposable instance of the production engine, so every database test also runs on
     # PostgreSQL (FR-030). `trust` authentication means there is no password anywhere in this
     # workflow, not even a throw-away one (SC-010).

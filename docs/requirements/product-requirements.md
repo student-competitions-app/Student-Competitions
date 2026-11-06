@@ -87,13 +87,15 @@ A web application for running online competitions among students, testing their 
 - **Finished** — after a teacher allowed to manage competitions stops it. A finished competition cannot be cancelled; its results can always be reviewed.
 - **Cancelled** — after a teacher allowed to manage competitions cancels it, which is possible in any status except **Finished**. Cancelling is final: a cancelled competition never changes again and cannot be restored.
 
+Deleting a team is the one exception to "only an upcoming competition can be edited" and "a cancelled competition never changes again": it takes the team out of every competition that is not finished (upcoming, in progress and cancelled). A deleted team stays only in finished competitions, so their record stays complete.
+
 ### Question
 
-A question in a competition is usually 1–3 lines of text and expects a text answer. Every question belongs to one subject. A deleted question is only hidden: it stays stored, but it is no longer shown in the question bank and can no longer be added to new competitions. Completed competitions keep showing it.
+A question in a competition is usually 1–3 lines of text and expects a text answer. Every question belongs to one subject. A competition holds a copy of each of its questions, taken when the question is added, so editing or deleting the question in the bank afterwards does not change the competition. A deleted question is only hidden: it stays stored, but it is no longer shown in the question bank and can no longer be added to new competitions. Competitions that hold it keep their copy.
 
 ### Team
 
-A team is a named group of students of one educational institution, put together by a teacher without changing their classes. Teams are the participants of competitions. A team belongs to one institution and never moves to another. Its name is unique across all institutions. A student can belong to several teams of their institution, but to each team only once. A team has at most 50 members. A deleted team is only hidden: it stays stored with all its members, but it is no longer shown when managing teams or competitions and can no longer join new competitions. Completed competitions keep showing it. An institution that holds any team, even a deleted one, cannot be deleted.
+A team is a named group of students of one educational institution, put together by a teacher without changing their classes. Teams are the participants of competitions. A team belongs to one institution and never moves to another. Its name is unique across all institutions. A student can belong to several teams of their institution, but to each team only once. A team has at most 50 members. Any team that is not deleted, of an active institution in an active region, can be added to a competition by a teacher allowed to manage competitions, whether or not the teacher is linked to its institution. A deleted team is only hidden: it stays stored with all its members, but it is no longer shown when managing teams or competitions and can no longer join new competitions. Deleting a team takes it out of every competition that is not finished; finished competitions keep it, marked deleted. An institution that holds any team, even a deleted one, cannot be deleted.
 
 ### Subject
 

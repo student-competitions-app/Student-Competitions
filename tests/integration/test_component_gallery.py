@@ -55,7 +55,23 @@ SECTIONS = {
         "In this team",
         "No subjects yet",
     ],
-    "actions-menu": ["Actions", "for “Spring final”", "Edit", "Cancel competition", "Autumn round"],
+    "region-group": [
+        "Kyiv · 14 teams",
+        "Lviv · 1 team",
+        "Educational institution",
+        "Active members",
+        "(deleted)",
+        "Already in this competition",
+    ],
+    "actions-menu": [
+        "Actions",
+        "for “Spring final”",
+        "Edit",
+        "Questions",
+        "Teams",
+        "Cancel competition",
+        "Autumn round",
+    ],
     "time": ["14 March 2027, 10:00", "14 March 2027, 08:00 UTC"],
     "badges": [
         "Active",
@@ -279,13 +295,14 @@ def test_the_two_button_form_and_the_textareas(admin_client: TestClient) -> None
 
 
 def test_the_actions_menu_variants(admin_client: TestClient) -> None:
-    """Milestone 12.1 contracts/components.md §1: an open menu with a plain and a destructive
-    entry, a closed one for a 200-character name, and a row with no action and no menu."""
+    """Milestone 12.1 contracts/components.md §1, with the entries of milestone 12.2
+    (contracts/components.md §2): an open menu with every entry in order, the last one
+    destructive; a closed one for a 200-character name; and the two-entry read-only menu."""
     body = admin_client.get(GALLERY).text
     section = gallery_section(body, "actions-menu")
     menus = [d for d in section.find_all("details") if "actions-menu" in d.classes()]
-    assert [m.attrs.get("name") for m in menus] == ["row-actions", "row-actions"]
-    assert ["open" in m.attrs for m in menus] == [True, False]
+    assert [m.attrs.get("name") for m in menus] == ["row-actions"] * 3
+    assert ["open" in m.attrs for m in menus] == [True, False, False]
     summaries = [m.find_all("summary")[0].text() for m in menus]
     assert summaries[0] == "Actions for “Spring final”"
     assert summaries[1].startswith("Actions for “Regional robotics")
@@ -293,10 +310,41 @@ def test_the_actions_menu_variants(admin_client: TestClient) -> None:
     links = [(a.text(), a.classes()) for a in menus[0].find_all("a")]
     assert links == [
         ("Edit", ["actions-menu-link"]),
+        ("Questions", ["actions-menu-link"]),
+        ("Teams", ["actions-menu-link"]),
         ("Cancel competition", ["actions-menu-link", "actions-menu-link-destructive"]),
     ]
-    cells = [td for td in section.find_all("td") if "row-actions" in td.classes()]
-    assert cells[-1].children == []
+    assert [a.text() for a in menus[1].find_all("a")] == [
+        "Questions",
+        "Teams",
+        "Cancel competition",
+    ]
+    assert [a.text() for a in menus[2].find_all("a")] == ["Questions", "Teams"]
+
+
+def test_the_region_group_variants(admin_client: TestClient) -> None:
+    """Milestone 12.2 contracts/components.md §1: each group a section labelled by its `h2`
+    header, a plural and a singular total, a 200-character name, and a data table inside each,
+    with the "(deleted)" and "Already in this competition" row notes."""
+    body = admin_client.get(GALLERY).text
+    section = gallery_section(body, "region-group")
+    groups = [g for g in section.find_all("section") if "region-group" in g.classes()]
+    assert len(groups) == 3
+    headers = []
+    for group in groups:
+        (header,) = group.find_all("h2")
+        assert "region-group-header" in header.classes()
+        assert header.attrs["id"] == group.attrs["aria-labelledby"]
+        (table,) = group.find_all("table")
+        assert "data-table" in table.classes()
+        assert table.find_all("caption") == []
+        headers.append(header.text())
+    assert headers[:2] == ["Kyiv · 14 teams", "Lviv · 1 team"]
+    assert headers[2].endswith(" · 3 teams")
+    assert len(headers[2]) == 200 + len(" · 3 teams")
+    assert len({g.attrs["aria-labelledby"] for g in groups}) == 3
+    notes = [s.text() for s in section.find_all("span") if "row-note" in s.classes()]
+    assert notes == ["(deleted)", "Already in this competition"]
 
 
 def test_the_local_time_variants(admin_client: TestClient) -> None:

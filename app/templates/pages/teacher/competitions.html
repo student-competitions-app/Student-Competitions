@@ -1,8 +1,10 @@
 {% extends "layouts/teacher.html" %}
 {#- The Competitions tab (specs/012.1-teacher-competitions/contracts/http-routes.md §1): the subject
     list, then exactly one of the empty states or the chosen subject's status list and
-    competitions, between two page navigations. The row menu and Add competition show only with
-    the setting and an active subject (`can_add`). -#}
+    competitions, between two page navigations. Every row has a menu, in this order: Edit,
+    Questions, Teams, Cancel competition (milestone 12.2 contracts/components.md §2). Questions
+    and Teams are for every teacher; Add competition, Edit and Cancel competition only with the
+    setting and an active subject (`can_add`). -#}
 {% from "components/frame.html" import page_heading %}
 {% from "components/selectors.html" import chained_lists %}
 {% from "components/feedback.html" import empty_state, notice %}
@@ -53,12 +55,12 @@
   {% call cell("Start") %}{{ local_time(c.starts_at) }}{% endcall %}
   {% call cell("Status") %}{{ competition_status_badge(c.status) }}{% endcall %}
   {% call actions_cell() %}
-  {%- if can_add -%}
   {%- call actions_menu(c.name) -%}
-  {%- if c.status == "upcoming" %}{{ menu_link("Edit", "/teacher/competitions/" ~ c.id ~ "/edit?" ~ return_query) }}{% endif -%}
-  {%- if c.status in ("upcoming", "in_progress") %}{{ menu_link("Cancel competition", "/teacher/competitions/" ~ c.id ~ "/cancel?" ~ return_query, destructive=True) }}{% endif -%}
+  {%- if can_add and c.status == "upcoming" %}{{ menu_link("Edit", "/teacher/competitions/" ~ c.id ~ "/edit?" ~ return_query) }}{% endif -%}
+  {{ menu_link("Questions", "/teacher/competitions/" ~ c.id ~ "/questions?" ~ return_query) }}
+  {{- menu_link("Teams", "/teacher/competitions/" ~ c.id ~ "/teams?" ~ return_query) -}}
+  {%- if can_add and c.status in ("upcoming", "in_progress") %}{{ menu_link("Cancel competition", "/teacher/competitions/" ~ c.id ~ "/cancel?" ~ return_query, destructive=True) }}{% endif -%}
   {%- endcall -%}
-  {%- endif -%}
   {% endcall %}
 </tr>
 {% endfor %}

@@ -13,7 +13,9 @@ gets FastAPI's 422. See [research.md](../research.md) R7–R10.
    parsed): no **Can manage competitions** → 403, for unknown ids too.
 3. **Subject and competition**, as in 12.1: `subject` not offered → 404 "Subject not found"; the
    competition unknown, of another subject, or hidden by a deactivated subject → 404 "Competition
-   not found".
+   not found". A deactivated subject is offered only while it has a finished competition
+   (`competitions.offered_subjects`), so a competition hidden by a deactivated subject with no
+   finished competition gets "Subject not found" instead; both are the spec's "not found".
 4. **Status** (add and remove routes): not **Upcoming** → 409, the refusal below.
 5. **Region, question or team** → 404:
    - "Add teams": `region` unknown or deactivated → "Region not found";
@@ -24,6 +26,13 @@ gets FastAPI's 422. See [research.md](../research.md) R7–R10.
      found"); a known one that is not in the competition → 303 with the `absent` notice (R10).
 6. **The write** repeats steps 2–5 under lock (services contract); its refusals map to the same
    responses.
+
+**Path ids that are not numbers**: `{competition_id:int}`, `{question_id:int}` and
+`{team_id:int}` are path converters, so `/teacher/competitions/abc/questions` or
+`…/questions/abc/remove` matches no route and gets the application's plain 404 before step 1,
+for every role. This is accepted, as in 12.1 (`test_a_path_id_that_is_not_a_number_matches_no_route`):
+the answer is the same for everyone and reveals nothing. Numeric ids of any length match and go
+through steps 1–5.
 
 **Not-found page**: the 12.1 `pages/teacher/competition_not_found.html`, with these new headings
 and texts:
@@ -136,6 +145,9 @@ Query: `subject`, `status`, `page`, `back`, `region`, `p`, `notice`. Checks 1–
   `page_heading("Add teams to “<name>”")`, the notice.
 - `chained_lists` with one level: `region`, label "Region", placeholder "Choose a region", the
   active regions; carries `subject`, `status`, `page`, `back`; disabled when none is offered.
+- **One region offered, none in the address**: it is chosen with no redirect, so the address
+  stays without `region`; the page-navigation links and every **Add** form carry its id, so the
+  next address holds it (FR-022, FR-024).
 - Exactly one of:
   - no region offered: `empty_state("No teams yet")`;
   - none chosen: `empty_state("Select a region", "Choose a region in the list above to see its

@@ -85,9 +85,11 @@ teams tests, the route sweep, the migrations, the form contract, the gallery and
   - `tests/integration/test_competition_entries_service.py`;
   - `tests/integration/test_teacher_competition_entries.py`.
 - Updated modules: `test_teacher_competitions`, `test_teacher_teams`, `test_team_service`,
-  `test_competition_service`, `test_paging` (unit), `test_routes`, `test_migrations`,
-  `test_form_contract` (+ `form_contract.json`), `test_component_gallery`, `test_page_patterns`,
-  `conftest.py` (seeders for a competition's questions and teams).
+  `test_region_service`, `test_paging` (unit), `test_templates` (unit), `test_routes`,
+  `test_migrations`, `test_form_contract` (+ `form_contract.json`), `test_component_gallery`,
+  `test_page_patterns`, `conftest.py` (seeders for a competition's questions and teams).
+  `test_competition_service` stays green unchanged (the landing now goes through
+  `paging.landing_index`).
 - Browser behaviour (the region list without JavaScript, the region group on a phone) is checked by
   hand or with an ad hoc Playwright run ([quickstart.md](./quickstart.md) §4).
 
@@ -216,7 +218,7 @@ tests/
 ├── integration/test_competition_entries_service.py   # NEW
 ├── integration/test_teacher_competition_entries.py   # NEW
 └── (updated) test_teacher_competitions, test_teacher_teams, test_team_service,
-    test_competition_service, unit/test_paging, test_routes, test_migrations,
+    test_region_service, unit/test_paging, unit/test_templates, test_routes, test_migrations,
     test_form_contract + form_contract.json, test_component_gallery, test_page_patterns,
     conftest.py
 

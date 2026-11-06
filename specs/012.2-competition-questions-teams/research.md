@@ -362,9 +362,8 @@ New modules:
   and their independence from bank edits and deletions; order of adding; re-adding; the teams
   ordering, grouping and per-region totals across a page break; active-member counts; every
   refusal (setting, competition, status, entry); "already" and "absent"; the controlled clock
-  passing the start; concurrent additions (two sessions, PostgreSQL) and a deletion racing an
-  addition; `delete_team` removing links from upcoming, in-progress and cancelled competitions and
-  keeping finished ones.
+  passing the start; concurrent additions and removals, an addition racing a cancellation, and a
+  bank deletion or edit racing a question's addition (two sessions, PostgreSQL).
 - `tests/integration/test_teacher_competition_entries.py`: every route, end to end, per the spec's
   user stories: pages, texts, empty states, notices, landing, anchors and addresses; access per
   role and setting through addresses and forms; the check order; deactivated subjects; reloads.
@@ -373,7 +372,10 @@ Updated modules:
 
 - `test_teacher_competitions.py`: menus on every row, entry order per status and setting, finished
   competitions of a deactivated subject (SC-009 names the replaced 12.1 assertions).
-- `test_teacher_teams.py`, `test_team_service.py`: the delete confirmation text; the withdrawal.
+- `test_teacher_teams.py`, `test_team_service.py`: the delete confirmation text; `delete_team`
+  removing links from upcoming, in-progress and cancelled competitions and keeping finished ones,
+  and a deletion racing a team's addition (two sessions, PostgreSQL); `count_active_members`.
+- `test_region_service.py`: `list_active_regions`.
 - `test_routes.py`: the four new writes; the eight manage paths in `MANAGE_PATHS`; the two read
   paths swept with the cast teacher allowed.
 - `test_migrations.py`: the new revision on both engines, stairway and drift.

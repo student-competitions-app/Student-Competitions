@@ -577,9 +577,9 @@ and check each change.
 - **FR-012**: Each row MUST show the team's name, its educational institution and its number of
   active members (milestone 11.1). The region MUST be shown only in the header. Members' names MUST
   NOT be shown.
-- **FR-013**: A team MUST stay in a competition when its institution or region is deactivated. Only a
-  **Finished** competition can hold a deleted team (FR-040), and there the team MUST be marked
-  "(deleted)".
+- **FR-013**: A team whose institution or region is deactivated MUST still be listed, since it stays
+  in the competition (FR-042). Only a **Finished** competition can hold a deleted team (FR-040), and
+  there the team MUST be marked "(deleted)".
 - **FR-014**: A competition with no teams MUST show "No teams in this competition yet", with the hint
   "Add teams with Add team." for a teacher who can make changes and no hint for anyone else.
 
@@ -675,9 +675,9 @@ and check each change.
 
 #### Deleting and deactivating elsewhere
 
-- **FR-039**: Deleting a question from the bank (milestone 11) MUST never change a competition: the
-  competition keeps its copy, marked as in FR-008, and the question can no longer be added to any
-  competition. The wording of the milestone 11 delete confirmation ("can no longer be added to new
+- **FR-039**: Deleting a question from the bank (milestone 11) MUST never change a competition (its
+  copy stays, as FR-008 states), and the question can no longer be added to any competition. The
+  wording of the milestone 11 delete confirmation ("can no longer be added to new
   competitions") MUST stay as it is.
 - **FR-040**: Deleting a team (milestone 11.1) MUST take it out of every competition that is not
   **Finished** (**Upcoming**, **In progress** and **Cancelled**), as part of the deletion done by the
@@ -770,12 +770,7 @@ and check each change.
   statuses and its confirmation text, deactivated institutions and regions, and both kinds of
   competition of a deactivated subject; repeated and concurrent additions and removals, a team deleted
   while being added, and reloads; and access per role, setting and id.
-- **FR-053**: This milestone MUST NOT add changing the order of a competition's questions, updating a
-  competition's copy of a question when the bank changes, limits on the number of questions or teams
-  in a competition, checking that a student is in only one team of a competition, question or team
-  counts in the competitions list, filtering "Add questions", searching "Add questions" or "Add
-  teams", an "all regions" choice on "Add teams", stopping a competition, the student's view
-  (milestone 13) or results (milestone 15).
+- **FR-053**: This milestone MUST NOT add anything listed under **Out of Scope** below.
 
 ### Key Entities *(include if feature involves data)*
 

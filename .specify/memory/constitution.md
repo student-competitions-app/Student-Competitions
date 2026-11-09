@@ -81,8 +81,12 @@ The application has three roles — student, teacher, administrator — with rig
   complete.
 - Competitions of a deactivated subject MUST be hidden and inaccessible unless they are
   finished; finished ones stay available read-only, so their results can be reviewed.
-- Students MUST only access their own profile (read-only), their own answers and results,
-  and competitions they are assigned to.
+- Answers belong to a team, never to a single student: one text answer per question per team.
+  Students MUST only access their own profile (read-only), the competitions their teams take
+  part in, and their teams' answers and results.
+- A teacher MUST enter a team's answers only with Write access to the team's educational
+  institution; with Read access they MUST see only the teams' answer progress, never the
+  answers.
 - The administrator list MUST come from deployment configuration, not from the UI.
 
 **Rationale**: The system holds personal data of students and competition results; a single
@@ -98,7 +102,7 @@ missing check leaks data or allows score tampering.
 - State-changing requests (including HTMX requests) MUST be protected against CSRF.
 - Secrets (session key, database URL, LLM and email API keys, admin list) MUST come from
   environment variables and MUST NOT be committed to the repository.
-- Logs MUST NOT contain OTP codes, session identifiers, API keys or full student answers.
+- Logs MUST NOT contain OTP codes, session identifiers or API keys.
 
 **Rationale**: Email OTP moves the security boundary to code handling and session management;
 these rules close the common gaps.
@@ -111,15 +115,16 @@ these rules close the common gaps.
 - Evaluation MUST use structured output validated against a Pydantic schema in
   `app/schemas/`; the score MUST be an integer from 1 to 10 and MUST account for the level
   of detail, with the question text and the teacher's reference answer as inputs.
-- Student answers MUST be treated as untrusted input: clearly delimited in the prompt and
-  never able to alter scoring instructions (prompt-injection resistance).
+- Answers (a team's answers, entered by its students or by a teacher) MUST be treated as
+  untrusted input: clearly delimited in the prompt and never able to alter scoring
+  instructions (prompt-injection resistance).
 - Evaluation failures (timeouts, invalid output, provider errors) MUST NOT lose or corrupt a
   submitted answer; the answer stays persisted with an explicit pending/failed status and can
   be re-evaluated.
 - Each stored evaluation MUST record the score, the model's justification and the model
   identifier used, so results are auditable.
-- LLM calls MUST NOT run inside the request that saves a student's answer; answer submission
-  MUST succeed independently of the LLM being available.
+- LLM calls MUST NOT run inside the request that saves an answer; saving answers MUST succeed
+  independently of the LLM being available.
 
 **Rationale**: Scores decide winners; they must be reproducible, explainable and resilient to
 provider outages and manipulation.
@@ -137,7 +142,8 @@ provider outages and manipulation.
   from its start until a teacher stops it, then finished; or cancelled. Its status MUST be
   derived on the server from the stored start and the stored stop or cancel, and enforced
   server-side on every read of questions and every answer submission: students read questions
-  and submit answers only while the competition is in progress.
+  only while the competition is in progress, and answers are entered, by students or teachers,
+  only while it is in progress.
 - Results (scores, totals, places, best answers) MUST be persisted, and deletions MUST NOT
   silently orphan or destroy historical competition results.
 
@@ -262,4 +268,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 2.1.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-05
+**Version**: 2.2.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-09

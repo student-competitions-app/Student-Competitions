@@ -43,20 +43,27 @@
 {%- endif %}
 {%- endmacro %}
 
-{% macro field(id, label, value="", error=None, hint=None, type="text", name=None, attrs={}) -%}
+{#- `placeholder` (milestone 12.3 contracts/components.md §2): only says that the field is empty
+    ("Not answered"); it never replaces the label or the hint, which are rendered as without it. -#}
+{% macro _placeholder(placeholder) -%}
+{%- if placeholder is not none %} placeholder="{{ placeholder }}"{% endif -%}
+{%- endmacro %}
+
+{% macro field(id, label, value="", error=None, hint=None, type="text", name=None, attrs={}, placeholder=None) -%}
 <label for="{{ id }}">{{ label }}</label>
 {{ _messages(id, hint, error) }}
-<input type="{{ type }}" id="{{ id }}" name="{{ name or id }}" value="{{ value if value is not none else '' }}"{{ _described(id, hint, error) }}{{ _attrs(attrs) }}>
+<input type="{{ type }}" id="{{ id }}" name="{{ name or id }}" value="{{ value if value is not none else '' }}"{{ _described(id, hint, error) }}{{ _placeholder(placeholder) }}{{ _attrs(attrs) }}>
 {%- endmacro %}
 
 {#- The multi-line twin of `field` (milestone 11 contracts/components.md §3). The value is kept
     exactly: no whitespace sits between the tags and the value, and a value starting with a line
-    break gets one more, because HTML drops a single leading line break inside `<textarea>`. -#}
-{% macro textarea_field(id, label, value="", error=None, hint=None, name=None, rows=6, attrs={}) -%}
+    break gets one more, because HTML drops a single leading line break inside `<textarea>`. The
+    `placeholder` is the same as `field`'s. -#}
+{% macro textarea_field(id, label, value="", error=None, hint=None, name=None, rows=6, attrs={}, placeholder=None) -%}
 {%- set text = value if value is not none else "" -%}
 <label for="{{ id }}">{{ label }}</label>
 {{ _messages(id, hint, error) }}
-<textarea id="{{ id }}" name="{{ name or id }}" rows="{{ rows }}"{{ _described(id, hint, error) }}{{ _attrs(attrs) }}>{% if text.startswith("\n") %}{{ "\n" }}{% endif %}{{ text }}</textarea>
+<textarea id="{{ id }}" name="{{ name or id }}" rows="{{ rows }}"{{ _described(id, hint, error) }}{{ _placeholder(placeholder) }}{{ _attrs(attrs) }}>{% if text.startswith("\n") %}{{ "\n" }}{% endif %}{{ text }}</textarea>
 {%- endmacro %}
 
 {#- `groups` (milestone 12.1 contracts/components.md §6): `(label, options)` pairs, each rendered as

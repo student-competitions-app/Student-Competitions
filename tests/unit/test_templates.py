@@ -239,3 +239,97 @@ def test_confirmation_back_label() -> None:
     )
     assert '<a href="/back">Keep competition</a>' in custom
     assert ">Cancel</a>" not in custom
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.3: the placeholder and the answer sheet (specs/012.3-team-answers contracts/
+# components.md §1–§2)
+# ---------------------------------------------------------------------------------------------
+
+FORM = '{% from "components/form.html" import field, textarea_field %}'
+SHEET = '{% from "components/answer_sheet.html" import answer_sheet %}'
+
+
+def test_field_and_textarea_without_a_placeholder_are_unchanged() -> None:
+    """The markup of milestones 10 and 11, byte for byte: every existing call is unchanged."""
+    out = render(
+        FORM + '{{ field("n", "Name", value="a", hint="H", error="E", attrs={"maxlength": "9"}) }}'
+    )
+    assert out == (
+        '<label for="n">Name</label>\n'
+        '<small id="n-hint" class="field-hint">H</small>'
+        '<small id="n-error" class="field-error">E</small>\n'
+        '<input type="text" id="n" name="n" value="a" aria-describedby="n-hint n-error"'
+        ' aria-invalid="true" maxlength="9">'
+    )
+    out = render(
+        FORM + '{{ textarea_field("t", "Text", value=v, hint="H", attrs={"maxlength": "2000"}) }}',
+        v="\nx",
+    )
+    assert out == (
+        '<label for="t">Text</label>\n'
+        '<small id="t-hint" class="field-hint">H</small>\n'
+        '<textarea id="t" name="t" rows="6" aria-describedby="t-hint" maxlength="2000">'
+        "\n\nx</textarea>"
+    )
+
+
+def test_the_placeholder_keeps_the_label_and_the_hint() -> None:
+    out = render(
+        FORM + '{{ textarea_field("t", "Answer to question 2", hint="Up to 2,000 characters.",'
+        ' placeholder="Not <answered>") }}'
+    )
+    assert out == (
+        '<label for="t">Answer to question 2</label>\n'
+        '<small id="t-hint" class="field-hint">Up to 2,000 characters.</small>\n'
+        '<textarea id="t" name="t" rows="6" aria-describedby="t-hint"'
+        ' placeholder="Not &lt;answered&gt;"></textarea>'
+    )
+    out = render(FORM + '{{ field("n", "Name", placeholder="Empty", attrs={"required": True}) }}')
+    assert out.count('placeholder="Empty"') == 1
+    assert out.startswith('<label for="n">Name</label>')
+    assert out.endswith(' placeholder="Empty" required>')
+
+
+def sheet_item(number: int, value: str = "", error: str | None = None) -> dict[str, object]:
+    return {
+        "number": number,
+        "field_id": f"answer-{40 + number}",
+        "text": f"Question <{number}>",
+        "value": value,
+        "error": error,
+    }
+
+
+def test_the_answer_sheet() -> None:
+    out = render(
+        SHEET + '{{ answer_sheet(items, "/teacher/competitions/17/answers/31", hidden) }}',
+        items=[sheet_item(1, "Sodium"), sheet_item(2, error="Too long.")],
+        hidden={"subject": "3", "back": "2"},
+    )
+    assert out.startswith('<form method="post" action="/teacher/competitions/17/answers/31">')
+    assert '<input type="hidden" name="subject" value="3">' in out
+    assert '<input type="hidden" name="back" value="2">' in out
+    assert out.count("<li>") == 2
+    assert "<h3>Question 1</h3>" in out and "<h3>Question 2</h3>" in out
+    assert "Question &lt;1&gt;" in out
+    assert '<label for="answer-41">Answer to question 1</label>' in out
+    assert (
+        '<textarea id="answer-41" name="answer-41" rows="6" aria-describedby="answer-41-hint"'
+        ' placeholder="Not answered" maxlength="2000">Sodium</textarea>'
+    ) in out
+    assert 'aria-describedby="answer-42-hint answer-42-error" aria-invalid="true"' in out
+    assert '<small id="answer-42-error" class="field-error">Too long.</small>' in out
+    assert out.index("</ol>") < out.index("Save answers</button>")
+    assert out.count("<button") == 1
+    assert ">Cancel<" not in out
+
+
+def test_the_answer_sheet_keeps_a_leading_line_break() -> None:
+    out = render(SHEET + '{{ answer_sheet(items, "/a", {}) }}', items=[sheet_item(1, "\nNaCl")])
+    assert 'maxlength="2000">\n\nNaCl</textarea>' in out
+
+
+def test_the_answer_sheet_needs_a_question() -> None:
+    with pytest.raises(TemplateRuntimeError, match="answer_sheet: at least one question"):
+        render(SHEET + '{{ answer_sheet([], "/a", {}) }}')

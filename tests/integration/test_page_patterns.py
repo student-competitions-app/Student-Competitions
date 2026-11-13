@@ -979,3 +979,99 @@ def test_the_entries_refusal_reads_back_to_the_competition(
     assert len(sections) == 1
     assert (back, "Back to the competition") in html.link_pairs(body, "main")
     assert [b for f in html.forms(body, "main") for b in f.buttons] == []
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.3: a team's answers
+# ---------------------------------------------------------------------------------------------
+
+
+def answers_world(
+    client: TestClient,
+    client_as: ClientAs,
+    outbox: list[Any],
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    cancelled: bool = False,
+) -> tuple[TestClient, str, str, int]:
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, base, context = contract.team_answers_scene(w, cancelled=cancelled)
+    return browser, base, context, contract.team_of(base)
+
+
+def test_the_team_answers_page_patterns(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A back link first, one heading with no action, the details with the status badge, region
+    groups (never a table caption) between two page navigations, and no primary action."""
+    browser, base, context, _ = answers_world(client, client_as, outbox, monkeypatch)
+    body = browser.get(f"{base}?{context}").text
+    competition = base.split("/")[3]
+    assert_back_link(
+        body,
+        f"/teacher/competitions?{context}#competition-{competition}",
+        "Back to the competitions",
+    )
+    assert html.h1(body) == "Answers of “Spring round”"
+    assert html.badges(body) == ["In progress"]
+    sections = [s for s in html.parse(body).find_all("section") if "region-group" in s.classes()]
+    assert len(sections) == 1 and "<caption>" not in body
+    assert html.pagination(body, "Pages, top") and html.pagination(body, "Pages, bottom")
+    assert primary_actions(body) == []
+
+
+def test_the_answer_sheet_patterns(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A back link first, one heading, the details, the `answer_sheet` with exactly one primary
+    submit inside a `POST` form, never disabled and with no inline script, so the milestone 10.1
+    loading feedback marks it busy and keeps the form from being sent twice (FR-032); every
+    answer field labelled, with the hint and the placeholder; the error summary only on the 400
+    page, linking to each field with its message."""
+    browser, base, context, team = answers_world(client, client_as, outbox, monkeypatch)
+    body = browser.get(f"{base}/{team}?{context}&back=2").text
+    assert_back_link(body, f"{base}?{context}&p=2#team-{team}", "Back to the answers")
+    assert html.h1(body) == "Answers of “Comets” in “Spring round”"
+    assert html.error_summary(body) is None
+    (form,) = [f for f in html.forms(body, "main") if "/answers/" in f.action]
+    assert form.method == "post"
+    (button,) = form.buttons
+    assert (button.text, button.attrs.get("type")) == ("Save answers", "submit")
+    assert "disabled" not in button.attrs and "onclick" not in button.attrs
+    assert primary_actions(body) == ["Save answers"]
+    assert "<script>" not in html.region(body, "main")
+    textareas = [e for e in html.parse(body).iter() if e.tag == "textarea"]
+    assert len(textareas) == 2
+    labels = {e.attrs["for"] for e in html.parse(body).iter() if e.tag == "label"}
+    for textarea in textareas:
+        assert textarea.attrs["id"] in labels
+        assert textarea.attrs["placeholder"] == "Not answered"
+        assert textarea.attrs["aria-describedby"] == f"{textarea.attrs['id']}-hint"
+    answers = {i.name: i.value for i in form.inputs if i.name and i.name.startswith("answer-")}
+    data = {i.name: i.value for i in form.inputs if i.name} | dict.fromkeys(answers, "x" * 2001)
+    invalid = browser.post(f"{base}/{team}", data=data)
+    assert invalid.status_code == 400
+    assert_summary_matches_fields(invalid.text, list(answers))
+    assert html.h1(invalid.text) == "Answers of “Comets” in “Spring round”"
+
+
+def test_the_answers_refusal(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The 409 `refusal`: the question, the reason and Back to competitions, with no button."""
+    browser, base, context, _ = answers_world(
+        client, client_as, outbox, monkeypatch, cancelled=True
+    )
+    response = browser.get(f"{base}?{context}")
+    assert response.status_code == 409
+    body = response.text
+    competition = base.split("/")[3]
+    back = f"/teacher/competitions?{context}#competition-{competition}"
+    assert_back_link(body, back, "Back to the competitions")
+    assert html.h1(body) == "Enter answers for “Spring round”?"
+    sections = [
+        s for s in html.parse(body).find_all("section") if "confirmation-refused" in s.classes()
+    ]
+    assert len(sections) == 1
+    assert (back, "Back to competitions") in html.link_pairs(body, "main")
+    assert [b for f in html.forms(body, "main") for b in f.buttons] == []

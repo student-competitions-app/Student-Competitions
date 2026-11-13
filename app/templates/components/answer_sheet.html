@@ -1,0 +1,32 @@
+{#- Answer sheet (milestone 12.3 contracts/components.md §1, research R15): every answer of one
+    participant to a list of questions, saved at once, such as a team's answers in a competition.
+    A form of numbered text cards, "Question 3" over the question's text, each with its answer
+    field under it ("Answer to question 3", the hint "Up to 2,000 characters." and the placeholder
+    "Not answered"), and one primary save button below the list, with no Cancel. Each item is a
+    mapping with `number`, `field_id`, `text`, `value` ("" when not answered) and `error` (or
+    `None`). The page renders the `error_summary` under its heading, linking to each `field_id`,
+    and its own empty state when there is no question: an empty list is refused. Never a
+    reference answer. Milestone 13 will give students the same sheet. -#}
+
+{% from "components/card.html" import text_card, text_box %}
+{% from "components/form.html" import textarea_field, form_actions %}
+
+{% macro answer_sheet(items, action, hidden, submit_label="Save answers") -%}
+{%- if not items %}{{ template_error("answer_sheet: at least one question is required") }}{% endif -%}
+<form method="post" action="{{ action }}">
+  {%- for name, value in hidden.items() %}
+  <input type="hidden" name="{{ name }}" value="{{ value }}">
+  {%- endfor %}
+  <ol class="answer-sheet">
+    {%- for item in items %}
+    <li>
+      {% call text_card("Question " ~ item.number) %}
+      {{ text_box("Question", item.text) }}
+      {{ textarea_field(item.field_id, "Answer to question " ~ item.number, value=item.value, error=item.error, hint="Up to 2,000 characters.", placeholder="Not answered", attrs={"maxlength": "2000"}) }}
+      {% endcall %}
+    </li>
+    {%- endfor %}
+  </ol>
+  {{ form_actions(submit_label) }}
+</form>
+{%- endmacro %}

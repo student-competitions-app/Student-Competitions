@@ -31,11 +31,13 @@ from app.models import (
     Role,
     SchoolClass,
     Team,
+    TeamAnswer,
     TeamMembership,
     User,
     UserSession,
 )
 from app.schemas.names import InvalidName
+from app.services import team_answers
 from app.services.competition_entries import EntryNotFound, add_team
 from app.services.institutions import set_institution_active
 from app.services.regions import set_region_active
@@ -66,14 +68,17 @@ from app.services.teams import (
 from app.services.users import reconcile_users
 from tests.conftest import (
     ADMIN_EMAIL,
+    add_competition_question,
     add_competition_team,
     make_class,
     make_competition,
     make_institution,
     make_member,
+    make_question,
     make_subject,
     make_teacher,
     make_team,
+    save_team_answer,
     seed_roles_directly,
 )
 
@@ -534,7 +539,7 @@ def test_a_deletion_sets_only_the_deletion_time(
         name: rows for name, rows in before.items() if name != "teams"
     }
     assert [r.getMessage() for r in caplog.records] == [
-        f"Team deleted: id={team} members=2 competitions=0"
+        f"Team deleted: id={team} members=2 competitions=0 answers=0"
     ]
 
 
@@ -576,7 +581,7 @@ def test_a_deletion_takes_the_team_out_of_every_competition_not_finished(
     assert competitions_of(engine, team) == {statuses["finished"]}
     assert competitions_of(engine, other) == set(statuses.values())
     assert [r.getMessage() for r in caplog.records] == [
-        f"Team deleted: id={team} members=0 competitions=3"
+        f"Team deleted: id={team} members=0 competitions=3 answers=0"
     ]
     assert "Comets" not in caplog.text
 
@@ -640,6 +645,114 @@ def test_a_deletion_racing_an_addition_leaves_no_unfinished_competition(
             thread.join(timeout=30)
         assert outcomes["delete"] == "deleted"
         assert outcomes["add"] in ("added", "not found")
+        assert competitions_of(engine, team) == set()
+
+
+def answers_by_competition(engine: Engine, team_id: int) -> dict[int, list[str]]:
+    with Session(engine) as session:
+        found: dict[int, list[str]] = {}
+        for answer in session.exec(select(TeamAnswer).where(TeamAnswer.team_id == team_id)):
+            found.setdefault(answer.competition_id, []).append(answer.text)
+        return {competition: sorted(texts) for competition, texts in found.items()}
+
+
+def answered(engine: Engine, competition: int, team: int, *texts: str) -> None:
+    """The team's answers to new copies of the competition, stored directly."""
+    with Session(engine) as session:
+        subject_id = session.exec(
+            select(Competition.subject_id).where(Competition.id == competition)
+        ).one()
+    for text in texts:
+        copy = add_competition_question(engine, competition, make_question(engine, subject_id))
+        save_team_answer(engine, competition, team, copy, text)
+
+
+def test_a_deletion_deletes_the_answers_in_every_competition_not_finished(
+    engine: Engine, scene: Scene, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Milestone 12.3 FR-028, US11-1, US11-2, SC-008, research R7: the answers go with the team's
+    place in the In progress and the Cancelled competition; the Finished one keeps the team and
+    its answers; another team's answers stay. The log line holds ids and counts only."""
+    team = make_team(engine, scene.a, "Comets")
+    other = make_team(engine, scene.a, "Novas")
+    statuses = one_of_each_status(engine)
+    for competition in statuses.values():
+        add_competition_team(engine, competition, team)
+        add_competition_team(engine, competition, other)
+    for status in ("in_progress", "cancelled", "finished"):
+        answered(engine, statuses[status], team, f"{status} one", f"{status} two")
+        answered(engine, statuses[status], other, f"{status} other")
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"), Session(engine) as session:
+        delete_team(session, scene.teacher, team)
+    assert answers_by_competition(engine, team) == {
+        statuses["finished"]: ["finished one", "finished two"]
+    }
+    assert competitions_of(engine, team) == {statuses["finished"]}
+    assert answers_by_competition(engine, other) == {
+        statuses[status]: [f"{status} other"] for status in ("in_progress", "cancelled", "finished")
+    }
+    assert [r.getMessage() for r in caplog.records] == [
+        f"Team deleted: id={team} members=0 competitions=3 answers=4"
+    ]
+    assert "Comets" not in caplog.text and "one" not in caplog.text
+
+
+def test_a_deletion_racing_a_save_of_answers_leaves_none_behind(
+    engine: Engine, scene: Scene, database_url: str
+) -> None:
+    """Milestone 12.3 FR-028, research R3, R7: the save's `FOR SHARE` on the team and the
+    deletion's `FOR UPDATE` serialise them: a save stored first is deleted with the team, and one
+    that waits finds the team deleted. PostgreSQL only."""
+    if not database_url.startswith("postgresql"):
+        pytest.skip("row locks are a PostgreSQL behaviour")
+    competition = one_of_each_status(engine)["in_progress"]
+    with Session(engine) as session:
+        subject_id = session.exec(
+            select(Competition.subject_id).where(Competition.id == competition)
+        ).one()
+    copy = add_competition_question(engine, competition, make_question(engine, subject_id))
+    for attempt in range(3):
+        team = make_team(engine, scene.a, f"Race {attempt}")
+        add_competition_team(engine, competition, team)
+        barrier = threading.Barrier(2)
+        outcomes: dict[str, str] = {}
+
+        def saving(
+            team_id: int = team,
+            barrier: threading.Barrier = barrier,
+            outcomes: dict[str, str] = outcomes,
+        ) -> None:
+            with Session(engine) as session:
+                barrier.wait()
+                try:
+                    team_answers.save_answers(
+                        session, scene.teacher, competition, subject_id, team_id, {copy: "Raced"}
+                    )
+                except team_answers.TeamNotFound:
+                    outcomes["save"] = "not found"
+                except BaseException as error:  # noqa: BLE001 — reported below
+                    outcomes["save"] = repr(error)
+                else:
+                    outcomes["save"] = "saved"
+
+        def deleting(
+            team_id: int = team,
+            barrier: threading.Barrier = barrier,
+            outcomes: dict[str, str] = outcomes,
+        ) -> None:
+            with Session(engine) as session:
+                barrier.wait()
+                delete_team(session, scene.teacher, team_id)
+                outcomes["delete"] = "deleted"
+
+        threads = [threading.Thread(target=saving), threading.Thread(target=deleting)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+        assert outcomes["delete"] == "deleted"
+        assert outcomes["save"] in ("saved", "not found")
+        assert answers_by_competition(engine, team) == {}
         assert competitions_of(engine, team) == set()
 
 

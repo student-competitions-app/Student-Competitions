@@ -29,6 +29,10 @@ to; `region` is the region of "Add teams". Every address is built by `entries_pa
 the question's or team's id and the outcome; the texts are built when the page is shown (research
 R9), so no name ever reaches an address or a log line (FR-048). Nothing here logs; the service
 logs ids.
+
+**Shared with milestone 12.3**: `teacher_team_answers` (a competition's team answers) imports
+`ListContext`, `find_context`, `render_competition_page`, `address` and `page_prefix`, so both
+routers build the same addresses and pages.
 """
 
 from dataclasses import dataclass
@@ -167,7 +171,7 @@ def _entry(kind: ListKind) -> str:
     return "question" if kind == "questions" else "team"
 
 
-def _address(
+def address(
     path: str,
     context: ListContext,
     *,
@@ -179,18 +183,18 @@ def _address(
 ) -> str:
     """`path` with the context, then `back`, `region` and `p` (each left out at its default),
     the notice and the anchor."""
-    address = f"{path}?{context.query}"
+    built = f"{path}?{context.query}"
     if back > 1:
-        address += f"&back={back}"
+        built += f"&back={back}"
     if region is not None:
-        address += f"&region={region}"
+        built += f"&region={region}"
     if p > 1:
-        address += f"&p={p}"
+        built += f"&p={p}"
     if notice:
-        address += f"&notice={notice}"
+        built += f"&notice={notice}"
     if anchor:
-        address += f"#{anchor}"
-    return address
+        built += f"#{anchor}"
+    return built
 
 
 def _anchor(kind: ListKind, entry_id: int | None) -> str | None:
@@ -208,7 +212,7 @@ def entries_path(
     """The competition's questions or teams at page `p`, with the sealed `notice`, scrolled to
     the `anchor` entry: `/teacher/competitions/17/questions?subject=3&p=2#question-12`."""
     path = f"/teacher/competitions/{competition_id}/{kind}"
-    return _address(path, context, p=p, notice=notice, anchor=_anchor(kind, anchor))
+    return address(path, context, p=p, notice=notice, anchor=_anchor(kind, anchor))
 
 
 def add_page_path(
@@ -224,7 +228,7 @@ def add_page_path(
     """ "Add questions" or "Add teams" at page `p` (of `region`), returning to page `back` of the
     competition's list."""
     path = f"/teacher/competitions/{competition_id}/{kind}/add"
-    return _address(
+    return address(
         path, context, back=back, region=region, p=p, notice=notice, anchor=_anchor(kind, anchor)
     )
 
@@ -234,12 +238,12 @@ def remove_path(
 ) -> str:
     """The remove confirmation of one question or team, returning to page `back`."""
     path = f"/teacher/competitions/{competition_id}/{kind}/{entry_id}/remove"
-    return _address(path, context, back=back)
+    return address(path, context, back=back)
 
 
-def _page_prefix(address: str) -> str:
-    """The address a page number completes, for the page navigation."""
-    return f"{address}&p="
+def page_prefix(path: str) -> str:
+    """The address `path` a page number completes, for the page navigation."""
+    return f"{path}&p="
 
 
 # ---------------------------------------------------------------------------------------------
@@ -257,7 +261,7 @@ def _fallback(session: Session, competition_id: int) -> ListContext | None:
     return ListContext(subject, None, locate(session, subject, None, competition_id).page)
 
 
-def _found(
+def find_context(
     request: Request,
     session: Session,
     competition_id: int,
@@ -368,12 +372,13 @@ def entries_refused(
     )
 
 
-def _render(
+def render_competition_page(
     request: Request,
     template: str,
     competition: CompetitionView,
     context: ListContext,
     values: dict[str, Any],
+    status_code: int = 200,
 ) -> HTMLResponse:
     """A page of this router: the competition, its subject and the context's hidden fields, with
     the page's own values."""
@@ -383,6 +388,7 @@ def _render(
         TAB,
         {"competition": competition, "subject": context.subject, "hidden": context.hidden()}
         | values,
+        status_code=status_code,
     )
 
 
@@ -406,7 +412,7 @@ def competition_questions_page(
     """The competition's questions in the order of adding, ten per page, for every teacher;
     **Add question** and **Remove** only for a teacher who can make changes (FR-003–FR-009,
     FR-015). Opening it changes nothing."""
-    found = _found(request, session, competition_id, subject, status, page)
+    found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
@@ -421,7 +427,7 @@ def competition_questions_page(
         if can_change
         else {}
     )
-    return _render(
+    return render_competition_page(
         request,
         "pages/teacher/competition_questions.html",
         competition,
@@ -432,7 +438,7 @@ def competition_questions_page(
             "notice": read_entry_notice(request, session, notice, competition, "questions"),
             "back": context.back_to_list(competition.id),
             "add_href": add_page_path("questions", competition.id, context, back=current),
-            "page_href": _page_prefix(entries_path("questions", competition.id, context)),
+            "page_href": page_prefix(entries_path("questions", competition.id, context)),
             "remove_hrefs": remove_hrefs,
         },
     )
@@ -455,7 +461,7 @@ def add_questions_page(
     **Add** or "Already in this competition" (FR-016–FR-019); the refusal for a competition
     that is not Upcoming (FR-034)."""
     require_manage(request, session)
-    found = _found(request, session, competition_id, subject, status, page)
+    found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
@@ -466,7 +472,7 @@ def add_questions_page(
         )
     assert context.subject.id is not None
     listing = question_bank.question_page(session, context.subject.id, parse_page(p))
-    return _render(
+    return render_competition_page(
         request,
         "pages/teacher/competition_questions_add.html",
         competition,
@@ -477,7 +483,7 @@ def add_questions_page(
             "notice": read_entry_notice(request, session, notice, competition, "questions"),
             "back": back_page,
             "back_href": entries_path("questions", competition.id, context, p=back_page),
-            "page_href": _page_prefix(
+            "page_href": page_prefix(
                 add_page_path("questions", competition.id, context, back=back_page)
             ),
         },
@@ -501,7 +507,7 @@ def add_question_action(
     "Add questions", at the question, with the notice (FR-018); "already in" lands there too,
     with its notice (FR-035)."""
     require_manage(request, session)
-    found = _found(request, session, competition_id, subject, status, page)
+    found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
@@ -559,7 +565,7 @@ def remove_question_page(
     """The confirmation (FR-029); "is not in" for a known question that is not in the
     competition, which only redirects (research R10)."""
     require_manage(request, session)
-    found = _found(request, session, competition_id, subject, status, page)
+    found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
@@ -609,7 +615,7 @@ def remove_question_action(
     """Takes the question out of the competition and lands on the same page of its list at the
     row that took its place, else the one before it, with the notice (FR-032)."""
     require_manage(request, session)
-    found = _found(request, session, competition_id, subject, status, page)
+    found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
@@ -656,7 +662,7 @@ def _confirmation(
 ) -> HTMLResponse:
     """The remove confirmation of a question or a team; **Cancel** returns to the page it came
     from, at the entry (FR-031)."""
-    return _render(
+    return render_competition_page(
         request,
         "pages/teacher/competition_entry_remove.html",
         competition,
@@ -692,7 +698,7 @@ def competition_teams_page(
     """The competition's teams in region boxes, ten teams per page, for every teacher; **Add
     team** and **Remove** only for a teacher who can make changes (FR-010–FR-015). Opening it
     changes nothing."""
-    found = _found(request, session, competition_id, subject, status, page)
+    found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
@@ -708,7 +714,7 @@ def competition_teams_page(
         if can_change
         else {}
     )
-    return _render(
+    return render_competition_page(
         request,
         "pages/teacher/competition_teams.html",
         competition,
@@ -720,7 +726,7 @@ def competition_teams_page(
             "notice": read_entry_notice(request, session, notice, competition, "teams"),
             "back": context.back_to_list(competition.id),
             "add_href": add_page_path("teams", competition.id, context, back=current),
-            "page_href": _page_prefix(entries_path("teams", competition.id, context)),
+            "page_href": page_prefix(entries_path("teams", competition.id, context)),
             "remove_hrefs": remove_hrefs,
         },
     )
@@ -745,7 +751,7 @@ def add_teams_page(
     competition" (FR-020–FR-027). With no region in the address, the only region offered is
     chosen, without a redirect: its id travels in every form and page link instead."""
     require_manage(request, session)
-    found = _found(request, session, competition_id, subject, status, page)
+    found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
@@ -775,11 +781,11 @@ def add_teams_page(
         values |= {
             "listing": addable_teams(session, selected.id, parse_page(p)),
             "in_competition": team_ids(session, competition.id),
-            "page_href": _page_prefix(
+            "page_href": page_prefix(
                 add_page_path("teams", competition.id, context, back_page, region=selected.id)
             ),
         }
-    return _render(
+    return render_competition_page(
         request, "pages/teacher/competition_teams_add.html", competition, context, values
     )
 
@@ -801,7 +807,7 @@ def add_team_action(
     """Adds one team, and stays on the same region and page of "Add teams", at the team, with
     the notice (FR-026); "already in" lands there too, with its notice (FR-035)."""
     require_manage(request, session)
-    found = _found(request, session, competition_id, subject, status, page)
+    found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
@@ -868,7 +874,7 @@ def remove_team_page(
     """The confirmation, naming the team, its institution and its region (FR-030); "is not in"
     for a known team that is not in the competition, which only redirects (research R10)."""
     require_manage(request, session)
-    found = _found(request, session, competition_id, subject, status, page)
+    found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
@@ -915,7 +921,7 @@ def remove_team_action(
     lands on the same page of its list at the row that took its place, else the one before it,
     with the notice (FR-032, FR-033)."""
     require_manage(request, session)
-    found = _found(request, session, competition_id, subject, status, page)
+    found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found

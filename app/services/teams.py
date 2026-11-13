@@ -26,7 +26,10 @@ The lookups check no reach: their callers do.
 active region may be added to a competition by a teacher with **Can manage competitions**, linked
 to its institution or not (`app.services.competition_entries`). Deleting a team takes it out of
 every competition that is not finished, the exception constitution v2.1.0 Principle IV allows;
-finished competitions keep it, so their record stays complete.
+finished competitions keep it, so their record stays complete. Since milestone 12.3 (research R7)
+the deletion also deletes the team's answers in those competitions, before its links, as the
+composite foreign key of `team_answers` requires; finished competitions keep the team's answers
+too.
 """
 
 import logging
@@ -46,6 +49,7 @@ from app.models import (
     Region,
     SchoolClass,
     Team,
+    TeamAnswer,
     TeamMembership,
     User,
 )
@@ -312,19 +316,29 @@ def rename_team(session: Session, teacher_id: int, team_id: int, raw_name: str) 
 def delete_team(session: Session, teacher_id: int, team_id: int) -> TeamView:
     """Mark the team deleted, and take it out of every competition that is not finished
     (upcoming, in progress and cancelled), in the same transaction (milestone 12.2 FR-040,
-    research R5); finished competitions keep it. Of the team, only `deleted_at` is written: the
+    research R5), deleting its answers there first (milestone 12.3 FR-028, research R7): the
+    composite foreign key of `team_answers` requires it. Finished competitions keep the team and
+    its answers. Of the team, only `deleted_at` is written: the
     name, the institution, `updated_at` and every membership stay as they are (FR-007, FR-009).
     The setting **Can manage competitions** is not needed. A deleted team is out of reach, so a
     second deletion is `NotReachable`.
 
     The team row is locked `FOR UPDATE` first (`reach_team`), and an addition to a competition
     reads it `FOR SHARE`, so the two are serialised: an addition committed first is removed
-    here, and one that waits sees the deletion (FR-037)."""
+    here, and one that waits sees the deletion (FR-037). A save of the team's answers reads the
+    team `FOR SHARE` too (milestone 12.3 research R3): a save committed first has its answers
+    deleted here, and one that waits finds the team deleted."""
     _, team = reach_team(session, teacher_id, team_id, write=True, lock=True)
     members = count_members(session, team_id)
     team.deleted_at = utc_now()
     session.add(team)
     unfinished = select(Competition.id).where(col(Competition.stopped_at).is_(None))
+    answers = session.execute(
+        delete(TeamAnswer).where(
+            col(TeamAnswer.team_id) == team_id,
+            col(TeamAnswer.competition_id).in_(unfinished),
+        )
+    )
     withdrawn = session.execute(
         delete(CompetitionTeam).where(
             col(CompetitionTeam.team_id) == team_id,
@@ -334,10 +348,11 @@ def delete_team(session: Session, teacher_id: int, team_id: int) -> TeamView:
     view = TeamView.from_row(team)
     session.commit()
     logger.info(
-        "Team deleted: id=%d members=%d competitions=%d",
+        "Team deleted: id=%d members=%d competitions=%d answers=%d",
         team_id,
         members,
         withdrawn.rowcount,  # type: ignore[attr-defined]
+        answers.rowcount,  # type: ignore[attr-defined]
     )
     return view
 

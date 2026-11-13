@@ -19,6 +19,7 @@
 {% from "components/pagination.html" import page_navigation %}
 {% from "components/menu.html" import actions_menu, menu_link %}
 {% from "components/time.html" import local_time with context %}
+{% from "components/answer_sheet.html" import answer_sheet %}
 
 {% block title %}Components — {{ app_name }}{% endblock %}
 
@@ -182,6 +183,14 @@
   </tr>
   {% endfor %}
   {% endcall %}
+  <h3>A short value on one line</h3>
+  <p>A short value that must not break, such as a team's progress, stays on one line beside a long name.</p>
+  {% call data_table(["Team", "Answered"]) %}
+  <tr>
+    {{ cell("Team", long_section_title) }}
+    {{ cell("Answered", "3 of 6", nowrap=True) }}
+  </tr>
+  {% endcall %}
   <h3>An empty list</h3>
   {{ empty_state("No subjects yet", "Create the first subject with Create subject.") }}
 </section>
@@ -216,7 +225,7 @@
 
 <section id="actions-menu" aria-labelledby="actions-menu-heading">
   <h2 id="actions-menu-heading">Actions menu</h2>
-  <p>A row's actions behind one button, in the row's actions cell. It opens and closes without JavaScript; opening one closes the others where the browser supports it. The first menu is shown open, over the rows below it, with every entry a competition can have: Edit, Questions, Teams, then the destructive Cancel competition; the last row has only the entries every teacher gets.</p>
+  <p>A row's actions behind one button, in the row's actions cell. It opens and closes without JavaScript; opening one closes the others where the browser supports it. The first menu is shown open, over the rows below it, with every entry a competition can have: Edit, Questions, Teams, Answers, then the destructive Cancel competition (no competition has all five at once: Edit is Upcoming only, Answers In progress only); the last row has only the entries every teacher gets.</p>
   {% call data_table(["Name", "Start", "Status", "Actions"]) %}
   <tr>
     {{ cell("Name", "Spring final") }}
@@ -227,6 +236,7 @@
     {{ menu_link("Edit", "/admin/components#actions-menu") }}
     {{ menu_link("Questions", "/admin/components#actions-menu") }}
     {{ menu_link("Teams", "/admin/components#actions-menu") }}
+    {{ menu_link("Answers", "/admin/components#actions-menu") }}
     {{ menu_link("Cancel competition", "/admin/components#actions-menu", destructive=True) }}
     {%- endcall -%}
     {% endcall %}
@@ -239,6 +249,7 @@
     {%- call actions_menu(long_competition_name) -%}
     {{ menu_link("Questions", "/admin/components#actions-menu") }}
     {{ menu_link("Teams", "/admin/components#actions-menu") }}
+    {{ menu_link("Answers", "/admin/components#actions-menu") }}
     {{ menu_link("Cancel competition", "/admin/components#actions-menu", destructive=True) }}
     {%- endcall -%}
     {% endcall %}
@@ -304,11 +315,22 @@
   {{ textarea_field("gallery-text-empty", "Question", hint="Up to 2,000 characters.") }}
   {{ textarea_field("gallery-text-filled", "Reference answer", value=multiline_text) }}
   {{ textarea_field("gallery-text-error", "Question text", value="", error=textarea_error) }}
+  <h3>An empty field with a placeholder</h3>
+  <p>A placeholder only says that the field is empty. The label and the hint stay.</p>
+  {{ textarea_field("gallery-placeholder", "Answer to question 2", hint="Up to 2,000 characters.", placeholder="Not answered") }}
   {{ form_actions("Save question", cancel_href="/admin/components#forms", name="then", value="list", secondary={"label": "Save and add one more question", "name": "then", "value": "another"}) }}
   <h3>A date and a time</h3>
   {{ date_time_fields("gallery-start-empty", "Start", date_time_values, date_time_errors, "UTC") }}
   {{ date_time_fields("gallery-start-filled", "Start", date_time_values, date_time_errors, "Europe/Kyiv") }}
   {{ date_time_fields("gallery-start-errors", "Start", date_time_values, date_time_errors, "Europe/Kyiv") }}
+</section>
+
+<section id="answer-sheet" aria-labelledby="answer-sheet-heading">
+  <h2 id="answer-sheet-heading">Answer sheet</h2>
+  <p>Every answer of one participant to a list of questions, saved at once with one button below the list. Each question is a numbered card with its answer field under the text; an empty field shows "Not answered". The error summary sits under the page heading.</p>
+  {{ error_summary(answer_sheet_errors, order=answer_sheet_order) }}
+  {{ answer_sheet(answer_sheet_items, "#", {"back": "1"}) }}
+  <p>Narrow the window below 768 px: the sheet stays one column, each field at the card's full width.</p>
 </section>
 
 <section id="confirmations" aria-labelledby="confirmations-heading">

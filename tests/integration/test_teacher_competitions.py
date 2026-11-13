@@ -39,6 +39,7 @@ from tests.conftest import (
     ADMIN_STUDENT_EMAIL,
     AUTO,
     STUDENT_EMAIL,
+    TEACHER_EMAIL,
     ClientAs,
     make_competition,
     make_institution,
@@ -71,9 +72,14 @@ GAP = (
     " Enter another time."
 )
 
-ENTRY_ROUTES = (f"{TAB}/{{competition_id:int}}/questions", f"{TAB}/{{competition_id:int}}/teams")
+ENTRY_ROUTES = (
+    f"{TAB}/{{competition_id:int}}/questions",
+    f"{TAB}/{{competition_id:int}}/teams",
+    f"{TAB}/{{competition_id:int}}/answers",
+)
 """A competition's questions and teams (milestone 12.2), swept in
-`test_teacher_competition_entries.py` with their own order of checks."""
+`test_teacher_competition_entries.py`, and its team answers (milestone 12.3), swept in
+`test_teacher_team_answers.py`, each with their own order of checks."""
 COMPETITION_ROUTES = sorted(
     (method, path)
     for path, methods, _ in ALL_ROUTES
@@ -91,6 +97,12 @@ def lists(competition: int, query: str) -> list[tuple[str, str]]:
         ("Questions", f"{TAB}/{competition}/questions?{query}"),
         ("Teams", f"{TAB}/{competition}/teams?{query}"),
     ]
+
+
+def answers(competition: int, query: str) -> tuple[str, str]:
+    """The menu entry every teacher gets on an In progress row since milestone 12.3 (FR-001,
+    FR-002): the competition's **Answers**, with the list's context."""
+    return ("Answers", f"{TAB}/{competition}/answers?{query}")
 
 
 def at(day: int, hour: int = 10, minute: int = 0, month: int = 3) -> datetime:
@@ -675,7 +687,8 @@ def test_no_subjects_yet(scene: Scene) -> None:
 
 def test_without_the_setting_no_add_and_read_only_menus(scene: Scene) -> None:
     """US2-9, US2-13. Replaced by milestone 12.2 FR-002 (SC-009): a teacher without the setting
-    no longer gets rows with no menu, but a menu with only **Questions** and **Teams**."""
+    no longer gets rows with no menu, but a menu with only **Questions** and **Teams**; replaced
+    again by milestone 12.3 FR-001 (SC-011): an In progress row adds **Answers**."""
     spring = make_competition(scene.engine, scene.chemistry, starts_at=at(14))
     running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
     body = listed(scene, browser=scene.reader)
@@ -683,7 +696,7 @@ def test_without_the_setting_no_add_and_read_only_menus(scene: Scene) -> None:
     query = f"subject={scene.chemistry}"
     assert [(r.name, r.menu, r.menu_label) for r in rows(body)] == [
         ("Spring round", lists(spring, query), "Actions for “Spring round”"),
-        ("Running", lists(running, query), "Actions for “Running”"),
+        ("Running", [*lists(running, query), answers(running, query)], "Actions for “Running”"),
     ]
     assert len(rows(listed(scene))[0].menu) == 4
 
@@ -1163,7 +1176,8 @@ def test_a_cancelled_name_is_free_again(scene: Scene) -> None:
 
 def test_a_started_competition_is_in_progress(scene: Scene) -> None:
     """US6-1, US6-2: nothing is written when the start passes; the menu offers no Edit, only the
-    competition's lists (milestone 12.2) and Cancel competition."""
+    competition's lists (milestone 12.2), **Answers** (replaced by milestone 12.3 FR-001,
+    SC-011) and Cancel competition."""
     competition = make_competition(scene.engine, scene.chemistry, starts_at=at(1, 10))
     before = snapshot(scene.engine)
     scene.clock(timedelta(hours=1))
@@ -1171,6 +1185,7 @@ def test_a_started_competition_is_in_progress(scene: Scene) -> None:
     assert row.status == "In progress"
     assert row.menu == [
         *lists(competition, f"subject={scene.chemistry}"),
+        answers(competition, f"subject={scene.chemistry}"),
         ("Cancel competition", f"{TAB}/{competition}/cancel?subject={scene.chemistry}"),
     ]
     assert [r.id for r in rows(listed(scene, "&status=in_progress"))] == [competition]
@@ -1732,3 +1747,49 @@ def test_a_deactivated_subject_that_is_the_only_offered_is_chosen(
     body = scene.manager.get(TAB).text
     assert [o.text for o in html.options(body, "subject") if o.selected] == ["Chemistry"]
     assert names(body) == ["Finished"]
+
+
+# Milestone 12.3: Answers in the menu (specs/012.3-team-answers US4, FR-001, FR-002)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_every_teacher_gets_answers_on_an_in_progress_row(
+    scene: Scene, client_as: ClientAs
+) -> None:
+    """US4-1–US4-3: with and without the setting, and with no institution link at all (the cast
+    teacher), only the In progress row offers **Answers**, after **Teams** and before **Cancel
+    competition**."""
+    running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
+    make_competition(scene.engine, scene.chemistry, "Later", starts_at=at(14))
+    make_competition(scene.engine, scene.chemistry, "Done", starts_at=at(1, 7), stopped=True)
+    make_competition(scene.engine, scene.chemistry, "Off", starts_at=at(14), cancelled=True)
+    query = f"subject={scene.chemistry}"
+    for browser, tail in (
+        (scene.manager, ["Cancel competition"]),
+        (scene.reader, []),
+        (client_as(TEACHER_EMAIL), []),
+    ):
+        for row in rows(listed(scene, browser=browser)):
+            texts = [text for text, _ in row.menu]
+            if row.id == running:
+                assert texts == ["Questions", "Teams", "Answers", *tail]
+                assert answers(running, query) in row.menu
+            else:
+                assert "Answers" not in texts, row.name
+
+
+def test_answers_keeps_the_list_and_leads_back_to_it(scene: Scene) -> None:
+    """US4-4, SC-001: the entry carries the list's subject, status and page, and the page it
+    opens leads back to that list, at the competition."""
+    running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
+    for day in range(15, 26):
+        make_competition(scene.engine, scene.chemistry, f"Day {day}", starts_at=at(day))
+    query = f"subject={scene.chemistry}&page=2"
+    body = listed(scene, "&page=2", browser=scene.reader)
+    (row,) = [r for r in rows(body) if r.id == running]
+    href = dict(row.menu)["Answers"]
+    assert href == f"{TAB}/{running}/answers?{query}"
+    page = scene.reader.get(href)
+    assert page.status_code == 200
+    back = f"{TAB}?{query}#competition-{running}"
+    assert (back, "Back to the competitions") in html.link_pairs(page.text, "main")

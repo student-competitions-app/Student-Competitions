@@ -16,7 +16,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from sqlalchemy import Engine, update
+from sqlalchemy import Engine, text, update
+from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, col, select
 
 import app.services.competitions as competitions
@@ -40,6 +41,7 @@ from app.services.competitions import (
     get_competition,
     landing,
     locate,
+    lock_competition,
     offered_subjects,
     parse_status_filter,
     status_of,
@@ -797,3 +799,66 @@ def test_each_change_logs_ids_only(
         f"Competition cancelled: id={competition}",
     ]
     assert not any("Secret" in r.getMessage() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.3: the share lock of a save of answers (specs/012.3-team-answers research R3)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_the_share_lock_finds_what_the_update_lock_finds(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    competition = make_competition(engine, scene.chemistry, starts_at=at(20))
+    hidden = make_competition(engine, scene.physics, starts_at=at(20))
+    deactivate(engine, scene.physics)
+    for share in (False, True):
+        with Session(engine) as session:
+            row, found = lock_competition(session, competition, scene.chemistry, share=share)
+            assert (row.id, found.id) == (competition, scene.chemistry)
+            session.rollback()
+            for competition_id, subject_id in (
+                (MISSING, scene.chemistry),
+                (competition, scene.physics),
+                (hidden, scene.physics),
+            ):
+                with pytest.raises(CompetitionNotFound):
+                    lock_competition(session, competition_id, subject_id, share=share)
+                assert session.exec(select(Competition.id)).all()
+
+
+def short_lock_timeout(session: Session) -> None:
+    """A lock that is not granted in 300 ms fails, instead of waiting: no test sleeps."""
+    session.execute(text("SET LOCAL lock_timeout = '300ms'"))
+
+
+def test_share_locks_do_not_wait_for_each_other_but_cancelling_waits(
+    engine: Engine,
+    database_url: str,
+    scene: Scene,
+    clock: Callable[[timedelta], datetime],
+) -> None:
+    """Two saves of answers of one competition hold its share lock together; a cancellation
+    waits until both have ended, and then goes through."""
+    if not database_url.startswith("postgresql"):
+        pytest.skip("row locks are a PostgreSQL behaviour")
+    competition = make_competition(engine, scene.chemistry, starts_at=at(1, 8))
+    with Session(engine) as first, Session(engine) as second:
+        lock_competition(first, competition, scene.chemistry, share=True)
+        short_lock_timeout(second)
+        lock_competition(second, competition, scene.chemistry, share=True)
+        with Session(engine) as cancelling:
+            short_lock_timeout(cancelling)
+            with pytest.raises(OperationalError, match="lock timeout"):
+                cancel_competition(cancelling, scene.manager, competition, scene.chemistry, None)
+        first.rollback()
+        with Session(engine) as cancelling:
+            short_lock_timeout(cancelling)
+            with pytest.raises(OperationalError, match="lock timeout"):
+                cancel_competition(cancelling, scene.manager, competition, scene.chemistry, None)
+        second.rollback()
+    with Session(engine) as cancelling:
+        cancel_competition(cancelling, scene.manager, competition, scene.chemistry, None)
+    with Session(engine) as session:
+        row = session.get(Competition, competition)
+        assert row is not None and row.cancelled_at is not None

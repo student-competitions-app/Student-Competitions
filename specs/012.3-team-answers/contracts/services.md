@@ -8,8 +8,10 @@ R3–R7, R11.
 ```python
 ANSWER_MAX_LENGTH = QUESTION_FIELD_MAX_LENGTH  # 2000; also the column length
 
+
 class InvalidAnswer(ValueError):
     message: str  # ready to show beside the field
+
 
 def clean_answer(raw: str, number: int) -> str:
     """Line endings → "\n"; a NUL → InvalidAnswer("Answer to question <number> cannot contain a
@@ -33,22 +35,25 @@ class AnswerTeamRow:
     name: str
     institution_name: str
     active_members: int
-    answered: int        # the team's answers in the competition
-    questions: int       # the competition's questions
-    can_write: bool      # Write access to the team's institution
+    answered: int  # the team's answers in the competition
+    questions: int  # the competition's questions
+    can_write: bool  # Write access to the team's institution
+
 
 @dataclass(frozen=True)
 class AnswerTeamPage:
-    groups: list[RegionGroup[AnswerTeamRow]]   # this page: regions, then teams, by name ignoring case
-    paging: Paging                             # counts the listed teams
-    linked: bool                               # the teacher has at least one reachable institution
+    groups: list[RegionGroup[AnswerTeamRow]]  # this page, by name ignoring case
+    paging: Paging  # counts the listed teams
+    linked: bool  # the teacher has at least one reachable institution
+
 
 @dataclass(frozen=True)
 class SheetQuestion:
-    competition_question_id: int   # the field: answer-<id>
-    number: int                    # 1, 2, 3, … in the order of adding
-    text: str                      # the copy; never the reference answer
-    answer: str                    # the saved answer, "" when not answered
+    competition_question_id: int  # the field: answer-<id>
+    number: int  # 1, 2, 3, … in the order of adding
+    text: str  # the copy; never the reference answer
+    answer: str  # the saved answer, "" when not answered
+
 
 @dataclass(frozen=True)
 class AnswerSheet:

@@ -56,6 +56,7 @@ from app.models import (
     Role,
     SchoolClass,
     Team,
+    TeamAnswer,
     TeamMembership,
     User,
     UserRole,
@@ -804,5 +805,31 @@ def add_competition_team(engine: Engine, competition_id: int, team_id: int) -> N
     with Session(engine) as db_session:
         db_session.add(
             CompetitionTeam(competition_id=competition_id, team_id=team_id, added_at=utc_now())
+        )
+        db_session.commit()
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.3: a team's answers
+# ---------------------------------------------------------------------------------------------
+
+
+def save_team_answer(
+    engine: Engine, competition_id: int, team_id: int, competition_question_id: int, text: str
+) -> None:
+    """The team's answer to the competition's copy of a question, inserted as given.
+
+    **Test-only**, but harmless: no personal data; it skips the status, team and access checks
+    that `test_team_answer_service.py` covers, and is the only way to give a **Finished** or
+    **Cancelled** competition answers.
+    """
+    with Session(engine) as db_session:
+        db_session.add(
+            TeamAnswer(
+                competition_id=competition_id,
+                team_id=team_id,
+                competition_question_id=competition_question_id,
+                text=text,
+            )
         )
         db_session.commit()

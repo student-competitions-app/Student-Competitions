@@ -75,6 +75,7 @@ from app.routers import (
     teacher_competitions,
     teacher_questions,
     teacher_students,
+    teacher_team_answers,
     teacher_teams,
     theme,
 )
@@ -183,6 +184,7 @@ app.include_router(teacher_teams.router)
 app.include_router(teacher_questions.router)
 app.include_router(teacher_competitions.router)
 app.include_router(teacher_competition_entries.router)
+app.include_router(teacher_team_answers.router)
 app.include_router(admin.router)
 app.include_router(admin_teachers.router)
 app.include_router(admin_institutions.router)

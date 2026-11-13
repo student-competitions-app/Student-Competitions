@@ -1335,6 +1335,62 @@
       "method": "post"
     }
   ],
+  "teacher-team-answers": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-team-answers-refused": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-team-answers-sheet": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/answers/{id}",
+      "buttons": [],
+      "fields": [
+        "answer-{id}",
+        "back",
+        "page",
+        "status",
+        "subject"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-team-answers-sheet-invalid": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/answers/{id}",
+      "buttons": [],
+      "fields": [
+        "answer-{id}",
+        "back",
+        "page",
+        "status",
+        "subject"
+      ],
+      "method": "post"
+    }
+  ],
   "teacher-team-delete": [
     {
       "action": "/logout",

@@ -31,7 +31,9 @@ line with ids only, never a name; a no-op and a refusal log nothing (FR-046).
 `cancelled_at IS NULL AND stopped_at IS NULL AND starts_at <= :now`; the questions and teams of a
 competition may change only while `status_of` is Upcoming, under the competition's lock
 (`lock_competition`), which `app.services.competition_entries` (milestone 12.2) is the first to
-use; students (milestone 13) may answer only while it is In progress and visible.
+use; a team's answers are entered only while it is In progress, under the competition's share
+lock (`lock_competition(share=True)`, `app.services.team_answers`, milestone 12.3), and students
+(milestone 13) may answer only so too, while it is visible.
 """
 
 import logging
@@ -294,13 +296,18 @@ def competition_page(
 
 
 def _find(
-    session: Session, competition_id: int, subject_id: int, *, lock: bool
+    session: Session, competition_id: int, subject_id: int, *, lock: bool, share: bool = False
 ) -> tuple[Competition, Subject]:
     """The competition and its subject, if the competition belongs to `subject_id` and is
-    visible; `CompetitionNotFound` otherwise. With `lock`, the competition is read `FOR UPDATE`,
-    then the subject `FOR SHARE`, both refreshed."""
+    visible; `CompetitionNotFound` otherwise. With `lock`, the competition is read `FOR UPDATE`
+    (`FOR SHARE` with `share`), then the subject `FOR SHARE`, both refreshed."""
     if lock:
-        row = session.get(Competition, competition_id, with_for_update=True, populate_existing=True)
+        row = session.get(
+            Competition,
+            competition_id,
+            with_for_update={"read": True} if share else True,
+            populate_existing=True,
+        )
     else:
         row = session.get(Competition, competition_id)
     if row is None or row.subject_id != subject_id:
@@ -317,13 +324,18 @@ def _find(
 
 
 def lock_competition(
-    session: Session, competition_id: int, subject_id: int
+    session: Session, competition_id: int, subject_id: int, *, share: bool = False
 ) -> tuple[Competition, Subject]:
     """The competition `FOR UPDATE`, then its subject `FOR SHARE`, both refreshed, if the
     competition belongs to `subject_id` and is visible; `CompetitionNotFound`, after a rollback,
     otherwise. The first step of every change to a competition or to its questions and teams,
-    so a change and a cancellation never interleave."""
-    return _find(session, competition_id, subject_id, lock=True)
+    so a change and a cancellation never interleave.
+
+    With `share` (milestone 12.3 research R3), the competition is read `FOR SHARE` instead: a
+    save of a team's answers takes it so, so the saves of one competition do not wait for each
+    other, while cancelling and stopping, which take it `FOR UPDATE`, still wait for every save
+    in progress, and every save waits for them."""
+    return _find(session, competition_id, subject_id, lock=True, share=share)
 
 
 def get_competition(session: Session, competition_id: int, subject_id: int) -> CompetitionView:

@@ -652,6 +652,8 @@ def test_delete_asks_then_hides_the_team_and_keeps_everything(scene: Scene) -> N
         ("Members", "1"),
     ]
     # Replaced by milestone 12.2 FR-041 (SC-009): the first sentence names the competitions.
+    # Unchanged by milestone 12.3 (spec Assumptions): the answers deleted with the team in those
+    # competitions are not mentioned.
     assert (
         "The team will be hidden and taken out of every competition that has not finished. It can"
         " no longer join new competitions. Its members keep their accounts, classes and other"
@@ -1040,7 +1042,7 @@ def test_no_log_line_names_anyone(scene: Scene, caplog: pytest.LogCaptureFixture
         f"Team renamed: id={team}",
         f"Team member added: team_id={team} user_id={scene.taras}",
         f"Team member removed: team_id={team} user_id={scene.taras}",
-        f"Team deleted: id={team} members=0 competitions=0",
+        f"Team deleted: id={team} members=0 competitions=0 answers=0",
     ]
 
 

@@ -1,16 +1,27 @@
 """The `competitions` table: a named event of one subject with a start, which teams of students
-take part in; and a competition's questions and teams (milestone 12.2).
+take part in; a competition's questions and teams (milestone 12.2); and the teams' answers
+(milestone 12.3).
 
-See specs/012.1-teacher-competitions/data-model.md §1 and research R1–R3, and
-specs/012.2-competition-questions-teams/data-model.md §1–§2 and research R1.
+See specs/012.1-teacher-competitions/data-model.md §1 and research R1–R3,
+specs/012.2-competition-questions-teams/data-model.md §1–§2 and research R1, and
+specs/012.3-team-answers/data-model.md §1 and research R1–R2.
 """
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, Column, Index, String, UniqueConstraint, text
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    ForeignKeyConstraint,
+    Index,
+    String,
+    UniqueConstraint,
+    text,
+)
 from sqlmodel import Field, SQLModel
 
 from app.core.db import UTCDateTime, utc_now
+from app.schemas.answer import ANSWER_MAX_LENGTH
 from app.schemas.names import NAME_KEY_MAX_LENGTH, NAME_MAX_LENGTH
 from app.schemas.question import QUESTION_FIELD_MAX_LENGTH
 
@@ -77,7 +88,9 @@ class CompetitionQuestion(SQLModel, table=True):
     answer, taken when it was added and never written again, so editing or deleting the bank
     question changes nothing here (FR-007, FR-008). The `id` is the order of adding. Its writers
     are `app.services.competition_entries` (insert, delete), only while the competition is
-    Upcoming. Not personal data: no column names a person."""
+    Upcoming. `team_answers` refers to it (milestone 12.3): an answer is keyed by the copy, so a
+    question with answers cannot be removed, and a competition's questions never change after it
+    starts anyway. Not personal data: no column names a person."""
 
     __tablename__ = "competition_questions"
     __table_args__ = (
@@ -116,8 +129,9 @@ class CompetitionTeam(SQLModel, table=True):
     number of active members are read from the team, never copied. Its writers are
     `app.services.competition_entries` (insert, delete), only while the competition is Upcoming,
     and `app.services.teams.delete_team`, which removes a deleted team from every competition
-    that is not finished (constitution Principle IV). Not personal data: it names a team, not its
-    members."""
+    that is not finished (constitution Principle IV). `team_answers` refers to it through a
+    composite foreign key (milestone 12.3), so `delete_team` deletes the team's answers in those
+    competitions before their links. Not personal data: it names a team, not its members."""
 
     __tablename__ = "competition_teams"
 
@@ -128,3 +142,35 @@ class CompetitionTeam(SQLModel, table=True):
     (research R5). The primary key keeps a team at most once per competition (FR-035)."""
     added_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
     """When it was added. Never shown."""
+
+
+class TeamAnswer(SQLModel, table=True):
+    """One team's text answer to one question of one competition (milestone 12.3). A row exists
+    only for an answered question: an emptied answer deletes it, so a team's progress is a count
+    of its rows. Neither who saved it nor when is stored (FR-023): it belongs to the team and is
+    not personal data. Its writers are `app.services.team_answers.save_answers` (insert, update,
+    delete), only while the competition is In progress, and `app.services.teams.delete_team`,
+    which deletes a deleted team's answers in every competition that is not finished."""
+
+    __tablename__ = "team_answers"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["competition_id", "team_id"],
+            ["competition_teams.competition_id", "competition_teams.team_id"],
+        ),
+        CheckConstraint("text <> ''", name="answered"),
+    )
+
+    competition_id: int = Field(primary_key=True)
+    """With `team_id`, a foreign key to `competition_teams`: the team is in the competition. No
+    `ON DELETE`."""
+    team_id: int = Field(primary_key=True)
+    """With `competition_id`, a foreign key to `competition_teams`. No `ON DELETE`."""
+    competition_question_id: int = Field(
+        foreign_key="competition_questions.id", primary_key=True, index=True
+    )
+    """The competition's copy of the question (research R2). No `ON DELETE`. Indexed for the
+    foreign-key check when a question is removed."""
+    text: str = Field(sa_column=Column(String(ANSWER_MAX_LENGTH), nullable=False))
+    """Trimmed, line breaks as `\n`, 1–2,000 code points, no NUL (`app.schemas.answer`). Never
+    empty: an emptied answer deletes the row."""

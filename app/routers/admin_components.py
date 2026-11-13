@@ -168,6 +168,34 @@ REGION_GROUPS = (
 )
 """Region groups: `(name, total, rows)`, each row `(team, institution, active members, what the
 actions cell holds)`: Remove, the "(deleted)" note, or "Already in this competition"."""
+ANSWER_SHEET_ERROR = "Answer to question 3 can be at most 2,000 characters."
+ANSWER_SHEET_ITEMS = (
+    {
+        "number": 1,
+        "field_id": "gallery-answer-1",
+        "text": "What is table salt made of? Give its name and its formula.",
+        "value": "Sodium chloride\nNaCl",
+        "error": None,
+    },
+    {
+        "number": 2,
+        "field_id": "gallery-answer-2",
+        "text": "Name the three states of matter.",
+        "value": "",
+        "error": None,
+    },
+    {
+        "number": 3,
+        "field_id": "gallery-answer-3",
+        "text": "Describe how water boils, step by step.",
+        "value": "Water boils when " + "the bubbles rise and burst at the surface, " * 48,
+        "error": ANSWER_SHEET_ERROR,
+    },
+)
+"""The answer sheet: question 1 answered on two lines, question 2 empty (the placeholder), and
+question 3 with a value over 2,000 characters and its error."""
+ANSWER_SHEET_ERRORS = {"gallery-answer-3": ANSWER_SHEET_ERROR}
+ANSWER_SHEET_ORDER = ("gallery-answer-1", "gallery-answer-2", "gallery-answer-3")
 ONE_ROLE_USER = SampleUser("olena.kovalenko@school.example")
 TWO_ROLE_USER = SampleUser("taras.shevchenko@school.example")
 SAMPLE_TABS = (
@@ -233,6 +261,9 @@ def _samples() -> dict[str, Any]:
         "date_time_values": DATE_TIME_VALUES,
         "date_time_errors": DATE_TIME_ERRORS,
         "region_groups": REGION_GROUPS,
+        "answer_sheet_items": ANSWER_SHEET_ITEMS,
+        "answer_sheet_errors": ANSWER_SHEET_ERRORS,
+        "answer_sheet_order": ANSWER_SHEET_ORDER,
     }
 
 

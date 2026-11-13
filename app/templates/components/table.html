@@ -21,8 +21,10 @@
 </table>
 {%- endmacro %}
 
-{% macro cell(label, value=None) -%}
-<td data-label="{{ label }}">{% if caller is defined %}{{ caller() }}{% else %}{{ value }}{% endif %}</td>
+{#- `nowrap` (milestone 12.3): a short value that must not break across lines on a wide screen,
+    such as a progress "3 of 6" beside long names; on a phone card it is a labelled line as any. -#}
+{% macro cell(label, value=None, nowrap=False) -%}
+<td data-label="{{ label }}"{% if nowrap %} class="cell-nowrap"{% endif %}>{% if caller is defined %}{{ caller() }}{% else %}{{ value }}{% endif %}</td>
 {%- endmacro %}
 
 {% macro actions_cell() -%}

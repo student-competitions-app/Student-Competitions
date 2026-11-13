@@ -1104,6 +1104,35 @@ html [aria-busy="true"]:not(input, select, textarea):is(button, [type="submit"],
   font-weight: var(--sc-weight-semibold);
 }
 
+/* Answer sheet (components/answer_sheet.html, milestone 12.3 contracts/components.md §1): the
+   numbered question cards spaced as a text card list, with no markers (the card heading carries
+   the number), each answer field at the card's full width, and long texts wrapping. One column on
+   every screen; below 768 px only the widths change. */
+.answer-sheet {
+  display: grid;
+  gap: var(--sc-space-3);
+  margin: 0 0 var(--sc-space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.answer-sheet > li {
+  margin: 0;
+  max-width: none;
+  list-style: none;
+}
+
+.answer-sheet .text-card {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.answer-sheet textarea {
+  width: 100%;
+  max-width: none;
+  margin-bottom: 0;
+}
+
 
 /* Data table (components/table.html, FR-027): a real table from 768 px, a card of labelled values
    per row below it. Long values wrap; nothing scrolls sideways. */
@@ -1133,6 +1162,12 @@ html [aria-busy="true"]:not(input, select, textarea):is(button, [type="submit"],
 /* A time in a table (components/time.html, milestone 12.1) stays on one line, so a row is no
    taller than its name needs. */
 .data-table time {
+  white-space: nowrap;
+}
+
+/* A short value that must not break, such as a progress "3 of 6" (components/table.html `cell`,
+   milestone 12.3): one line beside long names. */
+.data-table td.cell-nowrap {
   white-space: nowrap;
 }
 

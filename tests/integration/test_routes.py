@@ -75,8 +75,8 @@ def test_the_write_routes_are_exact() -> None:
     """Signing in and out, choosing a role, the administrator's subject, region, institution and
     teacher actions, accepting an invitation, the teacher's class and student actions, the
     question bank's add, edit and delete, the teacher's team actions (milestone 11.1), the
-    competitions' add, edit and cancel (milestone 12.1), and a competition's questions and teams
-    (milestone 12.2)."""
+    competitions' add, edit and cancel (milestone 12.1), a competition's questions and teams
+    (milestone 12.2), and a team's answers (milestone 12.3)."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -129,6 +129,7 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/teacher/competitions/{competition_id:int}/questions/{question_id:int}/remove"),
         ("POST", "/teacher/competitions/{competition_id:int}/teams"),
         ("POST", "/teacher/competitions/{competition_id:int}/teams/{team_id:int}/remove"),
+        ("POST", "/teacher/competitions/{competition_id:int}/answers/{team_id:int}"),
     }
 
 
@@ -292,10 +293,13 @@ ENTRY_READ_PATHS = frozenset(
     {
         "/teacher/competitions/{competition_id:int}/questions",
         "/teacher/competitions/{competition_id:int}/teams",
+        "/teacher/competitions/{competition_id:int}/answers",
+        "/teacher/competitions/{competition_id:int}/answers/{team_id:int}",
     }
 )
-"""A competition's questions and teams (milestone 12.2): every teacher reads them, so they are
-swept with the cast teacher allowed; id 1 names no competition and answers 404, not 403."""
+"""A competition's questions and teams (milestone 12.2), and a competition's team answers page and
+answer sheets (milestone 12.3), which every teacher may open: they are swept with the cast teacher
+allowed; id 1 names no competition and answers 404, not 403."""
 
 
 def test_there_are_declared_pages_to_sweep() -> None:

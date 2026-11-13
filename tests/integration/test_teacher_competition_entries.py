@@ -42,6 +42,7 @@ from tests.conftest import (
     ADMIN_STUDENT_EMAIL,
     AUTO,
     STUDENT_EMAIL,
+    TEACHER_EMAIL,
     ClientAs,
     add_competition_question,
     add_competition_team,
@@ -906,7 +907,8 @@ def menus(body: str) -> dict[str, list[tuple[str, str]]]:
 def test_the_menu_entries_per_status_and_setting(
     scene: Scene, clock: Callable[[timedelta], datetime]
 ) -> None:
-    """US6-1–US6-4, FR-001, FR-002."""
+    """US6-1–US6-4, FR-001, FR-002. The In progress menus replaced by milestone 12.3 FR-001
+    (SC-011): they gain **Answers** after **Teams**, for every teacher."""
     running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
     finished = make_competition(
         scene.engine, scene.chemistry, "Done", starts_at=at(1, 7), stopped=True
@@ -919,12 +921,13 @@ def test_the_menu_entries_per_status_and_setting(
     assert olena == {
         f"competition-{scene.competition}": ["Edit", "Questions", "Teams", "Cancel competition"],
         f"competition-{cancelled}": ["Questions", "Teams"],
-        f"competition-{running}": ["Questions", "Teams", "Cancel competition"],
+        f"competition-{running}": ["Questions", "Teams", "Answers", "Cancel competition"],
         f"competition-{finished}": ["Questions", "Teams"],
     }
     mykola = {k: [t for t, _ in v] for k, v in menus(get(scene.mykola, url)).items()}
+    assert mykola.pop(f"competition-{running}") == ["Questions", "Teams", "Answers"]
     assert set(map(tuple, mykola.values())) == {("Questions", "Teams")}
-    assert len(mykola) == 4
+    assert len(mykola) == 3
 
 
 def test_the_menu_links_keep_the_list_and_lead_back_to_it(scene: Scene) -> None:
@@ -1653,3 +1656,43 @@ def test_a_deactivated_subject(scene: Scene) -> None:
         reason = f"“Summer round” has finished and its {kind} can no longer be changed."
         assert reason in html.text(response.text, "main")
     assert snapshot(scene.engine) == before
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.3: the Teams page stays as it is (specs/012.3-team-answers US5, FR-003)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_the_teams_page_never_offers_enter_answers(scene: Scene, client_as: ClientAs) -> None:
+    """US5-1, US5-2: every team from every institution, read-only without the setting, with Add
+    team and Remove only for Olena on an Upcoming competition, and in no status Enter answers or
+    an Answered column; a teacher with no link (the cast teacher) sees the same."""
+    competitions = {
+        "upcoming": scene.competition,
+        "in_progress": make_competition(
+            scene.engine, scene.chemistry, "Running", starts_at=at(1, 8)
+        ),
+        "cancelled": make_competition(
+            scene.engine, scene.chemistry, "Off", starts_at=at(14), cancelled=True
+        ),
+        "finished": make_competition(
+            scene.engine, scene.chemistry, "Done", starts_at=at(1, 7), stopped=True
+        ),
+    }
+    teams = [
+        make_team(scene.engine, scene.school, "Comets"),
+        make_team(scene.engine, scene.academy, "Lions"),
+        make_team(scene.engine, scene.lyceum, "Novas"),
+    ]
+    for competition in competitions.values():
+        for team in teams:
+            add_competition_team(scene.engine, competition, team)
+    for status, competition in competitions.items():
+        for browser in (scene.olena, scene.mykola, client_as(TEACHER_EMAIL)):
+            body = get(browser, page_of(scene, "teams", competition=competition))
+            listed = sorted(row["Team"] for g in region_groups(body) for row in g.rows)
+            assert listed == ["Comets", "Lions", "Novas"], status
+            assert "Enter answers" not in body and "Answered" not in body, status
+            can_change = browser is scene.olena and status == "upcoming"
+            assert ("Add team" in body) is can_change, status
+            assert (">Remove<" in body) is can_change, status

@@ -31,6 +31,10 @@ Deliberate changes since (each is a contract change, recorded here):
   `-teams*`, `-entry-*` cases) are new, generated once with `UPDATE_FORM_CONTRACT=1` for those
   cases only. The new menu entries of `teacher-competitions` are links, not forms, so that case
   is unchanged.
+- **Milestone 12.3**: a team's answers (`teacher-team-answers*` cases) are new, generated once
+  with `UPDATE_FORM_CONTRACT=1` for those cases only. An answer field's name holds its question's
+  id, `answer-<id>`, recorded as `answer-{id}`. The new **Answers** menu entry of
+  `teacher-competitions` is a link, so that case is unchanged.
 """
 
 import json
@@ -38,7 +42,7 @@ import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -50,7 +54,7 @@ from sqlmodel import Session, select
 import app.services.institutions
 import app.services.subjects
 from app.main import app as application
-from app.models import AccessLevel, Institution, Role
+from app.models import AccessLevel, CompetitionTeam, Institution, Role
 from app.services.email import EmailMessage
 from app.services.regions import create_region
 from app.services.subjects import create_subject, set_subject_active
@@ -72,6 +76,7 @@ from tests.conftest import (
     make_subject,
     make_teacher,
     make_team,
+    save_team_answer,
     token_from,
 )
 from tests.integration.test_login_flow import code_from
@@ -131,6 +136,7 @@ def records(response: Response) -> list[dict[str, Any]]:
         if form.action == "/theme":
             continue
         fields = {i.name for i in form.inputs if i.name} | {b.name for b in form.buttons if b.name}
+        fields = {re.sub(r"^answer-\d+$", "answer-{id}", name) for name in fields}
         found.append(
             {
                 "method": form.method,
@@ -889,6 +895,68 @@ def _(w: World) -> Response:
     """A refusal has no form of its own; the page keeps the frame's forms."""
     e = competition_entries(w, cancelled=True)
     return e.browser.get(f"{e.base}/questions/add?{e.context}")
+
+
+def team_answers_scene(world: World, *, cancelled: bool = False) -> tuple[TestClient, str, str]:
+    """Taras with Write access to School No. 5, and Chemistry's competition that started an hour
+    ago (or was cancelled), holding two questions and the school's team "Comets", with one
+    answer; `(browser, the competition's address, the competitions-list context)`."""
+    engine, settings = application.state.engine, application.state.settings
+    school = make_institution(engine, "School No. 5", "Kyiv")
+    make_teacher(engine, settings, email=TARAS, institutions={school: AccessLevel.WRITE})
+    chemistry = make_subject(engine, "Chemistry")
+    start = datetime.now(UTC).replace(second=0, microsecond=0) - timedelta(hours=1)
+    competition = make_competition(engine, chemistry, starts_at=start, cancelled=cancelled)
+    copies = [
+        add_competition_question(engine, competition, make_question(engine, chemistry, text))
+        for text in ("Salt?", "Water?")
+    ]
+    team = make_team(engine, school, "Comets")
+    add_competition_team(engine, competition, team)
+    save_team_answer(engine, competition, team, copies[0], "NaCl")
+    browser = world.client_as(TARAS)
+    browser.cookies.set("sc_time_zone", "Europe/Kyiv")
+    return browser, f"/teacher/competitions/{competition}/answers", f"subject={chemistry}&page=2"
+
+
+def team_of(base: str) -> int:
+    competition = int(base.split("/")[3])
+    with Session(application.state.engine) as session:
+        return session.exec(
+            select(CompetitionTeam.team_id).where(CompetitionTeam.competition_id == competition)
+        ).one()
+
+
+@case("teacher-team-answers")
+def _(w: World) -> Response:
+    """The team answers page: Enter answers is a link, so only the frame's forms."""
+    browser, base, context = team_answers_scene(w)
+    return browser.get(f"{base}?{context}")
+
+
+@case("teacher-team-answers-sheet")
+def _(w: World) -> Response:
+    """The sheet with an answer: the save form, its hidden context and the answer fields."""
+    browser, base, context = team_answers_scene(w)
+    return browser.get(f"{base}/{team_of(base)}?{context}&back=2")
+
+
+@case("teacher-team-answers-sheet-invalid")
+def _(w: World) -> Response:
+    """The 400 page after an answer that is too long: the same form."""
+    browser, base, context = team_answers_scene(w)
+    team = team_of(base)
+    page = browser.get(f"{base}/{team}?{context}&back=2").text
+    form = {i.name: i.value for f in html.forms(page) if "/answers/" in f.action for i in f.inputs}
+    answer = next(name for name in form if name and name.startswith("answer-"))
+    return browser.post(f"{base}/{team}", data=form | {answer: "x" * 2001})
+
+
+@case("teacher-team-answers-refused")
+def _(w: World) -> Response:
+    """A refusal has no form of its own; the page keeps the frame's forms."""
+    browser, base, context = team_answers_scene(w, cancelled=True)
+    return browser.get(f"{base}?{context}")
 
 
 # ---------------------------------------------------------------------------------------------

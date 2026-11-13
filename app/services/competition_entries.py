@@ -34,10 +34,12 @@ no name or text is ever logged (FR-048).
 teams for good, deleted teams included. Milestone 13 shows a student the competitions one of
 their teams is linked to, with the copies in `competition_questions`, in their order, never the
 bank's. Milestones 14–15 score against the copy's text and reference answer, and list every
-linked team in the results, deleted ones marked.
+linked team in the results, deleted ones marked. A team's answers (milestone 12.3) are in
+`app.services.team_answers`, which lists the teams through `team_entries` and `group_by_region`.
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
@@ -146,19 +148,22 @@ class TeamRow:
 
 
 @dataclass(frozen=True)
-class RegionGroup:
+class RegionGroup[Row]:
+    """One region's rows on a page of teams: `TeamRow` here, `AnswerTeamRow` on the team answers
+    page (milestone 12.3)."""
+
     region_id: int
     region_name: str
     """As stored."""
     total: int
-    """The region's teams in the competition, across all pages."""
-    rows: list[TeamRow]
+    """The region's listed teams, across all pages."""
+    rows: list[Row]
     """This page's rows of the region."""
 
 
 @dataclass(frozen=True)
 class CompetitionTeamPage:
-    groups: list[RegionGroup]
+    groups: list[RegionGroup[TeamRow]]
     """This page: regions, then teams, by name ignoring case."""
     paging: Paging
     """Counts teams, not regions."""
@@ -230,10 +235,13 @@ def _ordered_question_ids(session: Session, competition_id: int) -> list[int]:
     return list(session.exec(statement))
 
 
-def _team_entries(session: Session, competition_id: int) -> list[tuple[Team, Institution, Region]]:
+TeamEntry = tuple[Team, Institution, Region]
+
+
+def team_entries(session: Session, competition_id: int) -> list[TeamEntry]:
     """The competition's teams with their institutions and regions (deleted teams and
-    deactivated institutions and regions included), sorted by region, then team, by name
-    ignoring case, ties by id (R12). Sorted in Python, so both engines agree."""
+    deactivated institutions and regions included; the caller filters), sorted by region, then
+    team, by name ignoring case, ties by id (R12). Sorted in Python, so both engines agree."""
     statement = (
         select(Team, Institution, Region)
         .select_from(CompetitionTeam)
@@ -323,25 +331,39 @@ def get_competition_question(
     )
 
 
-def team_page(session: Session, competition_id: int, p: int) -> CompetitionTeamPage:
-    """One page of the competition's teams, ten teams per page, the page clamped to 1..last,
-    grouped by region: each group the region's rows on this page, with its total across all
-    pages, so a region continuing from the previous page shows the same total (R12). The active
-    members are counted for this page's teams in one query (R13)."""
-    entries = _team_entries(session, competition_id)
+def group_by_region[Row](
+    entries: list[TeamEntry], p: int, make_rows: Callable[[list[TeamEntry]], list[Row]]
+) -> tuple[list[RegionGroup[Row]], Paging]:
+    """One page of `entries` (sorted as `team_entries` sorts them), ten teams per page, the page
+    clamped to 1..last, grouped by region: each group the region's rows on this page, with its
+    total across all of `entries`, so a region continuing from the previous page shows the same
+    total (R12). `make_rows` is called once, with the page's entries, and returns their rows in
+    the same order, so the caller counts what it shows for the whole page in one query each."""
     totals: dict[int, int] = {}
     for _, _, region in entries:
         assert region.id is not None
         totals[region.id] = totals.get(region.id, 0) + 1
     paging = Paging.build(p, len(entries))
     shown = entries[paging.offset : paging.offset + paging.size]
-    counts = count_active_members(session, [team.id for team, _, _ in shown if team.id])
-    groups: list[RegionGroup] = []
-    for team, institution, region in shown:
+    rows = make_rows(shown)
+    groups: list[RegionGroup[Row]] = []
+    for (_, _, region), row in zip(shown, rows, strict=True):
         assert region.id is not None
         if not groups or groups[-1].region_id != region.id:
             groups.append(RegionGroup(region.id, region.name, totals[region.id], []))
-        groups[-1].rows.append(_team_row(team, institution, counts))
+        groups[-1].rows.append(row)
+    return groups, paging
+
+
+def team_page(session: Session, competition_id: int, p: int) -> CompetitionTeamPage:
+    """One page of the competition's teams, grouped by region (`group_by_region`, R12). The
+    active members are counted for this page's teams in one query (R13)."""
+
+    def make_rows(shown: list[TeamEntry]) -> list[TeamRow]:
+        counts = count_active_members(session, [team.id for team, _, _ in shown if team.id])
+        return [_team_row(team, institution, counts) for team, institution, _ in shown]
+
+    groups, paging = group_by_region(team_entries(session, competition_id), p, make_rows)
     return CompetitionTeamPage(groups, paging)
 
 
@@ -538,7 +560,7 @@ def remove_team(
     if session.get(Team, team_id) is None:
         session.rollback()
         raise EntryNotFound("team")
-    before = [team.id for team, _, _ in _team_entries(session, competition_id)]
+    before = [team.id for team, _, _ in team_entries(session, competition_id)]
     if team_id not in before:
         session.rollback()
         raise NotIn("team", team_id)
@@ -551,7 +573,7 @@ def remove_team(
     if result.rowcount == 0:  # type: ignore[attr-defined]
         session.rollback()
         raise NotIn("team", team_id)
-    after = [team.id for team, _, _ in _team_entries(session, competition_id) if team.id]
+    after = [team.id for team, _, _ in team_entries(session, competition_id) if team.id]
     session.commit()
     logger.info("Competition team removed: competition=%d team=%d", competition_id, team_id)
     return Landing(*landing_index(after, None, before.index(team_id)))

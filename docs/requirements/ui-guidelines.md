@@ -313,6 +313,10 @@ never scrolls sideways. An empty list renders `empty_state` instead of a table.
 {% endcall %}
 ```
 
+**`cell(label, value, nowrap=True)`** (milestone 12.3) keeps a short value that must not break on
+one line beside long names, such as a team's progress "3 of 6"; on a phone it is a labelled line of
+the card as any other. Never for a name or a text.
+
 **`row_note(text)`** stands in the actions cell where a row's action is not available, as "In this
 team"; muted text, never a disabled button.
 
@@ -360,6 +364,7 @@ the user menu, so it opens and closes without JavaScript.
 {% if can_add and c.status == "upcoming" %}{{ menu_link("Edit", edit_href) }}{% endif %}
 {{ menu_link("Questions", questions_href) }}
 {{ menu_link("Teams", teams_href) }}
+{% if c.status == "in_progress" %}{{ menu_link("Answers", answers_href) }}{% endif %}
 {% if can_add and c.status in ("upcoming", "in_progress") %}{{ menu_link("Cancel competition", cancel_href, destructive=True) }}{% endif %}
 {%- endcall -%}
 {% endcall %}
@@ -368,7 +373,8 @@ the user menu, so it opens and closes without JavaScript.
 - **The button** reads "Actions" and is announced "Actions for “Spring round”"; the item name is
   required. It is a small outline secondary button with a chevron, a full touch target.
 - **The entries** come in a fixed order, each where it is available: on the **Competitions** tab
-  **Edit**, **Questions**, **Teams**, **Cancel competition** (milestone 12.2).
+  **Edit**, **Questions**, **Teams**, **Answers**, **Cancel competition** (milestones 12.2 and
+  12.3).
 - **Every entry** is a link to a page (a list, a form or a confirmation), never a `POST`, so every destructive
   action still goes through its confirmation. A destructive entry is in the danger colour. Each
   entry is 44 px tall and as wide as the panel; a long label wraps.
@@ -436,6 +442,9 @@ Every form page passes `values` (what was entered, by field id), `errors` (field
 - **`textarea_field`** is the multi-line twin of `field`, for text that may run over several lines
   (a question, a reference answer). It keeps the value exactly, line breaks included, is wider than
   a single-line field (the reading measure) and resizes only downwards.
+- **`placeholder`** (milestone 12.3), an argument of `field` and `textarea_field`, only says that
+  the field is empty: "Not answered". The label and the hint are rendered as without it; see
+  **Placeholders** under Wording patterns.
 - **`form_actions(label, cancel_href)`**: the primary button first, then **Cancel** as a link.
   `name` and `value` go on the primary button. `secondary` (`{"label", "name", "value"}`) adds one
   secondary save right after it, for "save and continue with another": **Save question** then
@@ -445,6 +454,30 @@ Every form page passes `values` (what was entered, by field id), `errors` (field
 A message about one field's value (an invalid address, a duplicate name, a wrong code) is a field
 error. A limit, an outage or a message about the whole submission is the form error.
 _Gallery_: [forms](/admin/components#forms).
+
+### Answer sheet (`components/answer_sheet.html`)
+
+**`answer_sheet(items, action, hidden, submit_label="Save answers")`** shows every answer of one
+participant to a list of questions, saved at once: a team's answers in a competition (milestone
+12.3; the students' own sheet in milestone 13 is the same).
+
+```jinja
+{{ error_summary(errors, order=field_order) }}
+{{ answer_sheet(items, "/teacher/competitions/17/answers/31", hidden) }}
+```
+
+- **Each question** is a numbered text card, "Question 3", holding the question's text and, under
+  it, its answer field "Answer to question 3" with the hint "Up to 2,000 characters.", the
+  placeholder "Not answered" and the 2,000-character limit (the server checks it again).
+- **One primary save button** below the list, **Save answers**, and no **Cancel**: the back link
+  above the page leads away. Every question is on the one page, with no page navigation.
+- **Errors**: each field shows its own message, and the page's `error_summary` under its heading
+  links to each field, in the order of the questions. A refused save shows every text as it was
+  sent.
+- **Never a reference answer** on a sheet.
+- **No question**: the page shows its empty state instead; an empty list is refused.
+
+_Gallery_: [answer sheet](/admin/components#answer-sheet).
 
 ### Confirmations (`components/confirmation.html`)
 
@@ -539,11 +572,13 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
   something is a verb (**Edit**, **Cancel competition**); an entry that only opens a page is named
   by that page (**Questions**, **Teams**); a destructive entry is always a verb.
 - **Row notes** are a short plain phrase, with no full stop: "In this team", "Already in this
-  competition", "Deleted from the question bank", "(deleted)". A row note may also mark a record
+  competition", "Deleted from the question bank", "(deleted)", "Read access". A row note may also mark a record
   the row can no longer act on, such as a deleted team in a finished competition; a *status*
   (Active, Upcoming…) still takes a badge.
 - **Page navigation** says where you are as "<Noun> 31–40 of 200" (an en dash, no spaces), and
   moves with **Previous** and **Next**.
+- **Placeholders** only say that a field is empty: "Not answered". A placeholder never replaces the
+  field's label or hint, and never holds an example, an instruction or a value.
 
 ## 8. Phone behaviour
 
@@ -560,6 +595,8 @@ Below 768 px:
   scrolls sideways at 375 px. The page navigation wraps onto more rows, each entry keeping its
   touch target, and a long word in a text box wraps inside the box. Two save buttons wrap, each
   with its full label.
+- **The answer sheet stays one column**: each question card with its answer field under the text,
+  the save button below the list.
 - **The area tabs are 44 px tall** (the touch target) and may wrap onto two rows, which keeps the
   pinned frame under a quarter of a 375 × 667 screen.
 - **Held sideways**, under 600 px tall, a phone does not pin the frame: it scrolls away, so the

@@ -1,0 +1,25 @@
+{% extends "layouts/teacher.html" %}
+{#- A team's answer sheet (specs/012.3-team-answers/contracts/http-routes.md §2): the team's
+    educational institution under the heading, the error summary after a refused save, the notice
+    after a save, then every question of the competition in the `answer_sheet`, saved at once; or
+    the empty state and no form for a competition with no questions. Never a reference answer. -#}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/details.html" import details_list %}
+{% from "components/feedback.html" import empty_state, notice as notice_box %}
+{% from "components/form.html" import error_summary %}
+{% from "components/answer_sheet.html" import answer_sheet %}
+
+{% block title %}Answers of “{{ sheet.team_name }}” in “{{ competition.name }}” — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(back, "Back to the answers") }}
+{{ page_heading("Answers of “" ~ sheet.team_name ~ "” in “" ~ competition.name ~ "”") }}
+{{ details_list([("Educational institution", sheet.institution_name)]) }}
+{{ error_summary(errors, order=field_order) }}
+{% if notice %}{{ notice_box(notice, "success") }}{% endif %}
+{% if not items %}
+{{ empty_state("No questions in this competition") }}
+{% else %}
+{{ answer_sheet(items, action, hidden) }}
+{% endif %}
+{% endblock %}

@@ -53,6 +53,8 @@ SECTIONS = {
         "Activate",
         "Students of KN-21 · year 2",
         "In this team",
+        "A short value on one line",
+        "3 of 6",
         "No subjects yet",
     ],
     "region-group": [
@@ -69,6 +71,7 @@ SECTIONS = {
         "Edit",
         "Questions",
         "Teams",
+        "Answers",
         "Cancel competition",
         "Autumn round",
     ],
@@ -101,6 +104,16 @@ SECTIONS = {
         "Time zone: Europe/Kyiv",
         "Enter a real start date.",
         "There is no 03:30 on 28 March 2027 in Europe/Kyiv because the clocks go forward.",
+        "Answer to question 2",
+    ],
+    "answer-sheet": [
+        "Answer sheet",
+        "There is a problem",
+        "Question 1",
+        "Sodium chloride",
+        "Answer to question 3",
+        "Answer to question 3 can be at most 2,000 characters.",
+        "Save answers",
     ],
     "confirmations": [
         "Delete “Physics”?",
@@ -295,9 +308,10 @@ def test_the_two_button_form_and_the_textareas(admin_client: TestClient) -> None
 
 
 def test_the_actions_menu_variants(admin_client: TestClient) -> None:
-    """Milestone 12.1 contracts/components.md §1, with the entries of milestone 12.2
-    (contracts/components.md §2): an open menu with every entry in order, the last one
-    destructive; a closed one for a 200-character name; and the two-entry read-only menu."""
+    """Milestone 12.1 contracts/components.md §1, with the entries of milestones 12.2
+    (contracts/components.md §2) and 12.3 (contracts/components.md §4): an open menu with every
+    entry in order, the last one destructive; a closed one for a 200-character name, in progress;
+    and the two-entry read-only menu."""
     body = admin_client.get(GALLERY).text
     section = gallery_section(body, "actions-menu")
     menus = [d for d in section.find_all("details") if "actions-menu" in d.classes()]
@@ -312,14 +326,77 @@ def test_the_actions_menu_variants(admin_client: TestClient) -> None:
         ("Edit", ["actions-menu-link"]),
         ("Questions", ["actions-menu-link"]),
         ("Teams", ["actions-menu-link"]),
+        ("Answers", ["actions-menu-link"]),
         ("Cancel competition", ["actions-menu-link", "actions-menu-link-destructive"]),
     ]
     assert [a.text() for a in menus[1].find_all("a")] == [
         "Questions",
         "Teams",
+        "Answers",
         "Cancel competition",
     ]
     assert [a.text() for a in menus[2].find_all("a")] == ["Questions", "Teams"]
+
+
+def test_a_short_value_stays_on_one_line(admin_client: TestClient) -> None:
+    """Milestone 12.3: `cell(..., nowrap=True)` marks only its own cell."""
+    body = admin_client.get(GALLERY).text
+    assert '<td data-label="Answered" class="cell-nowrap">3 of 6</td>' in body
+    assert body.count("cell-nowrap") == 1
+
+
+def test_the_answer_sheet(admin_client: TestClient) -> None:
+    """Milestone 12.3 contracts/components.md §1: one post form holding the hidden field, an
+    `ol.answer-sheet` of three numbered text cards, each with its labelled answer field (the hint,
+    the placeholder and the 2,000-character limit), the third one invalid and linked from the
+    error summary above, and one primary "Save answers" after the list."""
+    body = admin_client.get(GALLERY).text
+    section = gallery_section(body, "answer-sheet")
+    (summary,) = [e for e in section.iter() if "error-summary" in e.classes()]
+    assert [a.attrs["href"] for a in summary.find_all("a")] == ["#gallery-answer-3"]
+    (form,) = section.find_all("form")
+    assert form.attrs["method"] == "post"
+    assert [(i.attrs["name"], i.attrs["value"]) for i in form.find_all("input")] == [("back", "1")]
+    (sheet,) = form.find_all("ol")
+    assert sheet.classes() == ["answer-sheet"]
+    items = sheet.find_all("li")
+    assert len(items) == 3
+    for number, item in enumerate(items, start=1):
+        (card,) = item.find_all("article")
+        assert "text-card" in card.classes()
+        assert card.find_all("h3")[0].text() == f"Question {number}"
+        (textarea,) = item.find_all("textarea")
+        field_id = f"gallery-answer-{number}"
+        assert textarea.attrs["id"] == textarea.attrs["name"] == field_id
+        (label,) = item.find_all("label")
+        assert label.attrs["for"] == field_id
+        assert label.text() == f"Answer to question {number}"
+        assert textarea.attrs["placeholder"] == "Not answered"
+        assert textarea.attrs["maxlength"] == "2000"
+        assert f"{field_id}-hint" in textarea.attrs["aria-describedby"]
+        hints = [e.text() for e in item.iter() if e.attrs.get("id") == f"{field_id}-hint"]
+        assert hints == ["Up to 2,000 characters."]
+    assert "aria-invalid" not in items[0].find_all("textarea")[0].attrs
+    assert items[2].find_all("textarea")[0].attrs["aria-invalid"] == "true"
+    errors = [e.text() for e in items[2].iter() if e.attrs.get("id") == "gallery-answer-3-error"]
+    assert errors == ["Answer to question 3 can be at most 2,000 characters."]
+    assert ">Sodium chloride\nNaCl</textarea>" in body
+    buttons = form.find_all("button")
+    assert [(b.text(), b.classes()) for b in buttons] == [("Save answers", [])]
+    assert buttons[0].start > sheet.end
+    assert not [a for a in form.find_all("a") if a.text() == "Cancel"]
+
+
+def test_the_placeholder_stays_under_its_label_and_hint(admin_client: TestClient) -> None:
+    """Milestone 12.3 contracts/components.md §2: the empty field of `#forms` keeps its label and
+    hint, and shows "Not answered" as its placeholder only."""
+    body = admin_client.get(GALLERY).text
+    assert (
+        '<label for="gallery-placeholder">Answer to question 2</label>\n'
+        '<small id="gallery-placeholder-hint" class="field-hint">Up to 2,000 characters.</small>\n'
+        '<textarea id="gallery-placeholder" name="gallery-placeholder" rows="6"'
+        ' aria-describedby="gallery-placeholder-hint" placeholder="Not answered"></textarea>'
+    ) in body
 
 
 def test_the_region_group_variants(admin_client: TestClient) -> None:

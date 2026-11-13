@@ -990,9 +990,8 @@ bank_questions_t = sa.table(
 revision."""
 
 
-def test_the_head_is_the_competition_entries_revision() -> None:
+def test_the_competition_entries_revision_follows_the_competitions_revision() -> None:
     """Milestone 12.2 follows milestone 12.1's revision."""
-    assert head_revision() == COMPETITION_ENTRIES_REVISION
     script = ScriptDirectory.from_config(alembic_config())
     assert script.get_revision(COMPETITION_ENTRIES_REVISION).down_revision == (
         COMPETITIONS_REVISION
@@ -1127,3 +1126,155 @@ def test_the_downgrade_drops_the_competition_entry_tables(
         for table in ("competitions", "questions", "teams"):
             count = connection.execute(text(f"SELECT count(*) FROM {table}")).scalar_one()
             assert count == (2 if table == "competitions" else 1), table
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.3: a team's answers
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/012.3-team-answers/data-model.md §1, §5 and research R1–R2.
+
+TEAM_ANSWERS_REVISION = "b709653d1111"
+
+team_answers_t = sa.table(
+    "team_answers",
+    sa.column("competition_id", sa.Integer()),
+    sa.column("team_id", sa.Integer()),
+    sa.column("competition_question_id", sa.Integer()),
+    sa.column("text", sa.String()),
+)
+
+
+def test_the_head_is_the_team_answers_revision() -> None:
+    """Milestone 12.3 follows milestone 12.2's revision."""
+    assert head_revision() == TEAM_ANSWERS_REVISION
+    script = ScriptDirectory.from_config(alembic_config())
+    assert script.get_revision(TEAM_ANSWERS_REVISION).down_revision == (
+        COMPETITION_ENTRIES_REVISION
+    )
+
+
+def test_the_team_answers_table_at_head(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    inspector = inspect(migration_engine)
+    columns = {c["name"]: c["nullable"] for c in inspector.get_columns("team_answers")}
+    assert columns == {
+        "competition_id": False,
+        "team_id": False,
+        "competition_question_id": False,
+        "text": False,
+    }
+    key = inspector.get_pk_constraint("team_answers")
+    assert (key["name"], key["constrained_columns"]) == (
+        "pk_team_answers",
+        ["competition_id", "team_id", "competition_question_id"],
+    )
+    foreign_keys = {
+        fk["name"]: (fk["constrained_columns"], fk["referred_table"], fk["referred_columns"])
+        for fk in inspector.get_foreign_keys("team_answers")
+    }
+    assert foreign_keys == {
+        "fk_team_answers_competition_id_competition_teams": (
+            ["competition_id", "team_id"],
+            "competition_teams",
+            ["competition_id", "team_id"],
+        ),
+        "fk_team_answers_competition_question_id_competition_questions": (
+            ["competition_question_id"],
+            "competition_questions",
+            ["id"],
+        ),
+    }
+    assert {i["name"]: i["column_names"] for i in inspector.get_indexes("team_answers")} == {
+        "ix_team_answers_competition_question_id": ["competition_question_id"]
+    }
+    checks = {c["name"] for c in inspector.get_check_constraints("team_answers")}
+    assert checks == {"ck_team_answers_answered"}
+
+
+def _seed_answerable(connection: Connection) -> tuple[int, int, int, int]:
+    """A competition holding a copy of a question and a team, and a second competition's copy:
+    `(competition, team, copy, other competition's copy)`."""
+    first, second, question, team = _seed_entries(connection)
+    copy = connection.execute(_copy(first, question).returning(competition_questions_t.c.id))
+    other = connection.execute(_copy(second, question).returning(competition_questions_t.c.id))
+    connection.execute(_link(first, team))
+    return first, team, copy.scalar_one(), other.scalar_one()
+
+
+def _answer(competition_id: int, team_id: int, copy_id: int, text_: str = "NaCl") -> sa.Insert:
+    return team_answers_t.insert().values(
+        competition_id=competition_id,
+        team_id=team_id,
+        competition_question_id=copy_id,
+        text=text_,
+    )
+
+
+def _answer_count(engine: Engine) -> int:
+    with engine.connect() as connection:
+        return connection.execute(text("SELECT count(*) FROM team_answers")).scalar_one()
+
+
+def test_one_non_empty_answer_per_question_per_team(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Research R1, FR-022: the primary key refuses a second answer to the same question of the
+    same team; the check constraint refuses an empty text, since a row means "answered"."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        competition, team, copy, _ = _seed_answerable(connection)
+        connection.execute(_answer(competition, team, copy))
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(_answer(competition, team, copy, "Sodium chloride"))
+    with migration_engine.begin() as connection:
+        connection.execute(text("DELETE FROM team_answers"))
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(_answer(competition, team, copy, ""))
+    assert _answer_count(migration_engine) == 0
+
+
+def test_an_answer_needs_its_team_in_the_competition_and_a_known_copy(
+    monkeypatch: pytest.MonkeyPatch,
+    empty_database_url: str,
+    migration_engine: Engine,
+) -> None:
+    """Research R1: the composite foreign key refuses an answer of a team that is not in the
+    competition, and the other one an unknown copy. SQLite does not enforce foreign keys in this
+    application (no `PRAGMA foreign_keys`), so the refusals are checked on PostgreSQL; the service
+    checks both under lock on every engine (research R3)."""
+    if migration_engine.dialect.name != "postgresql":
+        pytest.skip("SQLite does not enforce foreign keys here")
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        competition, team, copy, _ = _seed_answerable(connection)
+        second = connection.execute(
+            text("SELECT id FROM competitions WHERE id <> :id"), {"id": competition}
+        ).scalar_one()
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(_answer(second, team, copy))
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(_answer(competition, team, copy + 1000))
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(_answer(competition, team, copy))
+        connection.execute(
+            text("DELETE FROM competition_teams WHERE team_id = :team"), {"team": team}
+        )
+    assert _answer_count(migration_engine) == 0
+
+
+def test_the_downgrade_drops_the_team_answers_table(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        competition, team, copy, _ = _seed_answerable(connection)
+        connection.execute(_answer(competition, team, copy))
+    run_alembic(monkeypatch, empty_database_url, "downgrade", COMPETITION_ENTRIES_REVISION)
+    assert "team_answers" not in inspect(migration_engine).get_table_names()
+    with migration_engine.connect() as connection:
+        copies = connection.execute(text("SELECT count(*) FROM competition_questions"))
+        links = connection.execute(text("SELECT count(*) FROM competition_teams"))
+        assert (copies.scalar_one(), links.scalar_one()) == (2, 1)

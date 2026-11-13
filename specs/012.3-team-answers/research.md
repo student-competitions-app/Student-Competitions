@@ -243,11 +243,18 @@ the first thing checked.
   (`answer-41`). The error summary links to the same id.
 - **The save** reads the context fields (`subject`, `status`, `page`, `back`) as `Form` strings, as
   in 12.2, and the answers through a small async dependency, `answer_fields(request)`, which awaits
-  `request.form()` (Starlette caches it, so the body is parsed once) and returns every field whose
-  name starts with `answer-`. The handler itself stays a plain `def`, so its database calls run in
-  the thread pool like every other route's.
+  `request.form()` (Starlette caches it, so the body is parsed once) and returns every
+  `(name, value)` pair whose name starts with `answer-`, through `form.multi_items()`, in the order
+  sent. The handler itself stays a plain `def`, so its database calls run in the thread pool like
+  every other route's.
 - **Parsing**: `answer-` followed by an id (`parse_id`) → that question; any other `answer-…` name,
-  or the same question twice, is "Question not found" (404), and nothing is saved (FR-025 step 4).
+  or the same question twice (the identical name repeated, or two spellings of one id such as
+  `answer-41` and `answer-041`), is "Question not found" (404), and nothing is saved (FR-025 step 4).
+- **Repeated names are refused, never collapsed**: a `dict` of the form, or `form.items()`, keeps
+  one value per name, so `answer-41=A&answer-41=B` would silently save `B`. Reading every pair
+  removes that ambiguity (HTTP parameter pollution): one form gives exactly one text per question,
+  and no later code (milestone 13's student save, a log line, a check) can read a different copy of
+  the value than the one that was validated and written.
 
 **Rationale**: a name per question ties each text to its question without relying on the order of
 the fields, and a crafted form naming another competition's question is caught by the id (FR-025).
@@ -294,8 +301,9 @@ not be "the page the teacher came from" if the list changed meanwhile.
 2. the competition's live teams whose institution is in that map, from the 12.2 `_team_entries`
    (made public as `competition_entries.team_entries`), sorted by region, then team, ignoring case;
 3. per-region totals over those teams only (FR-007), the page sliced and grouped by region with the
-   12.2 grouping, extracted as `competition_entries.group_by_region(entries, p, make_row)`, which
-   `team_page` then calls too;
+   12.2 grouping, extracted as `competition_entries.group_by_region(entries, p, make_rows)`, which
+   `team_page` then calls too; `make_rows` is called once with the page's entries (batched), so the
+   counts below are one query each per page;
 4. the active members of the page's teams (`teams.count_active_members`), and their answered counts
    in one grouped query (`team_answers.count_answered`), and the competition's question count.
 

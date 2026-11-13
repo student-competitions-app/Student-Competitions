@@ -17,8 +17,10 @@ read every value as a plain string, so no input gets FastAPI's 422. See
 4. **Team and questions** (sheet and save) → 404:
    - the team unknown, deleted, not in the competition, or of a deactivated institution or region →
      "Team not found";
-   - the save names a question that is not one of the competition's, names one twice, or has an
-     `answer-…` field whose suffix is not an id → "Question not found".
+   - the save names a question that is not one of the competition's, names one twice (the same
+     field name repeated, or two spellings of one id), or has an `answer-…` field whose suffix is
+     not an id → "Question not found". Every `answer-…` pair of the body is read
+     (`form.multi_items()`), so a repeated name is seen and refused, never collapsed to one value.
 5. **Access to the team** (sheet and save): the teacher not linked to the team's institution, or
    linked with **Read** only → 403 "access denied".
 6. **The answers** (save): any answer too long or holding a NUL character → 400, the sheet again
@@ -93,7 +95,8 @@ Steps 1–5. Then `team_answers.answer_sheet(session, teacher, competition, team
 ### 3. `POST /answers/{team_id:int}`: save (Write)
 
 Form: `subject`, `status`, `page`, `back` (plain `Form` strings) and every `answer-…` field (the
-`answer_fields` dependency, R9). Steps 1–4 (the questions parsed here), then
+`answer_fields` dependency, R9). Steps 1–4 (the questions parsed here; a `team_id` above `MAX_ID`
+is "Team not found" before any answer field is read, as on the sheet), then
 `team_answers.save_answers(…)`, which repeats the checks under lock.
 
 | Outcome | Response |

@@ -123,7 +123,8 @@ the gallery and page patterns.
 - 1 migration, 1 new model, 1 new schema module, 1 new service module; 3 changed services
   (`competitions`, `competition_entries`, `teams`).
 - 1 new router with 3 endpoints; the 12.2 router exposes its helpers.
-- 2 new page templates (`competition_answers.html`, `team_answers.html`); 1 changed
+- 2 new page templates (`competition_answers.html`, the team answers page;
+  `team_answer_sheet.html`, the answer sheet); 1 changed
   (`competitions.html`).
 - 1 new component file (`answer_sheet.html`), 1 changed (`form.html`), and their CSS; gallery
   sections.
@@ -204,7 +205,7 @@ app/
 │       └── teacher/
 │           ├── competitions.html                # Answers in the menu (In progress)
 │           ├── competition_answers.html         # NEW: the team answers page
-│           └── team_answers.html                # NEW: the answer sheet
+│           └── team_answer_sheet.html           # NEW: the answer sheet
 ├── static/css/app.css           # .answer-sheet
 └── main.py                      # include the new router
 

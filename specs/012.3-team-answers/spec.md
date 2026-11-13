@@ -235,14 +235,17 @@ without the setting and with and without links, and check the teams and the butt
 
 ### User Story 6 - Answers that are too long save nothing (Priority: P1)
 
-Taras pastes a long text into the answer to question 4, 2,001 characters after trimming, and also
-changes the answers to questions 1 and 5. He presses **Save answers**. Nothing is saved: the page
-shows again with every text he entered kept, the error at question 4 and the error summary "There is a
-problem" linking to it. He shortens the answer to exactly 2,000 characters and saves: all the answers
-are saved.
+Every answer field stops taking text at 2,000 characters, so in a current browser Taras cannot type
+or paste more. The server checks the length again, whatever the browser did. A save that gets past
+the browser's limit anyway (an old browser, a page whose limit was removed, a hand-made request)
+sends a 2,001-character answer to question 4, after trimming, with changes to questions 1 and 5.
+Nothing is saved: the page shows again with every text that was sent kept, the error at question 4
+and the error summary "There is a problem" linking to it. With the answer shortened to exactly 2,000
+characters, the save stores all the answers.
 
 **Why this priority**: A save stores the whole sheet, so it must never store part of it; and a lost
-long answer would cost the teacher their typing.
+long answer would cost the teacher their typing. The browser's limit is a convenience that stops
+the teacher early; the server's check is the guarantee, because a browser limit can be bypassed.
 
 **Independent Test**: Save a sheet with one answer of 2,001 characters after trimming among other
 changes, and then with exactly 2,000; check that nothing, then everything, is stored, and the kept
@@ -259,6 +262,9 @@ texts, the error and the summary.
    error and the summary lists them all, in the order of the questions.
 4. **Given** an answer of exactly 2,000 characters after trimming, **When** the sheet is saved,
    **Then** it is saved.
+5. **Given** the answer sheet, **When** it is shown (also again after a refused save), **Then** every
+   answer field limits its text to 2,000 characters in the browser, and scenarios 1–4 hold for a save
+   that ignores that limit.
 
 ---
 
@@ -470,7 +476,8 @@ capability of its own.
   copied text and no mark, and answered like any other.
 - **An answer made only of spaces and line breaks**: trimmed to nothing, so the question is not
   answered and does not count in the progress.
-- **An answer of 2,001 characters before trimming but 2,000 or fewer after**: it is saved.
+- **An answer of 2,001 characters before trimming but 2,000 or fewer after**: it is saved. The
+  browser counts before trimming, so only a save that bypasses the browser's limit can send it.
 - **Saving with nothing changed**: the save is accepted and shows the notice; the stored answers stay
   the same.
 - **Pressing Save answers twice (double press)**: the form cannot be sent again until the next page
@@ -566,7 +573,9 @@ capability of its own.
   at once. An empty field MUST mean that the question is not answered.
 - **FR-018**: Answers MUST be trimmed, MUST keep their inner line breaks, and MUST be at most 2,000
   characters after trimming, as in the question bank (milestone 11), with the error wording of
-  milestone 11.
+  milestone 11. Each answer field MUST limit its text to 2,000 characters in the browser, as the
+  question form does; the server MUST check every answer's length again on every save, and that
+  check MUST NOT rely on the browser's limit.
 - **FR-019**: If any answer is too long, nothing MUST be saved, and the page MUST show again with every
   entered text kept, the error at each answer that is too long and the error summary linking to them.
 - **FR-020**: After a save the teacher MUST stay on the sheet, with the saved answers in their fields
@@ -727,6 +736,11 @@ capability of its own.
   answer field's label as its subject.
 - **Each answer field has the hint "Up to 2,000 characters."**, as the question form of milestone 11;
   the placeholder "Not answered" never replaces it. The milestone does not name a hint.
+- **The browser's limit is never looser than the server's**: the browser counts a line break as one
+  character, as the server does after turning `\r\n` into `\n`; it counts a character outside the
+  Basic Multilingual Plane (an emoji) as two, while the server counts it as one. So the browser may
+  stop a little early on such text, but nothing the browser accepts is refused by the server for its
+  length.
 - **A save that does not name a question of the competition** (only a crafted form can omit one, since
   a competition's questions cannot change while it is **In progress**) leaves that question's stored
   answer as it is.

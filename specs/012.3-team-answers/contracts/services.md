@@ -103,8 +103,11 @@ class AnswerSheet:
 ## `app/services/competition_entries.py` (changed)
 
 - `_team_entries` → public `team_entries(session, competition_id)`.
-- New `group_by_region(entries, p, make_row) -> (list[RegionGroup[Row]], Paging)`: the 12.2
-  grouping and per-region totals, extracted; `team_page` calls it with `_team_row`.
+- New `group_by_region(entries, p, make_rows) -> (list[RegionGroup[Row]], Paging)`: the 12.2
+  grouping and per-region totals, extracted. `make_rows(shown)` is called **once** with the page's
+  `(team, institution, region)` entries and returns their rows in the same order, so a caller
+  counts members (and answers) for the whole page in one query each; `team_page` calls it with a
+  `make_rows` built on `count_active_members` and `_team_row`.
 - `RegionGroup` becomes generic in its row type (`RegionGroup[TeamRow]` for 12.2).
 - The docstring's "Contract for later milestones" points to `team_answers` for the answers.
 

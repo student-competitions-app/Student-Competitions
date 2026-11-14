@@ -908,7 +908,10 @@ def test_the_menu_entries_per_status_and_setting(
     scene: Scene, clock: Callable[[timedelta], datetime]
 ) -> None:
     """US6-1–US6-4, FR-001, FR-002. The In progress menus replaced by milestone 12.3 FR-001
-    (SC-011): they gain **Answers** after **Teams**, for every teacher."""
+    (SC-011): they gain **Answers** after **Teams**, for every teacher. Replaced again by
+    milestone 12.4 FR-004 (SC-011): the In progress menu gains **Finish competition** before
+    **Cancel competition** with the setting, and the Finished menu gains **Answers** for every
+    teacher and **Grades** with the setting."""
     running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
     finished = make_competition(
         scene.engine, scene.chemistry, "Done", starts_at=at(1, 7), stopped=True
@@ -921,13 +924,20 @@ def test_the_menu_entries_per_status_and_setting(
     assert olena == {
         f"competition-{scene.competition}": ["Edit", "Questions", "Teams", "Cancel competition"],
         f"competition-{cancelled}": ["Questions", "Teams"],
-        f"competition-{running}": ["Questions", "Teams", "Answers", "Cancel competition"],
-        f"competition-{finished}": ["Questions", "Teams"],
+        f"competition-{running}": [
+            "Questions",
+            "Teams",
+            "Answers",
+            "Finish competition",
+            "Cancel competition",
+        ],
+        f"competition-{finished}": ["Questions", "Teams", "Answers", "Grades"],
     }
     mykola = {k: [t for t, _ in v] for k, v in menus(get(scene.mykola, url)).items()}
     assert mykola.pop(f"competition-{running}") == ["Questions", "Teams", "Answers"]
+    assert mykola.pop(f"competition-{finished}") == ["Questions", "Teams", "Answers"]
     assert set(map(tuple, mykola.values())) == {("Questions", "Teams")}
-    assert len(mykola) == 3
+    assert len(mykola) == 2
 
 
 def test_the_menu_links_keep_the_list_and_lead_back_to_it(scene: Scene) -> None:
@@ -1645,7 +1655,8 @@ def test_a_deactivated_subject(scene: Scene) -> None:
     assert [r["Team"] for r in team_rows(teams).values()] == ["Comets"]
     assert heading_action(teams) == []
     row_menu = menus(get(scene.mykola, f"{TAB}?{scene.ctx}"))[f"competition-{finished}"]
-    assert [text for text, _ in row_menu] == ["Questions", "Teams"]
+    # Replaced by milestone 12.4 FR-004, FR-042 (SC-011): a finished row adds **Answers**.
+    assert [text for text, _ in row_menu] == ["Questions", "Teams", "Answers"]
     for kind, response in (
         ("questions", scene.olena.get(page_of(scene, "questions/add", competition=finished))),
         ("teams", scene.olena.get(page_of(scene, "teams/add", competition=finished))),

@@ -29,9 +29,9 @@ from sqlalchemy import Engine
 from sqlmodel import Session, select
 
 from app.main import app
-from app.models import AccessLevel, Role, TeamAnswer
+from app.models import AccessLevel, Role, Team, TeamAnswer
 from app.schemas.teachers import MAX_ID
-from app.services.competitions import cancel_competition
+from app.services.competitions import cancel_competition, finish_competition
 from app.services.institutions import set_institution_active
 from app.services.regions import set_region_active
 from app.services.subjects import set_subject_active
@@ -47,6 +47,7 @@ from tests.conftest import (
     ClientAs,
     add_competition_question,
     add_competition_team,
+    grade_answer,
     make_class,
     make_competition,
     make_institution,
@@ -368,14 +369,16 @@ def test_the_team_answers_page(scene: Scene) -> None:
         "Answered",
         "Actions",
     ]
-    assert actions(body) == {"Comets": "Enter answers", "Lions": "Read access"}
-    notes = [e for e in html.parse(body).iter() if "row-note" in e.classes()]
-    assert [n.text() for n in notes] == ["Read access"]
+    # Replaced by milestone 12.4 FR-036, research R7 (SC-011): a Read institution's team gets
+    # **View answers** instead of the "Read access" row note.
+    assert actions(body) == {"Comets": "Enter answers", "Lions": "View answers"}
+    assert [e for e in html.parse(body).iter() if "row-note" in e.classes()] == []
     assert "Novas" not in body
-    enter = [link for link in html.links(body, "main") if link.text == "Enter answers"]
-    assert [link.href for link in enter] == [
-        f"{TAB}/{scene.competition}/answers/{scene.comets}?{scene.ctx}"
-    ]
+    links = {link.text: link.href for link in html.links(body, "main") if "/answers/" in link.href}
+    assert links == {
+        "Enter answers": f"{TAB}/{scene.competition}/answers/{scene.comets}?{scene.ctx}",
+        "View answers": f"{TAB}/{scene.competition}/answers/{scene.lions}?{scene.ctx}",
+    }
     text = html.text(body, "main")
     assert "Add team" not in text and "Remove" not in text
     assert "<caption>" not in body
@@ -428,7 +431,8 @@ def test_twelve_teams_in_two_regions_across_two_pages(scene: Scene) -> None:
     for query, expected_body in (("&p=99", second), ("&p=x", first), ("&p=0", first)):
         body = get(scene.taras, answers_url(scene, query))
         assert region_groups(body) == region_groups(expected_body), query
-    assert actions(second) == {"Lions": "Read access", "Lynx": "Read access"}
+    # Replaced by milestone 12.4 FR-036 (SC-011): **View answers**, not "Read access".
+    assert actions(second) == {"Lions": "View answers", "Lynx": "View answers"}
 
 
 def test_the_back_link_falls_back_without_a_subject(scene: Scene) -> None:
@@ -571,24 +575,64 @@ def test_the_back_page_is_kept_and_falls_back_to_the_page_holding_the_team(scene
 # User story 3: Read access follows the progress only
 # ---------------------------------------------------------------------------------------------
 
+READ_NOTICE = "You have Read access to “Lyceum No. 2”, so you cannot change these answers."
+
+
+def read_only_items(body: str) -> list[str]:
+    """The text of each question card of the read-only sheet."""
+    (sheet,) = [o for o in html.parse(body).find_all("ol") if "answer-sheet" in o.classes()]
+    return [item.text() for item in sheet.find_all("li")]
+
 
 def test_read_access_shows_the_progress_and_never_the_answers(scene: Scene) -> None:
-    """US3 story, US3-3, US3-4, SC-004: Iryna sees Lions with its progress and no Enter answers;
-    its sheet and a crafted save are denied, nothing changes, and no answer is shown."""
-    save_team_answer(scene.engine, scene.competition, scene.lions, scene.copies[0], "Secret lion")
+    """US3 story, US3-3, US3-4, SC-004: Iryna sees Lions with its progress and no Enter answers; a
+    crafted save is denied and nothing changes. Replaced by milestone 12.4 US7, FR-034–FR-036,
+    research R7 (SC-011): the row has **View answers** instead of "Read access", and the sheet
+    opens read-only, with the access notice, instead of "access denied"."""
+    save_team_answer(
+        scene.engine, scene.competition, scene.lions, scene.copies[0], "Secret lion\nline two"
+    )
     body = get(scene.iryna, answers_url(scene))
     assert [(g.header, g.rows[0]["Answered"]) for g in region_groups(body)] == [
         ("Lviv · 1 team", "1 of 6")
     ]
-    assert actions(body) == {"Lions": "Read access"}
+    assert actions(body) == {"Lions": "View answers"}
     assert "Enter answers" not in body
     before = snapshot(scene.engine)
     for browser in (scene.iryna, scene.taras):
-        response = browser.get(sheet_url(scene, scene.lions))
-        denied(response)
-        assert "Secret lion" not in response.text and "Question text" not in response.text
+        sheet = get(browser, sheet_url(scene, scene.lions))
+        assert html.h1(sheet) == "Answers of “Lions” in “Spring round”"
+        assert ("Educational institution", "Lyceum No. 2") in html.details(sheet)
+        assert ("status", READ_NOTICE) in html.notices(sheet)
+        items = read_only_items(sheet)
+        assert (
+            items[0]
+            == "Question 1 Question Question text 1? Answer to question 1 Secret lion line two"
+        )
+        assert all(item.endswith("Not answered") for item in items[1:])
+        assert '<p class="keep-lines">Secret lion\nline two</p>' in sheet
+        main = html.region(sheet, "main")
+        for absent in ("<form", "<textarea", "<button", "Reference answer", "Grade", "Score"):
+            assert absent not in main, absent
+        back = f"{TAB}/{scene.competition}/answers?{scene.ctx}#team-{scene.lions}"
+        assert (back, "Back to the answers") in html.link_pairs(sheet, "main")
         denied(post_answers(scene, browser, {scene.copies[0]: "Changed"}, team=scene.lions))
     assert snapshot(scene.engine) == before
+
+
+def test_the_read_only_sheet_shows_answers_saved_since(scene: Scene) -> None:
+    """US7-3: opened again, it shows what a Write teacher saved meanwhile."""
+    get(scene.iryna, sheet_url(scene, scene.lions))
+    save_team_answer(scene.engine, scene.competition, scene.lions, scene.copies[1], "Later one")
+    items = read_only_items(get(scene.iryna, sheet_url(scene, scene.lions)))
+    assert items[1].endswith("Answer to question 2 Later one")
+
+
+def test_raising_the_access_to_write_offers_enter_answers(scene: Scene) -> None:
+    """US7-5."""
+    set_links(scene, lyceum=AccessLevel.WRITE)
+    assert actions(get(scene.taras, answers_url(scene)))["Lions"] == "Enter answers"
+    assert sheet_forms(get(scene.taras, sheet_url(scene, scene.lions)))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -673,16 +717,14 @@ def closed_round(s: Scene, name: str, **seed: Any) -> tuple[int, int]:
             {"starts_at": STARTED, "cancelled": True},
             "“{name}” has been cancelled, so its answers can no longer be entered.",
         ),
-        (
-            {"starts_at": STARTED, "stopped": True},
-            "“{name}” has finished, so its answers can no longer be entered.",
-        ),
     ],
 )
 def test_both_pages_and_the_save_refuse_a_competition_not_in_progress(
     scene: Scene, seed: dict[str, Any], reason: str
 ) -> None:
-    """US7-1–US7-3, FR-026, SC-003: typed addresses and a save; nothing is saved."""
+    """US7-1–US7-3, FR-026, SC-003: typed addresses and a save; nothing is saved. Replaced by
+    milestone 12.4 FR-041 (SC-011): a Finished competition is no longer refused on the pages,
+    only on the save (`test_a_save_after_the_finish_is_refused`)."""
     competition, copy = closed_round(scene, "Autumn round", **seed)
     before = snapshot(scene.engine)
     expected = reason.format(name="Autumn round")
@@ -884,14 +926,16 @@ def test_a_link_lowered_or_removed_while_the_sheet_is_open(
     scene: Scene, change: AccessLevel | None
 ) -> None:
     """US8-6, US8-7, FR-013, FR-027: the save is denied and the answers saved before stay; the
-    team answers page then shows "Read access", or no longer lists the team."""
+    team answers page then shows **View answers** (milestone 12.4), or no longer lists the
+    team."""
     post_answers(scene, scene.taras, {scene.copies[0]: "Before"})
     get(scene.taras, sheet_url(scene))
     set_links(scene, school=change)
     denied(post_answers(scene, scene.taras, {scene.copies[0]: "After"}))
     assert stored(scene) == {scene.copies[0]: "Before"}
     rows = actions(get(scene.taras, answers_url(scene)))
-    assert rows.get("Comets") == ("Read access" if change else None)
+    # Replaced by milestone 12.4 FR-036 (SC-011): **View answers**, not "Read access".
+    assert rows.get("Comets") == ("View answers" if change else None)
 
 
 def test_the_subject_deactivated_while_the_sheet_is_open(scene: Scene) -> None:
@@ -1077,3 +1121,175 @@ def test_a_rows_active_members(scene: Scene) -> None:
     body = get(scene.taras, answers_url(scene))
     assert region_groups(body)[0].rows[0]["Active members"] == "2"
     assert "No0" not in body
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.4: the Answers pages of a finished competition (specs/012.4-finish-and-grade US8)
+# ---------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Finished:
+    competition: int
+    copies: list[int]
+
+
+@pytest.fixture
+def finished(scene: Scene) -> Finished:
+    """ "Autumn round", Finished, 4 questions; Comets answered all 4 (graded 5, 7, 5 and not
+    graded), Lions answered nothing; Novas (unlinked) and a deleted team of School No. 5 are in
+    it too."""
+    competition = make_competition(
+        scene.engine, scene.chemistry, "Autumn round", starts_at=STARTED, stopped=True
+    )
+    copies = [
+        add_competition_question(
+            scene.engine,
+            competition,
+            make_question(scene.engine, scene.chemistry, f"Autumn {n}?", f"Hidden reference {n}"),
+        )
+        for n in range(1, 5)
+    ]
+    gone = make_team(scene.engine, scene.school, "Gone", deleted=True)
+    for team in (scene.comets, scene.lions, scene.novas, gone):
+        add_competition_team(scene.engine, competition, team)
+    for copy, grade in zip(copies, (5, 7, 5, None), strict=True):
+        save_team_answer(scene.engine, competition, scene.comets, copy, f"Comets {copy}")
+        if grade is not None:
+            grade_answer(scene.engine, competition, scene.comets, copy, grade)
+    return Finished(competition, copies)
+
+
+def test_the_answers_page_of_a_finished_competition(
+    scene: Scene, finished: Finished, client_as: ClientAs
+) -> None:
+    """US8-1, US8-2, FR-037: Write and Read, with or without the setting, see only their
+    institutions' teams with **Answered**, **Graded**, **Score** and **View answers**."""
+    body = get(scene.taras, answers_url(scene, competition=finished.competition))
+    assert ("Status", "Finished") in html.details(body)
+    (table,) = html.parse(body).find_all("table")[:1]
+    assert [th.text() for th in table.find_all("th")] == [
+        "Team",
+        "Educational institution",
+        "Active members",
+        "Answered",
+        "Graded",
+        "Score",
+        "Actions",
+    ]
+    listed = {r["Team"]: r for g in region_groups(body) for r in g.rows}
+    assert listed == {
+        "Comets": {
+            "Team": "Comets",
+            "Educational institution": "School No. 5",
+            "Active members": "0",
+            "Answered": "4 of 4",
+            "Graded": "3 of 4",
+            "Score": "17",
+            "": "View answers",
+        },
+        "Lions": {
+            "Team": "Lions",
+            "Educational institution": "Lyceum No. 2",
+            "Active members": "0",
+            "Answered": "0 of 4",
+            "Graded": "0 of 0",
+            "Score": "0",
+            "": "View answers",
+        },
+    }
+    assert "Enter answers" not in body
+    assert list(
+        actions(get(scene.iryna, answers_url(scene, competition=finished.competition)))
+    ) == ["Lions"]
+    olena = get(scene.olena, answers_url(scene, competition=finished.competition))
+    assert "No teams from your educational institutions" in html.text(olena, "main")
+
+
+def test_the_read_only_sheet_of_a_finished_competition(scene: Scene, finished: Finished) -> None:
+    """US8-3, US8-4, FR-038: the score, the graded count, each grade, "Not answered"; no reference
+    answer, no form, no access notice; a grade saved by grading shows on the next opening."""
+    for browser, team in ((scene.taras, scene.comets), (scene.oksana, scene.comets)):
+        body = get(browser, sheet_url(scene, team, competition=finished.competition))
+        text = html.text(body, "main")
+        assert "Score: 17" in text
+        assert "Graded 3 of 4 answers" in text
+        items = read_only_items(body)
+        assert [item.rsplit(" ", 4)[-4:] for item in items[:3]] == [
+            ["Grade:", "5", "of", "10"],
+            ["Grade:", "7", "of", "10"],
+            ["Grade:", "5", "of", "10"],
+        ]
+        assert items[3].endswith("Not graded yet")
+        main = html.region(body, "main")
+        for absent in ("<form", "<textarea", "<button", "Hidden reference", "Read access to"):
+            assert absent not in main, absent
+    lions = get(scene.taras, sheet_url(scene, scene.lions, competition=finished.competition))
+    text = html.text(lions, "main")
+    assert "Score: 0" in text and "Graded 0 of 0 answers" in text
+    assert "Read access to" not in text
+    assert text.count("Not answered") == 4
+    grade_answer(scene.engine, finished.competition, scene.comets, finished.copies[3], 9)
+    again = get(scene.taras, sheet_url(scene, competition=finished.competition))
+    assert "Score: 26" in html.text(again, "main")
+    assert read_only_items(again)[3].endswith("Grade: 9 of 10")
+
+
+def test_the_finished_pages_follow_the_links_only(
+    scene: Scene, finished: Finished, client_as: ClientAs
+) -> None:
+    """US8-5, US8-6, FR-041: deleted, unlinked and deactivated teams; the setting gives
+    nothing."""
+    with Session(scene.engine) as session:
+        deleted = session.exec(select(Team.id).where(Team.name == "Gone")).one()
+    not_found(
+        scene.taras.get(sheet_url(scene, deleted, competition=finished.competition)),
+        TEAM_NOT_FOUND,
+    )
+    for browser in (scene.taras, scene.olena):
+        denied(browser.get(sheet_url(scene, scene.novas, competition=finished.competition)))
+    with Session(scene.engine) as session:
+        set_institution_active(session, region_of(scene.engine, scene.school), scene.school, False)
+    not_found(scene.taras.get(sheet_url(scene, competition=finished.competition)), TEAM_NOT_FOUND)
+    body = get(scene.taras, answers_url(scene, competition=finished.competition))
+    assert "Comets" not in actions(body)
+
+
+def test_a_save_after_the_finish_is_refused(scene: Scene, finished: Finished) -> None:
+    """US8-7, FR-040: a typed save, and one from a sheet opened before the finish; the answers
+    saved before are kept."""
+    post_answers(scene, scene.taras, {scene.copies[0]: "Before"})
+    get(scene.taras, sheet_url(scene))
+    with Session(scene.engine) as session:
+        manager = get_user_by_email(session, OLENA)
+        assert manager is not None and manager.id is not None
+        finish_competition(session, manager.id, scene.competition, scene.chemistry, None)
+    before = snapshot(scene.engine)
+    for competition, copy in (
+        (scene.competition, scene.copies[0]),
+        (finished.competition, finished.copies[0]),
+    ):
+        refused(
+            post_answers(scene, scene.taras, {copy: "After"}, competition=competition),
+            "Spring round" if competition == scene.competition else "Autumn round",
+            "has finished, so its answers can no longer be entered.",
+            scene,
+            competition,
+        )
+    assert snapshot(scene.engine) == before
+    assert stored(scene) == {scene.copies[0]: "Before"}
+
+
+def test_a_finished_competition_of_a_deactivated_subject_stays_readable(
+    scene: Scene, finished: Finished
+) -> None:
+    """US13-1, FR-042: its Answers page and read-only sheets open; an In progress competition of
+    the subject is not found on both pages."""
+    with Session(scene.engine) as session:
+        set_subject_active(session, scene.chemistry, False)
+    body = get(scene.taras, answers_url(scene, competition=finished.competition))
+    assert actions(body) == {"Comets": "View answers", "Lions": "View answers"}
+    sheet = get(scene.taras, sheet_url(scene, competition=finished.competition))
+    assert "Score: 17" in html.text(sheet, "main")
+    for url in (answers_url(scene), sheet_url(scene)):
+        not_found(scene.taras.get(url), COMPETITION_NOT_FOUND)

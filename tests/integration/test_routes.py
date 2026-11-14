@@ -17,8 +17,9 @@ denied roles only; `test_teacher_access.py` sweeps the same route table with rea
 
 The question bank's management pages (`MANAGE_PATHS`) need **Can manage competitions**, which the
 cast teacher lacks (it has no teacher profile), so they answer it "access denied" too (milestone
-11 FR-037), and so do the competitions' add, edit and cancel pages (milestone 12.1). For those the
-sweep also checks the denied roles only; `test_teacher_questions.py` and
+11 FR-037), and so do the competitions' add, edit and cancel pages (milestone 12.1), and the
+finish confirmation, the Grades page and the grading sheets (milestone 12.4). For those the sweep
+also checks the denied roles only; `test_teacher_questions.py` and
 `test_teacher_competitions.py` check them with a real teacher who has the setting.
 """
 
@@ -76,7 +77,8 @@ def test_the_write_routes_are_exact() -> None:
     teacher actions, accepting an invitation, the teacher's class and student actions, the
     question bank's add, edit and delete, the teacher's team actions (milestone 11.1), the
     competitions' add, edit and cancel (milestone 12.1), a competition's questions and teams
-    (milestone 12.2), and a team's answers (milestone 12.3)."""
+    (milestone 12.2), a team's answers (milestone 12.3), and finishing and grading (milestone
+    12.4)."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -130,6 +132,8 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/teacher/competitions/{competition_id:int}/teams"),
         ("POST", "/teacher/competitions/{competition_id:int}/teams/{team_id:int}/remove"),
         ("POST", "/teacher/competitions/{competition_id:int}/answers/{team_id:int}"),
+        ("POST", "/teacher/competitions/{competition_id:int}/finish"),
+        ("POST", "/teacher/competitions/{competition_id:int}/grades/{team_id:int}"),
     }
 
 
@@ -283,11 +287,15 @@ MANAGE_PATHS = frozenset(
         "/teacher/competitions/{competition_id:int}/questions/{question_id:int}/remove",
         "/teacher/competitions/{competition_id:int}/teams/add",
         "/teacher/competitions/{competition_id:int}/teams/{team_id:int}/remove",
+        "/teacher/competitions/{competition_id:int}/finish",
+        "/teacher/competitions/{competition_id:int}/grades",
+        "/teacher/competitions/{competition_id:int}/grades/{team_id:int}",
     }
 )
 """The pages that need Can manage competitions: the question bank's (milestone 11 FR-037), the
-competitions' (milestone 12.1 FR-042), and the add pages and remove confirmations of a
-competition's questions and teams (milestone 12.2 FR-045)."""
+competitions' (milestone 12.1 FR-042), the add pages and remove confirmations of a competition's
+questions and teams (milestone 12.2 FR-045), and the finish confirmation, the Grades page and the
+grading sheets (milestone 12.4 FR-043)."""
 
 ENTRY_READ_PATHS = frozenset(
     {

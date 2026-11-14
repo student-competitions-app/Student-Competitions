@@ -1133,6 +1133,32 @@ html [aria-busy="true"]:not(input, select, textarea):is(button, [type="submit"],
   margin-bottom: 0;
 }
 
+/* Grading sheet (components/grading_sheet.html, milestone 12.4 contracts/components.md §2): the
+   answer sheet's cards and spacing. A grade is a short field on wide screens and takes the card's
+   full width below 768 px; "Not answered" and a read-only grade are body text spaced as a text
+   box. */
+.answer-sheet input {
+  width: 100%;
+  max-width: none;
+  margin-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .answer-sheet input {
+    width: var(--sc-action-width);
+  }
+}
+
+.grade-line {
+  max-width: none;
+  margin: 0 0 var(--sc-space-2);
+  color: var(--sc-text);
+}
+
+.answer-sheet .grade-line:last-child {
+  margin-bottom: 0;
+}
+
 
 /* Data table (components/table.html, FR-027): a real table from 768 px, a card of labelled values
    per row below it. Long values wrap; nothing scrolls sideways. */
@@ -1930,7 +1956,8 @@ nav.pagination li a:hover {
   text-decoration: underline;
 }
 
-nav.pagination li a[aria-current="page"] {
+nav.pagination li a[aria-current="page"],
+nav.filter-links li a[aria-current="true"] {
   border-bottom-color: var(--sc-primary);
   color: var(--sc-text);
   font-weight: var(--sc-weight-bold);
@@ -1939,6 +1966,46 @@ nav.pagination li a[aria-current="page"] {
 .pagination-off,
 .pagination-gap {
   color: var(--sc-muted);
+}
+
+/* Filter links (components/filter.html, milestone 12.4 contracts/components.md §3): a row of plain
+   links above a list, with the page navigation's gap, touch target and look; the current filter
+   shares the current page's rule above. */
+nav.filter-links {
+  display: block;
+  margin: 0 0 var(--sc-space-2);
+}
+
+nav.filter-links ul {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--sc-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+nav.filter-links li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+nav.filter-links li a {
+  display: flex;
+  align-items: center;
+  min-height: var(--sc-touch-target);
+  margin: 0;
+  padding: var(--sc-border-accent) var(--sc-space-1) 0;
+  border-bottom: var(--sc-border-accent) solid transparent;
+  border-radius: 0;
+  font-weight: var(--sc-weight-semibold);
+  text-decoration: none;
+}
+
+nav.filter-links li a:hover {
+  text-decoration: underline;
 }
 
 /* The theme switch (components/frame.html, FR-014): three secondary buttons; the current choice

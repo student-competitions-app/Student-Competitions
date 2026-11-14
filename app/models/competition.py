@@ -1,10 +1,11 @@
 """The `competitions` table: a named event of one subject with a start, which teams of students
-take part in; a competition's questions and teams (milestone 12.2); and the teams' answers
-(milestone 12.3).
+take part in; a competition's questions and teams (milestone 12.2); the teams' answers (milestone
+12.3); and their grades (milestone 12.4).
 
 See specs/012.1-teacher-competitions/data-model.md §1 and research R1–R3,
-specs/012.2-competition-questions-teams/data-model.md §1–§2 and research R1, and
-specs/012.3-team-answers/data-model.md §1 and research R1–R2.
+specs/012.2-competition-questions-teams/data-model.md §1–§2 and research R1,
+specs/012.3-team-answers/data-model.md §1 and research R1–R2, and
+specs/012.4-finish-and-grade/data-model.md §1–§2 and research R1–R2.
 """
 
 from datetime import datetime
@@ -14,6 +15,7 @@ from sqlalchemy import (
     Column,
     ForeignKeyConstraint,
     Index,
+    SmallInteger,
     String,
     UniqueConstraint,
     text,
@@ -43,7 +45,7 @@ class Competition(SQLModel, table=True):
     cancelled and finished.
 
     Who created or changed it is not stored (FR-001), so it is not personal data. `stopped_at` is
-    written by stopping, a later 12.x milestone; in milestone 12.1 only tests set it.
+    written once by `app.services.competitions.finish_competition` (milestone 12.4).
     Competitions are never deleted.
     """
 
@@ -75,7 +77,8 @@ class Competition(SQLModel, table=True):
     cancelled_at: datetime | None = Field(default=None, sa_type=UTCDateTime, nullable=True)
     """Set once by cancelling; never cleared (FR-007)."""
     stopped_at: datetime | None = Field(default=None, sa_type=UTCDateTime, nullable=True)
-    """Set once by stopping, a later 12.x milestone (FR-008)."""
+    """Set once by `app.services.competitions.finish_competition` (milestone 12.4), only while the
+    competition is In progress; never cleared (FR-008)."""
     created_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
     """Set once at creation; never changes."""
     updated_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
@@ -149,8 +152,10 @@ class TeamAnswer(SQLModel, table=True):
     only for an answered question: an emptied answer deletes it, so a team's progress is a count
     of its rows. Neither who saved it nor when is stored (FR-023): it belongs to the team and is
     not personal data. Its writers are `app.services.team_answers.save_answers` (insert, update,
-    delete), only while the competition is In progress, and `app.services.teams.delete_team`,
-    which deletes a deleted team's answers in every competition that is not finished."""
+    delete; `text` only), only while the competition is In progress;
+    `app.services.grades.save_grades` (`grade` only, milestone 12.4), only while it is Finished;
+    and `app.services.teams.delete_team`, which deletes a deleted team's answers in every
+    competition that is not finished, where no grade exists."""
 
     __tablename__ = "team_answers"
     __table_args__ = (
@@ -159,6 +164,7 @@ class TeamAnswer(SQLModel, table=True):
             ["competition_teams.competition_id", "competition_teams.team_id"],
         ),
         CheckConstraint("text <> ''", name="answered"),
+        CheckConstraint("grade IS NULL OR (grade >= 0 AND grade <= 10)", name="grade_range"),
     )
 
     competition_id: int = Field(primary_key=True)
@@ -174,3 +180,7 @@ class TeamAnswer(SQLModel, table=True):
     text: str = Field(sa_column=Column(String(ANSWER_MAX_LENGTH), nullable=False))
     """Trimmed, line breaks as `\n`, 1–2,000 code points, no NUL (`app.schemas.answer`). Never
     empty: an emptied answer deletes the row."""
+    grade: int | None = Field(default=None, sa_type=SmallInteger, nullable=True)
+    """`NULL`: not graded. A whole number 0–10 (`grade_range`), written only by
+    `app.services.grades.save_grades`, only while the competition is Finished. Who graded it, or
+    when, is not stored."""

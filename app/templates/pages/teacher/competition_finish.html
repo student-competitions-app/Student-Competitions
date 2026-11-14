@@ -1,0 +1,16 @@
+{% extends "layouts/teacher.html" %}
+{#- The finish confirmation (specs/012.4-finish-and-grade/contracts/http-routes.md §7): it names the
+    competition, its subject and its start in the browser's zone. Finishing cannot be undone but is
+    the normal next step of the work, so the button is primary (`kind="primary"`), and the link
+    back keeps the competition running: Keep in progress. -#}
+{% from "components/frame.html" import back_link %}
+{% from "components/confirmation.html" import confirmation %}
+{% from "components/time.html" import local_time with context %}
+
+{% block title %}Finish competition “{{ competition.name }}” — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(back, "Back to the competitions") }}
+{% set question %}Finish competition “{{ competition.name }}” of {{ subject.name }}, started {{ local_time(competition.starts_at) }}?{% endset %}
+{{ confirmation(question, "The competition will be marked Finished. Its answers can no longer be entered or changed, and it cannot be cancelled or restarted. Its answers can then be graded.", "/teacher/competitions/" ~ competition.id ~ "/finish", "Finish competition", back, hidden={"subject": subject.id, "status": status_value, "page": page}, back_label="Keep in progress", kind="primary") }}
+{% endblock %}

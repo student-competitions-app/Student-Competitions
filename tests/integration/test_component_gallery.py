@@ -72,6 +72,8 @@ SECTIONS = {
         "Questions",
         "Teams",
         "Answers",
+        "Grades",
+        "Finish competition",
         "Cancel competition",
         "Autumn round",
     ],
@@ -115,11 +117,27 @@ SECTIONS = {
         "Answer to question 3 can be at most 2,000 characters.",
         "Save answers",
     ],
+    "grading-sheet": [
+        "Grading sheet",
+        "There is a problem",
+        "Question 1",
+        "Reference answer",
+        "Answer to question 1",
+        "Grade for question 1",
+        "A whole number from 0 to 10.",
+        "Not answered",
+        "Enter a whole number from 0 to 10.",
+        "Save grades",
+        "Grade: 7 of 10",
+        "Not graded yet",
+    ],
     "confirmations": [
         "Delete “Physics”?",
         "is in use and cannot be deleted",
         "Deactivate",
         "Keep competition",
+        "Finish competition",
+        "Keep in progress",
     ],
     "details": ["Email", "Olena", "Teacher, Student"],
     "selectors": [
@@ -130,6 +148,7 @@ SECTIONS = {
         "Show",
         "Astronomy",
     ],
+    "filter-links": ["Filter links", "All teams", "Ungraded only"],
     "pagination": [
         "Questions 1–5 of 5",
         "Questions 31–40 of 200",
@@ -309,9 +328,10 @@ def test_the_two_button_form_and_the_textareas(admin_client: TestClient) -> None
 
 def test_the_actions_menu_variants(admin_client: TestClient) -> None:
     """Milestone 12.1 contracts/components.md §1, with the entries of milestones 12.2
-    (contracts/components.md §2) and 12.3 (contracts/components.md §4): an open menu with every
-    entry in order, the last one destructive; a closed one for a 200-character name, in progress;
-    and the two-entry read-only menu."""
+    (contracts/components.md §2), 12.3 (contracts/components.md §4) and 12.4 (contracts/
+    components.md §5, which adds **Grades** and a non-destructive **Finish competition**): an open
+    menu with every entry in order, the last one destructive; a closed one for a 200-character
+    name, in progress; and the two-entry read-only menu."""
     body = admin_client.get(GALLERY).text
     section = gallery_section(body, "actions-menu")
     menus = [d for d in section.find_all("details") if "actions-menu" in d.classes()]
@@ -327,12 +347,15 @@ def test_the_actions_menu_variants(admin_client: TestClient) -> None:
         ("Questions", ["actions-menu-link"]),
         ("Teams", ["actions-menu-link"]),
         ("Answers", ["actions-menu-link"]),
+        ("Grades", ["actions-menu-link"]),
+        ("Finish competition", ["actions-menu-link"]),
         ("Cancel competition", ["actions-menu-link", "actions-menu-link-destructive"]),
     ]
     assert [a.text() for a in menus[1].find_all("a")] == [
         "Questions",
         "Teams",
         "Answers",
+        "Finish competition",
         "Cancel competition",
     ]
     assert [a.text() for a in menus[2].find_all("a")] == ["Questions", "Teams"]
@@ -469,6 +492,95 @@ def test_the_confirmation_with_a_back_label(admin_client: TestClient) -> None:
     )
     assert len(keep.find_all("time")) == 1
     assert [a.text() for a in keep.find_all("a")] == ["Keep competition"]
+
+
+def test_the_primary_confirmation(admin_client: TestClient) -> None:
+    """Milestone 12.4 contracts/components.md §1: a second confirmation whose button is primary
+    (no destructive class), with **Keep in progress** as the link back."""
+    section = gallery_section(admin_client.get(GALLERY).text, "confirmations")
+    (finish,) = [c for c in section.find_all("section") if "Keep in progress" in c.text()]
+    assert finish.find_all("h1")[0].text() == (
+        "Finish competition “Spring round” of Chemistry, started 14 March 2027, 10:00?"
+    )
+    buttons = finish.find_all("button")
+    assert [(b.text(), b.classes()) for b in buttons] == [("Finish competition", [])]
+    assert [a.text() for a in finish.find_all("a")] == ["Keep in progress"]
+    others = [c for c in section.find_all("section") if "Keep competition" in c.text()]
+    assert [b.classes() for b in others[0].find_all("button")] == [["destructive"]]
+
+
+def test_the_grading_sheet(admin_client: TestClient) -> None:
+    """Milestone 12.4 contracts/components.md §2: one post form holding the hidden field, an
+    `ol.answer-sheet` of three numbered text cards, each with its reference answer; questions 1 and
+    3 with a labelled text field (numeric keypad, the hint, the "Not graded" placeholder), question
+    2 "Not answered" with no field; question 3 invalid and linked from the error summary; one
+    primary "Save grades". Then the read-only variant with grades and without: no form, no field,
+    no reference answer."""
+    body = admin_client.get(GALLERY).text
+    section = gallery_section(body, "grading-sheet")
+    (summary,) = [e for e in section.iter() if "error-summary" in e.classes()]
+    assert [a.attrs["href"] for a in summary.find_all("a")] == ["#gallery-grade-3"]
+    (form,) = section.find_all("form")
+    assert form.attrs["method"] == "post"
+    sheets = [o for o in section.find_all("ol") if "answer-sheet" in o.classes()]
+    assert len(sheets) == 3
+    sheet, with_grades, without_grades = sheets
+    assert sheet.start > form.start and sheet.end < form.end
+    items = sheet.find_all("li")
+    assert len(items) == 3
+    for number, item in enumerate(items, start=1):
+        (card,) = item.find_all("article")
+        assert "text-card" in card.classes()
+        assert card.find_all("h3")[0].text() == f"Question {number}"
+        assert "Reference answer" in card.text()
+    for number in (1, 3):
+        item = items[number - 1]
+        field_id = f"gallery-grade-{number}"
+        (field,) = [i for i in item.find_all("input")]
+        assert field.attrs["type"] == "text"
+        assert field.attrs["inputmode"] == "numeric"
+        assert field.attrs["placeholder"] == "Not graded"
+        assert field.attrs["id"] == field.attrs["name"] == field_id
+        for absent in ("pattern", "maxlength", "min", "max"):
+            assert absent not in field.attrs
+        (label,) = item.find_all("label")
+        assert label.attrs["for"] == field_id
+        assert label.text() == f"Grade for question {number}"
+        assert f"Answer to question {number}" in item.text()
+        hints = [e.text() for e in item.iter() if e.attrs.get("id") == f"{field_id}-hint"]
+        assert hints == ["A whole number from 0 to 10."]
+    assert items[0].find_all("input")[0].attrs["value"] == "7"
+    assert "aria-invalid" not in items[0].find_all("input")[0].attrs
+    assert items[2].find_all("input")[0].attrs["aria-invalid"] == "true"
+    assert html.field_error(body, "gallery-grade-3") == "Enter a whole number from 0 to 10."
+    assert items[1].find_all("input") == [] and items[1].find_all("label") == []
+    assert "Not answered" in items[1].text()
+    buttons = form.find_all("button")
+    assert [(b.text(), b.classes()) for b in buttons] == [("Save grades", [])]
+    assert buttons[0].start > sheet.end
+    assert not [a for a in form.find_all("a") if a.text() == "Cancel"]
+    for read_only in (with_grades, without_grades):
+        assert read_only.start > form.end
+        assert read_only.find_all("input") == []
+        assert read_only.find_all("button") == []
+        assert "Reference answer" not in read_only.text()
+        assert "Answer to question 1" in read_only.text()
+        assert "Not answered" in read_only.text()
+    assert "Grade: 7 of 10" in with_grades.text()
+    assert "Not graded yet" in with_grades.text()
+    assert "Grade:" not in without_grades.text()
+    assert "Not graded yet" not in without_grades.text()
+
+
+def test_the_filter_links(admin_client: TestClient) -> None:
+    """Milestone 12.4 contracts/components.md §3: a labelled `nav.filter-links`, exactly one link
+    current with `aria-current="true"`, never `"page"`."""
+    section = gallery_section(admin_client.get(GALLERY).text, "filter-links")
+    (nav,) = section.find_all("nav")
+    assert nav.classes() == ["filter-links"]
+    assert nav.attrs["aria-label"] == "Show"
+    links = [(a.text(), a.attrs.get("aria-current")) for a in nav.find_all("a")]
+    assert links == [("All teams", "true"), ("Ungraded only", None)]
 
 
 def test_the_option_group(admin_client: TestClient) -> None:

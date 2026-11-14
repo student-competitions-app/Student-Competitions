@@ -32,6 +32,7 @@ from sqlmodel import Session, select
 from app.core.config import AuthSettings
 from app.models import (
     AccessLevel,
+    Competition,
     CompetitionQuestion,
     CompetitionTeam,
     Institution,
@@ -46,6 +47,7 @@ from app.services.competitions import (
     cancel_competition,
     lock_competition,
 )
+from app.services.grades import GradeCount
 from app.services.institutions import set_institution_active
 from app.services.questions import delete_question, update_question
 from app.services.regions import set_region_active
@@ -64,6 +66,7 @@ from tests.conftest import (
     ADMIN_EMAIL,
     add_competition_question,
     add_competition_team,
+    grade_answer,
     make_class,
     make_competition,
     make_institution,
@@ -786,8 +789,9 @@ def test_the_questions_come_before_the_access(scene: Scene) -> None:
 
 
 def test_no_write_access_is_denied(engine: Engine, scene: Scene) -> None:
-    """US3-4, US8-5, FR-025 step 5: a Read link and no link, on the sheet and the save; the
-    answers saved before stay."""
+    """US3-4, US8-5, FR-025 step 5: a Read link and no link, on the save; no link on the sheet;
+    the answers saved before stay. Replaced by milestone 12.4 FR-034, research R7 (SC-011): a Read
+    link no longer gets `AnswersDenied` on the sheet, but the sheet with `can_write=False`."""
     save_team_answer(engine, scene.competition, scene.lions, scene.copies[0], "Kept")
     save_team_answer(engine, scene.competition, scene.novas, scene.copies[0], "Kept")
     before = snapshot(engine)
@@ -797,10 +801,84 @@ def test_no_write_access_is_denied(engine: Engine, scene: Scene) -> None:
         (scene.taras, scene.novas),
     ):
         with pytest.raises(AnswersDenied):
-            sheet(scene, teacher=teacher, team=team)
-        with pytest.raises(AnswersDenied):
             save(scene, {scene.copies[0]: "Changed"}, teacher=teacher, team=team)
+    with pytest.raises(AnswersDenied):
+        sheet(scene, teacher=scene.taras, team=scene.novas)
     assert snapshot(engine) == before
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.4: Read access reads, and finished competitions show their grades
+# (specs/012.4-finish-and-grade US7, US8, research R7)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_read_access_opens_the_sheet_without_writing(engine: Engine, scene: Scene) -> None:
+    """US7-1, FR-034, FR-035: Read gets the sheet with `can_write=False`, Write with `True`; the
+    rows keep `can_write`; no grade, no count while In progress."""
+    save_team_answer(engine, scene.competition, scene.lions, scene.copies[0], "Lion answer")
+    for teacher in (scene.taras, scene.iryna):
+        found = sheet(scene, teacher=teacher, team=scene.lions)
+        assert (found.team_name, found.can_write, found.count) == ("Lions", False, None)
+        assert found.institution_id == scene.lyceum
+        assert found.questions[0].answer == "Lion answer"
+        assert found.questions[0].grade is None
+    assert sheet(scene).can_write
+    assert {name: row.can_write for name, row in rows(listing(scene)).items()} == {
+        "Comets": True,
+        "Lions": False,
+    }
+    assert {row.graded for row in rows(listing(scene)).values()} == {None}
+
+
+def finished_round(s: Scene) -> tuple[int, list[int]]:
+    """A Finished competition of Chemistry with 4 questions, Comets and Lions in it; Comets
+    answered all 4, graded 5, 7, 5 and not graded; Lions answered nothing."""
+    competition = make_competition(s.engine, s.chemistry, "Finished round", starts_at=STARTED)
+    copies = [
+        add_competition_question(
+            s.engine, competition, make_question(s.engine, s.chemistry, f"Q{n}?", f"Secret ref {n}")
+        )
+        for n in range(1, 5)
+    ]
+    for team in (s.comets, s.lions):
+        add_competition_team(s.engine, competition, team)
+    for copy, grade in zip(copies, (5, 7, 5, None), strict=True):
+        save_team_answer(s.engine, competition, s.comets, copy, f"Answer {copy}")
+        if grade is not None:
+            grade_answer(s.engine, competition, s.comets, copy, grade)
+    with Session(s.engine) as session:
+        row = session.get(Competition, competition)
+        assert row is not None
+        row.stopped_at = NOW
+        session.add(row)
+        session.commit()
+    return competition, copies
+
+
+def test_a_finished_competition_shows_grades_and_scores(engine: Engine, scene: Scene) -> None:
+    """US8-1, US8-3, FR-037, FR-038: rows carry graded and score; the sheet each grade and the
+    team's count; the reference answer appears nowhere."""
+    competition, copies = finished_round(scene)
+    with Session(engine) as session:
+        page = team_answers.answer_team_page(session, scene.taras, competition, 1, finished=True)
+        found = {
+            row.name: (row.answered, row.graded, row.score) for g in page.groups for row in g.rows
+        }
+        assert found == {"Comets": (4, 3, 17), "Lions": (0, 0, 0)}
+        plain = team_answers.answer_team_page(session, scene.taras, competition, 1)
+        assert {(row.graded, row.score) for g in plain.groups for row in g.rows} == {(None, None)}
+        comets = team_answers.answer_sheet(
+            session, scene.taras, competition, scene.comets, finished=True
+        )
+        lions = team_answers.answer_sheet(
+            session, scene.iryna, competition, scene.lions, finished=True
+        )
+    assert [q.grade for q in comets.questions] == [5, 7, 5, None]
+    assert comets.count == GradeCount(4, 3, 17)
+    assert lions.count == GradeCount(0, 0, 0)
+    assert [q.answer for q in lions.questions] == ["", "", "", ""]
+    assert "Secret ref" not in repr((page, comets, lions))
 
 
 def test_a_link_lowered_or_removed_while_the_sheet_is_open(engine: Engine, scene: Scene) -> None:

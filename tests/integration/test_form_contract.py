@@ -35,6 +35,11 @@ Deliberate changes since (each is a contract change, recorded here):
   with `UPDATE_FORM_CONTRACT=1` for those cases only. An answer field's name holds its question's
   id, `answer-<id>`, recorded as `answer-{id}`. The new **Answers** menu entry of
   `teacher-competitions` is a link, so that case is unchanged.
+- **Milestone 12.4**: finishing and grading (`teacher-competition-finish`, `teacher-grades*`,
+  `teacher-team-answers-read-only` cases) are new, generated once with `UPDATE_FORM_CONTRACT=1`
+  for those cases only. A grade field's name holds its question's id, `grade-<id>`, recorded as
+  `grade-{id}`. The new **Grades** and **Finish competition** menu entries of
+  `teacher-competitions` are links, so that case is unchanged.
 """
 
 import json
@@ -136,7 +141,7 @@ def records(response: Response) -> list[dict[str, Any]]:
         if form.action == "/theme":
             continue
         fields = {i.name for i in form.inputs if i.name} | {b.name for b in form.buttons if b.name}
-        fields = {re.sub(r"^answer-\d+$", "answer-{id}", name) for name in fields}
+        fields = {re.sub(r"^(answer|grade)-\d+$", r"\1-{id}", name) for name in fields}
         found.append(
             {
                 "method": form.method,
@@ -957,6 +962,88 @@ def _(w: World) -> Response:
     """A refusal has no form of its own; the page keeps the frame's forms."""
     browser, base, context = team_answers_scene(w, cancelled=True)
     return browser.get(f"{base}?{context}")
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.4: finishing and grading
+# ---------------------------------------------------------------------------------------------
+
+
+def grading_scene(world: World) -> tuple[TestClient, str, str, int]:
+    """Olena with Can manage competitions, and Chemistry's finished competition holding two
+    questions and School No. 5's team "Comets", which answered the first; `(browser, the
+    competition's address, the competitions-list context, the team)`."""
+    engine, settings = application.state.engine, application.state.settings
+    school = make_institution(engine, "School No. 5", "Kyiv")
+    make_teacher(
+        engine, settings, email=OLENA, institutions={school: AccessLevel.READ}, can_manage=True
+    )
+    chemistry = make_subject(engine, "Chemistry")
+    start = datetime.now(UTC).replace(second=0, microsecond=0) - timedelta(hours=2)
+    competition = make_competition(engine, chemistry, starts_at=start, stopped=True)
+    copies = [
+        add_competition_question(engine, competition, make_question(engine, chemistry, text))
+        for text in ("Salt?", "Water?")
+    ]
+    team = make_team(engine, school, "Comets")
+    add_competition_team(engine, competition, team)
+    save_team_answer(engine, competition, team, copies[0], "NaCl")
+    browser = world.client_as(OLENA)
+    browser.cookies.set("sc_time_zone", "Europe/Kyiv")
+    context = f"subject={chemistry}&status=finished&page=2"
+    return browser, f"/teacher/competitions/{competition}", context, team
+
+
+@case("teacher-competition-finish")
+def _(w: World) -> Response:
+    """The finish confirmation of an In progress competition: one post form, the context."""
+    engine = application.state.engine
+    browser, subject, _ = a_competition_manager(w)
+    start = datetime.now(UTC).replace(second=0, microsecond=0) - timedelta(hours=1)
+    running = make_competition(engine, subject, "Running", starts_at=start)
+    return browser.get(f"/teacher/competitions/{running}/finish?subject={subject}&page=2")
+
+
+@case("teacher-grades")
+def _(w: World) -> Response:
+    """The Grades page: the filter and Grade answers are links, so only the frame's forms."""
+    browser, base, context, _ = grading_scene(w)
+    return browser.get(f"{base}/grades?{context}")
+
+
+@case("teacher-grades-sheet")
+def _(w: World) -> Response:
+    """The grading sheet: the save form, its hidden context and one grade field per answer."""
+    browser, base, context, team = grading_scene(w)
+    return browser.get(f"{base}/grades/{team}?{context}&show=ungraded&back=2")
+
+
+@case("teacher-grades-sheet-invalid")
+def _(w: World) -> Response:
+    """The 400 page after an invalid grade: the same form."""
+    browser, base, context, team = grading_scene(w)
+    page = browser.get(f"{base}/grades/{team}?{context}&show=ungraded&back=2").text
+    form = {i.name: i.value for f in html.forms(page) if "/grades/" in f.action for i in f.inputs}
+    grade = next(name for name in form if name and name.startswith("grade-"))
+    return browser.post(f"{base}/grades/{team}", data=form | {grade: "11"})
+
+
+@case("teacher-team-answers-read-only")
+def _(w: World) -> Response:
+    """The read-only sheet of a finished competition: no form of its own."""
+    engine, settings = application.state.engine, application.state.settings
+    browser, base, context, team = grading_scene(w)
+    (school,) = application_institutions()
+    make_teacher(engine, settings, email=TARAS, institutions={school: AccessLevel.WRITE})
+    reader = w.client_as(TARAS)
+    response = reader.get(f"{base}/answers/{team}?{context}")
+    assert response.status_code == 200 and "Score: 0" in response.text
+    return response
+
+
+def application_institutions() -> list[int]:
+    with Session(application.state.engine) as session:
+        return [i.id for i in session.exec(select(Institution)).all() if i.id is not None]
 
 
 # ---------------------------------------------------------------------------------------------

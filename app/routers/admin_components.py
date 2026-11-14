@@ -196,6 +196,52 @@ ANSWER_SHEET_ITEMS = (
 question 3 with a value over 2,000 characters and its error."""
 ANSWER_SHEET_ERRORS = {"gallery-answer-3": ANSWER_SHEET_ERROR}
 ANSWER_SHEET_ORDER = ("gallery-answer-1", "gallery-answer-2", "gallery-answer-3")
+GRADE_ERROR = "Enter a whole number from 0 to 10."
+GRADING_SHEET_ITEMS = (
+    {
+        "number": 1,
+        "text": "What is table salt made of? Give its name and its formula.",
+        "reference_answer": "Sodium chloride, NaCl.",
+        "answer": "Sodium chloride\nNaCl",
+        "field_id": "gallery-grade-1",
+        "value": "7",
+        "error": None,
+    },
+    {
+        "number": 2,
+        "text": "Name the three states of matter.",
+        "reference_answer": "Solid, liquid and gas.",
+        "answer": None,
+        "field_id": "gallery-grade-2",
+        "value": "",
+        "error": None,
+    },
+    {
+        "number": 3,
+        "text": "Describe how water boils, step by step.",
+        "reference_answer": (
+            "Heat raises the temperature to 100 °C; bubbles of vapour form, rise and burst."
+        ),
+        "answer": "It gets hot and bubbles.",
+        "field_id": "gallery-grade-3",
+        "value": "11",
+        "error": GRADE_ERROR,
+    },
+)
+"""The grading sheet: question 1 answered on two lines and graded 7, question 2 not answered (no
+field), and question 3 answered with the value "11" and its error."""
+GRADING_SHEET_ERRORS = {"gallery-grade-3": GRADE_ERROR}
+GRADING_SHEET_ORDER = ("gallery-grade-1", "gallery-grade-3")
+READ_ONLY_ITEMS = tuple(
+    {"number": item["number"], "text": item["text"], "answer": item["answer"], "grade": grade}
+    for item, grade in zip(GRADING_SHEET_ITEMS, (7, None, None), strict=True)
+)
+"""The read-only answers of the same questions: question 1 graded 7, question 2 not answered,
+question 3 answered and not graded yet."""
+FILTER_LINKS = (
+    ("All teams", "#filter-links", True),
+    ("Ungraded only", "#filter-links", False),
+)
 ONE_ROLE_USER = SampleUser("olena.kovalenko@school.example")
 TWO_ROLE_USER = SampleUser("taras.shevchenko@school.example")
 SAMPLE_TABS = (
@@ -264,6 +310,11 @@ def _samples() -> dict[str, Any]:
         "answer_sheet_items": ANSWER_SHEET_ITEMS,
         "answer_sheet_errors": ANSWER_SHEET_ERRORS,
         "answer_sheet_order": ANSWER_SHEET_ORDER,
+        "grading_sheet_items": GRADING_SHEET_ITEMS,
+        "grading_sheet_errors": GRADING_SHEET_ERRORS,
+        "grading_sheet_order": GRADING_SHEET_ORDER,
+        "read_only_items": READ_ONLY_ITEMS,
+        "filter_links": FILTER_LINKS,
     }
 
 

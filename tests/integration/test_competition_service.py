@@ -1,8 +1,9 @@
 """The competitions service: statuses, the offered subjects, pages, visibility, landings, and the
-rules of creating, editing and cancelling, under concurrency.
+rules of creating, editing, cancelling and finishing, under concurrency.
 
 See specs/012.1-teacher-competitions/contracts/services.md §`app/services/competitions.py` and
-research R2, R3, R7, R8, R11, R13. Every case runs on both engines. The clock is controlled by
+research R2, R3, R7, R8, R11, R13; finishing is specs/012.4-finish-and-grade/contracts/services.md
+§`competitions` and research R1. Every case runs on both engines. The clock is controlled by
 patching `app.services.competitions.utc_now`; no test waits.
 
 - the manager: a real teacher with **Can manage competitions**;
@@ -22,7 +23,7 @@ from sqlmodel import Session, col, select
 
 import app.services.competitions as competitions
 from app.core.config import AuthSettings
-from app.models import AccessLevel, Competition, Subject
+from app.models import AccessLevel, Competition, Subject, TeamAnswer
 from app.schemas.names import InvalidName
 from app.services.competitions import (
     CompetitionNotFound,
@@ -33,11 +34,13 @@ from app.services.competitions import (
     ManageRequired,
     NotCancellable,
     NotEditable,
+    NotFinishable,
     StartNotInFuture,
     SubjectUnavailable,
     cancel_competition,
     competition_page,
     create_competition,
+    finish_competition,
     get_competition,
     landing,
     locate,
@@ -48,14 +51,20 @@ from app.services.competitions import (
     update_competition,
 )
 from app.services.subjects import count_subject_uses, set_subject_active
+from app.services.team_answers import AnswersClosed, save_answers
 from app.services.users import reconcile_users
 from tests.conftest import (
     ADMIN_EMAIL,
+    add_competition_question,
+    add_competition_team,
     make_competition,
     make_institution,
+    make_question,
     make_subject,
     make_teacher,
+    make_team,
 )
+from tests.integration.test_competition_entries_service import postgresql_only, race
 
 NOW = datetime(2027, 3, 1, 9, 0, tzinfo=UTC)
 MISSING = 999_999
@@ -67,6 +76,8 @@ class Scene:
     reader: int
     chemistry: int
     physics: int
+    institution: int
+    """Kyiv Polytechnic Institute: Read for the manager, Write for the reader."""
 
 
 @pytest.fixture
@@ -92,6 +103,7 @@ def scene(engine: Engine, auth_settings: AuthSettings) -> Scene:
         reader=reader,
         chemistry=make_subject(engine, "Chemistry"),
         physics=make_subject(engine, "Physics"),
+        institution=institution,
     )
 
 
@@ -862,3 +874,262 @@ def test_share_locks_do_not_wait_for_each_other_but_cancelling_waits(
     with Session(engine) as session:
         row = session.get(Competition, competition)
         assert row is not None and row.cancelled_at is not None
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.4: finishing (specs/012.4-finish-and-grade contracts/services.md §competitions,
+# research R1)
+# ---------------------------------------------------------------------------------------------
+
+
+def finish(
+    engine: Engine,
+    teacher: int,
+    competition: int,
+    subject_id: int,
+    status: CompetitionStatus | None = None,
+) -> Landing:
+    with Session(engine) as session:
+        return finish_competition(session, teacher, competition, subject_id, status)
+
+
+def test_finish_sets_only_stopped_at(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """US1-3, FR-008: the moment of finishing, and nothing else."""
+    competition = make_competition(engine, scene.chemistry, starts_at=at(1, 8))
+    name, key, starts_at, _, _, updated_at = row(engine, competition)
+    later = clock(timedelta(minutes=5))
+    assert finish(engine, scene.manager, competition, scene.chemistry) == Landing(1, competition)
+    assert row(engine, competition) == (name, key, starts_at, None, later, updated_at)
+    assert [c.status for c in page(engine, scene.chemistry).competitions] == ["finished"]
+
+
+def test_finish_landings_under_a_filter(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """US1-4, research R13: under All and Finished the competition itself; under In progress the
+    row that took its place, the row before it, and the empty state."""
+    ids = [
+        make_competition(engine, scene.chemistry, f"Feb {d:02}", starts_at=at(d, 12, month=2))
+        for d in range(2, 9)
+    ]  # 7 in progress, listed Feb 08 … Feb 02; ids[0] is Feb 02, last.
+    in_progress = CompetitionStatus.IN_PROGRESS
+    assert finish(engine, scene.manager, ids[3], scene.chemistry, in_progress) == (
+        Landing(1, ids[2])
+    )
+    assert finish(engine, scene.manager, ids[0], scene.chemistry, in_progress) == (
+        Landing(1, ids[1])
+    )
+    assert finish(engine, scene.manager, ids[1], scene.chemistry, None) == Landing(1, ids[1])
+    assert finish(engine, scene.manager, ids[2], scene.chemistry, CompetitionStatus.FINISHED) == (
+        Landing(1, ids[2])
+    )
+    for competition in ids[4:-1]:
+        finish(engine, scene.manager, competition, scene.chemistry)
+    assert finish(engine, scene.manager, ids[-1], scene.chemistry, in_progress) == (
+        Landing(1, None)
+    )
+
+
+def test_finish_landing_on_the_previous_page(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """US1-4: 11 in progress; finishing the 11th, alone on page 2, lands on page 1's last row."""
+    ids = [
+        make_competition(engine, scene.chemistry, f"Feb {d:02}", starts_at=at(d, 12, month=2))
+        for d in range(2, 13)
+    ]  # ids[0] is Feb 02, the 11th row, alone on page 2.
+    assert finish(
+        engine, scene.manager, ids[0], scene.chemistry, CompetitionStatus.IN_PROGRESS
+    ) == (Landing(1, ids[1]))
+
+
+def test_finish_needs_the_setting_and_an_in_progress_competition(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """US2-1–US2-3, FR-002, FR-012: the reader is refused; an upcoming, a cancelled and a finished
+    competition are refused with their status; nothing changes."""
+    running = make_competition(engine, scene.chemistry, "Running", starts_at=at(1, 8))
+    upcoming = make_competition(engine, scene.chemistry, "Upcoming", starts_at=at(14))
+    cancelled = make_competition(
+        engine, scene.chemistry, "Cancelled", starts_at=at(1, 7), cancelled=True
+    )
+    finished = make_competition(
+        engine, scene.chemistry, "Finished", starts_at=at(1, 6), stopped=True
+    )
+    before = snapshot(engine)
+    with Session(engine) as session:
+        with pytest.raises(ManageRequired):
+            finish_competition(session, scene.reader, running, scene.chemistry, None)
+        with pytest.raises(CompetitionNotFound):
+            finish_competition(session, scene.manager, running, scene.physics, None)
+        with pytest.raises(CompetitionNotFound):
+            finish_competition(session, scene.manager, MISSING, scene.chemistry, None)
+        for competition, status in (
+            (upcoming, CompetitionStatus.UPCOMING),
+            (cancelled, CompetitionStatus.CANCELLED),
+            (finished, CompetitionStatus.FINISHED),
+        ):
+            with pytest.raises(NotFinishable) as refused:
+                finish_competition(session, scene.manager, competition, scene.chemistry, None)
+            assert refused.value.status is status
+            assert session.exec(select(Competition.id)).all()
+    assert snapshot(engine) == before
+
+
+def test_an_upcoming_competition_is_finished_once_its_start_passed(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """US2-4, FR-012: refused before the start, finished after it with the clock moved."""
+    competition = make_competition(engine, scene.chemistry, starts_at=at(1, 10))
+    with pytest.raises(NotFinishable):
+        finish(engine, scene.manager, competition, scene.chemistry)
+    later = clock(timedelta(hours=2))
+    finish(engine, scene.manager, competition, scene.chemistry)
+    assert row(engine, competition)[4] == later
+
+
+def test_a_finished_competition_is_final(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """FR-009, FR-010: no longer cancelled or edited, and its name is free again."""
+    competition = make_competition(engine, scene.chemistry, "Spring round", starts_at=at(1, 8))
+    finish(engine, scene.manager, competition, scene.chemistry)
+    with Session(engine) as session:
+        with pytest.raises(NotCancellable) as not_cancelled:
+            cancel_competition(session, scene.manager, competition, scene.chemistry, None)
+        assert not_cancelled.value.status is CompetitionStatus.FINISHED
+        with pytest.raises(NotEditable) as not_edited:
+            update_competition(
+                session, scene.manager, competition, scene.chemistry, "Spring round", at(20)
+            )
+        assert not_edited.value.status is CompetitionStatus.FINISHED
+        again = create_competition(session, scene.manager, scene.chemistry, "spring ROUND", at(20))
+    assert again.name == "spring ROUND"
+    assert row(engine, competition)[3] is None
+
+
+def test_a_lost_finish_race_is_refused(
+    engine: Engine,
+    scene: Scene,
+    clock: Callable[[timedelta], datetime],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Research R1: the status read under the lock says In progress, but the row was cancelled
+    first; the conditional update matches nothing and the re-read status is reported."""
+    competition = make_competition(engine, scene.chemistry, starts_at=at(1, 8))
+    first = NOW - timedelta(minutes=1)
+    real_status_of = competitions.status_of
+    calls = [0]
+
+    def in_progress_once(row_: Competition, now: datetime) -> CompetitionStatus:
+        calls[0] += 1
+        if calls[0] == 1:
+            return CompetitionStatus.IN_PROGRESS
+        return real_status_of(row_, now)
+
+    cancel_directly(engine, competition, first)
+    monkeypatch.setattr("app.services.competitions.status_of", in_progress_once)
+    with pytest.raises(NotFinishable) as refused:
+        finish(engine, scene.manager, competition, scene.chemistry)
+    assert refused.value.status is CompetitionStatus.CANCELLED
+    assert row(engine, competition)[3:5] == (first, None)
+
+
+def test_finishing_logs_the_id_only(
+    engine: Engine,
+    scene: Scene,
+    clock: Callable[[timedelta], datetime],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """FR-045: one line with the id; a refusal logs nothing."""
+    competition = make_competition(engine, scene.chemistry, "Secret round", starts_at=at(1, 8))
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"):
+        with pytest.raises(ManageRequired):
+            finish(engine, scene.reader, competition, scene.chemistry)
+        finish(engine, scene.manager, competition, scene.chemistry)
+        with pytest.raises(NotFinishable):
+            finish(engine, scene.manager, competition, scene.chemistry)
+    messages = [r.getMessage() for r in caplog.records if r.name == "uvicorn.error"]
+    assert messages == [f"Competition finished: id={competition}"]
+    assert not any("Secret" in r.getMessage() for r in caplog.records)
+
+
+def test_two_finishes_at_the_same_moment_finish_once(
+    engine: Engine, database_url: str, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """US2-5, FR-013: exactly one finish changes the competition; the other is refused as
+    already finished."""
+    postgresql_only(database_url)
+    for n in range(3):
+        competition = make_competition(engine, scene.chemistry, f"Race {n}", starts_at=at(1, 8))
+        outcomes = race(
+            engine,
+            lambda session, c=competition: finish_competition(
+                session, scene.manager, c, scene.chemistry, None
+            ),
+            lambda session, c=competition: finish_competition(
+                session, scene.manager, c, scene.chemistry, None
+            ),
+        )
+        assert sorted(outcomes) == ["NotFinishable", "ok"]
+        assert row(engine, competition)[4] == NOW
+
+
+def test_a_finish_and_a_cancel_at_the_same_moment(
+    engine: Engine, database_url: str, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """US2-6, FR-013: exactly one succeeds; the competition is either finished or cancelled,
+    never both (`one_end`)."""
+    postgresql_only(database_url)
+    for n in range(3):
+        competition = make_competition(engine, scene.chemistry, f"Race {n}", starts_at=at(1, 8))
+        outcomes = race(
+            engine,
+            lambda session, c=competition: finish_competition(
+                session, scene.manager, c, scene.chemistry, None
+            ),
+            lambda session, c=competition: cancel_competition(
+                session, scene.manager, c, scene.chemistry, None
+            ),
+        )
+        assert outcomes in (["ok", "NotCancellable"], ["NotFinishable", "ok"])
+        cancelled_at, stopped_at = row(engine, competition)[3:5]
+        assert (cancelled_at is None) != (stopped_at is None)
+
+
+def test_a_finish_waits_for_an_answer_save_in_progress(
+    engine: Engine, database_url: str, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """Research R1, FR-011: a save of answers holds the competition's share lock; the finish
+    waits until it ends, then goes through."""
+    postgresql_only(database_url)
+    competition = make_competition(engine, scene.chemistry, starts_at=at(1, 8))
+    with Session(engine) as saving:
+        lock_competition(saving, competition, scene.chemistry, share=True)
+        with Session(engine) as finishing:
+            short_lock_timeout(finishing)
+            with pytest.raises(OperationalError, match="lock timeout"):
+                finish_competition(finishing, scene.manager, competition, scene.chemistry, None)
+        saving.commit()
+    finish(engine, scene.manager, competition, scene.chemistry)
+    assert row(engine, competition)[4] == NOW
+
+
+def test_an_answer_save_after_the_finish_is_refused(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """FR-011, US8: once the finish committed, a save sees Finished and stores nothing."""
+    competition = make_competition(engine, scene.chemistry, starts_at=at(1, 8))
+    copy = add_competition_question(
+        engine, competition, make_question(engine, scene.chemistry, "Salt?")
+    )
+    team = make_team(engine, scene.institution, "Comets")
+    add_competition_team(engine, competition, team)
+    finish(engine, scene.manager, competition, scene.chemistry)
+    with Session(engine) as session:
+        with pytest.raises(AnswersClosed) as refused:
+            save_answers(session, scene.reader, competition, scene.chemistry, team, {copy: "NaCl"})
+        assert refused.value.status is CompetitionStatus.FINISHED
+        assert session.exec(select(TeamAnswer)).all() == []

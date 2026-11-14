@@ -76,8 +76,8 @@ youngest user); W3C/WAI *Making Content Usable*, objective 3 (use clear words).
 - Every form error is shown next to its field and in an error summary at the top of the page,
   headed "There is a problem", with one link per error that moves to its field. What the person
   entered is kept.
-- Every destructive action asks for confirmation on its own page, names the item and says what
-  will happen.
+- Every action that cannot be undone asks for confirmation on its own page, names the item and
+  says what will happen.
 
 _Sources_: the GOV.UK Design System error summary, error message and confirmation patterns;
 W3C/WAI *Making Content Usable*, objective 6 (help users avoid mistakes and know how to correct
@@ -364,7 +364,9 @@ the user menu, so it opens and closes without JavaScript.
 {% if can_add and c.status == "upcoming" %}{{ menu_link("Edit", edit_href) }}{% endif %}
 {{ menu_link("Questions", questions_href) }}
 {{ menu_link("Teams", teams_href) }}
-{% if c.status == "in_progress" %}{{ menu_link("Answers", answers_href) }}{% endif %}
+{% if c.status in ("in_progress", "finished") %}{{ menu_link("Answers", answers_href) }}{% endif %}
+{% if can_manage and c.status == "finished" %}{{ menu_link("Grades", grades_href) }}{% endif %}
+{% if can_manage and c.status == "in_progress" %}{{ menu_link("Finish competition", finish_href) }}{% endif %}
 {% if can_add and c.status in ("upcoming", "in_progress") %}{{ menu_link("Cancel competition", cancel_href, destructive=True) }}{% endif %}
 {%- endcall -%}
 {% endcall %}
@@ -373,8 +375,9 @@ the user menu, so it opens and closes without JavaScript.
 - **The button** reads "Actions" and is announced "Actions for “Spring round”"; the item name is
   required. It is a small outline secondary button with a chevron, a full touch target.
 - **The entries** come in a fixed order, each where it is available: on the **Competitions** tab
-  **Edit**, **Questions**, **Teams**, **Answers**, **Cancel competition** (milestones 12.2 and
-  12.3).
+  **Edit**, **Questions**, **Teams**, **Answers**, **Grades**, **Finish competition**, **Cancel
+  competition** (milestones 12.2–12.4). **Finish competition** is not destructive: it cannot be
+  undone, but it is the normal next step of the work.
 - **Every entry** is a link to a page (a list, a form or a confirmation), never a `POST`, so every destructive
   action still goes through its confirmation. A destructive entry is in the danger colour. Each
   entry is 44 px tall and as wide as the panel; a long label wraps.
@@ -479,16 +482,54 @@ participant to a list of questions, saved at once: a team's answers in a competi
 
 _Gallery_: [answer sheet](/admin/components#answer-sheet).
 
+### Grading sheet (`components/grading_sheet.html`)
+
+**`grading_sheet(items, action, hidden, submit_label="Save grades")`** is the answer sheet's
+counterpart for the person who grades: every question of one participant's answers with its
+reference answer, and a grade under each answer, saved at once (a team's answers in a finished
+competition, milestone 12.4). **`answers_read_only(items, grades=True)`** shows the same answers
+to someone who may only read them.
+
+```jinja
+{{ error_summary(errors, order=field_order) }}
+{{ grading_sheet(items, "/teacher/competitions/17/grades/31", hidden) }}
+```
+
+- **Each question** is a numbered text card, "Question 3", holding the question's text, its
+  **Reference answer** (always shown on the grading sheet), then the answer, "Answer to question 3",
+  and under it the field "Grade for question 3" with the hint "A whole number from 0 to 10." and
+  the placeholder "Not graded".
+- **A question with no answer** shows the plain text "Not answered" and no field: there is nothing
+  to grade. When no question is answered there is no form and no button.
+- **The grade field** is a text field with `inputmode="numeric"`, not a number field: the phone
+  opens the digit keypad, and a typed "7.5" or "seven" reaches the server and gets its error
+  instead of being dropped by the browser. The server checks the value: "Enter a whole number from
+  0 to 10.".
+- **One primary save button** below the list, **Save grades**, and no **Cancel**. Errors as on the
+  answer sheet: each field shows its own message, the summary links to each, in question order,
+  and a refused save shows every value as it was sent.
+- **The read-only variant** shows the question and "Answer to question 3" (or "Not answered"); with
+  `grades`, under each answered question "Grade: 7 of 10" or "Not graded yet". Never a reference
+  answer, no form, no field, no button.
+- **On a phone** the cards are one column and each grade field takes the card's full width; on a
+  wide screen it is a short field.
+
+_Gallery_: [grading sheet](/admin/components#grading-sheet).
+
 ### Confirmations (`components/confirmation.html`)
 
-- **`confirmation(question, consequence, action, verb, cancel_href, back_label="Cancel")`**: the
-  question names the item ("Delete “Physics”?"), the consequence says what happens, the destructive
-  button repeats the verb, then **Cancel**. When the verb itself is "Cancel …", the link back says
-  what is kept instead: **Cancel competition** and **Keep competition** (`back_label`).
+- **`confirmation(question, consequence, action, verb, cancel_href, back_label="Cancel",
+  kind="destructive")`**: the question names the item ("Delete “Physics”?"), the consequence says
+  what happens, the button repeats the verb, then **Cancel**. Whenever the verb ends something, the
+  link back says what is kept instead: **Cancel competition** and **Keep competition**, **Finish
+  competition** and **Keep in progress** (`back_label`).
+- **`kind`**: the button is destructive (the default) when the action removes, hides or calls off
+  something (**Delete**, **Deactivate**, **Withdraw consent**, **Cancel competition**), and primary
+  (`kind="primary"`) when it is the normal next step of the work (**Finish competition**).
 - **`refusal(question, reason, back_href, back_text)`**: when the action cannot be done, with the
   reason ("is in use") and the alternative, through `{% call %}` (**Deactivate**).
 
-Every destructive action goes through a confirmation page. _Gallery_:
+Every action that cannot be undone goes through a confirmation page. _Gallery_:
 [confirmations](/admin/components#confirmations).
 
 ### Details list (`components/details.html`)
@@ -509,6 +550,22 @@ store. A `None` value is left out; a rich value (a list, a badge) comes through
 
 Reuse these for the subject and class choices of milestones 11 and 12. _Gallery_:
 [selectors](/admin/components#selectors).
+
+### Filter links (`components/filter.html`)
+
+**`filter_links(links, label)`** is a short row of links above a list, each one a filter of the
+list below, such as **All teams** and **Ungraded only** on a competition's Grades page (milestone
+12.4). `links` is a list of `(text, href, current)`, exactly one current; `label` names the
+landmark ("Show").
+
+- **Following a link** goes to page 1 of that filter; the filter travels in the address, so the
+  page navigation and the links back keep it.
+- **The current filter** is marked `aria-current="true"`, not `"page"`: on page 3 of a filter its
+  link leads to page 1, so it is not the current page, and the page navigation already marks the
+  current page. It is drawn like the current page: bold, with the primary underline.
+- Plain links with the touch target: no JavaScript and no **Show** button.
+
+_Gallery_: [filter links](/admin/components#filter-links).
 
 ### Page navigation (`components/pagination.html`)
 
@@ -539,11 +596,13 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
 |---|---|---|
 | **primary** | solid primary blue | the main action of a page or section: **Save**, **Send code**, **Create subject**. At most one per page or section. |
 | **secondary** | surface with a border | other actions: **Cancel** as a button, **Rename**, **Edit**, **Activate**, the role and theme choices |
-| **destructive** | red | actions that remove or hide: **Delete**, **Remove**, **Deactivate**, **Withdraw consent** |
+| **destructive** | red | actions with a high impact that cannot be reverted and that the person may regret: they remove, hide or call off something (**Delete**, **Remove**, **Deactivate**, **Withdraw consent**, **Cancel competition**) |
 
 - **The kind follows the action, not the element.** A link to a form or a confirmation page is a
   `link_button` of the kind of the action it leads to: **Create subject** is primary, **Delete** in
   a row is destructive.
+- **An action that cannot be undone but is the normal next step of the work** (**Finish
+  competition**) is primary, not destructive; its confirmation page still asks first.
 - **Row actions** are `outline` and `small`, all the same width and gap, together at the end of
   the row.
 - **Equal choices** (choosing a role) are all secondary: none is primary.
@@ -553,8 +612,9 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
 - **Buttons** are verbs, and say what will happen: **Create subject**, **Invite teacher**, **Send
   invitation**, **Add student**. Not "Create", not "OK", not "Submit".
 - **Confirmations** ask a question that names the item: "Delete “Physics”?", "Remove Olena
-  Kovalenko as a teacher?". The consequence is one plain sentence: "Deleting a subject cannot be
-  undone." The button repeats the verb: **Delete**, **Remove**.
+  Kovalenko as a teacher?". The consequence says plainly what will happen in one to three short
+  sentences, the first saying what happens to the item: "Deleting a subject cannot be undone." The
+  button repeats the verb: **Delete**, **Remove**.
 - **Refusals** say why, then what to do instead: "“Physics” is in use and cannot be deleted. You
   can deactivate it instead."
 - **Errors** say what is wrong and how to fix it, in one sentence: "Enter a valid email address.",
@@ -572,7 +632,7 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
   something is a verb (**Edit**, **Cancel competition**); an entry that only opens a page is named
   by that page (**Questions**, **Teams**); a destructive entry is always a verb.
 - **Row notes** are a short plain phrase, with no full stop: "In this team", "Already in this
-  competition", "Deleted from the question bank", "(deleted)", "Read access". A row note may also mark a record
+  competition", "Deleted from the question bank", "(deleted)". A row note may also mark a record
   the row can no longer act on, such as a deleted team in a finished competition; a *status*
   (Active, Upcoming…) still takes a badge.
 - **Page navigation** says where you are as "<Noun> 31–40 of 200" (an en dash, no spaces), and

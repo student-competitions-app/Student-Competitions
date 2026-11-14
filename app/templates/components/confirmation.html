@@ -1,13 +1,19 @@
-{#- Confirmations (contracts/components.md §8, FR-032, research D12). The question names the item,
-    the consequence says what happens, the destructive button repeats the verb, and the link back
-    reads `back_label`: Cancel, unless the verb itself is "Cancel …", as for a competition, where it
-    reads **Keep competition** (milestone 12.1 contracts/components.md §5). A refusal keeps the question, gives the reason, and offers the alternative the page
-    offers today (through `{% call %}`), then the way back. -#}
+{#- Confirmations (contracts/components.md §8, FR-032, research D12; milestone 12.4
+    contracts/components.md §1). Every action that cannot be undone goes through a confirmation
+    page: the question names the item, the consequence says what happens, and the button repeats
+    the verb. The button is destructive (`kind="destructive"`, the default) when the action removes,
+    hides or calls off something (**Delete**, **Deactivate**, **Withdraw consent**, **Cancel
+    competition**), and primary (`kind="primary"`) when it is the normal next step of the work
+    (**Finish competition**). The link back reads `back_label`: Cancel, unless the verb ends
+    something, where it says what is kept (**Keep competition**, **Keep in progress**). A refusal
+    keeps the question, gives the reason, and offers the alternative the page offers today (through
+    `{% call %}`), then the way back. -#}
 
 {% from "components/button.html" import post_button %}
 {% from "components/feedback.html" import notice %}
 
-{% macro confirmation(question, consequence, action, verb, cancel_href, hidden={}, back_label="Cancel") -%}
+{% macro confirmation(question, consequence, action, verb, cancel_href, hidden={}, back_label="Cancel", kind="destructive") -%}
+{%- if kind not in ("destructive", "primary") %}{{ template_error("confirmation: kind must be destructive or primary") }}{% endif -%}
 <section class="confirmation">
   <h1>{{ question }}</h1>
   {%- if consequence %}
@@ -17,7 +23,7 @@
   {{ caller() }}
   {%- endif %}
   <div class="form-actions">
-    {{ post_button(action, verb, kind="destructive", hidden=hidden) }}
+    {{ post_button(action, verb, kind=kind, hidden=hidden) }}
     <a href="{{ cancel_href }}">{{ back_label }}</a>
   </div>
 </section>

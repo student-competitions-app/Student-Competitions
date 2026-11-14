@@ -1,0 +1,81 @@
+{#- Grading sheet (milestone 12.4 contracts/components.md §2, research R13): the answer sheet's
+    counterpart for the person who grades. Every question of one participant's answers as a
+    numbered text card, "Question 3" over the question's text and its **reference answer** (always
+    shown here), then the answer ("Answer to question 3") and its grade field ("Grade for question
+    3", the hint "A whole number from 0 to 10." and the placeholder "Not graded"), or the plain text
+    "Not answered" and no field. One primary save button below the list, with no Cancel. When no
+    question is answered there is nothing to grade: no form and no button.
+
+    Each item is a mapping with `number`, `text`, `reference_answer`, `answer` (`None` when not
+    answered), `field_id` (`grade-<copy id>`), `value` (the saved grade as text, or what was sent)
+    and `error` (or `None`). The grade is a text field with `inputmode="numeric"`, not a number
+    field, so a typed "7.5" or "seven" reaches the server and gets its error, and the phone shows
+    the digit keypad. The page renders the `error_summary` under its heading and its own empty
+    state when there is no question: an empty list is refused.
+
+    The read-only variant, `answers_read_only`, shows the same cards with the question and the
+    answer (or "Not answered"), and with `grades` the grade under each answered question ("Grade: 7
+    of 10" or "Not graded yet"). It reads `number`, `text`, `answer` and `grade`; never a reference
+    answer, no form, no field, no button. -#}
+
+{% from "components/card.html" import text_card, text_box %}
+{% from "components/form.html" import field, form_actions %}
+
+{% macro _graded_cards(items) -%}
+<ol class="answer-sheet">
+  {%- for item in items %}
+  <li>
+    {% call text_card("Question " ~ item.number) %}
+    {{ text_box("Question", item.text) }}
+    {{ text_box("Reference answer", item.reference_answer) }}
+    {%- if item.answer is not none %}
+    {{ text_box("Answer to question " ~ item.number, item.answer) }}
+    {{ field(item.field_id, "Grade for question " ~ item.number, value=item.value, error=item.error, hint="A whole number from 0 to 10.", placeholder="Not graded", attrs={"inputmode": "numeric", "autocomplete": "off"}) }}
+    {%- else %}
+    <p class="grade-line">Not answered</p>
+    {%- endif %}
+    {% endcall %}
+  </li>
+  {%- endfor %}
+</ol>
+{%- endmacro %}
+
+{% macro grading_sheet(items, action, hidden, submit_label="Save grades") -%}
+{%- if not items %}{{ template_error("grading_sheet: at least one question is required") }}{% endif -%}
+{%- if items | selectattr("answer", "ne", none) | list -%}
+<form method="post" action="{{ action }}">
+  {%- for name, value in hidden.items() %}
+  <input type="hidden" name="{{ name }}" value="{{ value }}">
+  {%- endfor %}
+  {{ _graded_cards(items) }}
+  {{ form_actions(submit_label) }}
+</form>
+{%- else -%}
+{{ _graded_cards(items) }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro answers_read_only(items, grades=True) -%}
+{%- if not items %}{{ template_error("answers_read_only: at least one question is required") }}{% endif -%}
+<ol class="answer-sheet">
+  {%- for item in items %}
+  <li>
+    {% call text_card("Question " ~ item.number) %}
+    {{ text_box("Question", item.text) }}
+    {%- if item.answer is not none %}
+    {{ text_box("Answer to question " ~ item.number, item.answer) }}
+    {%- if grades %}
+    {%- if item.grade is not none %}
+    <p class="grade-line">Grade: {{ item.grade }} of 10</p>
+    {%- else %}
+    <p class="grade-line">Not graded yet</p>
+    {%- endif %}
+    {%- endif %}
+    {%- else %}
+    <p class="grade-line">Not answered</p>
+    {%- endif %}
+    {% endcall %}
+  </li>
+  {%- endfor %}
+</ol>
+{%- endmacro %}

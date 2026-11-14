@@ -35,7 +35,9 @@ teams for good, deleted teams included. Milestone 13 shows a student the competi
 their teams is linked to, with the copies in `competition_questions`, in their order, never the
 bank's. Milestones 14–15 score against the copy's text and reference answer, and list every
 linked team in the results, deleted ones marked. A team's answers (milestone 12.3) are in
-`app.services.team_answers`, which lists the teams through `team_entries` and `group_by_region`.
+`app.services.team_answers`, which lists the teams through `team_entries` and `group_by_region`;
+their grades (milestone 12.4) are in `app.services.grades`, which does the same. Both read the
+questions through `question_copies`.
 """
 
 import logging
@@ -304,6 +306,19 @@ def question_page(session: Session, competition_id: int, p: int) -> CompetitionQ
         for copy, deleted_at in session.exec(statement)
     ]
     return CompetitionQuestionPage(views, paging)
+
+
+def question_copies(session: Session, competition_id: int) -> list[CompetitionQuestion]:
+    """The competition's copies of its questions, in the order of adding (`CompetitionQuestion.id`).
+    The questions of a team's answer sheet (`app.services.team_answers`, milestone 12.3) and of
+    its grading sheet (`app.services.grades`, milestone 12.4), numbered from 1 in this order."""
+    return list(
+        session.exec(
+            select(CompetitionQuestion)
+            .where(CompetitionQuestion.competition_id == competition_id)
+            .order_by(col(CompetitionQuestion.id))
+        )
+    )
 
 
 def question_ids(session: Session, competition_id: int) -> set[int]:

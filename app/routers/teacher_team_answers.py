@@ -1,22 +1,29 @@
 """A competition's team answers, on the Competitions tab of the teacher area: the team answers page
 (the teacher's own institutions' teams with their progress), a team's answer sheet, and saving it.
 
-See specs/012.3-team-answers/contracts/http-routes.md and research R8–R14. Thin handlers only, as
-in `teacher_competition_entries`: each reads its values as plain strings (so no input ever gets
-FastAPI's 422), calls `app.services.team_answers`, maps its outcomes to a status and a page, and
-on success redirects with a 303, so a reload never repeats a save.
+See specs/012.3-team-answers/contracts/http-routes.md and research R8–R14, and
+specs/012.4-finish-and-grade/contracts/http-routes.md §4–§6 and research R7, R9. Thin handlers only,
+as in `teacher_competition_entries`: each reads its values as plain strings (so no input ever gets
+FastAPI's 422), calls `app.services.team_answers`, maps its outcomes to a status and a page, and on
+success redirects with a 303, so a reload never repeats a save.
 
 **Every teacher opens the team answers page, which lists only the teams of their own reachable
-institutions; only a teacher with Write access to a team's institution opens its sheet and saves
-it, and only while the competition is In progress.** There is no **Can manage competitions**
-check anywhere here (FR-002).
+institutions; a teacher with Read or Write access to a team's institution opens its sheet, and
+only one with Write access saves it, and only while the competition is In progress.** With Write
+access while In progress the sheet is the answer sheet; otherwise it is the read-only sheet: with
+Read access while In progress, with the access notice; on a Finished competition, for either
+level, with the team's grades and score (milestone 12.4 R7). There is no **Can manage
+competitions** check anywhere here (FR-002; milestone 12.4 FR-003).
 
-**Order of checks** (http-routes.md §Order of checks): the role (`@allow_roles`, before any id is
-read); the subject ("Subject not found") and the competition ("Competition not found"), 404,
-through the 12.2 `find_context`; the status (the refusal, 409); on the sheet and the save, the
+**Order of checks** (milestone 12.4 http-routes.md §Order of checks: the Answers pages, FR-041):
+the role (`@allow_roles`, before any id is read); the subject ("Subject not found") and the
+competition ("Competition not found"), 404, through the 12.2 `find_context`; the status: Upcoming
+and Cancelled get the refusal (409) on every page and save, In progress opens the pages and accepts
+a save, Finished opens the pages read-only and refuses a save (409); on the sheet and the save, the
 team ("Team not found") and, on the save, the named questions ("Question not found"), 404; then
-**Write** access to the team's institution (403); then, on the save, the answers (400). The
-service's save checks everything again under lock, in the same order.
+access to the team's institution: not linked is 403, Read access reads and its save is 403; then,
+on the save, the answers (400). The service's save checks everything again under lock, in the same
+order.
 
 **Addresses** (research R10): `subject`, `status` and `page` keep their 12.1 meaning, the
 competitions list the teacher came from, and travel through every page, form, refusal and
@@ -33,6 +40,7 @@ the team's ids and the outcome; the text is built when the page is shown (resear
 name ever reaches an address or a log line (FR-031). Nothing here logs; the service logs ids.
 """
 
+from collections.abc import Callable, Coroutine
 from datetime import timedelta
 from typing import Annotated, Any
 
@@ -127,7 +135,7 @@ def sheet_path(
     return address(path, context, back=back, notice=notice)
 
 
-def _back_page(raw: str | None) -> int | None:
+def back_page(raw: str | None) -> int | None:
     """The `back` page from the address or the form, `None` when it is missing or invalid."""
     if raw is None or not raw.isascii() or not raw.isdigit() or not raw.strip("0"):
         return None
@@ -202,16 +210,24 @@ def _open(
     subject: str | None,
     status: str | None,
     page: str | None,
+    *,
+    saving: bool = False,
 ) -> tuple[ListContext, CompetitionView] | HTMLResponse:
-    """Checks 2–3: the context and the competition, or the not-found page; then the refusal for a
-    competition that is not In progress."""
+    """Checks 2–3: the context and the competition, or the not-found page; then the refusal for an
+    Upcoming or Cancelled competition, and, when `saving`, for a Finished one too (milestone 12.4
+    FR-041): its pages open read-only."""
     found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
-    if competition.status is not CompetitionStatus.IN_PROGRESS:
+    opens = (CompetitionStatus.IN_PROGRESS,) if saving else _PAGE_STATUSES
+    if competition.status not in opens:
         return answers_refused(request, competition, competition.status, context)
     return context, competition
+
+
+_PAGE_STATUSES = (CompetitionStatus.IN_PROGRESS, CompetitionStatus.FINISHED)
+"""The statuses whose Answers pages open (milestone 12.4 FR-041)."""
 
 
 # ---------------------------------------------------------------------------------------------
@@ -231,19 +247,22 @@ def competition_answers_page(
     p: str | None = Query(None),
 ) -> HTMLResponse:
     """The competition's teams of the teacher's reachable institutions in region boxes, ten per
-    page, each with its progress and **Enter answers** (Write) or "Read access" (FR-004–FR-013).
-    Opening it changes nothing."""
+    page, each with its progress and **Enter answers** (Write, In progress) or **View answers**
+    (FR-004–FR-013; milestone 12.4 R7); on a Finished competition, also **Graded** and **Score**
+    (milestone 12.4 FR-037). Opening it changes nothing."""
     opened = _open(request, session, competition_id, subject, status, page)
     if isinstance(opened, HTMLResponse):
         return opened
     context, competition = opened
-    listing = answer_team_page(session, teacher_id(request), competition.id, parse_page(p))
+    finished = competition.status is CompetitionStatus.FINISHED
+    listing = answer_team_page(
+        session, teacher_id(request), competition.id, parse_page(p), finished=finished
+    )
     current = listing.paging.number
     sheet_hrefs = {
         row.team_id: sheet_path(competition.id, row.team_id, context, back=current)
         for group in listing.groups
         for row in group.rows
-        if row.can_write
     }
     return render_competition_page(
         request,
@@ -264,31 +283,38 @@ def competition_answers_page(
 # ---------------------------------------------------------------------------------------------
 
 
-async def answer_fields(request: Request) -> list[tuple[str, str]]:
-    """Every `answer-…` pair of the form, in the order sent, repeated names included (research
-    R9): never a `dict`, which would keep one value per name and hide a repeated field. The
-    body is parsed once; Starlette caches it for the other form values."""
-    form = await request.form()
-    return [
-        (name, value)
-        for name, value in form.multi_items()
-        if name.startswith(ANSWER_FIELD_PREFIX) and isinstance(value, str)
-    ]
+def prefixed_fields(
+    prefix: str,
+) -> Callable[[Request], Coroutine[Any, Any, list[tuple[str, str]]]]:
+    """A dependency reading every `<prefix>…` pair of the form, in the order sent, repeated names
+    included (research R9; milestone 12.4 research R9 shares it with the grades): never a `dict`,
+    which would keep one value per name and hide a repeated field. The body is parsed once;
+    Starlette caches it for the other form values."""
+
+    async def fields(request: Request) -> list[tuple[str, str]]:
+        form = await request.form()
+        return [
+            (name, value)
+            for name, value in form.multi_items()
+            if name.startswith(prefix) and isinstance(value, str)
+        ]
+
+    return fields
 
 
-AnswerFields = Annotated[list[tuple[str, str]], Depends(answer_fields)]
+AnswerFields = Annotated[list[tuple[str, str]], Depends(prefixed_fields(ANSWER_FIELD_PREFIX))]
 
 
-def _parse_answers(fields: list[tuple[str, str]]) -> dict[int, str] | None:
-    """The texts by `competition_question_id`, or `None` when a name's suffix is not an id or
-    names a question already given (the same name twice, or `answer-41` and `answer-041`)."""
-    answers: dict[int, str] = {}
+def parse_prefixed(fields: list[tuple[str, str]], prefix: str) -> dict[int, str] | None:
+    """The values by `competition_question_id`, or `None` when a name's suffix is not an id or
+    names a question already given (the same name twice, or `<prefix>41` and `<prefix>041`)."""
+    values: dict[int, str] = {}
     for name, value in fields:
-        question_id = parse_id(name.removeprefix(ANSWER_FIELD_PREFIX))
-        if question_id is None or question_id in answers:
+        question_id = parse_id(name.removeprefix(prefix))
+        if question_id is None or question_id in values:
             return None
-        answers[question_id] = value
-    return answers
+        values[question_id] = value
+    return values
 
 
 def _render_sheet(
@@ -338,6 +364,38 @@ def _render_sheet(
     )
 
 
+def _render_read_only(
+    request: Request,
+    competition: CompetitionView,
+    context: ListContext,
+    sheet: AnswerSheet,
+    back: int,
+) -> HTMLResponse:
+    """The read-only sheet (milestone 12.4 http-routes.md §5): every question with the team's
+    answer, never a field; with Read access while In progress, the access notice; on a Finished
+    competition, the team's score and each answer's grade. Never a reference answer."""
+    items = [
+        {
+            "number": q.number,
+            "text": q.text,
+            "answer": q.answer or None,
+            "grade": q.grade,
+        }
+        for q in sheet.questions
+    ]
+    return render_competition_page(
+        request,
+        "pages/teacher/team_answers_read_only.html",
+        competition,
+        context,
+        {
+            "sheet": sheet,
+            "items": items,
+            "back": answers_path(competition.id, context, p=back, anchor=sheet.team_id),
+        },
+    )
+
+
 @router.get("/answers/{team_id:int}", response_class=HTMLResponse)
 @allow_roles(Role.TEACHER)
 def team_answer_sheet_page(
@@ -352,7 +410,9 @@ def team_answer_sheet_page(
     notice: str | None = Query(None),
 ) -> HTMLResponse:
     """A team's answer sheet: every question of the competition with its answer field, and one
-    **Save answers** (FR-014–FR-021); the reference answer never. Opening it changes nothing."""
+    **Save answers** (FR-014–FR-021), for a Write institution's team while In progress; otherwise
+    the read-only sheet (milestone 12.4 R7). The reference answer never. Opening it changes
+    nothing."""
     opened = _open(request, session, competition_id, subject, status, page)
     if isinstance(opened, HTMLResponse):
         return opened
@@ -360,19 +420,22 @@ def team_answer_sheet_page(
     if team_id > MAX_ID:
         return not_found(request, TEAM_NOT_FOUND)
     teacher = teacher_id(request)
+    finished = competition.status is CompetitionStatus.FINISHED
     try:
-        sheet = answer_sheet(session, teacher, competition.id, team_id)
+        sheet = answer_sheet(session, teacher, competition.id, team_id, finished=finished)
     except TeamNotFound:
         return not_found(request, TEAM_NOT_FOUND)
     except AnswersDenied:
         raise AccessDenied(Role.TEACHER) from None
-    back_page = _back_page(back) or team_page_of(session, teacher, competition.id, team_id)
+    back_to = back_page(back) or team_page_of(session, teacher, competition.id, team_id)
+    if finished or not sheet.can_write:
+        return _render_read_only(request, competition, context, sheet, back_to)
     return _render_sheet(
         request,
         competition,
         context,
         sheet,
-        back_page,
+        back_to,
         notice=read_answers_notice(request, notice, competition.id, team_id, sheet.team_name),
     )
 
@@ -392,18 +455,19 @@ def save_team_answers_action(
 ) -> Response:
     """Saves every answer of the sheet at once and stays on it with the notice, also when
     nothing changed (FR-017, FR-020, FR-024); answers that are too long save nothing and show the
-    sheet again with every text as sent (FR-019)."""
-    opened = _open(request, session, competition_id, subject, status, page)
+    sheet again with every text as sent (FR-019). A Finished competition is refused before the
+    team is read (milestone 12.4 FR-040)."""
+    opened = _open(request, session, competition_id, subject, status, page, saving=True)
     if isinstance(opened, HTMLResponse):
         return opened
     context, competition = opened
     if team_id > MAX_ID:
         return not_found(request, TEAM_NOT_FOUND)
-    answers = _parse_answers(fields)
+    answers = parse_prefixed(fields, ANSWER_FIELD_PREFIX)
     if answers is None:
         return not_found(request, QUESTION_NOT_FOUND)
     teacher = teacher_id(request)
-    back_page = _back_page(back) or team_page_of(session, teacher, competition.id, team_id)
+    back_to = back_page(back) or team_page_of(session, teacher, competition.id, team_id)
     assert context.subject.id is not None
     try:
         save_answers(session, teacher, competition.id, context.subject.id, team_id, answers)
@@ -425,7 +489,7 @@ def save_team_answers_action(
         except AnswersDenied:
             raise AccessDenied(Role.TEACHER) from None
         return _render_sheet(
-            request, competition, context, sheet, back_page, sent=answers, errors=invalid.errors
+            request, competition, context, sheet, back_to, sent=answers, errors=invalid.errors
         )
     token = answers_notice_token(request, competition.id, team_id)
-    return redirect(sheet_path(competition.id, team_id, context, back_page, notice=token))
+    return redirect(sheet_path(competition.id, team_id, context, back_to, notice=token))

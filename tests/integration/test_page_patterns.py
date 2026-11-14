@@ -1075,3 +1075,130 @@ def test_the_answers_refusal(
     assert len(sections) == 1
     assert (back, "Back to competitions") in html.link_pairs(body, "main")
     assert [b for f in html.forms(body, "main") for b in f.buttons] == []
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.4: finishing and grading
+# ---------------------------------------------------------------------------------------------
+
+
+def grading_world(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> tuple[TestClient, str, str, int]:
+    return contract.grading_scene(world(client, client_as, outbox, monkeypatch))
+
+
+def assert_busy_ready(form: html.Form, label: str) -> None:
+    """One `<button type="submit">` inside a `POST` form, never disabled and with no inline
+    script, so the milestone 10.1 `loading-feedback.js` marks it busy and keeps the form from
+    being sent twice (FR-032)."""
+    assert form.method == "post"
+    (button,) = form.buttons
+    assert (button.text, button.attrs.get("type")) == (label, "submit")
+    assert "disabled" not in button.attrs and "onclick" not in button.attrs
+
+
+def test_the_finish_confirmation_patterns(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The `confirmation` with a primary, not destructive, submit and **Keep in progress**."""
+    response = contract.CASES["teacher-competition-finish"](
+        world(client, client_as, outbox, monkeypatch)
+    )
+    body = response.text
+    assert html.h1(body).startswith("Finish competition “Running” of Chemistry, started ")
+    sections = [s for s in html.parse(body).find_all("section") if "confirmation" in s.classes()]
+    assert len(sections) == 1
+    (form,) = [f for f in html.forms(body, "main") if f.action.endswith("/finish")]
+    assert_busy_ready(form, "Finish competition")
+    assert "destructive" not in form.buttons[0].attrs.get("class", "")
+    assert primary_actions(body) == ["Finish competition"]
+    assert [text for _, text in html.link_pairs(body, "main")][-1] == "Keep in progress"
+
+
+def test_the_grades_page_patterns(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A back link first, one heading, the details with the status badge, the progress line, the
+    filter links with exactly one current link, region groups between two page navigations, and
+    no primary action."""
+    browser, base, context, _ = grading_world(client, client_as, outbox, monkeypatch)
+    body = browser.get(f"{base}/grades?{context}").text
+    competition = base.split("/")[3]
+    assert_back_link(
+        body,
+        f"/teacher/competitions?{context}#competition-{competition}",
+        "Back to the competitions",
+    )
+    assert html.h1(body) == "Grades of “Spring round”"
+    assert html.badges(body) == ["Finished"]
+    assert "Graded 0 of 1 team" in html.text(body, "main")
+    (nav,) = [n for n in html.parse(body).find_all("nav") if "filter-links" in n.classes()]
+    assert [a.attrs.get("aria-current") for a in nav.find_all("a")] == ["true", None]
+    sections = [s for s in html.parse(body).find_all("section") if "region-group" in s.classes()]
+    assert len(sections) == 1 and "<caption>" not in body
+    assert html.pagination(body, "Pages, top") and html.pagination(body, "Pages, bottom")
+    assert primary_actions(body) == []
+
+
+def test_the_grading_sheet_patterns(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A back link first, one heading, the details, the `grading_sheet` with exactly one primary
+    submit inside a `POST` form; every grade field labelled, with its hint; the error summary only
+    on the 400 page, linking to each field with its message."""
+    browser, base, context, team = grading_world(client, client_as, outbox, monkeypatch)
+    body = browser.get(f"{base}/grades/{team}?{context}&back=2").text
+    assert_back_link(body, f"{base}/grades?{context}&p=2#team-{team}", "Back to the grades")
+    assert html.h1(body) == "Grade answers of “Comets” in “Spring round”"
+    assert ("Educational institution", "School No. 5") in html.details(body)
+    assert html.error_summary(body) is None
+    (form,) = [f for f in html.forms(body, "main") if "/grades/" in f.action]
+    assert_busy_ready(form, "Save grades")
+    assert primary_actions(body) == ["Save grades"]
+    assert "<script>" not in html.region(body, "main")
+    inputs = [
+        e for e in html.parse(body).iter() if e.tag == "input" and e.attrs.get("type") == "text"
+    ]
+    assert len(inputs) == 1
+    labels = {e.attrs["for"] for e in html.parse(body).iter() if e.tag == "label"}
+    for field in inputs:
+        assert field.attrs["id"] in labels
+        assert field.attrs["aria-describedby"] == f"{field.attrs['id']}-hint"
+    grades = {i.name: i.value for i in form.inputs if i.name and i.name.startswith("grade-")}
+    data = {i.name: i.value for i in form.inputs if i.name} | dict.fromkeys(grades, "seven")
+    invalid = browser.post(f"{base}/grades/{team}", data=data)
+    assert invalid.status_code == 400
+    assert_summary_matches_fields(invalid.text, list(grades))
+
+
+def test_the_read_only_sheet_has_no_form(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    response = contract.CASES["teacher-team-answers-read-only"](
+        world(client, client_as, outbox, monkeypatch)
+    )
+    body = response.text
+    assert html.h1(body) == "Answers of “Comets” in “Spring round”"
+    assert html.forms(body, "main") == []
+    assert primary_actions(body) == []
+
+
+def test_the_grading_refusal(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The 409 `refusal` with **Back to competitions** and no button."""
+    browser, subject, competition = contract.a_competition_manager(
+        world(client, client_as, outbox, monkeypatch)
+    )
+    response = browser.get(f"/teacher/competitions/{competition}/grades?subject={subject}")
+    assert response.status_code == 409
+    body = response.text
+    assert html.h1(body) == "Grade answers of “Spring round”?"
+    sections = [
+        s for s in html.parse(body).find_all("section") if "confirmation-refused" in s.classes()
+    ]
+    assert len(sections) == 1
+    back = f"/teacher/competitions?subject={subject}#competition-{competition}"
+    assert (back, "Back to competitions") in html.link_pairs(body, "main")
+    assert [b for f in html.forms(body, "main") for b in f.buttons] == []

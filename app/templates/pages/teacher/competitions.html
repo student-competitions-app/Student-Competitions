@@ -1,11 +1,13 @@
 {% extends "layouts/teacher.html" %}
 {#- The Competitions tab (specs/012.1-teacher-competitions/contracts/http-routes.md §1): the subject
     list, then exactly one of the empty states or the chosen subject's status list and
-    competitions, between two page navigations. Every row has a menu, in this order: Edit,
-    Questions, Teams, Answers, Cancel competition (milestone 12.2 contracts/components.md §2,
-    milestone 12.3 research R16). Questions and Teams are for every teacher; Answers for every
-    teacher on an In progress competition; Add competition, Edit and Cancel competition only with
-    the setting and an active subject (`can_add`). -#}
+    competitions, between two page navigations. Every row has a menu, in this order (milestone 12.4
+    FR-004, research R12): Edit, Questions, Teams, Answers, Grades, Finish competition, Cancel
+    competition. Questions and Teams are for every teacher; Answers for every teacher on an In
+    progress or Finished competition; Grades (Finished) and Finish competition (In progress, not
+    destructive) with the setting (`can_manage`), so a finished competition of a deactivated
+    subject still offers Grades; Add competition, Edit and Cancel competition only with the
+    setting and an active subject (`can_add`). -#}
 {% from "components/frame.html" import page_heading %}
 {% from "components/selectors.html" import chained_lists %}
 {% from "components/feedback.html" import empty_state, notice %}
@@ -60,7 +62,9 @@
   {%- if can_add and c.status == "upcoming" %}{{ menu_link("Edit", "/teacher/competitions/" ~ c.id ~ "/edit?" ~ return_query) }}{% endif -%}
   {{ menu_link("Questions", "/teacher/competitions/" ~ c.id ~ "/questions?" ~ return_query) }}
   {{- menu_link("Teams", "/teacher/competitions/" ~ c.id ~ "/teams?" ~ return_query) -}}
-  {%- if c.status == "in_progress" %}{{ menu_link("Answers", "/teacher/competitions/" ~ c.id ~ "/answers?" ~ return_query) }}{% endif -%}
+  {%- if c.status in ("in_progress", "finished") %}{{ menu_link("Answers", "/teacher/competitions/" ~ c.id ~ "/answers?" ~ return_query) }}{% endif -%}
+  {%- if can_manage and c.status == "finished" %}{{ menu_link("Grades", "/teacher/competitions/" ~ c.id ~ "/grades?" ~ return_query) }}{% endif -%}
+  {%- if can_manage and c.status == "in_progress" %}{{ menu_link("Finish competition", "/teacher/competitions/" ~ c.id ~ "/finish?" ~ return_query) }}{% endif -%}
   {%- if can_add and c.status in ("upcoming", "in_progress") %}{{ menu_link("Cancel competition", "/teacher/competitions/" ~ c.id ~ "/cancel?" ~ return_query, destructive=True) }}{% endif -%}
   {%- endcall -%}
   {% endcall %}

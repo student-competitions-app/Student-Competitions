@@ -1,8 +1,9 @@
 """Competitions: the subjects offered on the Competitions tab, one page of a subject's
-competitions, and creating, editing and cancelling them.
+competitions, and creating, editing, cancelling and finishing them.
 
 See specs/012.1-teacher-competitions/contracts/services.md §`app/services/competitions.py` and
-research R2, R3, R7, R8, R11, R13. Every teacher reads every competition; reading needs only the
+research R2, R3, R7, R8, R11, R13; finishing is specs/012.4-finish-and-grade/contracts/services.md
+§`competitions` and research R1. Every teacher reads every competition; reading needs only the
 teacher role, which the routes check.
 
 - **The status is derived, never stored** (`status_of`): Cancelled, Finished, Upcoming before the
@@ -15,11 +16,11 @@ teacher role, which the routes check.
   finished competition.
 - **Every write checks the setting itself**: **Can manage competitions**, read through
   `teacher_access.can_manage_competitions` with `lock=True` inside the write's own transaction.
-  Then the subject is read `FOR SHARE` and, for an edit or a cancellation, the competition
-  `FOR UPDATE`, both refreshed; the status is derived with a fresh clock. The change itself is a
-  conditional `UPDATE` whose row count tells a lost race, so "already cancelled" and "has already
-  started" hold on both engines (on SQLite the locks render nothing). Each refusal rolls back
-  before it raises, so no lock outlives it.
+  Then the subject is read `FOR SHARE` and, for an edit, a cancellation or a finish, the
+  competition `FOR UPDATE`, both refreshed; the status is derived with a fresh clock. The change
+  itself is a conditional `UPDATE` whose row count tells a lost race, so "already cancelled" and
+  "has already started" hold on both engines (on SQLite the locks render nothing). Each refusal
+  rolls back before it raises, so no lock outlives it.
 - **Names** follow the subject-name rules (`clean_name`, `name_key`) and are unique among the live
   competitions of a subject, ignoring case; the partial unique index
   `uq_competitions_subject_name_live`, not the lookup before a write, is the guarantee.
@@ -27,13 +28,15 @@ teacher role, which the routes check.
 Every function takes an open session first; the caller owns it. Each successful change logs one
 line with ids only, never a name; a no-op and a refusal log nothing (FR-046).
 
-**Contract for later milestones**: stopping writes `stopped_at` with a conditional update on
-`cancelled_at IS NULL AND stopped_at IS NULL AND starts_at <= :now`; the questions and teams of a
-competition may change only while `status_of` is Upcoming, under the competition's lock
-(`lock_competition`), which `app.services.competition_entries` (milestone 12.2) is the first to
-use; a team's answers are entered only while it is In progress, under the competition's share
-lock (`lock_competition(share=True)`, `app.services.team_answers`, milestone 12.3), and students
-(milestone 13) may answer only so too, while it is visible.
+**Contract for later milestones**: stopping is `finish_competition` (milestone 12.4), which
+writes `stopped_at` once with a conditional update on `cancelled_at IS NULL AND stopped_at IS NULL
+AND starts_at <= :now`; the questions and teams of a competition may change only while `status_of`
+is Upcoming, under the competition's lock (`lock_competition`), which
+`app.services.competition_entries` (milestone 12.2) is the first to use; a team's answers are
+entered only while it is In progress, under the competition's share lock
+(`lock_competition(share=True)`, `app.services.team_answers`, milestone 12.3), and students
+(milestone 13) may answer only so too, while it is visible; answers are graded only once it is
+Finished, under the same share lock (`app.services.grades`, milestone 12.4).
 """
 
 import logging
@@ -117,6 +120,14 @@ class NotCancellable(ValueError):
 
     def __init__(self, status: CompetitionStatus) -> None:
         super().__init__(f"Not cancellable: {status}")
+        self.status = status
+
+
+class NotFinishable(ValueError):
+    """The competition is not In progress: Upcoming, Cancelled or already Finished (409)."""
+
+    def __init__(self, status: CompetitionStatus) -> None:
+        super().__init__(f"Not finishable: {status}")
         self.status = status
 
 
@@ -534,4 +545,50 @@ def cancel_competition(
     after, _ = _listed(session, subject, status, now)
     session.commit()
     logger.info("Competition cancelled: id=%d", competition_id)
+    return landing(after, competition_id, old_index)
+
+
+def finish_competition(
+    session: Session,
+    teacher_id: int,
+    competition_id: int,
+    subject_id: int,
+    status: CompetitionStatus | None,
+) -> Landing:
+    """Finish an in-progress competition, as a teacher with the setting: only `stopped_at` is
+    written, and never again. Raises `ManageRequired`, `CompetitionNotFound` or `NotFinishable`;
+    nothing changes then.
+
+    The competition is read `FOR UPDATE`, so a finish waits for every answer save in progress
+    (they hold it `FOR SHARE`), and every later save sees it Finished (milestone 12.4 research
+    R1). The conditional update repeats the status check in the database, so of two finishes, or a
+    finish and a cancel, exactly one changes the row.
+
+    Returns where the list filtered by `status` (the request's filter) lands, as
+    `cancel_competition` does (R13).
+    """
+    _require_manage(session, teacher_id)
+    row, subject = lock_competition(session, competition_id, subject_id)
+    now = utc_now()
+    current = status_of(row, now)
+    if current is not CompetitionStatus.IN_PROGRESS:
+        raise _refuse(session, True, NotFinishable(current))
+    before, _ = _listed(session, subject, status, now)
+    ids = [view.id for view in before]
+    old_index = ids.index(competition_id) if competition_id in ids else None
+    result = session.execute(
+        update(Competition)
+        .where(
+            col(Competition.id) == competition_id,
+            col(Competition.cancelled_at).is_(None),
+            col(Competition.stopped_at).is_(None),
+            col(Competition.starts_at) <= now,
+        )
+        .values(stopped_at=now)
+    )
+    if result.rowcount == 0:  # type: ignore[attr-defined]
+        raise NotFinishable(_reread_status(session, competition_id))
+    after, _ = _listed(session, subject, status, now)
+    session.commit()
+    logger.info("Competition finished: id=%d", competition_id)
     return landing(after, competition_id, old_index)

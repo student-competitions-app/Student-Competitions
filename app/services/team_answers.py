@@ -1,10 +1,12 @@
 """A team's answers in a competition: the team answers page every teacher reads (their own
-institutions' teams with their progress), the answer sheet, and saving it, which only a teacher
-with **Write** access to the team's institution does, and only while the competition is **In
-progress**.
+institutions' teams with their progress), the answer sheet, which a teacher with **Read** or
+**Write** access to the team's institution reads, and saving it, which only a teacher with **Write**
+access does, and only while the competition is **In progress**. Once it is **Finished**, the same
+pages show each team's grades and score, read-only (milestone 12.4).
 
-See specs/012.3-team-answers/contracts/services.md and research R1–R7, R11. Reading needs only
-the teacher role, which the routes check, and a competition the caller has already found with
+See specs/012.3-team-answers/contracts/services.md and research R1–R7, R11, and
+specs/012.4-finish-and-grade/contracts/services.md §`team_answers` and research R7. Reading needs
+only the teacher role, which the routes check, and a competition the caller has already found with
 `competitions.get_competition` (its subject and visibility checked).
 
 - **An answer belongs to a team** (R1): one row per answered question of the competition, keyed
@@ -13,7 +15,10 @@ the teacher role, which the routes check, and a competition the caller has alrea
 - **The listing** (R6, R11): the competition's live teams whose institution the teacher reaches
   (`teacher_access.list_reachable_institutions`: linked, active, in an active region), grouped
   by region with the 12.2 grouping (`competition_entries.group_by_region`), each with its
-  progress and whether the teacher may write. The links are read on every call (FR-013).
+  progress and whether the teacher may write. The links are read on every call (FR-013). On a
+  **Finished** competition each row also has its graded answers and score (`grades.grade_counts`).
+- **Read access reads, Write access writes** (milestone 12.4 R7): `answer_sheet` returns the sheet
+  for either level, with `can_write`; only `save_answers` requires **Write**.
 - **The clock** is `app.services.competitions.utc_now`, read through that module once per call,
   so tests that move the 12.1 clock move this one too.
 - **The save, in this order** (R3, FR-025): the competition `FOR SHARE` and its subject `FOR
@@ -32,12 +37,12 @@ A save logs one line with ids and counts only: `Team answers saved: competition=
 answered=%d changed=%d`, also when nothing changed. A refusal logs nothing; no name, question
 text or answer text is ever logged (FR-031).
 
-**Contract for later milestones**: grading by hand (a later 12.x) grades these rows; a question
-with no row has no answer to grade. Milestone 13 lets a team's students save through the same
-steps, with the access step replaced by "the student is a member of the team", into the same
-rows, the last save winning whoever made it. Milestone 14 scores each row against its copy's text
-and reference answer; a changed row needs scoring again. Milestone 15 reads the answers of every
-team, deleted ones included, of a finished competition.
+**Contract for later milestones**: `app.services.grades` (milestone 12.4) grades these rows once the
+competition is Finished; a question with no row has no answer to grade. Milestone 13 lets a team's
+students save through the same steps, with the access step replaced by "the student is a member of
+the team", into the same rows, the last save winning whoever made it. Milestone 14 scores each row
+against its copy's text and reference answer; a changed row needs scoring again. Milestone 15 reads
+the answers of every team, deleted ones included, of a finished competition.
 """
 
 import logging
@@ -54,9 +59,11 @@ from app.services.competition_entries import (
     RegionGroup,
     TeamEntry,
     group_by_region,
+    question_copies,
     team_entries,
 )
 from app.services.competitions import CompetitionStatus
+from app.services.grades import GradeCount, count_of, grade_counts
 from app.services.paging import PAGE_SIZE, Paging
 from app.services.teacher_access import (
     NotReachable,
@@ -121,7 +128,12 @@ class AnswerTeamRow:
     questions: int
     """The competition's questions."""
     can_write: bool
-    """Write access to the team's institution: **Enter answers**, else "Read access"."""
+    """Write access to the team's institution: **Enter answers** while In progress, else **View
+    answers** (milestone 12.4 R7)."""
+    graded: int | None = None
+    """The team's graded answers; set only on a Finished competition (milestone 12.4)."""
+    score: int | None = None
+    """The sum of the team's grades; set only on a Finished competition."""
 
 
 @dataclass(frozen=True)
@@ -144,6 +156,8 @@ class SheetQuestion:
     """The competition's copy; never the reference answer."""
     answer: str
     """The saved answer, `""` when the question is not answered."""
+    grade: int | None = None
+    """Its grade; read only on a Finished competition (milestone 12.4)."""
 
 
 @dataclass(frozen=True)
@@ -152,6 +166,12 @@ class AnswerSheet:
     team_name: str
     institution_name: str
     questions: list[SheetQuestion]
+    institution_id: int
+    can_write: bool
+    """Write access to the team's institution: the answer sheet while In progress; with Read
+    access, the read-only sheet (milestone 12.4 R7)."""
+    count: GradeCount | None = None
+    """The team's answered, graded and score; set only on a Finished competition."""
 
 
 @dataclass(frozen=True)
@@ -165,17 +185,6 @@ class SaveResult:
 # ---------------------------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------------------------
-
-
-def _question_copies(session: Session, competition_id: int) -> list[CompetitionQuestion]:
-    """The competition's copies of its questions, in the order of adding."""
-    return list(
-        session.exec(
-            select(CompetitionQuestion)
-            .where(CompetitionQuestion.competition_id == competition_id)
-            .order_by(col(CompetitionQuestion.id))
-        )
-    )
 
 
 def _stored_answers(
@@ -238,12 +247,13 @@ def count_answered(
 
 
 def answer_team_page(
-    session: Session, teacher_id: int, competition_id: int, p: int
+    session: Session, teacher_id: int, competition_id: int, p: int, *, finished: bool = False
 ) -> AnswerTeamPage:
     """One page of the competition's teams the teacher reaches, ten per page, the page clamped
     to 1..last, grouped by region; the totals count only the listed teams (FR-005–FR-010). The
     active members and the answered questions are counted for the page's teams in one query
-    each, and the progress is counted, never stored (FR-009)."""
+    each, and the progress is counted, never stored (FR-009). With `finished` (milestone 12.4
+    FR-037), the answered, graded and score of each row come from one `grades.grade_counts`."""
     reachable = _reachable(session, teacher_id)
     entries = _listed_entries(session, competition_id, reachable)
     questions = session.exec(
@@ -253,19 +263,23 @@ def answer_team_page(
     def make_rows(shown: list[TeamEntry]) -> list[AnswerTeamRow]:
         team_ids = [team.id for team, _, _ in shown if team.id is not None]
         members = count_active_members(session, team_ids)
-        answered = count_answered(session, competition_id, team_ids)
+        counts = grade_counts(session, competition_id) if finished else None
+        answered = count_answered(session, competition_id, team_ids) if counts is None else {}
         rows = []
         for team, institution, _ in shown:
             assert team.id is not None and institution.id is not None
+            count = count_of(counts, team.id) if counts is not None else None
             rows.append(
                 AnswerTeamRow(
                     team_id=team.id,
                     name=team.name,
                     institution_name=institution.name,
                     active_members=members.get(team.id, 0),
-                    answered=answered.get(team.id, 0),
+                    answered=count.answered if count else answered.get(team.id, 0),
                     questions=questions,
                     can_write=reachable[institution.id].can_write,
+                    graded=count.graded if count else None,
+                    score=count.score if count else None,
                 )
             )
         return rows
@@ -283,12 +297,14 @@ def team_page_of(session: Session, teacher_id: int, competition_id: int, team_id
 
 
 def answer_sheet(
-    session: Session, teacher_id: int, competition_id: int, team_id: int
+    session: Session, teacher_id: int, competition_id: int, team_id: int, *, finished: bool = False
 ) -> AnswerSheet:
     """The team's answer sheet: every question of the competition in the order of adding, each
     with the team's saved answer, never the reference answer (FR-015, FR-016). Checks, without
-    locks, in the save's order: the team (`TeamNotFound`), then **Write** access to its
-    institution (`AnswersDenied`). The caller has checked the competition and its status."""
+    locks, in the save's order: the team (`TeamNotFound`), then access to its institution: not
+    linked is `AnswersDenied`; **Read** or **Write** returns the sheet with `can_write` (milestone
+    12.4 R7). With `finished`, each question's grade and the team's `GradeCount` are filled. The
+    caller has checked the competition and its status."""
     team = session.get(Team, team_id)
     if team is None or team.deleted_at is not None:
         raise TeamNotFound()
@@ -299,12 +315,12 @@ def answer_sheet(
     if institution is None or region is None or not (institution.is_active and region.is_active):
         raise TeamNotFound()
     try:
-        reach_institution(session, teacher_id, team.institution_id, write=True)
-    except (NotReachable, WriteRequired) as error:
+        reachable = reach_institution(session, teacher_id, team.institution_id)
+    except NotReachable as error:
         raise AnswersDenied() from error
     stored = _stored_answers(session, competition_id, team_id)
     questions = []
-    for index, copy in enumerate(_question_copies(session, competition_id)):
+    for index, copy in enumerate(question_copies(session, competition_id)):
         assert copy.id is not None
         answer = stored.get(copy.id)
         questions.append(
@@ -313,9 +329,23 @@ def answer_sheet(
                 number=index + 1,
                 text=copy.text,
                 answer=answer.text if answer is not None else "",
+                grade=answer.grade if finished and answer is not None else None,
             )
         )
-    return AnswerSheet(team_id, team.name, institution.name, questions)
+    count = None
+    if finished:
+        grades = [answer.grade for answer in stored.values() if answer.grade is not None]
+        count = GradeCount(answered=len(stored), graded=len(grades), score=sum(grades))
+    assert institution.id is not None
+    return AnswerSheet(
+        team_id,
+        team.name,
+        institution.name,
+        questions,
+        institution_id=institution.id,
+        can_write=reachable.can_write,
+        count=count,
+    )
 
 
 # ---------------------------------------------------------------------------------------------
@@ -372,7 +402,7 @@ def save_answers(
         raise _rollback(session, AnswersClosed(status))
     team = _lock_team(session, competition_id, team_id)
     numbers = {
-        copy.id: index + 1 for index, copy in enumerate(_question_copies(session, competition_id))
+        copy.id: index + 1 for index, copy in enumerate(question_copies(session, competition_id))
     }
     if any(question_id not in numbers for question_id in raw_answers):
         raise _rollback(session, QuestionNotFound())

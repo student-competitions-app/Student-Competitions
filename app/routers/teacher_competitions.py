@@ -1,7 +1,8 @@
-"""The Competitions tab of the teacher area: a subject's competitions, and adding, editing and
-cancelling them.
+"""The Competitions tab of the teacher area: a subject's competitions, and adding, editing,
+cancelling and finishing them.
 
-See specs/012.1-teacher-competitions/contracts/http-routes.md and research R9, R11–R13. Thin
+See specs/012.1-teacher-competitions/contracts/http-routes.md and research R9, R11–R13; finishing
+is specs/012.4-finish-and-grade/contracts/http-routes.md §7–§8 and research R8, R11, R12. Thin
 handlers only: each reads its values as plain strings (so no input ever gets FastAPI's 422),
 calls `app.services.competitions`, maps its outcomes to a status and a page, and on success
 redirects with a 303 (Post/Redirect/Get), so a reload never repeats a change. An invalid form is
@@ -9,8 +10,11 @@ shown again with every error and every value as typed.
 
 **Every teacher reads every competition; only a teacher with Can manage competitions changes
 them.** The list shows **Add competition**, and **Edit** and **Cancel competition** in the row
-menus, only with the setting and an active subject; every row has a menu with the competition's
-**Questions** and **Teams** (milestone 12.2). Every other route is a *manage* route.
+menus, only with the setting and an active subject; **Finish competition** (in progress) and
+**Grades** (finished, milestone 12.4) only with the setting; every row has a menu with the
+competition's **Questions** and **Teams** (milestone 12.2) and, in progress or finished,
+**Answers** (milestones 12.3, 12.4). Every other route is a *manage* route; finishing mirrors
+cancelling, with its own refusals and a primary confirmation.
 
 **Order of checks** (http-routes.md §Order of checks): the role (`@allow_roles`); then, on a
 manage route, the setting, first thing in the handler, before any value is parsed, so a teacher
@@ -60,12 +64,14 @@ from app.services.competitions import (
     ManageRequired,
     NotCancellable,
     NotEditable,
+    NotFinishable,
     StartNotInFuture,
     SubjectChoices,
     SubjectUnavailable,
     cancel_competition,
     competition_page,
     create_competition,
+    finish_competition,
     get_competition,
     locate,
     offered_subjects,
@@ -107,7 +113,13 @@ CANCEL_REFUSALS = {
     CompetitionStatus.CANCELLED: "“{name}” is already cancelled.",
     CompetitionStatus.FINISHED: "“{name}” has finished and cannot be cancelled.",
 }
-"""The reason of each refusal, by the competition's status (http-routes.md §4, §6)."""
+FINISH_REFUSALS = {
+    CompetitionStatus.UPCOMING: "“{name}” has not started yet and cannot be finished.",
+    CompetitionStatus.CANCELLED: "“{name}” has been cancelled and cannot be finished.",
+    CompetitionStatus.FINISHED: "“{name}” has already finished.",
+}
+"""The reason of each refusal, by the competition's status (http-routes.md §4, §6; milestone 12.4
+http-routes.md §Refusals)."""
 
 COMPETITION_NOTICE_PURPOSE = "competition-notice"
 COMPETITION_NOTICE_TTL = timedelta(minutes=10)
@@ -115,6 +127,7 @@ NOTICES = {
     "added": "Competition “{name}” was added",
     "saved": "Competition “{name}” was saved",
     "cancelled": "Competition “{name}” was cancelled",
+    "finished": "Competition “{name}” was finished",
 }
 """The success notice of each outcome; the name is read when the list is shown."""
 
@@ -394,6 +407,19 @@ def _cancel_refused(
 ) -> HTMLResponse:
     question = f"Cancel competition “{competition.name}”?"
     reason = CANCEL_REFUSALS[status].format(name=competition.name)
+    return _refused(request, question, reason, subject, filter_status, page, competition.id)
+
+
+def _finish_refused(
+    request: Request,
+    competition: CompetitionView,
+    status: CompetitionStatus,
+    subject: Subject,
+    filter_status: CompetitionStatus | None,
+    page: int,
+) -> HTMLResponse:
+    question = f"Finish competition “{competition.name}”?"
+    reason = FINISH_REFUSALS[status].format(name=competition.name)
     return _refused(request, question, reason, subject, filter_status, page, competition.id)
 
 
@@ -683,6 +709,95 @@ def cancel_competition_action(
             request, competition, refused.status, selected, status_filter, return_page
         )
     notice = _notice_token(request, competition_id, "cancelled")
+    return redirect(
+        list_path(selected.id, status_filter, landing.page, landing.competition_id, notice)
+    )
+
+
+# ---------------------------------------------------------------------------------------------
+# Finishing (milestone 12.4 http-routes.md §7–§8)
+# ---------------------------------------------------------------------------------------------
+
+
+@router.get("/{competition_id:int}/finish", response_class=HTMLResponse)
+@allow_roles(Role.TEACHER)
+def finish_competition_page(
+    request: Request,
+    session: SessionDep,
+    competition_id: int,
+    subject: str | None = Query(None),
+    status: str | None = Query(None),
+    page: str | None = Query(None),
+) -> HTMLResponse:
+    """The confirmation, naming the competition, its subject and its start, with a primary
+    **Finish competition** and **Keep in progress** (FR-007); the refusal for a competition that
+    is not In progress (FR-012)."""
+    require_manage(request, session)
+    selected = offered_subject(offered_subjects(session), subject)
+    if selected is None:
+        return not_found(request, SUBJECT_NOT_FOUND)
+    assert selected.id is not None
+    competition = find_competition(session, competition_id, selected)
+    if competition is None:
+        return not_found(request, COMPETITION_NOT_FOUND)
+    status_filter, return_page = parse_status_filter(status), parse_page(page)
+    if competition.status in FINISH_REFUSALS:
+        return _finish_refused(
+            request, competition, competition.status, selected, status_filter, return_page
+        )
+    return render_teacher(
+        request,
+        "pages/teacher/competition_finish.html",
+        TAB,
+        {
+            "competition": competition,
+            "subject": selected,
+            "status_value": status_filter.value if status_filter is not None else "",
+            "page": return_page,
+            "back": list_path(selected.id, status_filter, return_page, anchor=competition_id),
+        },
+    )
+
+
+@router.post("/{competition_id:int}/finish", response_class=HTMLResponse)
+@allow_roles(Role.TEACHER)
+def finish_competition_action(
+    request: Request,
+    session: SessionDep,
+    competition_id: int,
+    subject: str = Form(""),
+    status: str = Form(""),
+    page: str = Form(""),
+) -> Response:
+    """Finishes the competition for good and lands where it was in the filtered list, as a
+    cancellation does: at it while the filter shows it, else at the row that took its place,
+    else the one before it, else the empty state (FR-008, research R13)."""
+    require_manage(request, session)
+    selected = offered_subject(offered_subjects(session), subject)
+    if selected is None:
+        return not_found(request, SUBJECT_NOT_FOUND)
+    assert selected.id is not None
+    competition = find_competition(session, competition_id, selected)
+    if competition is None:
+        return not_found(request, COMPETITION_NOT_FOUND)
+    status_filter, return_page = parse_status_filter(status), parse_page(page)
+    if competition.status in FINISH_REFUSALS:
+        return _finish_refused(
+            request, competition, competition.status, selected, status_filter, return_page
+        )
+    try:
+        landing = finish_competition(
+            session, teacher_id(request), competition_id, selected.id, status_filter
+        )
+    except ManageRequired:
+        raise AccessDenied(Role.TEACHER) from None
+    except CompetitionNotFound:
+        return not_found(request, COMPETITION_NOT_FOUND)
+    except NotFinishable as refused:
+        return _finish_refused(
+            request, competition, refused.status, selected, status_filter, return_page
+        )
+    notice = _notice_token(request, competition_id, "finished")
     return redirect(
         list_path(selected.id, status_filter, landing.page, landing.competition_id, notice)
     )

@@ -1,0 +1,19 @@
+{#- Filter links (milestone 12.4 contracts/components.md §3, research R13): a short row of links
+    above a list, each one a filter of the list below ("All teams", "Ungraded only"). Following one
+    goes to page 1 of that filter. Plain links: no JavaScript and no **Show** button.
+
+    `links` is a list of `(text, href, current)`, exactly one of them current. The current link is
+    marked `aria-current="true"`, never `"page"`: on page 3 of a filter its link leads to page 1, so
+    it is not the current page, and the page navigation below already marks the current page. It is
+    drawn like the page navigation's current page. `label` names the landmark ("Show"). -#}
+
+{% macro filter_links(links, label) -%}
+{%- if links | selectattr(2) | list | length != 1 %}{{ template_error("filter_links: exactly one link must be current") }}{% endif -%}
+<nav class="filter-links" aria-label="{{ label }}">
+  <ul>
+    {%- for text, href, current in links %}
+    <li><a href="{{ href }}"{% if current %} aria-current="true"{% endif %}>{{ text }}</a></li>
+    {%- endfor %}
+  </ul>
+</nav>
+{%- endmacro %}

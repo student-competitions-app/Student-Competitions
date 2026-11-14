@@ -1,17 +1,19 @@
 {% extends "layouts/teacher.html" %}
-{#- A competition's team answers page (specs/012.3-team-answers/contracts/http-routes.md §1): the
-    subject, the start and the status under the heading, then the competition's teams of the
-    teacher's reachable institutions in region groups, ten teams per page, between two page
-    navigations, as the Teams page of milestone 12.2. Each row shows the team's progress, plain
-    text in the Answered column ("Answered 3 of 6" on a phone), and **Enter answers** for a team
-    of a Write institution or the row note "Read access" for a Read one. No Add team, no Remove.
-    The empty states, the first that applies: no reachable institution, then no listed team. -#}
+{#- A competition's team answers page (specs/012.3-team-answers/contracts/http-routes.md §1;
+    specs/012.4-finish-and-grade/contracts/http-routes.md §4): the subject, the start and the
+    status under the heading, then the competition's teams of the teacher's reachable institutions
+    in region groups, ten teams per page, between two page navigations, as the Teams page of
+    milestone 12.2. Each row shows the team's progress, plain text in the Answered column
+    ("Answered 3 of 6" on a phone), and on a Finished competition its **Graded** and **Score**;
+    then **Enter answers** for a team of a Write institution while In progress, else **View
+    answers**. No Add team, no Remove. The empty states, the first that applies: no reachable
+    institution, then no listed team. -#}
 {% from "components/frame.html" import back_link, page_heading %}
 {% from "components/details.html" import details_list %}
 {% from "components/feedback.html" import empty_state %}
 {% from "components/pagination.html" import page_navigation %}
 {% from "components/group.html" import region_group %}
-{% from "components/table.html" import data_table, cell, actions_cell, row_note %}
+{% from "components/table.html" import data_table, cell, actions_cell %}
 {% from "components/button.html" import link_button %}
 {% from "components/badge.html" import competition_status_badge %}
 {% from "components/time.html" import local_time with context %}
@@ -32,15 +34,20 @@
 {{ page_navigation(listing.paging, page_href, "Teams", "Pages, top") }}
 {% for g in listing.groups %}
 {% call region_group(g.region_name, g.total, "region-" ~ g.region_id ~ "-p" ~ listing.paging.number) %}
-{% call data_table(["Team", "Educational institution", "Active members", "Answered", "Actions"]) %}
+{% set finished = competition.status == "finished" %}
+{% call data_table(["Team", "Educational institution", "Active members", "Answered", "Graded", "Score", "Actions"] if finished else ["Team", "Educational institution", "Active members", "Answered", "Actions"]) %}
 {% for row in g.rows %}
 <tr id="team-{{ row.team_id }}">
   {{ cell("Team", row.name) }}
   {{ cell("Educational institution", row.institution_name) }}
   {{ cell("Active members", row.active_members) }}
   {{ cell("Answered", row.answered ~ " of " ~ row.questions, nowrap=True) }}
+  {%- if finished %}
+  {{ cell("Graded", row.graded ~ " of " ~ row.answered, nowrap=True) }}
+  {{ cell("Score", row.score, nowrap=True) }}
+  {%- endif %}
   {% call actions_cell() %}
-  {%- if row.can_write %}{{ link_button("Enter answers", sheet_hrefs[row.team_id], kind="secondary", outline=True, small=True) }}{% else %}{{ row_note("Read access") }}{% endif -%}
+  {%- if row.can_write and competition.status == "in_progress" %}{{ link_button("Enter answers", sheet_hrefs[row.team_id], kind="secondary", outline=True, small=True) }}{% else %}{{ link_button("View answers", sheet_hrefs[row.team_id], kind="secondary", outline=True, small=True) }}{% endif -%}
   {% endcall %}
 </tr>
 {% endfor %}

@@ -241,6 +241,37 @@ def test_confirmation_back_label() -> None:
     assert ">Cancel</a>" not in custom
 
 
+def test_confirmation_without_a_kind_is_unchanged() -> None:
+    """Milestone 12.4 contracts/components.md §1: the default is byte-for-byte the 12.1 markup."""
+    out = render(
+        CONFIRMATION + '{{ confirmation("Q?", "C.", "/a", "Delete", "/back", {"page": "2"}) }}'
+    )
+    assert out == (
+        '<section class="confirmation">\n  <h1>Q?</h1>\n  <p>C.</p>\n'
+        '  <div class="form-actions">\n'
+        '    <form method="post" action="/a" class="inline-form">'
+        '<input type="hidden" name="page" value="2">'
+        '<button type="submit" class="destructive">Delete</button>\n</form>\n'
+        '    <a href="/back">Cancel</a>\n  </div>\n</section>'
+    )
+
+
+def test_a_primary_confirmation() -> None:
+    out = render(
+        CONFIRMATION
+        + '{{ confirmation("Q?", "C.", "/a", "Finish competition", "/back",'
+        + ' back_label="Keep in progress", kind="primary") }}'
+    )
+    assert '<button type="submit">Finish competition</button>' in out
+    assert "destructive" not in out
+    assert '<a href="/back">Keep in progress</a>' in out
+
+
+def test_confirmation_refuses_another_kind() -> None:
+    with pytest.raises(TemplateRuntimeError, match="confirmation: kind must be destructive or"):
+        render(CONFIRMATION + '{{ confirmation("Q?", "C.", "/a", "Go", "/b", kind="secondary") }}')
+
+
 # ---------------------------------------------------------------------------------------------
 # Milestone 12.3: the placeholder and the answer sheet (specs/012.3-team-answers contracts/
 # components.md §1–§2)
@@ -333,3 +364,69 @@ def test_the_answer_sheet_keeps_a_leading_line_break() -> None:
 def test_the_answer_sheet_needs_a_question() -> None:
     with pytest.raises(TemplateRuntimeError, match="answer_sheet: at least one question"):
         render(SHEET + '{{ answer_sheet([], "/a", {}) }}')
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.4: the grading sheet and the filter links (specs/012.4-finish-and-grade contracts/
+# components.md §2–§3)
+# ---------------------------------------------------------------------------------------------
+
+GRADING = '{% from "components/grading_sheet.html" import grading_sheet, answers_read_only %}'
+FILTER = '{% from "components/filter.html" import filter_links %}'
+
+
+def grading_item(number: int, answer: str | None) -> dict[str, object]:
+    return {
+        "number": number,
+        "text": f"Question text {number}",
+        "reference_answer": f"Reference {number}",
+        "answer": answer,
+        "field_id": f"grade-{number}",
+        "value": "",
+        "error": None,
+        "grade": None,
+    }
+
+
+def test_the_grading_sheet_with_an_answer_has_a_form() -> None:
+    out = render(
+        GRADING + '{{ grading_sheet(items, "/g", {"back": "2"}) }}',
+        items=[grading_item(1, "Yes"), grading_item(2, None)],
+    )
+    assert out.startswith('<form method="post" action="/g">')
+    assert '<input type="hidden" name="back" value="2">' in out
+    assert out.count('<input type="text"') == 1
+    assert '<button type="submit">Save grades</button>' in out
+    assert "Not answered" in out
+
+
+def test_the_grading_sheet_with_no_answer_has_no_form_and_no_button() -> None:
+    out = render(
+        GRADING + '{{ grading_sheet(items, "/g", {"back": "2"}) }}',
+        items=[grading_item(1, None), grading_item(2, None)],
+    )
+    assert "<form" not in out
+    assert "<button" not in out
+    assert "<input" not in out
+    assert out.count("Reference answer") == 2
+    assert out.count("Not answered") == 2
+
+
+def test_the_grading_sheets_need_a_question() -> None:
+    with pytest.raises(TemplateRuntimeError, match="grading_sheet: at least one question"):
+        render(GRADING + '{{ grading_sheet([], "/g", {}) }}')
+    with pytest.raises(TemplateRuntimeError, match="answers_read_only: at least one question"):
+        render(GRADING + "{{ answers_read_only([]) }}")
+
+
+@pytest.mark.parametrize(
+    "links",
+    [
+        [],
+        [("All teams", "/a", False), ("Ungraded only", "/u", False)],
+        [("All teams", "/a", True), ("Ungraded only", "/u", True)],
+    ],
+)
+def test_filter_links_need_exactly_one_current_link(links: list[tuple[str, str, bool]]) -> None:
+    with pytest.raises(TemplateRuntimeError, match="filter_links: exactly one link"):
+        render(FILTER + '{{ filter_links(links, "Show") }}', links=links)

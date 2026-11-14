@@ -1,0 +1,30 @@
+{% extends "layouts/teacher.html" %}
+{#- A team's answers, read-only (specs/012.4-finish-and-grade/contracts/http-routes.md §5): the
+    team's educational institution under the heading; while the competition is In progress, the
+    notice that Read access cannot change them; once it is Finished, the team's score and how many
+    of its answers are graded, and each answer's grade. Then every question with the team's answer
+    or "Not answered", in `answers_read_only`; or the empty state for a competition with no
+    questions. No form, no field, no button, never a reference answer. -#}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/details.html" import details_list %}
+{% from "components/feedback.html" import empty_state, notice %}
+{% from "components/grading_sheet.html" import answers_read_only %}
+
+{% block title %}Answers of “{{ sheet.team_name }}” in “{{ competition.name }}” — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(back, "Back to the answers") }}
+{{ page_heading("Answers of “" ~ sheet.team_name ~ "” in “" ~ competition.name ~ "”") }}
+{{ details_list([("Educational institution", sheet.institution_name)]) }}
+{% if sheet.count is none %}
+{{ notice("You have Read access to “" ~ sheet.institution_name ~ "”, so you cannot change these answers.", "info") }}
+{% else %}
+<p>Score: {{ sheet.count.score }}</p>
+<p>Graded {{ sheet.count.graded }} of {{ sheet.count.answered }} {{ "answer" if sheet.count.answered == 1 else "answers" }}</p>
+{% endif %}
+{% if not items %}
+{{ empty_state("No questions in this competition") }}
+{% else %}
+{{ answers_read_only(items, grades=sheet.count is not none) }}
+{% endif %}
+{% endblock %}

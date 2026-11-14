@@ -1145,19 +1145,20 @@ team_answers_t = sa.table(
 )
 
 
-def test_the_head_is_the_team_answers_revision() -> None:
-    """Milestone 12.3 follows milestone 12.2's revision."""
-    assert head_revision() == TEAM_ANSWERS_REVISION
+def test_the_team_answers_revision_follows_the_competition_entries_revision() -> None:
+    """Milestone 12.3 follows milestone 12.2's revision. (Milestone 12.4 moved the head check to
+    `test_the_head_is_the_answer_grades_revision`.)"""
     script = ScriptDirectory.from_config(alembic_config())
     assert script.get_revision(TEAM_ANSWERS_REVISION).down_revision == (
         COMPETITION_ENTRIES_REVISION
     )
 
 
-def test_the_team_answers_table_at_head(
+def test_the_team_answers_table_at_its_revision(
     monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
 ) -> None:
-    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    """The table as milestone 12.3 created it; milestone 12.4 adds `grade` (below)."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", TEAM_ANSWERS_REVISION)
     inspector = inspect(migration_engine)
     columns = {c["name"]: c["nullable"] for c in inspector.get_columns("team_answers")}
     assert columns == {
@@ -1278,3 +1279,91 @@ def test_the_downgrade_drops_the_team_answers_table(
         copies = connection.execute(text("SELECT count(*) FROM competition_questions"))
         links = connection.execute(text("SELECT count(*) FROM competition_teams"))
         assert (copies.scalar_one(), links.scalar_one()) == (2, 1)
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.4: the grade of an answer
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/012.4-finish-and-grade/data-model.md §1, §6 and research R2.
+
+ANSWER_GRADES_REVISION = "04d5b638615c"
+
+
+def test_the_head_is_the_answer_grades_revision() -> None:
+    """Milestone 12.4 follows milestone 12.3's revision."""
+    assert head_revision() == ANSWER_GRADES_REVISION
+    script = ScriptDirectory.from_config(alembic_config())
+    assert script.get_revision(ANSWER_GRADES_REVISION).down_revision == TEAM_ANSWERS_REVISION
+
+
+def test_the_grade_column_at_head(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    inspector = inspect(migration_engine)
+    columns = {c["name"]: c for c in inspector.get_columns("team_answers")}
+    assert list(columns) == [
+        "competition_id",
+        "team_id",
+        "competition_question_id",
+        "text",
+        "grade",
+    ]
+    assert columns["grade"]["nullable"] is True
+    assert isinstance(columns["grade"]["type"], sa.SmallInteger)
+    checks = {c["name"] for c in inspector.get_check_constraints("team_answers")}
+    assert checks == {"ck_team_answers_answered", "ck_team_answers_grade_range"}
+
+
+def test_upgrading_keeps_every_answer_not_graded(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Data-model §6: no data step; an answer stored at milestone 12.3 is kept, not graded."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", TEAM_ANSWERS_REVISION)
+    with migration_engine.begin() as connection:
+        competition, team, copy, _ = _seed_answerable(connection)
+        connection.execute(_answer(competition, team, copy, "Sodium chloride\nNaCl"))
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.connect() as connection:
+        rows = connection.execute(text("SELECT text, grade FROM team_answers")).all()
+    assert [tuple(row) for row in rows] == [("Sodium chloride\nNaCl", None)]
+
+
+def _set_grade(engine: Engine, grade: int | None) -> None:
+    with engine.begin() as connection:
+        connection.execute(text("UPDATE team_answers SET grade = :grade"), {"grade": grade})
+
+
+def test_a_grade_is_from_0_to_10(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Research R2: `grade_range` accepts `NULL`, 0 and 10 and refuses -1 and 11."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        competition, team, copy, _ = _seed_answerable(connection)
+        connection.execute(_answer(competition, team, copy))
+    for grade in (0, 10, None):
+        _set_grade(migration_engine, grade)
+    for grade in (-1, 11):
+        with pytest.raises(IntegrityError):
+            _set_grade(migration_engine, grade)
+    with migration_engine.connect() as connection:
+        assert connection.execute(text("SELECT grade FROM team_answers")).scalar_one() is None
+
+
+def test_the_downgrade_drops_the_grades_and_keeps_the_answers(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        competition, team, copy, _ = _seed_answerable(connection)
+        connection.execute(_answer(competition, team, copy, "NaCl"))
+    _set_grade(migration_engine, 7)
+    run_alembic(monkeypatch, empty_database_url, "downgrade", TEAM_ANSWERS_REVISION)
+    inspector = inspect(migration_engine)
+    assert "grade" not in {c["name"] for c in inspector.get_columns("team_answers")}
+    checks = {c["name"] for c in inspector.get_check_constraints("team_answers")}
+    assert checks == {"ck_team_answers_answered"}
+    with migration_engine.connect() as connection:
+        assert connection.execute(text("SELECT text FROM team_answers")).scalar_one() == "NaCl"

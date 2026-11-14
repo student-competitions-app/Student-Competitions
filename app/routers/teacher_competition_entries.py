@@ -30,9 +30,9 @@ the question's or team's id and the outcome; the texts are built when the page i
 R9), so no name ever reaches an address or a log line (FR-048). Nothing here logs; the service
 logs ids.
 
-**Shared with milestone 12.3**: `teacher_team_answers` (a competition's team answers) imports
-`ListContext`, `find_context`, `render_competition_page`, `address` and `page_prefix`, so both
-routers build the same addresses and pages.
+**Shared with milestones 12.3 and 12.4**: `teacher_team_answers` (a competition's team answers)
+and `teacher_grades` (its grades) import `ListContext`, `find_context`, `render_competition_page`,
+`address` and `page_prefix`, so the three routers build the same addresses and pages.
 """
 
 from dataclasses import dataclass
@@ -178,16 +178,19 @@ def address(
     back: int = 1,
     region: int | None = None,
     p: int = 1,
+    show: str | None = None,
     notice: str | None = None,
     anchor: str | None = None,
 ) -> str:
-    """`path` with the context, then `back`, `region` and `p` (each left out at its default),
-    the notice and the anchor."""
+    """`path` with the context, then `back`, `region`, `show` (the Grades page's filter,
+    milestone 12.4) and `p` (each left out at its default), the notice and the anchor."""
     built = f"{path}?{context.query}"
     if back > 1:
         built += f"&back={back}"
     if region is not None:
         built += f"&region={region}"
+    if show:
+        built += f"&show={show}"
     if p > 1:
         built += f"&p={p}"
     if notice:

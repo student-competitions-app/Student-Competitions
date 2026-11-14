@@ -1,0 +1,62 @@
+{% extends "layouts/teacher.html" %}
+{#- A finished competition's Grades page (specs/012.4-finish-and-grade/contracts/http-routes.md §1):
+    the subject, the start and the status under the heading, then the overall progress ("Graded 3
+    of 25 teams", over every team whatever the filter), the filter links **All teams** / **Ungraded
+    only**, and every team of the competition in region groups, ten per page, between two page
+    navigations, as the Teams page of milestone 12.2: deleted teams and teams of a deactivated
+    institution or region included, a deleted one with the row note "(deleted)". Each row shows
+    **Answered**, **Graded** and **Score** as plain text, and **Grade answers**. The empty states:
+    no team in the competition (whatever the filter, with no filter links), then no team left
+    under **Ungraded only**. -#}
+{% from "components/frame.html" import back_link, page_heading %}
+{% from "components/details.html" import details_list %}
+{% from "components/feedback.html" import empty_state %}
+{% from "components/filter.html" import filter_links as filter_nav %}
+{% from "components/pagination.html" import page_navigation %}
+{% from "components/group.html" import region_group %}
+{% from "components/table.html" import data_table, cell, actions_cell, row_note %}
+{% from "components/button.html" import link_button %}
+{% from "components/badge.html" import competition_status_badge %}
+{% from "components/time.html" import local_time with context %}
+
+{% block title %}Grades of “{{ competition.name }}” — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(back, "Back to the competitions") }}
+{{ page_heading("Grades of “" ~ competition.name ~ "”") }}
+{% set start %}{{ local_time(competition.starts_at) }}{% endset %}
+{% set badge %}{{ competition_status_badge(competition.status) }}{% endset %}
+{{ details_list([("Subject", subject.name), ("Start", start), ("Status", badge)]) }}
+<p>Graded {{ listing.teams_graded }} of {{ listing.teams_total }} {{ "team" if listing.teams_total == 1 else "teams" }}</p>
+{% if listing.teams_total == 0 %}
+{{ empty_state("No teams in this competition") }}
+{% else %}
+{{ filter_nav(filter_links, "Show") }}
+{% if not listing.groups %}
+{{ empty_state("All teams are graded") }}
+{% else %}
+{{ page_navigation(listing.paging, page_href, "Teams", "Pages, top") }}
+{% for g in listing.groups %}
+{% call region_group(g.region_name, g.total, "region-" ~ g.region_id ~ "-p" ~ listing.paging.number) %}
+{% call data_table(["Team", "Educational institution", "Active members", "Answered", "Graded", "Score", "Actions"]) %}
+{% for row in g.rows %}
+<tr id="team-{{ row.team_id }}">
+  {{ cell("Team", row.name) }}
+  {{ cell("Educational institution", row.institution_name) }}
+  {{ cell("Active members", row.active_members) }}
+  {{ cell("Answered", row.answered ~ " of " ~ row.questions, nowrap=True) }}
+  {{ cell("Graded", row.graded ~ " of " ~ row.answered, nowrap=True) }}
+  {{ cell("Score", row.score, nowrap=True) }}
+  {% call actions_cell() %}
+  {%- if row.is_deleted %}{{ row_note("(deleted)") }}{% endif %}
+  {{ link_button("Grade answers", grade_hrefs[row.team_id], kind="secondary", outline=True, small=True) }}
+  {%- endcall %}
+</tr>
+{% endfor %}
+{% endcall %}
+{% endcall %}
+{% endfor %}
+{{ page_navigation(listing.paging, page_href, "Teams", "Pages, bottom") }}
+{% endif %}
+{% endif %}
+{% endblock %}

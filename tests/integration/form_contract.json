@@ -826,6 +826,24 @@
       "method": "post"
     }
   ],
+  "teacher-competition-finish": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/finish",
+      "buttons": [],
+      "fields": [
+        "page",
+        "status",
+        "subject"
+      ],
+      "method": "post"
+    }
+  ],
   "teacher-competition-new": [
     {
       "action": "/logout",
@@ -972,6 +990,56 @@
         "subject"
       ],
       "method": "get"
+    }
+  ],
+  "teacher-grades": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-grades-sheet": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/grades/{id}",
+      "buttons": [],
+      "fields": [
+        "back",
+        "grade-{id}",
+        "page",
+        "show",
+        "status",
+        "subject"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-grades-sheet-invalid": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/grades/{id}",
+      "buttons": [],
+      "fields": [
+        "back",
+        "grade-{id}",
+        "page",
+        "show",
+        "status",
+        "subject"
+      ],
+      "method": "post"
     }
   ],
   "teacher-invitation": [
@@ -1336,6 +1404,14 @@
     }
   ],
   "teacher-team-answers": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "teacher-team-answers-read-only": [
     {
       "action": "/logout",
       "buttons": [],

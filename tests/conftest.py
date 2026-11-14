@@ -833,3 +833,28 @@ def save_team_answer(
             )
         )
         db_session.commit()
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.4: grades
+# ---------------------------------------------------------------------------------------------
+
+
+def grade_answer(
+    engine: Engine,
+    competition_id: int,
+    team_id: int,
+    competition_question_id: int,
+    grade: int | None,
+) -> None:
+    """Set the grade of the team's existing answer to the competition's copy of a question.
+
+    **Test-only**: it skips the setting, status, team and question checks that
+    `test_grade_service.py` covers.
+    """
+    with Session(engine) as db_session:
+        answer = db_session.get(TeamAnswer, (competition_id, team_id, competition_question_id))
+        assert answer is not None, "grade_answer: the team has no answer to this question"
+        answer.grade = grade
+        db_session.add(answer)
+        db_session.commit()

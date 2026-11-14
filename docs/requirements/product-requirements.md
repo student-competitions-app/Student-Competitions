@@ -39,9 +39,9 @@ A web application for running online competitions among students, testing their 
    - the name and the start date and time of the competition; a competition has no duration and runs until a teacher stops it
    - the list of questions
    - the participating teams (a team usually has fewer than 10 members, at most 50)
-5. **Entering team answers.** While a competition is in progress, a teacher with Write access to an educational institution enters the answers of its teams, one text answer per question per team. A teacher with Read access sees only how many questions each team has answered, not the answers.
+5. **Entering team answers.** While a competition is in progress, a teacher with Write access to an educational institution enters the answers of its teams, one text answer per question per team. A teacher with Read access sees only how many questions each team has answered, not the answers. After the competition has finished, the answers can no longer be changed: a teacher with Write access sees them read-only, with their grades and the team's score, to discuss them with the team.
 6. **Viewing competitions.** The teacher can view the list of all competitions, both past and planned. A teacher allowed to manage competitions can edit the name, the start, the participating teams and the list of questions of any upcoming competition, stop (finish) any competition in progress, and cancel any competition that is not finished (see [Competition statuses](#competition-statuses)).
-7. **Grading answers.** After a competition has finished, a teacher allowed to manage competitions grades its teams' answers by hand: each answer gets a whole-number grade from 0 to 10. They grade the answers of every team in the competition, whatever its educational institution, and can change a grade at any time.
+7. **Grading answers.** After a competition has finished, a teacher allowed to manage competitions grades its teams' answers by hand: each answer gets a whole-number grade from 0 to 10. They grade the answers of every team in the competition, whatever its educational institution, and can change a grade at any time. A team's score is the sum of its grades.
 
 #### Teacher access rights to competitions
 

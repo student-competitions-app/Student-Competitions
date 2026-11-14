@@ -70,23 +70,31 @@ The application has three roles — student, teacher, administrator — with rig
 - Teachers MUST only see and manage students of the educational institutions they are linked
   to; only administrators can link teachers to institutions and edit the institution list.
 - Competition rights MUST follow the product rules: every teacher can read all competitions;
-  only teachers whom an administrator allowed to manage competitions can create, edit, stop or
-  cancel one, and each of them can manage every competition, whoever created it (there are no
-  per-competition rights); only upcoming competitions are editable; any competition that is not
-  finished can be cancelled, and a cancelled competition never changes again.
+  only teachers whom an administrator allowed to manage competitions can create, edit, stop,
+  cancel or grade one, and each of them can manage every competition, whoever created it (there
+  are no per-competition rights); only upcoming competitions are editable; any competition that is
+  not finished can be cancelled, and a cancelled competition never changes again.
+- Grading MUST follow the product rules: only a teacher allowed to manage competitions grades
+  answers, only once the competition is finished, and the answers of every team in it, whatever
+  its educational institution. Grading MUST add or change grades only, never the competition's
+  questions, teams or answers.
 - Deleting a team is the one exception to these rules: the deletion, done by a teacher with
   Write access to the team's institution, MUST take the team out of every competition that is
   not finished (upcoming, in progress and cancelled), with or without the right to manage
   competitions. A deleted team MUST stay only in finished competitions, so their record stays
   complete.
 - Competitions of a deactivated subject MUST be hidden and inaccessible unless they are
-  finished; finished ones stay available read-only, so their results can be reviewed.
+  finished; finished ones stay available, so their results can be reviewed. They are read-only
+  for their participants: no answer is entered or changed. Their existing answers can still be
+  graded.
 - Answers belong to a team, never to a single student: one text answer per question per team.
   Students MUST only access their own profile (read-only), the competitions their teams take
   part in, and their teams' answers and results.
-- A teacher MUST enter a team's answers only with Write access to the team's educational
-  institution; with Read access they MUST see only the teams' answer progress, never the
-  answers.
+- A teacher MUST enter or change a team's answers only with Write access to the team's
+  educational institution; with Read access they see the team's answers, grades and scores
+  read-only and MUST never enter or change them. A teacher sees the answers, grades and scores of
+  the teams of their own institutions only; a teacher allowed to manage competitions also sees
+  those of every team of a competition they grade.
 - The administrator list MUST come from deployment configuration, not from the UI.
 
 **Rationale**: The system holds personal data of students and competition results; a single
@@ -113,15 +121,19 @@ these rules close the common gaps.
   `app/services/` behind a provider-agnostic interface, so the provider can be switched by
   configuration.
 - Evaluation MUST use structured output validated against a Pydantic schema in
-  `app/schemas/`; the score MUST be an integer from 1 to 10 and MUST account for the level
-  of detail, with the question text and the teacher's reference answer as inputs.
+  `app/schemas/`; the proposed grade MUST be an integer from 0 to 10, the scale of the manual
+  grade, and MUST account for the level of detail, with the question text and the teacher's
+  reference answer as inputs.
+- The proposed grade is the foundation of the answer's grade, never the last word: a teacher
+  allowed to manage competitions MUST be able to adjust it by hand, and the stored grade,
+  proposed or adjusted, is the one that counts.
 - Answers (a team's answers, entered by its students or by a teacher) MUST be treated as
   untrusted input: clearly delimited in the prompt and never able to alter scoring
   instructions (prompt-injection resistance).
 - Evaluation failures (timeouts, invalid output, provider errors) MUST NOT lose or corrupt a
   submitted answer; the answer stays persisted with an explicit pending/failed status and can
   be re-evaluated.
-- Each stored evaluation MUST record the score, the model's justification and the model
+- Each stored evaluation MUST record the proposed grade, the model's justification and the model
   identifier used, so results are auditable.
 - LLM calls MUST NOT run inside the request that saves an answer; saving answers MUST succeed
   independently of the LLM being available.
@@ -143,9 +155,11 @@ provider outages and manipulation.
   derived on the server from the stored start and the stored stop or cancel, and enforced
   server-side on every read of questions and every answer submission: students read questions
   only while the competition is in progress, and answers are entered, by students or teachers,
-  only while it is in progress.
-- Results (scores, totals, places, best answers) MUST be persisted, and deletions MUST NOT
-  silently orphan or destroy historical competition results.
+  only while it is in progress; answers are graded only once it is finished.
+- Results MUST be persisted: the grade of every answer, and the best answers, are stored. A
+  team's score, the sum of its grades, and its place are calculated from the stored grades
+  whenever they are shown, and are not stored apart from them. Deletions MUST NOT silently orphan
+  or destroy historical competition results.
 
 **Rationale**: Competition results are the product's core record; they must survive restarts,
 deployments and database engine changes.
@@ -268,4 +282,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 2.2.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-09
+**Version**: 2.3.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-14

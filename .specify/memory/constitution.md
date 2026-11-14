@@ -90,11 +90,11 @@ The application has three roles — student, teacher, administrator — with rig
 - Answers belong to a team, never to a single student: one text answer per question per team.
   Students MUST only access their own profile (read-only), the competitions their teams take
   part in, and their teams' answers and results.
-- A teacher MUST enter a team's answers only with Write access to the team's educational
-  institution; with Read access they MUST see only the teams' answer progress and, once the
-  competition is finished, the teams' grading progress and scores, never the answers. A teacher
-  sees the grades and scores of the teams of their own institutions only; a teacher allowed to
-  manage competitions also sees those of every team of a competition they grade.
+- A teacher MUST enter or change a team's answers only with Write access to the team's
+  educational institution; with Read access they see the team's answers, grades and scores
+  read-only and MUST never enter or change them. A teacher sees the answers, grades and scores of
+  the teams of their own institutions only; a teacher allowed to manage competitions also sees
+  those of every team of a competition they grade.
 - The administrator list MUST come from deployment configuration, not from the UI.
 
 **Rationale**: The system holds personal data of students and competition results; a single

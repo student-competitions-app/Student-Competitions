@@ -8,6 +8,7 @@
 | Frontend | Server-side rendering: Jinja2 + HTMX + Pico.css |
 | Database | SQLite locally, PostgreSQL in production, via SQLModel + Alembic |
 | Authentication | Email code (OTP) + server-side sessions in a signed cookie |
+| Localisation | gettext catalogues managed with Babel (Jinja2 `jinja2.ext.i18n`); Ukrainian by default, English as the alternative |
 | Answer evaluation | LLM API call (Claude or OpenAI) with structured output |
 | Infrastructure & deployment | Docker + Render (or Railway / Fly.io) |
 | Tooling & tests | uv, ruff, pytest, later Playwright |

@@ -1,3 +1,15 @@
+<!--
+Sync Impact Report
+- Version change: 2.3.0 → 2.4.0 (MINOR: a new stack category, Localisation)
+- Modified principles: none
+- Added sections: none; a Localisation row in Technology & Architecture Constraints →
+  Technology Stack (gettext + Babel through jinja2.ext.i18n; Ukrainian by default, English as the
+  alternative; milestone 12.5)
+- Removed sections: none
+- Templates: plan/spec/tasks templates read the constitution at runtime; no change needed
+- Related docs: docs/requirements/technical-requirements.md gains the same stack row
+- Follow-up TODOs: none
+-->
 # Student Competitions Constitution
 
 ## Core Principles
@@ -190,6 +202,7 @@ column shows when each component enters the codebase.
 | Database | SQLite (local development, tests) → PostgreSQL (production) | The same code and migrations run on both engines. | 3 |
 | Authentication | Email one-time code (OTP) + server-side sessions in a signed cookie | No passwords, no third-party identity provider (Principle V). | 4 |
 | Authorization | Roles: student / teacher / administrator; administrator list from deploy-time configuration | Enforced server-side, deny-by-default (Principle IV). | 5 |
+| Localisation | gettext catalogues managed with Babel, through Jinja2's `jinja2.ext.i18n` | Ukrainian is the default language of the interface, the consent texts and every other user-facing communication; English is the alternative, chosen per browser. Every user-facing message goes through the catalogues; what people enter is never translated. Babel is the only localisation dependency. | 12.5 |
 | Answer evaluation | LLM API (Claude or OpenAI) with structured output | Behind one provider-agnostic service; provider chosen by configuration (Principle VI). | 14 |
 | End-to-end tests | Playwright | Added "later", as part of polish and hardening; lives in `tests/e2e/`. | 16 |
 | Development process | GitHub Spec Kit | Every feature goes through the Spec Kit flow (see Development Workflow). | all |
@@ -282,4 +295,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 2.3.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-14
+**Version**: 2.4.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-14

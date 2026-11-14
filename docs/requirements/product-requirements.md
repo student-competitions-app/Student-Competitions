@@ -39,7 +39,7 @@ A web application for running online competitions among students, testing their 
    - the name and the start date and time of the competition; a competition has no duration and runs until a teacher stops it
    - the list of questions
    - the participating teams (a team usually has fewer than 10 members, at most 50)
-5. **Entering team answers.** While a competition is in progress, a teacher with Write access to an educational institution enters the answers of its teams, one text answer per question per team. A teacher with Read access sees only how many questions each team has answered, not the answers. After the competition has finished, the answers can no longer be changed: a teacher with Write access sees them read-only, with their grades and the team's score, to discuss them with the team.
+5. **Entering team answers.** While a competition is in progress, a teacher with Write access to an educational institution enters the answers of its teams, one text answer per question per team. A teacher with Read access sees only how many questions each team has answered, not the answers. After the competition has finished, the answers can no longer be changed: a teacher with Write access sees them read-only, with their grades and the team's score, to discuss them with the team, and a teacher with Read access sees each team's grading progress and score, never its answers.
 6. **Viewing competitions.** The teacher can view the list of all competitions, both past and planned. A teacher allowed to manage competitions can edit the name, the start, the participating teams and the list of questions of any upcoming competition, stop (finish) any competition in progress, and cancel any competition that is not finished (see [Competition statuses](#competition-statuses)).
 7. **Grading answers.** After a competition has finished, a teacher allowed to manage competitions grades its teams' answers by hand: each answer gets a whole-number grade from 0 to 10. They grade the answers of every team in the competition, whatever its educational institution, and can change a grade at any time. A team's score is the sum of its grades.
 
@@ -52,7 +52,7 @@ A web application for running online competitions among students, testing their 
 
 - A teacher is linked to one or more educational institutions.
 - A teacher only has access to the list of students from their own educational institutions.
-- Each link has an access level: **Read** (see the institution's students, its teams, how many questions its teams have answered in a competition in progress, and the teams' results) or **Write** (also add, edit and delete the students, manage the teams and enter the teams' answers).
+- Each link has an access level: **Read** (see the institution's students, its teams, how many questions its teams have answered in a competition in progress, and the teams' grading progress, scores and results once it has finished) or **Write** (also add, edit and delete the students, manage the teams and enter the teams' answers).
 - The students of an educational institution are divided into classes (for example "KN-21"). Each class has a year of study, shared by all its students. A student belongs to exactly one educational institution and exactly one class in it. A teacher with Write access keeps the list of classes of that institution.
 - A teacher sees a student's data only for their own institutions, never anything about an institution the student belonged to before.
 - Only an administrator can link a teacher to an educational institution and set the access level.
@@ -81,8 +81,9 @@ A web application for running online competitions among students, testing their 
 - A teacher organizes a competition in one subject for a specific date and time. A competition has no duration: it starts on its own at its start time and runs until a teacher stops it.
 - Teams take part in a competition: each participating team gives one written (text) answer to each question. The answers belong to the team, not to its students: the team's members, or a teacher with Write access to its educational institution, enter them, and the last save wins. A student has no answers of their own.
 - After the competition has finished, a teacher allowed to manage competitions grades the answers by hand, a whole number from 0 to 10 per answer. A question a team did not answer has no grade. Who graded an answer, or when, is not stored.
-- Answers are evaluated using AI. The input for evaluation is the question text and the correct answer prepared in advance by the teacher. Each answer is assigned a score.
-- The winner is the team with the highest total score, calculated as the sum of its scores across all questions in the competition.
+- A team's score is the sum of the grades of its answers. The grades are stored; the score is always calculated from them.
+- Later, answers are also evaluated using AI. The input for evaluation is the question text and the correct answer prepared in advance by the teacher. The AI proposes a grade for each answer, on the same 0–10 scale; it is the foundation of the answer's grade, and a teacher allowed to manage competitions can still adjust it by hand. The stored grade, proposed or adjusted, is the one that counts.
+- The winner is the team with the highest score.
 
 ### Competition statuses
 

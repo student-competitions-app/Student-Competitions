@@ -100,11 +100,13 @@ team_id, raw_grades)`, in the order of FR-043, every refusal rolling back first:
 2. **The subject and the competition**: `competitions.lock_competition(…, share=True)`
    (`CompetitionNotFound`); a finished competition of a deactivated subject is visible (R10).
 3. **The status** with a fresh clock: not **Finished** → `GradingClosed(status)`.
-4. **The team and the questions**: the team row (`TeamNotFound` if unknown), its link to the
-   competition `FOR UPDATE` (`TeamNotFound` if absent). **A deleted team, or one of a deactivated
-   institution or region, is found** (FR-043 step 5): unlike 12.3, the team's own state is not
-   checked. Then the named questions: each must be one of the competition's copies and have an
-   answer of the team (`QuestionNotFound` otherwise).
+4. **The team and the questions**: the team row (`GradedTeamNotFound` if unknown), its link to the
+   competition `FOR UPDATE` (`GradedTeamNotFound` if absent). **A deleted team, or one of a
+   deactivated institution or region, is found** (FR-043 step 5): unlike 12.3, the team's own state
+   is not checked. Then the named questions: each must be one of the competition's copies
+   (`competition_entries.question_copies`) and have an answer of the team
+   (`GradedQuestionNotFound` otherwise). The errors are named apart from 12.3's `TeamNotFound` and
+   `QuestionNotFound` because their rules differ; both map to the same not-found pages.
 5. **The grades**: `app.schemas.grade.clean_grade` on each named value, in question order
    (`InvalidGrades({copy id: message})`).
 6. **The change**: the team's answers read again under the link's lock; each named answer gets its
@@ -131,16 +133,22 @@ team_id, raw_grades)`, in the order of FR-043, every refusal rolling back first:
   grading has another actor (the setting, any institution) and another status, so a module of its
   own keeps each one's check order readable.
 - **Saving one grade per request**: the milestone saves the sheet at once (FR-024).
+- **`grades` importing helpers from `team_answers`**: `team_answers` imports `grades.grade_counts`
+  for the finished Answers pages (R7), so the reverse import would be a cycle. The one shared helper,
+  the competition's question copies in order, moves to `competition_entries.question_copies`, and the
+  imports run one way: `team_answers` → `grades` → `competition_entries`.
 
 ---
 
-## R4. Cleaning a grade: digits only, trimmed, 0 to 10, empty allowed
+## R4. Cleaning a grade: an integer 0 to 10, digits only, trimmed, empty allowed
 
 **Decision** ([contracts/services.md](./contracts/services.md) §`app/schemas/grade.py`):
 
-- **`clean_grade(raw: str) -> int | None`**: `raw.strip()`; empty → `None` (not graded); otherwise
-  it must be ASCII digits only (`isascii() and isdigit()`), at most 3 characters, and its value
-  0–10; `"07"` is 7. Anything else raises `InvalidGrade` with the message `GRADE_ERROR = "Enter a
+- **`clean_grade(raw: str) -> int | None`**: `raw.strip()` (spaces, tabs and line breaks around
+  it); empty → `None` (not graded); otherwise it must be ASCII digits only (`isascii() and
+  isdigit()`); leading zeros are ignored, however many (`value.lstrip("0") or "0"`), and what
+  remains must be at most 2 characters with a value 0–10: "07" and "0007" are 7, "0010" is 10,
+  "000" is 0, "011" is refused. Anything else raises `InvalidGrade` with the message `GRADE_ERROR = "Enter a
   whole number from 0 to 10."`.
 - **The field is a text field**, `type="text"` with `inputmode="numeric"`, `autocomplete="off"`, no
   `pattern`, no `maxlength`, no `min`/`max`.
@@ -149,8 +157,11 @@ team_id, raw_grades)`, in the order of FR-043, every refusal rolling back first:
 
 - **The spec's examples** (FR-025): "0", "7", "10" and " 7 " pass; "7.5", "-1", "11", "seven", "+7",
   "7.0", "1e1" and other-script digits ("٧", which `isdigit()` alone accepts) fail.
-- **The length cap before `int()`** keeps a very long digit string from reaching Python's integer
-  parser; any value with more than 3 characters is outside 0–10 anyway.
+- **A grade is an integer from 0 to 10** (the product owner's decision): leading zeros do not change
+  an integer, so any number of them is accepted, not only one.
+- **The length cap on the significant digits, before `int()`**, keeps a very long digit string from
+  reaching Python's integer parser (which refuses more than 4,300 digits); a value with more than 2
+  significant digits is outside 0–10 anyway.
 - **Not `type="number"`**: a browser sends an empty string for a number field holding "seven" or
   "7.5" in some locales, which would empty a grade silently instead of showing the error, and the
   page could not show "every entered value kept". Steppers and wheel scrolling would also change
@@ -408,8 +419,8 @@ changes of FR-047 in this PR; the README gets "finishing and grading" in its fea
 **New modules**:
 
 - `tests/unit/test_grade_schemas.py`: `clean_grade` on every value of FR-025 and the Assumptions
-  ("0", "10", " 7 ", "07", "", "   " → `None`; "7.5", "-1", "11", "seven", "+7", "7.0", "1e1", "٧",
-  "1000000" → error).
+  ("0", "10", " 7 ", "07", "0007", "0010", "000" → their integer; "", "   " → `None`; "7.5", "-1",
+  "11", "011", "seven", "+7", "7.0", "1e1", "٧", "1000000" → error).
 - `tests/integration/test_grade_service.py`: `finish_competition` (status, landing per filter,
   refusals, start passing, name free again); `save_grades` (store, change, empty, omit, the check
   order, deleted and deactivated teams found, unanswered or foreign question refused, setting taken

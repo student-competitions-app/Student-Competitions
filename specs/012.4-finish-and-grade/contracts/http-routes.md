@@ -40,7 +40,7 @@ answer sheet while **In progress**, the read-only sheet when **Finished**. No se
 | `subject`, `status`, `page` | query, form | the competitions list the teacher came from (12.1) | as in 12.2 |
 | `p` | query (Grades page) | the page of the Grades page | `parse_page`: 1, clamped to the last |
 | `show` | query, form (Grades page, grading sheet, save) | `ungraded` for **Ungraded only** | **All teams** |
-| `back` | query, form (grading sheet, save) | the Grades page's page to return to | the page holding the team under **All teams** |
+| `back` | query, form (grading sheet, save) | the Grades page's page to return to | the page holding the team under the current filter (`grades.team_page_of`), 1 if it is not listed |
 | `notice` | query (grading sheet) | a sealed `grades-notice` token | no notice |
 | `grade-<copy id>` | form (save) | one per answered question: the grade typed | see step 5 |
 

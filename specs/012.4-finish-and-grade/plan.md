@@ -129,8 +129,8 @@ the form contract, the gallery and page patterns, and a `grade_answer` seeder.
 
 **Scale/Scope**:
 
-- 1 migration (1 column, 1 check constraint); 1 new schema module, 1 new service module; 2 changed
-  services (`competitions`, `team_answers`).
+- 1 migration (1 column, 1 check constraint); 1 new schema module, 1 new service module; 3 changed
+  services (`competitions`, `team_answers`, `competition_entries`).
 - 1 new router with 3 endpoints; 2 new endpoints in `teacher_competitions`; `teacher_team_answers`
   changed.
 - 4 new page templates (`competition_finish.html`, `competition_grades.html`,
@@ -198,8 +198,9 @@ app/
 ├── schemas/
 │   └── grade.py                 # NEW: clean_grade, InvalidGrade, GRADE_ERROR
 ├── services/
-│   ├── grades.py                # NEW: grade_counts, grade_team_page, is_listed, grading_sheet, save_grades
+│   ├── grades.py                # NEW: grade_counts, grade_team_page, is_listed, team_page_of, grading_sheet, save_grades
 │   ├── competitions.py          # finish_competition, NotFinishable; docstring
+│   ├── competition_entries.py   # question_copies (moved from team_answers; no import cycle)
 │   └── team_answers.py          # answer_team_page / answer_sheet: Read access, finished, grades
 ├── routers/
 │   ├── teacher_grades.py        # NEW: 3 endpoints, notice, refusal, addresses

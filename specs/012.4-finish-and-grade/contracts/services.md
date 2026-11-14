@@ -14,11 +14,13 @@ class InvalidGrade(ValueError):
 
 def clean_grade(raw: str) -> int | None
     # strip(); "" → None (not graded)
-    # else: isascii() and isdigit() and len ≤ 3 and 0 ≤ int ≤ 10 → int
-    # else: InvalidGrade
+    # not (isascii() and isdigit()) → InvalidGrade
+    # significant = value.lstrip("0") or "0"        (leading zeros ignored, however many)
+    # len(significant) ≤ 2 and int(significant) ≤ 10 → int; else InvalidGrade
 ```
 
-"07" → 7; "7.5", "-1", "11", "seven", "+7", "7.0", "1e1", "٧" → `InvalidGrade` (research R4).
+A grade is an integer from 0 to 10. "07", "0007" → 7; "0010" → 10; "000" → 0; "7.5", "-1", "11",
+"011", "seven", "+7", "7.0", "1e1", "٧" → `InvalidGrade` (research R4).
 
 ## `app/services/competitions.py` (changed)
 
@@ -104,12 +106,17 @@ class GradeSaveResult:
 
 ```text
 class GradingClosed(ValueError): status: CompetitionStatus   # not Finished (409)
-class TeamNotFound(LookupError)                              # unknown, or not in the competition (404)
-class QuestionNotFound(LookupError)                          # not the competition's, or not answered (404)
+class GradedTeamNotFound(LookupError)                        # unknown, or not in the competition (404)
+class GradedQuestionNotFound(LookupError)                    # not the competition's, or not answered (404)
 class InvalidGrades(ValueError): errors: dict[int, str]      # by copy id, in question order (400)
 ```
 
-`ManageRequired` and `CompetitionNotFound` are the 12.1 errors of `competitions`.
+`ManageRequired` and `CompetitionNotFound` are the 12.1 errors of `competitions`. The two
+not-found errors are named apart from `team_answers.TeamNotFound` and `QuestionNotFound` because
+their rules differ: grading finds a deleted team, or one of a deactivated institution or region
+(a finished competition keeps every team, and every one is graded), and refuses a question the team
+did not answer (it has no answer to grade). Both map to the same "Team not found" and "Question
+not found" pages.
 
 ### Reads
 
@@ -125,8 +132,13 @@ def grade_team_page(session, competition_id, show: GradeFilter, p: int) -> Grade
 def is_listed(session, competition_id, team_id, show: GradeFilter) -> bool
     # the team is in the competition and, under UNGRADED, still has an ungraded answer
 
+def team_page_of(session, competition_id, team_id, show: GradeFilter) -> int
+    # the page of the Grades page under `show` that holds the team, 1 if it is not listed:
+    # the grading sheet's way back when its address carries no valid `back` (as 12.3's
+    # team_answers.team_page_of). Shares one private "listed entries" helper with the two above.
+
 def grading_sheet(session, competition_id, team_id) -> GradingSheet
-    # TeamNotFound for an unknown team or one not in the competition; deleted teams and
+    # GradedTeamNotFound for an unknown team or one not in the competition; deleted teams and
     # deactivated institutions and regions are found. Every copy in order, with its reference
     # answer, the team's answer and grade. No access check: the caller holds the setting and
     # has checked the competition and its status.
@@ -141,9 +153,9 @@ def save_grades(session, teacher_id, competition_id, subject_id, team_id,
 
 In this order, each refusal after a rollback (research R3): the setting `FOR SHARE`
 (`ManageRequired`) → `competitions.lock_competition(share=True)` (`CompetitionNotFound`) → status
-with a fresh clock, not **Finished** → `GradingClosed` → the team (`TeamNotFound`) and its link
-`FOR UPDATE` (`TeamNotFound`) → every named id is a copy of the competition with an answer of the
-team (`QuestionNotFound`) → `clean_grade` on each, in question order (`InvalidGrades`) → the
+with a fresh clock, not **Finished** → `GradingClosed` → the team (`GradedTeamNotFound`) and its
+link `FOR UPDATE` (`GradedTeamNotFound`) → every named id is a copy of the competition with an
+answer of the team (`GradedQuestionNotFound`) → `clean_grade` on each, in question order (`InvalidGrades`) → the
 team's rows re-read (`populate_existing`), each named row's `grade` set where it differs → commit →
 log `Grades saved: competition=%d team=%d graded=%d changed=%d`. A row the save does not name keeps
 its grade. Never touches `text`.
@@ -166,10 +178,23 @@ its grade. Never touches `text`.
 - The module docstring's "Contract for later milestones" names `app.services.grades` as the grader
   of these rows.
 
-## `app/services/competition_entries.py`, `app/services/teams.py` (unchanged)
+## `app/services/competition_entries.py` (changed)
 
-`team_entries`, `group_by_region`, `count_active_members` are reused as they are. `delete_team`
-already skips finished competitions, so it never meets a grade.
+```text
+def question_copies(session, competition_id) -> list[CompetitionQuestion]
+    # the competition's copies in the order of adding (CompetitionQuestion.id): moved here from
+    # team_answers._question_copies, unchanged
+```
+
+Both `team_answers` and `grades` import it from here. **The imports run one way only**:
+`team_answers` → `grades` (for `grade_counts` and `GradeCount`) → `competition_entries`;
+`grades` never imports `team_answers`, so the two services form no import cycle. `team_entries`
+and `group_by_region` are reused as they are.
+
+## `app/services/teams.py` (unchanged)
+
+`count_active_members` is reused as it is. `delete_team` already skips finished competitions, so
+it never meets a grade.
 
 ## Notices (in the routers)
 

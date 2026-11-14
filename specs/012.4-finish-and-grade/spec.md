@@ -599,7 +599,8 @@ capability of its own.
   found"; when it is activated again, the team is listed again with its answers and grades.
 - **The subject is deactivated while a grading sheet is open**: the competition is **Finished**, so the
   save is stored.
-- **A grade typed with a leading zero ("07") or with a plus sign ("+7")**: see Assumptions.
+- **A grade typed with leading zeros ("07", "0010") or with a plus sign ("+7")**: the leading zeros
+  are ignored ("07" is 7, "0010" is 10); the plus sign gets the error (see Assumptions).
 - **A grade field emptied that was never graded**: nothing changes for that answer.
 - **Saving grades with nothing changed**: the save is accepted and shows the notice.
 - **Pressing Save grades or Finish competition twice (double press)**: the form cannot be sent again
@@ -736,8 +737,8 @@ capability of its own.
 - **FR-024**: One **Save grades** button below the questions MUST save all the grades of the page at
   once. After a save the teacher MUST stay on the page with the saved grades in their fields and the
   notice "Grades of “<team>” were saved".
-- **FR-025**: A grade MUST be trimmed of spaces, entered as digits only, and be a whole number from 0
-  to 10 ("0", "7", "10"). Anything else ("7.5", "-1", "11", "seven") MUST get the error "Enter a whole
+- **FR-025**: A grade MUST be trimmed of the spaces, tabs and line breaks around it, entered as digits
+  only (leading zeros ignored), and be an integer from 0 to 10 ("0", "7", "10", "07"). Anything else ("7.5", "-1", "11", "seven") MUST get the error "Enter a whole
   number from 0 to 10.". If any grade is invalid, nothing MUST be saved, and the page MUST show again
   with every entered value kept, the error at each invalid grade and the error summary linking to them,
   in the order of the questions. The server MUST check every grade on every save, whatever the browser
@@ -896,7 +897,8 @@ capability of its own.
     following a link goes to page 1 of the filtered list. They need no JavaScript and no **Show**
     button.
 - **FR-049**: Apart from these, the pages MUST be built from existing components: the section heading,
-  the region group, data tables, page navigation, text cards, the error summary, notices, empty states,
+  the region group, data tables, row notes ("(deleted)"), page navigation, text cards, the error
+  summary, notices, empty states,
   the confirmation and refusal pages, back links, the local-time display and the competition status
   badge.
 
@@ -973,9 +975,8 @@ capability of its own.
 - **SC-011**: All tests from milestones 1–12.3 still pass, apart from those of the rules this milestone
   changes: the actions menu of **In progress** and **Finished** competitions; the 12.3 row note "Read
   access" and "access denied" on the answer sheet of a **Read**-access team; the 12.3 refusal on the
-  Answers pages of a **Finished** competition, which now open read-only; "not found" for the Answers
-  pages of a finished competition of a deactivated subject; and the UI guideline examples changed by
-  FR-047.
+  Answers pages of a **Finished** competition (also of a deactivated subject), which now open
+  read-only; and the UI guideline examples changed by FR-047.
 
 ## Assumptions
 
@@ -984,10 +985,12 @@ capability of its own.
   nobody can change the answers, so the read-only sheet has no access notice for either access level.
 - **Counts follow the number's noun**: "Graded 1 of 1 team" and "Graded 1 of 1 answer", as the region
   headers say "1 team". A team with no answers reads "Score: 0" with "Graded 0 of 0 answers".
-- **A grade is the digits 0–9 only, after trimming spaces, with a value from 0 to 10**: "07" is
-  accepted as 7; "+7", "7.0", "1e1" and digits of other scripts get the error "Enter a whole number from
-  0 to 10."; a value made only of spaces is trimmed to empty, so the answer is not graded. The browser
-  may offer a numeric keypad, but the field accepts whatever is typed and the server decides.
+- **A grade is an integer from 0 to 10, written with the digits 0–9 only**, after trimming the spaces,
+  tabs and line breaks around it. Leading zeros are ignored, however many: "07" and "0007" are 7,
+  "010" is 10, "000" is 0. "+7", "7.0", "1e1", "7 5" and digits of other scripts get the error "Enter a
+  whole number from 0 to 10."; a value made only of spaces is trimmed to empty, so the answer is not
+  graded. The browser may offer a numeric keypad, but the field accepts whatever is typed and the
+  server decides.
 - **A grading save that does not name an answered question** (only a crafted form can omit one) leaves
   that answer's grade as it is.
 - **A save with nothing changed** is accepted and shows the notice.

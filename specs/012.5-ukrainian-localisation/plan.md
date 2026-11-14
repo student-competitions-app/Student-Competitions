@@ -115,8 +115,8 @@ localised-email and bilingual-consent tests; the existing suite keeps running in
   to the database.
 - **Message rules** ([contracts/i18n.md](./contracts/i18n.md)): whole messages, named placeholders,
   user content never translated, no gendered word about another person in Ukrainian.
-- **Approval gate**: the Ukrainian consent wording and the glossary are approved before the pins and
-  the merge (FR-045, FR-050).
+- **Approval gate**: the Ukrainian consent wording is approved before the pins and the merge (FR-045,
+  FR-050). The glossary is approved (research R14).
 
 **Scale/Scope**:
 
@@ -255,7 +255,7 @@ The order the tasks should follow, so the application stays working after each s
 1. **Foundation**: Babel; `i18n.py` (with empty catalogues); middleware; Jinja extension; setting;
    compile in conftest and the image; `test_i18n.py`. Pages still English.
 2. **Consent draft first** (FR-050): the Ukrainian consent wordings drafted and sent to the product
-   owner, with the glossary draft (R14), so the review runs during the rest of the work.
+   owner, so the review runs during the rest of the work.
 3. **Switch and route**: `return_path.py`, `POST /language`, the component, flags, CSS, gallery,
    guidelines entry; `test_language.py`.
 4. **Messages**: components, then each area (sign-in and public pages, profile and consent, admin,

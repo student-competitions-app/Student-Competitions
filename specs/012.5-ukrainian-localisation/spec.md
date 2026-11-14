@@ -568,10 +568,9 @@ and change a placeholder, and check that the test suite fails each time.
   every page MUST use it. It MUST cover at least the application's name («Студентські змагання»), the
   three roles (**Адміністратор** for the administrator), «заклад освіти» for an educational institution,
   the statuses, the access levels, and the names of tabs and buttons.
-- **FR-031**: Since participants come from schools and colleges, the Ukrainian words for the teacher and
-  the student roles MUST fit both: «учень» and «вчитель» (school only) and «студент» and «викладач»
-  (college only) MUST NOT be used for a role. The glossary proposes the words (for example «Педагог» and
-  «Здобувач освіти») and the product owner approves them.
+- **FR-031**: The Ukrainian word for the teacher role MUST be «Педагог», which fits schools and colleges
+  alike («вчитель» and «викладач» MUST NOT be used for the role). The Ukrainian word for the student role
+  MUST be «Студент», the product owner's choice, in line with the application's name.
 - **FR-032**: Ukrainian text MUST follow the plain-language rules of the UI guidelines, use the quotation
   marks «…» with „…“ for a quotation inside a quotation, use the apostrophe ʼ, and address the reader as
   «ви».
@@ -763,10 +762,9 @@ and change a placeholder, and check that the test suite fails each time.
 
 ## Assumptions
 
-- **The role words are decided in the glossary.** The milestone fixes the constraint (FR-031) and the
-  approval step, not the words; until approval the drafts «Педагог» and «Здобувач освіти» are used.
-- **«Студентські змагання»** is the product owner's chosen name and fits the constraint of FR-031, which
-  applies to the role words only.
+- **The role words are decided**: «Педагог» for the teacher and «Студент» for the student (FR-031), as
+  the product owner chose; the product owner has approved the rest of the glossary draft (research R14).
+- **«Студентські змагання»** is the product owner's chosen name, in line with the student role word.
 - **The language switch on pages with no user menu** (signed out, error pages) sits at the end of the top
   bar, where the user menu would be.
 - **The switch offers both languages always**, the current one marked; choosing it again is harmless.

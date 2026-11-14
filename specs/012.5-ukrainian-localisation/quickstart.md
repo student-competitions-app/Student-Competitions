@@ -73,5 +73,5 @@ earlier consent wordings.
 
 ## 6. Product owner acceptance
 
-The product owner approves the glossary (research R14) and the Ukrainian consent wordings; the pins
+The product owner approves the Ukrainian consent wordings (the glossary, research R14, is approved); the pins
 are then set and the walk-through of the milestone's _Acceptance_ list is done in both languages.

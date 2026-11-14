@@ -383,21 +383,22 @@ key) and asserts the order; a grep-style test asserts no `.casefold()` sort key 
 **Rationale**: "every list ordered by a name" (FR-052) needs an inventory, and a guard so a later
 milestone does not reintroduce code-point order.
 
-## R14. The glossary (draft for the product owner)
+## R14. The glossary (approved by the product owner)
 
-**Decision**: the UI guidelines get a glossary table, drafted as below and approved by the product
-owner before acceptance (FR-030, FR-031). Drafts, to be confirmed:
+**Decision**: the UI guidelines get a glossary table, as below (FR-030, FR-031). The product owner
+approved it on 2026-11-15, changing the student role from «Здобувач освіти» to «Студент» and choosing
+«група» for a class:
 
 | English | Ukrainian |
 |---|---|
 | Student Competitions | Студентські змагання |
 | Administrator | Адміністратор |
 | Teacher (role) | Педагог |
-| Student (role) | Здобувач освіти |
+| Student (role) | Студент |
 | educational institution | заклад освіти |
 | region | регіон |
 | subject | предмет |
-| class | клас / група — **to decide**: «клас» for schools, «група» for colleges; draft «клас» |
+| class | група |
 | team | команда |
 | question bank | банк питань |
 | reference answer | еталонна відповідь |
@@ -414,8 +415,8 @@ owner before acceptance (FR-030, FR-031). Drafts, to be confirmed:
 | Withdraw consent / Delete my data | Відкликати згоду / Видалити мої дані |
 | Kyiv time | за київським часом |
 
-The tab "Students" uses «Учасники» (participants) on purpose: it fits school and college and is
-short. Status words are chosen to avoid gender agreement where possible (impersonal forms).
+The tab "Students" uses «Учасники» (participants) on purpose: it lists every participant a teacher
+manages and is short; the role itself is «Студент». Status words are chosen to avoid gender agreement where possible (impersonal forms).
 
 **Rationale**: terms fixed once are used everywhere; impersonal forms satisfy FR-034.
 

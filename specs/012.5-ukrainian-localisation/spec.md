@@ -635,7 +635,8 @@ and change a placeholder, and check that the test suite fails each time.
   student's rewrite 1.
 - **FR-050**: The review of the Ukrainian wording MUST NOT hold up the rest of the work: the upgrade
   starts with the draft wordings, and the pinned checksums are set last, once the wording is approved;
-  the change is merged only after that.
+  the change is merged only after that. Until then the draft's checksums may be pinned temporarily,
+  marked as a draft, so the test suite stays green; they never reach a merge.
 - **FR-051**: This MUST be the last rewrite in place: milestone 12.5 reaches production before the first
   real invitation is accepted, and from then on any change to a consent text is a new version.
 

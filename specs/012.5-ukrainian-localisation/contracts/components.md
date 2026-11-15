@@ -59,6 +59,13 @@ The macro takes `date_label` and `time_label` as whole messages instead of build
 
 The header count is `ngettext("%(num)d team", "%(num)d teams", total)`.
 
+## 6a. `status_badge(is_active, kind)` — changed, `components/badge.html`
+
+Takes the kind of record (`subject`, `region`, `institution`, `class`; anything else →
+`template_error`), so the Ukrainian word agrees with the record's noun: `pgettext(kind, "Active")`
+is «Активний» for предмет, регіон, заклад освіти and «Активна» for група; `pgettext(kind,
+"Deactivated")` is «Деактивовано» for all. Every caller passes its kind; the gallery shows each.
+
 ## 7. Consent text — new partial use in `pages/invitation.html` and `pages/profile.html`
 
 ```html

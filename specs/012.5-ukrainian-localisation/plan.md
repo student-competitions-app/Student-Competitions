@@ -81,7 +81,11 @@ localised-email and bilingual-consent tests; the existing suite keeps running in
 - New modules: `tests/unit/test_catalogues.py`, `tests/unit/test_template_text.py`,
   `tests/unit/test_i18n.py`, `tests/unit/test_name_order.py`,
   `tests/integration/test_language.py`, `tests/integration/test_localised_emails.py`,
-  `tests/integration/test_bilingual_consent.py`.
+  `tests/integration/test_bilingual_consent.py`, `tests/unit/test_ukrainian_wording.py`
+  (typography, gendered forms, glossary terms in the Ukrainian catalogue),
+  `tests/integration/test_ukrainian_names.py` (apostrophe duplicates and list order through the
+  services), `tests/integration/test_local_times.py` (times on pages, the Kyiv fallback, the form
+  hint).
 - Updated modules: `tests/conftest.py`, `test_consent_texts`, `test_migrations`, `test_email`,
   `test_teacher_invitation`, `test_student_invitation`, the time-zone and competition-form tests that
   expect the UTC fallback, the name-order assertions in the listing tests, `test_layout`,
@@ -175,6 +179,7 @@ specs/012.5-ukrainian-localisation/
 │   ├── http-routes.md      # POST /language; changed pages and routes
 │   ├── components.md       # language_switch, top_bar, local_date, form field, consent parts
 │   └── services.md         # config, templates, return path, names, emails, consent, migration
+├── consent-wording.md      # the draft bilingual consent texts for the product owner's review
 ├── checklists/             # from /speckit-specify
 └── tasks.md                # Phase 2 (/speckit-tasks)
 ```
@@ -234,8 +239,10 @@ Dockerfile                       # pybabel compile in the runtime stage
 pyproject.toml, uv.lock          # babel
 
 tests/
-├── unit/test_catalogues.py, test_template_text.py, test_i18n.py, test_name_order.py   # NEW
-├── integration/test_language.py, test_localised_emails.py, test_bilingual_consent.py  # NEW
+├── unit/test_catalogues.py, test_template_text.py, test_i18n.py, test_name_order.py,
+│   test_ukrainian_wording.py                                                       # NEW
+├── integration/test_language.py, test_localised_emails.py, test_bilingual_consent.py,
+│   test_ukrainian_names.py, test_local_times.py                                    # NEW
 └── (updated) conftest.py and the modules listed in Technical Context
 
 docs/requirements/product-requirements.md   # Languages section

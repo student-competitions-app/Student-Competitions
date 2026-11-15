@@ -366,7 +366,7 @@ integrity error halfway through.
 |---|---|
 | `services/subjects.py:64,71`; `services/competitions.py:284` | subjects; deactivated subjects |
 | `services/regions.py:65,72`; `services/teacher_access.py:140` | regions; a teacher's regions |
-| `services/institutions.py:110,149`; `routers/admin_teachers.py:141`; `services/teachers.py:239` | institutions, "Name (Region)" choices, a teacher's institution links: by `(name, region)` keys, not the joined label |
+| `services/institutions.py:98,149`; `routers/admin_teachers.py:141`; `services/teachers.py:239` | institutions, "Name (Region)" choices, a teacher's institution links: by `(name, region)` keys, not the joined label |
 | `services/teacher_access.py:132` | institutions within regions |
 | `services/classes.py:89` | classes |
 | `services/teachers.py:263` | teachers |
@@ -404,7 +404,7 @@ approved it on 2026-11-15, changing the student role from «Здобувач о�
 | reference answer | еталонна відповідь |
 | competition | змагання |
 | Upcoming / In progress / Finished / Cancelled | Заплановано / Триває / Завершено / Скасовано |
-| Active / Deactivated | Активний / Деактивовано |
+| Active / Deactivated (per kind of record, `pgettext(kind, …)`) | Активний (предмет, регіон, заклад освіти), Активна (група) / Деактивовано |
 | Read / Write (access) | Перегляд / Редагування |
 | Can manage competitions | Може керувати змаганнями |
 | Students / Teams / Questions / Competitions (tabs) | Учасники / Команди / Питання / Змагання |
@@ -455,7 +455,9 @@ plain-text server error are untouched.
 - **`tests/unit/test_template_text.py`** (new): parses every template except the gallery with Jinja's
   lexer; in each raw-text token, strips HTML tags, and fails on Latin letters left in text content or
   in the `aria-label`, `title`, `alt` and `placeholder` attribute values — so untranslated literals in
-  templates are caught. Allow-list: none expected beyond `<!doctype html>`.
+  templates are caught. Allow-list: `<!doctype html>` and the literal "English" of the language
+  switch (FR-007: each language's name is written in its own language, never translated). A second
+  test guards FR-005: no `lang="ua"` and no `"ua"` used as a language code.
 - **`tests/unit/test_i18n.py`** (new): `Text` translation, equality, nested parameters, user values
   untouched; Ukrainian plural forms for 1, 2, 5, 11, 21, 22, 25; genitive months; `parse_language`;
   `resolve_default_language` (unset, `uk`, `en`, invalid).

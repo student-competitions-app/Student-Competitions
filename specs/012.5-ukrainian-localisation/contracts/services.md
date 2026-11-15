@@ -18,7 +18,9 @@ def resolve_default_language(environ: Mapping[str, str] = os.environ) -> Languag
 
 - Lifespan: `resolve_default_language()` beside `resolve_auth_settings()`, before the database;
   `load_translations()`; `app.state.default_language`.
-- `app.add_middleware(LanguageMiddleware)`.
+- `app.add_middleware(LanguageMiddleware)` at **module level**, right after `app = FastAPI(...)`,
+  never inside the lifespan: Starlette refuses middleware once the app has started (its first call is
+  the startup event). It then wraps routing and the exception handlers.
 - `app.include_router(language.router)`.
 - Error handlers: messages as `Text` (research R16).
 

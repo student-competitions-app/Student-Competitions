@@ -387,7 +387,8 @@ milestone does not reintroduce code-point order.
 
 **Decision**: the UI guidelines get a glossary table, as below (FR-030, FR-031). The product owner
 approved it on 2026-11-15, changing the student role from «Здобувач освіти» to «Студент» and choosing
-«група» for a class:
+«група» for a class, and on the same day confirmed the per-kind status words «Активний» (предмет,
+регіон, заклад освіти) and «Активна» (група):
 
 | English | Ukrainian |
 |---|---|

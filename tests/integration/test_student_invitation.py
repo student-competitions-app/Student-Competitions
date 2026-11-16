@@ -159,7 +159,7 @@ def test_a_valid_form_sends_the_invitation_and_stores_nothing(
 
     [message] = outbox
     assert message.to == TARAS
-    assert message.subject == "You are invited to Student Competitions as a student"
+    assert message.subject.endswith(" / You are invited to Student Competitions as a student")
     for statement in (
         f"Olena Kovalenko ({OLENA}) invites you to Student Competitions as a student.",
         "Role: Student",
@@ -476,7 +476,7 @@ def test_the_student_signs_in_and_sees_their_profile(
         TARAS,
         FIRST,
         LAST,
-        " UTC · Student · version 1",
+        " (Kyiv time) · Student · version 1",
         "your class, which also records",
         "Corrections to student data are made by a teacher of your educational institution.",
     ):

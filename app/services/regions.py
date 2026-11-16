@@ -22,8 +22,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
+from app.core.i18n import _
 from app.models import Institution, Region
-from app.schemas.names import clean_name, name_key
+from app.schemas.names import clean_name, name_key, name_sort_key
 from app.services.availability import sign_out_students_below
 
 logger = logging.getLogger("uvicorn.error")
@@ -42,7 +43,7 @@ class DuplicateRegionName(ValueError):
 
     def __init__(self, existing_name: str) -> None:
         self.existing_name = existing_name
-        self.message = f"A region named “{existing_name}” already exists."
+        self.message = _("A region named “%(name)s” already exists.", name=existing_name)
         super().__init__(self.message)
 
 
@@ -62,14 +63,14 @@ def list_regions(session: Session) -> list[Region]:
     collation: this way SQLite and PostgreSQL give the same order (research D6).
     """
     regions = session.exec(select(Region)).all()
-    return sorted(regions, key=lambda region: (region.name_key, region.id))
+    return sorted(regions, key=lambda region: (name_sort_key(region.name), region.id))
 
 
 def list_active_regions(session: Session) -> list[Region]:
     """The active regions, sorted as `list_regions` sorts them: the **Region** list of "Add
     teams" (milestone 12.2 research R14)."""
     regions = session.exec(select(Region).where(col(Region.is_active))).all()
-    return sorted(regions, key=lambda region: (region.name_key, region.id))
+    return sorted(regions, key=lambda region: (name_sort_key(region.name), region.id))
 
 
 def get_region(session: Session, region_id: int) -> Region:

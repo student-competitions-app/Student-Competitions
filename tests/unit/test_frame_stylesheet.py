@@ -131,3 +131,18 @@ def test_the_skip_link_is_above_the_frame() -> None:
     frame = re.search(r"z-index:\s*(\d+)", rule("body > .frame", rules(pinned)))
     assert skip and frame
     assert int(skip.group(1)) > int(frame.group(1))
+
+
+def test_the_wordmark_gives_way_on_a_phone_when_a_role_is_shown() -> None:
+    """Milestone 12.5 research R15: below 768 px, with the language switch and the user menu in the
+    top bar, the wordmark is hidden visually beside a role label, and shown again from 768 px."""
+    css_rules = top_level_rules()
+    hidden = rule(".brand-with-role .brand-name", css_rules)
+    assert "position: absolute" in hidden and "clip: rect(0 0 0 0)" in hidden
+    wide = [
+        body
+        for block in media_blocks("(min-width: 768px)")
+        for selector, body in rules(block)
+        if selector == ".brand-with-role .brand-name"
+    ]
+    assert len(wide) == 1 and "position: static" in wide[0]

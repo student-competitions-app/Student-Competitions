@@ -5,26 +5,26 @@
 {% from "components/button.html" import link_button, post_button %}
 {% from "components/feedback.html" import notice, empty_state %}
 
-{% block title %}Students — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Students") }} — {{ app_name }}{% endblock %}
 
 {% block scripts %}<script src="/static/js/auto-submit.js" defer></script>{% endblock %}
 
 {% block teacher_content %}
-{{ page_heading("Students") }}
-{% if sent_to %}{{ notice("Invitation sent to " ~ sent_to, "success") }}{% endif %}
+{{ page_heading(_("Students")) }}
+{% if sent_to %}{{ notice(_("Invitation sent to %(email)s", email=sent_to), "success") }}{% endif %}
 {% set no_links = not regions %}
 {% set opts = namespace(institutions=[], classes=[]) %}
 {% for i in institutions %}{% set opts.institutions = opts.institutions + [(i.id, i.label)] %}{% endfor %}
 {% for c in classes %}{% set opts.classes = opts.classes + [(c.id, c.label ~ ("" if c.is_active else " (deactivated)"))] %}{% endfor %}
 {{ chained_lists([
-  {"id": "region", "name": "region", "label": "Region", "placeholder": "Select a region",
+  {"id": "region", "name": "region", "label": _("Region"), "placeholder": _("Select a region"),
    "options": regions, "selected": selected_region, "disabled": no_links, "carry": []},
-  {"id": "institution", "name": "institution", "label": "Educational institution",
-   "placeholder": "Select an educational institution", "options": opts.institutions,
+  {"id": "institution", "name": "institution", "label": _("Educational institution"),
+   "placeholder": _("Select an educational institution"), "options": opts.institutions,
    "selected": selected_institution.id if selected_institution else none,
    "disabled": no_links or selected_region is none,
    "carry": [("region", selected_region)] if selected_region is not none else []},
-  {"id": "class", "name": "class", "label": "Class", "placeholder": "Select a class",
+  {"id": "class", "name": "class", "label": _("Class"), "placeholder": _("Select a class"),
    "options": opts.classes, "selected": selected_class.id if selected_class else none,
    "disabled": no_links or not selected_institution,
    "carry": [("region", selected_region), ("institution", selected_institution.id)] if selected_institution else [],
@@ -33,40 +33,40 @@
 
 {#- The one-line next step under each empty message (contracts/pages.md §4.3). -#}
 {% set hints = {
-  "You are not linked to any educational institution": "Ask an administrator to link you to an educational institution.",
-  "Select a region to continue": "Choose a region in the first list.",
-  "Select an educational institution to continue": "Choose an educational institution in the second list.",
-  "Select a class to see its students": "Choose a class in the third list.",
-  "No students in this class yet": "Add the first student with Add student." if can_write and selected_class and selected_class.is_active else none,
-  "This class is deactivated; its students are hidden until it is activated again": "Activate the class to see its students." if can_write else none,
+  "You are not linked to any educational institution": _("Ask an administrator to link you to an educational institution."),
+  "Select a region to continue": _("Choose a region in the first list."),
+  "Select an educational institution to continue": _("Choose an educational institution in the second list."),
+  "Select a class to see its students": _("Choose a class in the third list."),
+  "No students in this class yet": _("Add the first student with Add student.") if can_write and selected_class and selected_class.is_active else none,
+  "This class is deactivated; its students are hidden until it is activated again": _("Activate the class to see its students.") if can_write else none,
 } %}
 
 {% if selected_class %}
 {% set class_path = "/teacher/students/classes/" ~ selected_class.id %}
 <section aria-labelledby="class-heading">
-  {% call section_heading(selected_class.label, "class-heading", ("Add student", class_path ~ "/invite") if can_write and selected_class.is_active else None, deactivated=not selected_class.is_active) %}
+  {% call section_heading(selected_class.label, "class-heading", (_("Add student"), class_path ~ "/invite") if can_write and selected_class.is_active else None, deactivated=not selected_class.is_active) %}
     {%- if can_write -%}
-    {{- link_button("Edit", class_path ~ "/edit", kind="secondary", outline=True, small=True) -}}
+    {{- link_button(_("Edit"), class_path ~ "/edit", kind="secondary", outline=True, small=True) -}}
     {%- if selected_class.is_active -%}
-    {{- link_button("Deactivate", class_path ~ "/deactivate", kind="destructive", outline=True, small=True) -}}
+    {{- link_button(_("Deactivate"), class_path ~ "/deactivate", kind="destructive", outline=True, small=True) -}}
     {%- else -%}
-    {{- post_button(class_path ~ "/activate", "Activate", kind="secondary", outline=True, small=True) -}}
+    {{- post_button(class_path ~ "/activate", _("Activate"), kind="secondary", outline=True, small=True) -}}
     {%- endif -%}
-    {{- link_button("Delete", class_path ~ "/delete", kind="destructive", outline=True, small=True) -}}
+    {{- link_button(_("Delete"), class_path ~ "/delete", kind="destructive", outline=True, small=True) -}}
     {%- endif -%}
   {% endcall %}
   {% if message %}{{ empty_state(message, hints.get(message)) }}{% endif %}
   {% if students %}
   {% set selection = "?region=" ~ selected_region ~ "&institution=" ~ selected_institution.id ~ "&class=" ~ selected_class.id %}
-  {% call data_table(["Name", "Email", "Actions"] if can_write else ["Name", "Email"]) %}
+  {% call data_table([_("Name"), _("Email"), _("Actions")] if can_write else [_("Name"), _("Email")]) %}
   {% for s in students %}
   <tr>
-    {{ cell("Name", s.last_name ~ " " ~ s.first_name) }}
-    {{ cell("Email", s.email) }}
+    {{ cell(_("Name"), s.last_name ~ " " ~ s.first_name) }}
+    {{ cell(_("Email"), s.email) }}
     {% if can_write %}
     {% call actions_cell() %}
-    {{- link_button("Edit", "/teacher/students/" ~ s.user_id ~ selection, kind="secondary", outline=True, small=True) -}}
-    {{- link_button("Remove", "/teacher/students/" ~ s.user_id ~ "/remove" ~ selection, kind="destructive", outline=True, small=True) -}}
+    {{- link_button(_("Edit"), "/teacher/students/" ~ s.user_id ~ selection, kind="secondary", outline=True, small=True) -}}
+    {{- link_button(_("Remove"), "/teacher/students/" ~ s.user_id ~ "/remove" ~ selection, kind="destructive", outline=True, small=True) -}}
     {% endcall %}
     {% endif %}
   </tr>

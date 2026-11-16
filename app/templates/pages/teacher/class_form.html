@@ -6,16 +6,16 @@
 
 {% block teacher_content %}
 {% if class_name %}
-{{ back_link(cancel, "Back to “" ~ class_name ~ "”") }}
+{{ back_link(cancel, pgettext("class", "Back to “%(name)s”", name=class_name)) }}
 {% else %}
-{{ back_link(cancel, "Back to Students") }}
+{{ back_link(cancel, _("Back to Students")) }}
 {% endif %}
 {{ page_heading(heading) }}
 {{ error_summary(errors, order=["name", "year_of_study"]) }}
-<p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
+<p>{{ _("Educational institution: %(institution)s", institution=institution.name) }} ({{ institution.region_name }})</p>
 <form method="post" action="{{ action }}">
-  {{ field("name", "Name", value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
-  {{ field("year_of_study", "Year of study", value=values.year_of_study, error=errors.year_of_study, type="number", attrs={"min": "1", "max": "12", "step": "1", "required": True}) }}
-  {{ form_actions("Save", cancel_href=cancel) }}
+  {{ field("name", _("Name"), value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
+  {{ field("year_of_study", _("Year of study"), value=values.year_of_study, error=errors.year_of_study, type="number", attrs={"min": "1", "max": "12", "step": "1", "required": True}) }}
+  {{ form_actions(_("Save"), cancel_href=cancel) }}
 </form>
 {% endblock %}

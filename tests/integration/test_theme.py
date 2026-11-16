@@ -136,7 +136,7 @@ def test_the_user_menu_has_the_switch_between_the_role_switch_and_log_out(
     browser = client_as(ADMIN_STUDENT_EMAIL)
     browser.post("/role", data={"role": "admin"})
     body = browser.get("/admin/subjects?x=1").text
-    actions = [f.action for f in html.forms(body, "details")]
+    actions = [f.action for f in html.forms(body, "details") if f.action != "/language"]
     assert actions == ["/role", "/theme", "/logout"]
     (switch,) = switches(body, "details")
     assert html.Input("next", "hidden", "/admin/subjects?x=1") in switch.inputs

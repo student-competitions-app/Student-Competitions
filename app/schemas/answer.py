@@ -12,6 +12,7 @@ The answer field also limits its text to 2,000 characters in the browser (`maxle
 never relies on that limit (spec FR-018).
 """
 
+from app.core.i18n import Text, _
 from app.schemas.question import QUESTION_FIELD_MAX_LENGTH
 
 ANSWER_MAX_LENGTH = QUESTION_FIELD_MAX_LENGTH
@@ -21,7 +22,7 @@ ANSWER_MAX_LENGTH = QUESTION_FIELD_MAX_LENGTH
 class InvalidAnswer(ValueError):
     """The answer breaks a rule; `message` is ready to show beside the field."""
 
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: Text) -> None:
         super().__init__(message)
         self.message = message
 
@@ -31,8 +32,12 @@ def clean_answer(raw: str, number: int) -> str:
     when it is not answered, or `InvalidAnswer` with the first rule it breaks."""
     value = raw.replace("\r\n", "\n").replace("\r", "\n")
     if "\x00" in value:
-        raise InvalidAnswer(f"Answer to question {number} cannot contain a null character.")
+        raise InvalidAnswer(
+            _("Answer to question %(number)d cannot contain a null character.", number=number)
+        )
     value = value.strip()
     if len(value) > ANSWER_MAX_LENGTH:
-        raise InvalidAnswer(f"Answer to question {number} can be at most 2,000 characters.")
+        raise InvalidAnswer(
+            _("Answer to question %(number)d can be at most 2,000 characters.", number=number)
+        )
     return value

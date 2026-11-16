@@ -3,23 +3,23 @@
 {% from "components/confirmation.html" import confirmation, refusal %}
 {% from "components/button.html" import link_button %}
 
-{% block title %}Delete educational institution “{{ institution.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Delete educational institution “%(name)s”", name=institution.name) }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
 {% set region_path = "/admin/institutions/regions/" ~ region.id %}
 {% set path = region_path ~ "/institutions/" ~ institution.id %}
-{% set question = "Delete educational institution “" ~ institution.name ~ "”?" %}
-{{ back_link(region_path, "Back to “" ~ region.name ~ "”") }}
+{% set question = _("Delete educational institution “%(name)s”?", name=institution.name) %}
+{{ back_link(region_path, pgettext("region", "Back to “%(name)s”", name=region.name)) }}
 {% if in_use %}
-{% call refusal(question, "“" ~ institution.name ~ "” is in use and cannot be deleted. You can deactivate it instead.", region_path, "Back to “" ~ region.name ~ "”") %}
-{% if institution.is_active %}{{ link_button("Deactivate", path ~ "/deactivate", kind="destructive") }}{% endif %}
+{% call refusal(question, pgettext("institution", "“%(name)s” is in use and cannot be deleted. You can deactivate it instead.", name=institution.name), region_path, pgettext("region", "Back to “%(name)s”", name=region.name)) %}
+{% if institution.is_active %}{{ link_button(_("Deactivate"), path ~ "/deactivate", kind="destructive") }}{% endif %}
 {% endcall %}
-<p>Region: {{ region.name }}</p>
+<p>{{ _("Region: %(region)s", region=region.name) }}</p>
 {% else %}
-{% call confirmation(question, none, path ~ "/delete", "Delete", region_path) %}
-<p>Region: {{ region.name }}</p>
-{% if classes == 1 %}<p>Its class will be deleted too.</p>{% elif classes > 1 %}<p>Its {{ classes }} classes will be deleted too.</p>{% endif %}
-<p>Deleting an educational institution cannot be undone.</p>
+{% call confirmation(question, none, path ~ "/delete", _("Delete"), region_path) %}
+<p>{{ _("Region: %(region)s", region=region.name) }}</p>
+{% if classes == 1 %}<p>{{ _("Its class will be deleted too.") }}</p>{% elif classes > 1 %}<p>{{ ngettext("Its %(num)d class will be deleted too.", "Its %(num)d classes will be deleted too.", classes) }}</p>{% endif %}
+<p>{{ _("Deleting an educational institution cannot be undone.") }}</p>
 {% endcall %}
 {% endif %}
 {% endblock %}

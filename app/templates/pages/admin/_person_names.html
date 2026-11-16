@@ -1,4 +1,4 @@
 {#- The first and last name fields of the teacher and student forms (contracts/pages.md §1.4). -#}
 {% from "components/form.html" import field %}
-{{ field("first_name", "First name", value=values.first_name, error=errors.first_name, attrs={"maxlength": "100", "required": True}) }}
-{{ field("last_name", "Last name", value=values.last_name, error=errors.last_name, attrs={"maxlength": "100", "required": True}) }}
+{{ field("first_name", _("First name"), value=values.first_name, error=errors.first_name, attrs={"maxlength": "100", "required": True}) }}
+{{ field("last_name", _("Last name"), value=values.last_name, error=errors.last_name, attrs={"maxlength": "100", "required": True}) }}

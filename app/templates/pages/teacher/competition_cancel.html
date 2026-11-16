@@ -6,10 +6,10 @@
 {% from "components/confirmation.html" import confirmation %}
 {% from "components/time.html" import local_time with context %}
 
-{% block title %}Cancel competition “{{ competition.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Cancel competition “%(name)s”", name=competition.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back, "Back to the competitions") }}
-{% set question %}Cancel competition “{{ competition.name }}” of {{ subject.name }}, starting {{ local_time(competition.starts_at) }}?{% endset %}
-{{ confirmation(question, "The competition will be marked Cancelled and stays in the list. It cannot be edited, started or restored.", "/teacher/competitions/" ~ competition.id ~ "/cancel", "Cancel competition", back, hidden={"subject": subject.id, "status": status_value, "page": page}, back_label="Keep competition") }}
+{{ back_link(back, _("Back to the competitions")) }}
+{% set question %}{{ _("Cancel competition “%(name)s” of %(subject)s, starting %(time)s?", name=competition.name, subject=subject.name, time=local_time(competition.starts_at)) }}{% endset %}
+{{ confirmation(question, _("The competition will be marked Cancelled and stays in the list. It cannot be edited, started or restored."), "/teacher/competitions/" ~ competition.id ~ "/cancel", _("Cancel competition"), back, hidden={"subject": subject.id, "status": status_value, "page": page}, back_label=_("Keep competition")) }}
 {% endblock %}

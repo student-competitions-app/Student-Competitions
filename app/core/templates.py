@@ -17,17 +17,22 @@ same way, through a context processor that reads `request.state` (set by
 `app.core.auth.resolve_access`), so the layout header can show the address, the current role, the
 role switch and the logout form without each handler passing them (FR-031, FR-018).
 
-The theme choice reaches every template the same way, through `_theme` (milestone 10 research
-D5–D6): `theme` is the browser's choice, rendered by the layout as `data-theme`, and
-`theme_return` is where the theme switch sends the browser back to.
+The browser's choices reach every template the same way, through `_page_context`: `theme` (milestone
+10 research D5–D6) is the theme, rendered by the layout as `data-theme`; `language` (milestone 12.5
+research R1, R7) is the request's language code, rendered as `<html lang>`; and `return_path` is
+where the theme and language switches send the browser back to.
+
+Text is translated through `jinja2.ext.i18n` with new-style callables (milestone 12.5 research
+R2): `{{ _("Delete “%(name)s”?", name=x) }}`, `ngettext`, `pgettext`. The callables read the
+request's language from `app.core.i18n`; Jinja formats the named parameters and escapes them.
 
 The browser's time zone reaches every template the same way, through `_time_zone` (milestone 12.1
 research R4, R10): `time_zone` is the zone named by the `sc_time_zone` cookie, or `None` when none
-is known. `format_local_time` and `utc_iso` are globals, so the `local_time` component shows a
-stored time in that zone, or in UTC labelled so.
+is known. `format_local_time`, `format_local_date` and `utc_iso` are globals, so the `local_time`
+and `local_date` components show a stored time in that zone, or in Kyiv time (milestone 12.5
+research R9).
 """
 
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -36,8 +41,15 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import TemplateRuntimeError
 
 from app.core.config import APP_NAME, APP_VERSION, COMMIT_SHA
+from app.core.i18n import current_language, gettext, ngettext, npgettext, pgettext
 from app.core.theme import read_theme
-from app.core.time_zone import format_local_time, read_time_zone, utc_iso
+from app.core.time_zone import (
+    format_local_date,
+    format_local_time,
+    local_date_iso,
+    read_time_zone,
+    utc_iso,
+)
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 
@@ -58,17 +70,18 @@ def _current_user(request: Request) -> dict[str, Any]:
     }
 
 
-def _theme(request: Request) -> dict[str, Any]:
-    """`theme` (`light`, `dark` or `device`) and `theme_return` for every template. The return
-    address is the path and query of a page shown by `GET` (or `HEAD`); a page shown after a
-    `POST` returns to its path alone, since its query, if any, belonged to the submission.
-    `POST /theme` checks the address again."""
+def _page_context(request: Request) -> dict[str, Any]:
+    """`theme` (`light`, `dark` or `device`), `language` (`uk` or `en`) and `return_path` for
+    every template. The return address is the path and query of a page shown by `GET` (or
+    `HEAD`); a page shown after a `POST` returns to its path alone, since its query, if any,
+    belonged to the submission. `POST /theme` and `POST /language` check the address again."""
     path = request.url.path
     query = request.url.query
     keep_query = request.method in ("GET", "HEAD") and query
     return {
         "theme": read_theme(request).value,
-        "theme_return": f"{path}?{query}" if keep_query else path,
+        "language": getattr(request.state, "language", current_language()).value,
+        "return_path": f"{path}?{query}" if keep_query else path,
     }
 
 
@@ -78,22 +91,12 @@ def _time_zone(request: Request) -> dict[str, Any]:
 
 
 templates = Jinja2Templates(
-    directory=TEMPLATES_DIR, context_processors=[_current_user, _theme, _time_zone]
+    directory=TEMPLATES_DIR, context_processors=[_current_user, _page_context, _time_zone]
 )
-
-
-def utc(value: datetime | None, form: str = "time") -> str:
-    """The `utc` filter (milestone 8 research D19): `value|utc` → `2026-10-22 14:05 UTC`,
-    `value|utc("date")` → `2026-10-15`, and `None` → an empty string. Stored times are already
-    UTC; the label says so, since there is no per-person time zone yet."""
-    if value is None:
-        return ""
-    if form == "date":
-        return value.strftime("%Y-%m-%d")
-    return value.strftime("%Y-%m-%d %H:%M UTC")
-
-
-templates.env.filters["utc"] = utc
+templates.env.add_extension("jinja2.ext.i18n")
+templates.env.install_gettext_callables(  # type: ignore[attr-defined]
+    gettext, ngettext, newstyle=True, pgettext=pgettext, npgettext=npgettext
+)
 
 
 def template_error(message: str) -> None:
@@ -105,6 +108,8 @@ def template_error(message: str) -> None:
 
 templates.env.globals["template_error"] = template_error
 templates.env.globals["format_local_time"] = format_local_time
+templates.env.globals["format_local_date"] = format_local_date
+templates.env.globals["local_date_iso"] = local_date_iso
 templates.env.globals["utc_iso"] = utc_iso
 
 templates.env.globals["app_name"] = APP_NAME

@@ -1,6 +1,7 @@
-{#- Local time (milestone 12.1 contracts/components.md §4, research R10). A stored UTC moment in the
-    browser's zone: "14 March 2027, 10:00"; with no zone known, the UTC value labelled "UTC". The
-    `datetime` attribute always holds the UTC value. Import it `with context`: `zone` defaults to
+{#- Local time (milestone 12.1 contracts/components.md §4, research R10; milestone 12.5 research
+    R9). A stored UTC moment in the browser's zone, in the page's language: "14 March 2027, 10:00",
+    «14 березня 2027, 10:00»; with no zone known, Kyiv time labelled so: "14 March 2027, 10:00 (Kyiv
+    time)". The `datetime` attribute always holds the UTC value. Import it `with context`: `zone` defaults to
     the request's `time_zone` (set by `app.core.templates`); the gallery passes it to show each
     variant. In a heading, capture the heading with `{% set … %}…{% endset %}` and pass it on;
     never build it as a string in Python. -#}
@@ -8,4 +9,11 @@
 {% macro local_time(moment, zone=time_zone) -%}
 {%- if moment is none %}{{ template_error("local_time: the moment is required") }}{% endif -%}
 <time datetime="{{ utc_iso(moment) }}">{{ format_local_time(moment, zone) }}</time>
+{%- endmacro %}
+
+{#- A date alone (milestone 12.5 contracts/components.md §4): the day of a stored moment in the same
+    zone (Kyiv when unknown), with no label: `<time datetime="2026-10-15">15 October 2026</time>`. -#}
+{% macro local_date(moment, zone=time_zone) -%}
+{%- if moment is none %}{{ template_error("local_date: the moment is required") }}{% endif -%}
+<time datetime="{{ local_date_iso(moment, zone) }}">{{ format_local_date(moment, zone) }}</time>
 {%- endmacro %}

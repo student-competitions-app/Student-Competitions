@@ -50,6 +50,7 @@ from sqlmodel import Session
 
 from app.core.auth import AccessDenied, allow_roles
 from app.core.db import SessionDep
+from app.core.i18n import Text, _
 from app.core.sealing import SealExpired, SealInvalid, seal, unseal
 from app.models import Role
 from app.routers.teacher import render_teacher
@@ -88,18 +89,22 @@ from app.services.team_answers import (
 router = APIRouter(prefix="/teacher/competitions/{competition_id:int}")
 
 TEAM_NOT_FOUND = (
-    "Team not found",
-    "This team does not exist, or it is not in this competition.",
+    _("Team not found"),
+    _("This team does not exist, or it is not in this competition."),
 )
-QUESTION_NOT_FOUND = ("Question not found", "This question is not in this competition.")
+QUESTION_NOT_FOUND = (_("Question not found"), _("This question is not in this competition."))
 """The not-found page's heading and text (http-routes.md §Order of checks)."""
 
-ANSWER_REFUSALS = {
-    CompetitionStatus.UPCOMING: "“{name}” has not started yet, so its answers cannot be entered"
-    " yet.",
-    CompetitionStatus.CANCELLED: "“{name}” has been cancelled, so its answers can no longer be"
-    " entered.",
-    CompetitionStatus.FINISHED: "“{name}” has finished, so its answers can no longer be entered.",
+ANSWER_REFUSALS: dict[Any, Callable[..., Text]] = {
+    CompetitionStatus.UPCOMING: lambda name: _(
+        "“%(name)s” has not started yet, so its answers cannot be entered yet.", name=name
+    ),
+    CompetitionStatus.CANCELLED: lambda name: _(
+        "“%(name)s” has been cancelled, so its answers can no longer be entered.", name=name
+    ),
+    CompetitionStatus.FINISHED: lambda name: _(
+        "“%(name)s” has finished, so its answers can no longer be entered.", name=name
+    ),
 }
 """The reason of the refusal, by the competition's status (http-routes.md §Refusal)."""
 
@@ -172,7 +177,7 @@ def read_answers_notice(
         return None
     if (competition, team) != (competition_id, team_id) or payload.get("outcome") != "saved":
         return None
-    return f"Answers of “{team_name}” were saved"
+    return _("Answers of “%(name)s” were saved", name=team_name)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -193,11 +198,11 @@ def answers_refused(
         "pages/teacher/competition_refused.html",
         TAB,
         {
-            "question": f"Enter answers for “{competition.name}”?",
-            "reason": ANSWER_REFUSALS[status].format(name=competition.name),
+            "question": _("Enter answers for “%(name)s”?", name=competition.name),
+            "reason": ANSWER_REFUSALS[status](name=competition.name),
             "back": context.back_to_list(competition.id),
-            "back_link_text": "Back to the competitions",
-            "back_text": "Back to competitions",
+            "back_link_text": _("Back to the competitions"),
+            "back_text": _("Back to competitions"),
         },
         status_code=409,
     )

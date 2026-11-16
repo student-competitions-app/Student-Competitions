@@ -2,12 +2,12 @@
 {% from "components/frame.html" import back_link, page_heading %}
 {% from "components/feedback.html" import notice %}
 
-{% block title %}Link requested — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Link requested") }} — {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="narrow">
-  {{ back_link("/login", "Back to sign in") }}
-  {{ page_heading("Check your email") }}
-  {{ notice("If this email is registered, we have sent you a link.", "success") }}
+  {{ back_link("/login", _("Back to sign in")) }}
+  {{ page_heading(_("Check your email")) }}
+  {{ notice(_("If this email is registered, we have sent you a link."), "success") }}
 </div>
 {% endblock %}

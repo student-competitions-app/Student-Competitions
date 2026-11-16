@@ -50,8 +50,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
+from app.core.i18n import Text, _
 from app.models import Competition, Subject
-from app.schemas.names import InvalidName, clean_name, name_key
+from app.schemas.names import InvalidName, clean_name, name_key, name_sort_key
 from app.services.paging import Paging, landing_index
 from app.services.subjects import list_active_subjects
 from app.services.teacher_access import can_manage_competitions
@@ -66,16 +67,17 @@ class CompetitionStatus(StrEnum):
     CANCELLED = "cancelled"
 
     @property
-    def label(self) -> str:
-        """The one word shown for the status, everywhere."""
+    def label(self) -> Text:
+        """The one word shown for the status, everywhere (Заплановано, Триває, Завершено,
+        Скасовано: impersonal forms, so they agree with nothing)."""
         return _LABELS[self]
 
 
 _LABELS = {
-    CompetitionStatus.UPCOMING: "Upcoming",
-    CompetitionStatus.IN_PROGRESS: "In progress",
-    CompetitionStatus.FINISHED: "Finished",
-    CompetitionStatus.CANCELLED: "Cancelled",
+    CompetitionStatus.UPCOMING: _("Upcoming"),
+    CompetitionStatus.IN_PROGRESS: _("In progress"),
+    CompetitionStatus.FINISHED: _("Finished"),
+    CompetitionStatus.CANCELLED: _("Cancelled"),
 }
 
 
@@ -140,7 +142,9 @@ class DuplicateCompetitionName(ValueError):
     the name as entered (after trimming)."""
 
     def __init__(self, entered_name: str) -> None:
-        self.message = f"A competition named “{entered_name}” already exists in this subject."
+        self.message = _(
+            "A competition named “%(name)s” already exists in this subject.", name=entered_name
+        )
         super().__init__(self.message)
 
 
@@ -221,10 +225,10 @@ def status_of(row: Competition, now: datetime) -> CompetitionStatus:
     return CompetitionStatus.IN_PROGRESS
 
 
-def sort_key(view: CompetitionView) -> tuple[float, str, int]:
-    """Latest start first, whatever the status; equal starts by name ignoring case, then id
-    (FR-014). Sorted in Python, so both engines agree."""
-    return (-view.starts_at.timestamp(), view.name_key, view.id)
+def sort_key(view: CompetitionView) -> tuple[float, tuple[tuple[int, int], ...], int]:
+    """Latest start first, whatever the status; equal starts by name in the Ukrainian order
+    (milestone 12.5 FR-052), then id (FR-014). Sorted in Python, so both engines agree."""
+    return (-view.starts_at.timestamp(), name_sort_key(view.name), view.id)
 
 
 def landing(rows: Sequence[CompetitionView], competition_id: int, old_index: int | None) -> Landing:
@@ -281,7 +285,9 @@ def offered_subjects(session: Session) -> SubjectChoices:
     deactivated = session.exec(select(Subject).where(~col(Subject.is_active), finished)).all()
     return SubjectChoices(
         active=list_active_subjects(session),
-        deactivated=sorted(deactivated, key=lambda subject: (subject.name_key, subject.id)),
+        deactivated=sorted(
+            deactivated, key=lambda subject: (name_sort_key(subject.name), subject.id)
+        ),
     )
 
 

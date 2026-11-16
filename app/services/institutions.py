@@ -21,15 +21,16 @@ the one place that computes it.
 
 import logging
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sqlalchemy import delete, func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
+from app.core.i18n import _
 from app.models import Enrolment, Institution, Region, SchoolClass, TeacherInstitution, Team
-from app.schemas.names import clean_name, name_key
+from app.schemas.names import clean_name, name_key, name_sort_key
 from app.services.availability import sign_out_students_below
 from app.services.regions import RegionNotFound, get_region
 
@@ -51,8 +52,9 @@ class DuplicateInstitutionName(ValueError):
 
     def __init__(self, existing_name: str) -> None:
         self.existing_name = existing_name
-        self.message = (
-            f"An educational institution named “{existing_name}” already exists in this region."
+        self.message = _(
+            "An educational institution named “%(name)s” already exists in this region.",
+            name=existing_name,
         )
         super().__init__(self.message)
 
@@ -83,6 +85,12 @@ class SelectableInstitution:
     """"Name (Region)", by the current names."""
     is_selectable: bool
     """The institution and its region are both active (FR-009)."""
+    order: "NameOrder" = field(default=(), compare=False)
+    """Where it stands in a list: by its name, then its region's, in the Ukrainian alphabet
+    (milestone 12.5 FR-052), never by the joined label. Derived, so not compared."""
+
+
+NameOrder = tuple[tuple[tuple[int, int], ...], ...]
 
 
 def _describe(institution: Institution, region: Region) -> SelectableInstitution:
@@ -91,11 +99,12 @@ def _describe(institution: Institution, region: Region) -> SelectableInstitution
         id=institution.id,
         label=f"{institution.name} ({region.name})",
         is_selectable=institution.is_active and region.is_active,
+        order=(name_sort_key(institution.name), name_sort_key(region.name)),
     )
 
 
-def _sort_key(item: SelectableInstitution) -> tuple[str, int]:
-    return (item.label.casefold(), item.id)
+def _sort_key(item: SelectableInstitution) -> tuple[NameOrder, int]:
+    return (item.order, item.id)
 
 
 def list_selectable_institutions(session: Session) -> list[SelectableInstitution]:
@@ -146,7 +155,9 @@ def list_institutions(session: Session, region_id: int) -> list[Institution]:
     """
     statement = select(Institution).where(Institution.region_id == region_id)
     institutions = session.exec(statement).all()
-    return sorted(institutions, key=lambda institution: (institution.name_key, institution.id))
+    return sorted(
+        institutions, key=lambda institution: (name_sort_key(institution.name), institution.id)
+    )
 
 
 def get_institution(session: Session, region_id: int, institution_id: int) -> Institution:

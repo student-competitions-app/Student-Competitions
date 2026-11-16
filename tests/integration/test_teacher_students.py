@@ -455,7 +455,7 @@ def test_a_link_issued_before_a_removal_is_refused_and_a_newer_one_works(
         text_id = current_consent_text(session, Role.STUDENT).id
     refused = client.post(f"/invitations/{old}", data={"consent_text_id": str(text_id)})
     assert refused.status_code == 400
-    assert NEUTRAL in refused.text
+    assert str(NEUTRAL) in refused.text
     assert class_of(user_id) is None
 
     newer = invite_student(engine, settings, email=email, class_id=scene.kn22, inviter_email=OLENA)

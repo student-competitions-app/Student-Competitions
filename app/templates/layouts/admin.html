@@ -1,7 +1,7 @@
 {% extends "layouts/base.html" %}
 {% from "components/frame.html" import area_tabs %}
 
-{% block tabs %}{{ area_tabs(admin_tabs, active_tab, "Administrator area") }}{% endblock %}
+{% block tabs %}{{ area_tabs(admin_tabs, active_tab, _("Administrator area")) }}{% endblock %}
 
 {% block content %}
 {% block admin_content %}{% endblock %}

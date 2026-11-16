@@ -13,12 +13,13 @@ router and the services check that against the database.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from app.core.i18n import Text, _
 from app.models.teacher import AccessLevel
 
-NONE_PICKED = "Pick at least one educational institution."
-NOT_SELECTABLE = "This educational institution cannot be selected."
-PICKED_TWICE = "Each educational institution can be picked only once."
-BAD_LEVEL = "Choose Read or Write access for each educational institution."
+NONE_PICKED = _("Pick at least one educational institution.")
+NOT_SELECTABLE = _("This educational institution cannot be selected.")
+PICKED_TWICE = _("Each educational institution can be picked only once.")
+BAD_LEVEL = _("Choose Read or Write access for each educational institution.")
 
 MAX_ID = 2**31 - 1
 """The largest `integer` key: a larger id cannot exist, and PostgreSQL would refuse to compare
@@ -37,7 +38,7 @@ class TeacherDetails:
 class InvalidChoice(ValueError):
     """The picker's values break a rule; `message` is ready to show in the form."""
 
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: Text) -> None:
         super().__init__(message)
         self.message = message
 

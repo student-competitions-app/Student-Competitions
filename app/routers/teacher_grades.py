@@ -32,6 +32,7 @@ team's ids and the outcome; the text is built when the page is shown (research R
 ever reaches an address or a log line (FR-045). Nothing here logs; the service logs ids.
 """
 
+from collections.abc import Callable
 from datetime import timedelta
 from typing import Annotated, Any
 
@@ -41,6 +42,7 @@ from sqlmodel import Session
 
 from app.core.auth import AccessDenied, allow_roles
 from app.core.db import SessionDep
+from app.core.i18n import Text, _
 from app.core.sealing import SealExpired, SealInvalid, seal, unseal
 from app.models import Role
 from app.routers.teacher import render_teacher
@@ -92,11 +94,17 @@ from app.services.paging import parse_page
 
 router = APIRouter(prefix="/teacher/competitions/{competition_id:int}")
 
-GRADE_REFUSALS = {
-    CompetitionStatus.UPCOMING: "“{name}” has not started yet, so its answers cannot be graded.",
-    CompetitionStatus.IN_PROGRESS: "“{name}” is still in progress, so its answers cannot be graded"
-    " until it is finished.",
-    CompetitionStatus.CANCELLED: "“{name}” has been cancelled, so its answers cannot be graded.",
+GRADE_REFUSALS: dict[Any, Callable[..., Text]] = {
+    CompetitionStatus.UPCOMING: lambda name: _(
+        "“%(name)s” has not started yet, so its answers cannot be graded.", name=name
+    ),
+    CompetitionStatus.IN_PROGRESS: lambda name: _(
+        "“%(name)s” is still in progress, so its answers cannot be graded until it is finished.",
+        name=name,
+    ),
+    CompetitionStatus.CANCELLED: lambda name: _(
+        "“%(name)s” has been cancelled, so its answers cannot be graded.", name=name
+    ),
 }
 """The reason of the refusal, by the competition's status (http-routes.md §Refusals)."""
 
@@ -175,7 +183,7 @@ def read_grades_notice(
         return None
     if (competition, team) != (competition_id, team_id) or payload.get("outcome") != "saved":
         return None
-    return f"Grades of “{team_name}” were saved"
+    return _("Grades of “%(name)s” were saved", name=team_name)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -196,11 +204,11 @@ def grades_refused(
         "pages/teacher/competition_refused.html",
         TAB,
         {
-            "question": f"Grade answers of “{competition.name}”?",
-            "reason": GRADE_REFUSALS[status].format(name=competition.name),
+            "question": _("Grade answers of “%(name)s”?", name=competition.name),
+            "reason": GRADE_REFUSALS[status](name=competition.name),
             "back": context.back_to_list(competition.id),
-            "back_link_text": "Back to the competitions",
-            "back_text": "Back to competitions",
+            "back_link_text": _("Back to the competitions"),
+            "back_text": _("Back to competitions"),
         },
         status_code=409,
     )
@@ -262,12 +270,12 @@ def competition_grades_page(
     }
     filter_links = [
         (
-            "All teams",
+            _("All teams"),
             grades_path(competition.id, context, GradeFilter.ALL),
             shown is GradeFilter.ALL,
         ),
         (
-            "Ungraded only",
+            _("Ungraded only"),
             grades_path(competition.id, context, GradeFilter.UNGRADED),
             shown is GradeFilter.UNGRADED,
         ),

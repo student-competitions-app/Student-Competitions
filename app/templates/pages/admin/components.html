@@ -3,7 +3,7 @@
     one section per component family, every variant, from the sample data of
     app/routers/admin_components.py. A new component or variant is added here, to the library
     and to docs/requirements/ui-guidelines.md in the same change (FR-045). -#}
-{% from "components/frame.html" import top_bar, user_menu, theme_switch, area_tabs, back_link, page_heading, section_heading, loading_bar with context %}
+{% from "components/frame.html" import top_bar, user_menu, theme_switch, language_switch, area_tabs, back_link, page_heading, section_heading, loading_bar with context %}
 {% from "components/icons.html" import logo_mark, icon %}
 {% from "components/palette.html" import swatch %}
 {% from "components/button.html" import button, link_button, post_button %}
@@ -18,7 +18,7 @@
 {% from "components/selectors.html" import list_detail, chained_lists %}
 {% from "components/pagination.html" import page_navigation %}
 {% from "components/menu.html" import actions_menu, menu_link %}
-{% from "components/time.html" import local_time with context %}
+{% from "components/time.html" import local_time, local_date with context %}
 {% from "components/answer_sheet.html" import answer_sheet %}
 {% from "components/grading_sheet.html" import grading_sheet, answers_read_only %}
 {% from "components/filter.html" import filter_links as filter_links_nav %}
@@ -65,6 +65,19 @@
   <h3>Page heading, with and without an action</h3>
   <div class="page-heading"><h2>Subjects</h2>{{ link_button("Create subject", "/admin/components#frame") }}</div>
   <div class="page-heading"><h2>Educational institutions</h2></div>
+</section>
+
+<section id="language" aria-labelledby="language-heading">
+  <h2 id="language-heading">Language switch</h2>
+  <p>In the top bar of every page, before the user menu. Each language is named in its own language, with its flag; the current one is marked. Below 768 px the switch shows the flag alone.</p>
+  {% for current in ("uk", "en") %}
+  <h3>Closed, {{ "Ukrainian" if current == "uk" else "English" }} current</h3>
+  <div class="top-bar"><div class="container">{{ language_switch(current, "/admin/components") }}</div></div>
+  {% endfor %}
+  {% for current in ("uk", "en") %}
+  <h3>Open, {{ "Ukrainian" if current == "uk" else "English" }} current</h3>
+  <div class="language-switch-sample"><div class="top-bar"><div class="container">{{ language_switch(current, "/admin/components", open=True) }}</div></div></div>
+  {% endfor %}
 </section>
 
 <section id="section-heading" aria-labelledby="section-heading-heading">
@@ -156,7 +169,7 @@
   {% for s in subjects %}
   <tr>
     {{ cell("Name", s.name) }}
-    {% call cell("Status") %}{{ status_badge(s.is_active) }}{% endcall %}
+    {% call cell("Status") %}{{ status_badge(s.is_active, "subject") }}{% endcall %}
     {% call actions_cell() %}
     {{- link_button("Rename", "/admin/components#table", kind="secondary", outline=True, small=True) -}}
     {%- if s.is_active -%}
@@ -275,17 +288,22 @@
 
 <section id="time" aria-labelledby="time-heading">
   <h2 id="time-heading">Local time</h2>
-  <p>A stored time in the person's time zone, and in UTC, labelled so, when the zone is not known.</p>
+  <p>A stored time in the person's time zone, and in Kyiv time, labelled so, when the zone is not known.</p>
   <ul>
     <li>{{ local_time(sample_moment, zone=kyiv) }}</li>
     <li>{{ local_time(sample_moment, zone=none) }}</li>
+  </ul>
+  <h3>A date alone</h3>
+  <p>The day of a stored time, in the same zone, with no label.</p>
+  <ul>
+    <li>{{ local_date(sample_moment, zone=kyiv) }}</li>
   </ul>
 </section>
 
 <section id="badges" aria-labelledby="badges-heading">
   <h2 id="badges-heading">Badges</h2>
   <div class="button-row">
-    {{ status_badge(True) }} {{ status_badge(False) }}
+    {% for kind in ("subject", "region", "institution", "class") %}{{ status_badge(True, kind) }} {{ status_badge(False, kind) }} {% endfor %}
     {% for level in access_levels %}{{ access_badge(level) }} {% endfor %}
   </div>
   <h3>Competition statuses</h3>
@@ -325,9 +343,9 @@
   {{ textarea_field("gallery-placeholder", "Answer to question 2", hint="Up to 2,000 characters.", placeholder="Not answered") }}
   {{ form_actions("Save question", cancel_href="/admin/components#forms", name="then", value="list", secondary={"label": "Save and add one more question", "name": "then", "value": "another"}) }}
   <h3>A date and a time</h3>
-  {{ date_time_fields("gallery-start-empty", "Start", date_time_values, date_time_errors, "UTC") }}
-  {{ date_time_fields("gallery-start-filled", "Start", date_time_values, date_time_errors, "Europe/Kyiv") }}
-  {{ date_time_fields("gallery-start-errors", "Start", date_time_values, date_time_errors, "Europe/Kyiv") }}
+  {{ date_time_fields("gallery-start-empty", "Start", date_time_values, date_time_errors, "UTC", "Start date", "Start time") }}
+  {{ date_time_fields("gallery-start-filled", "Start", date_time_values, date_time_errors, "Europe/Kyiv", "Start date", "Start time") }}
+  {{ date_time_fields("gallery-start-errors", "Start", date_time_values, date_time_errors, "Europe/Kyiv", "Start date", "Start time") }}
 </section>
 
 <section id="answer-sheet" aria-labelledby="answer-sheet-heading">
@@ -380,7 +398,7 @@
   {% if part == "detail" %}
   <h2 id="gallery-regions-detail">Educational institutions in “Kyiv”</h2>
   {% call data_table(["Name", "Status"]) %}
-  {% for i in institutions %}<tr>{{ cell("Name", i.name) }}{% call cell("Status") %}{{ status_badge(i.is_active) }}{% endcall %}</tr>{% endfor %}
+  {% for i in institutions %}<tr>{{ cell("Name", i.name) }}{% call cell("Status") %}{{ status_badge(i.is_active, "institution") }}{% endcall %}</tr>{% endfor %}
   {% endcall %}
   {% endif %}
   {% endcall %}

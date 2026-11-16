@@ -8,19 +8,19 @@
 {% from "components/badge.html" import status_badge %}
 {% from "components/feedback.html" import empty_state %}
 <fieldset id="picker"{% if errors.picker %} aria-describedby="picker-error"{% endif %}>
-  <legend>Educational institutions</legend>
+  <legend>{{ _("Educational institutions") }}</legend>
   {% if errors.picker %}<small id="picker-error" class="field-error">{{ errors.picker }}</small>{% endif %}
   {% if picker_rows %}
-  {% call data_table(["Educational institution", "Access"]) %}
+  {% call data_table([_("Educational institution"), _("Access")]) %}
   {% for row in picker_rows %}
   <tr>
-    {% call cell("Educational institution") %}{{ checkbox_field("institution-" ~ row.id, row.label, checked=row.checked, name="institution", value=row.id) }}{% if row.kept %} {{ status_badge(False) }}{% endif %}{% endcall %}
-    {% call cell("Access") %}
+    {% call cell(_("Educational institution")) %}{{ checkbox_field("institution-" ~ row.id, row.label, checked=row.checked, name="institution", value=row.id) }}{% if row.kept %} {{ status_badge(False, "institution") }}{% endif %}{% endcall %}
+    {% call cell(_("Access")) %}
     {%- if row.kept %}{{ row.level_label }}
     {%- else %}
-    <select name="access" aria-label="Access to {{ row.label }}">
-      <option value="{{ row.id }}:read"{% if row.level == "read" %} selected{% endif %}>Read</option>
-      <option value="{{ row.id }}:write"{% if row.level == "write" %} selected{% endif %}>Write</option>
+    <select name="access" aria-label="{{ _("Access to %(institution)s", institution=row.label) }}">
+      <option value="{{ row.id }}:read"{% if row.level == "read" %} selected{% endif %}>{{ pgettext("access level", "Read") }}</option>
+      <option value="{{ row.id }}:write"{% if row.level == "write" %} selected{% endif %}>{{ pgettext("access level", "Write") }}</option>
     </select>
     {%- endif %}
     {% endcall %}
@@ -28,6 +28,6 @@
   {% endfor %}
   {% endcall %}
   {% else %}
-  {{ empty_state("No educational institution can be selected yet. Create one on the Educational institutions tab.") }}
+  {{ empty_state(_("No educational institution can be selected yet. Create one on the Educational institutions tab.")) }}
   {% endif %}
 </fieldset>

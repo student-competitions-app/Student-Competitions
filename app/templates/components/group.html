@@ -10,7 +10,7 @@
 {%- if not name %}{{ template_error("region_group: the name is required") }}{% endif -%}
 {%- if total < 1 %}{{ template_error("region_group: the total must be at least 1") }}{% endif -%}
 <section class="region-group" aria-labelledby="{{ heading_id }}">
-  <h2 class="region-group-header" id="{{ heading_id }}">{{ name }} · {{ total }} {{ "team" if total == 1 else "teams" }}</h2>
+  <h2 class="region-group-header" id="{{ heading_id }}">{{ name }} · {{ ngettext("%(num)d team", "%(num)d teams", total) }}</h2>
   {{ caller() }}
 </section>
 {%- endmacro %}

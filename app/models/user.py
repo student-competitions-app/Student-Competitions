@@ -24,6 +24,7 @@ from sqlalchemy import Column, String
 from sqlmodel import Field, SQLModel
 
 from app.core.db import UTCDateTime, utc_now
+from app.core.i18n import Text, _
 from app.core.security import EMAIL_MAX_LENGTH
 from app.schemas.people import PERSON_NAME_MAX_LENGTH
 
@@ -39,12 +40,14 @@ class Role(StrEnum):
     STUDENT = "student"
 
     @property
-    def label(self) -> str:
-        """The name shown to people: `Administrator`, `Teacher`, `Student`."""
+    def label(self) -> Text:
+        """The name shown to people: `Administrator`, `Teacher`, `Student` (Адміністратор,
+        Педагог, Студент). A self-contained value: never lowercased or inserted into a sentence
+        that must agree with it (milestone 12.5 contracts/services.md "Enums with labels")."""
         return _LABELS[self]
 
 
-_LABELS = {Role.ADMIN: "Administrator", Role.TEACHER: "Teacher", Role.STUDENT: "Student"}
+_LABELS = {Role.ADMIN: _("Administrator"), Role.TEACHER: _("Teacher"), Role.STUDENT: _("Student")}
 
 ALL_ROLES = frozenset(Role)
 """Every role, for pages open to everyone signed in, such as `/`."""

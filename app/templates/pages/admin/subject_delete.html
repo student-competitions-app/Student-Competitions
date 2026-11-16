@@ -3,16 +3,16 @@
 {% from "components/confirmation.html" import confirmation, refusal %}
 {% from "components/button.html" import post_button %}
 
-{% block title %}Delete “{{ subject.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Delete “%(name)s”", name=subject.name) }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-{{ back_link("/admin/subjects", "Back to the subjects") }}
-{% set question = "Delete “" ~ subject.name ~ "”?" %}
+{{ back_link("/admin/subjects", _("Back to the subjects")) }}
+{% set question = _("Delete “%(name)s”?", name=subject.name) %}
 {% if in_use %}
-{% call refusal(question, "“" ~ subject.name ~ "” is in use and cannot be deleted. You can deactivate it instead.", "/admin/subjects", "Back to the subjects") %}
-{% if subject.is_active %}{{ post_button("/admin/subjects/" ~ subject.id ~ "/deactivate", "Deactivate", kind="destructive") }}{% endif %}
+{% call refusal(question, pgettext("subject", "“%(name)s” is in use and cannot be deleted. You can deactivate it instead.", name=subject.name), "/admin/subjects", _("Back to the subjects")) %}
+{% if subject.is_active %}{{ post_button("/admin/subjects/" ~ subject.id ~ "/deactivate", _("Deactivate"), kind="destructive") }}{% endif %}
 {% endcall %}
 {% else %}
-{{ confirmation(question, "Deleting a subject cannot be undone.", "/admin/subjects/" ~ subject.id ~ "/delete", "Delete", "/admin/subjects") }}
+{{ confirmation(question, _("Deleting a subject cannot be undone."), "/admin/subjects/" ~ subject.id ~ "/delete", _("Delete"), "/admin/subjects") }}
 {% endif %}
 {% endblock %}

@@ -49,6 +49,11 @@ COPY app ./app
 COPY alembic.ini ./
 COPY migrations ./migrations
 
+# The message catalogues are compiled here, from the committed `.po` files, so the image always
+# ships `.mo` files that match its source (milestone 12.5 FR-060). Babel is in the copied
+# virtualenv, so `pybabel` is on PATH; the application refuses to start without the result.
+RUN pybabel compile -d app/locale -D messages
+
 # Non-root, with no login shell and no home directory to write to. The uid is well above the
 # range Debian reserves for system accounts, so it cannot collide with one the base image adds
 # later; `--system` is deliberately absent, since it warns about exactly that uid range.

@@ -1,7 +1,7 @@
 {% extends "layouts/base.html" %}
 {% from "components/frame.html" import area_tabs %}
 
-{% block tabs %}{{ area_tabs(teacher_tabs, active_tab, "Teacher area") }}{% endblock %}
+{% block tabs %}{{ area_tabs(teacher_tabs, active_tab, _("Teacher area")) }}{% endblock %}
 
 {% block content %}
 {% block teacher_content %}{% endblock %}

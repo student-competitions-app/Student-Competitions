@@ -2,15 +2,15 @@
 {% from "components/frame.html" import back_link %}
 {% from "components/confirmation.html" import confirmation, refusal %}
 
-{% block title %}Delete region “{{ region.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Delete region “%(name)s”", name=region.name) }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
 {% set region_path = "/admin/institutions/regions/" ~ region.id %}
-{% set question = "Delete region “" ~ region.name ~ "”?" %}
-{{ back_link(region_path, "Back to “" ~ region.name ~ "”") }}
+{% set question = _("Delete region “%(name)s”?", name=region.name) %}
+{{ back_link(region_path, pgettext("region", "Back to “%(name)s”", name=region.name)) }}
 {% if not_empty %}
-{{ refusal(question, "“" ~ region.name ~ "” still holds educational institutions and cannot be deleted. Delete its institutions first.", region_path, "Back to “" ~ region.name ~ "”") }}
+{{ refusal(question, _("“%(name)s” still holds educational institutions and cannot be deleted. Delete its institutions first.", name=region.name), region_path, pgettext("region", "Back to “%(name)s”", name=region.name)) }}
 {% else %}
-{{ confirmation(question, "Deleting a region cannot be undone.", region_path ~ "/delete", "Delete", region_path) }}
+{{ confirmation(question, _("Deleting a region cannot be undone."), region_path ~ "/delete", _("Delete"), region_path) }}
 {% endif %}
 {% endblock %}

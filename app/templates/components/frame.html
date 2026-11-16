@@ -8,14 +8,21 @@
 {% from "components/button.html" import button, link_button %}
 {% from "components/badge.html" import status_badge %}
 
+{#- The top bar (milestone 12.5 contracts/components.md §2): the brand, the role label (signed in
+    with a role), the language switch, then the user menu (signed in). Signed out: the brand and
+    the language switch. `language` and `return_path` come from the template context. Below 768 px,
+    when a role is shown, the wordmark is hidden visually and the role label sits beside the logo
+    (milestone 12.5 research R15): the link still reads as the application's name. -#}
 {% macro top_bar(user=current_user, role=current_role, roles=user_roles) -%}
 <header class="top-bar">
   <div class="container">
-    <a href="/" class="brand">{{ logo_mark() }}<span class="brand-name">{{ app_name }}</span></a>
-    {%- if user %}
-    {%- if role %}
+    {%- set brand_class = "brand brand-with-role" if user and role else "brand" %}
+    <a href="/" class="{{ brand_class }}">{{ logo_mark() }}<span class="brand-name">{{ app_name }}</span></a>
+    {%- if user and role %}
     <span class="brand-role">{{ role.label }}</span>
     {%- endif %}
+    {{ language_switch(language, return_path) }}
+    {%- if user %}
     {{ user_menu(user, role, roles) }}
     {%- endif %}
   </div>
@@ -27,12 +34,12 @@
     milestone 5 header did, so it never shows on the role-choice page itself. -#}
 {% macro user_menu(user=current_user, role=current_role, roles=user_roles) -%}
 <details class="user-menu">
-  <summary>{{ icon("account") }}<span class="user-menu-email">{{ user.email }}</span><span class="visually-hidden">Account menu</span></summary>
+  <summary>{{ icon("account") }}<span class="user-menu-email">{{ user.email }}</span><span class="visually-hidden">{{ _("Account menu") }}</span></summary>
   <div class="user-menu-panel">
     <a href="/profile" class="user-menu-profile">{{ user.email }}</a>
     {%- if role and roles | length > 1 %}
     <form method="post" action="/role">
-      <span class="menu-label">Switch to</span>
+      <span class="menu-label">{{ _("Switch to") }}</span>
       <div class="button-row">
         {%- for other in roles if other != role %}
         <button type="submit" name="role" value="{{ other.value }}" class="secondary small">{{ other.label }}</button>
@@ -40,8 +47,8 @@
       </div>
     </form>
     {%- endif %}
-    {{ theme_switch(theme, theme_return) }}
-    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">Log out</button></form>
+    {{ theme_switch(theme, return_path) }}
+    <form method="post" action="/logout" class="logout"><button type="submit" class="secondary">{{ _("Log out") }}</button></form>
   </div>
 </details>
 {%- endmacro %}
@@ -53,15 +60,36 @@
 {%- set switch_classes = "theme-switch theme-switch-standalone" if standalone else "theme-switch" -%}
 <form method="post" action="/theme" class="{{ switch_classes }}">
   <fieldset>
-    <legend>Theme</legend>
+    <legend>{{ _("Theme") }}</legend>
     <input type="hidden" name="next" value="{{ return_to }}">
     <div class="button-row">
-      {%- for value, label in (("light", "Light"), ("dark", "Dark"), ("device", "Device")) %}
+      {%- for value, label in (("light", _("Light")), ("dark", _("Dark")), ("device", _("Device"))) %}
       {{ button(label, kind="secondary", name="theme", value=value, small=True, attrs={"aria-pressed": "true" if value == current else "false"}) }}
       {%- endfor %}
     </div>
   </fieldset>
 </form>
+{%- endmacro %}
+
+{#- The language switch (milestone 12.5 contracts/components.md §1, FR-006–FR-010, research R8): a
+    native <details> holding one form, so it works without JavaScript, like the user menu. The
+    summary shows the current language's flag and name; the panel lists both, Ukrainian first, each
+    with its flag and its name written in its own language (never translated, so "English" stays
+    English and «Українська» stays Ukrainian), the current one marked. Below 768 px the summary's
+    name is hidden visually and still read. `top_bar` calls it; a page never does. Only the
+    gallery passes `open=True`, to show the panel. -#}
+{% macro language_switch(current, return_to, open=False) -%}
+{%- set languages = (("uk", "flag-ua.svg", "Українська"), ("en", "flag-gb.svg", "English")) -%}
+{%- set shown = languages[1] if current == "en" else languages[0] -%}
+<details class="language-switch"{% if open %} open{% endif %}>
+  <summary><img src="/static/img/{{ shown[1] }}" alt="" class="flag"><span class="visually-hidden">{{ _("Language") }}</span><span class="language-switch-name" lang="{{ shown[0] }}">{{ shown[2] }}</span></summary>
+  <form method="post" action="/language" class="language-switch-panel">
+    <input type="hidden" name="next" value="{{ return_to }}">
+    {%- for code, flag, name in languages %}
+    <button type="submit" name="language" value="{{ code }}" lang="{{ code }}"{% if code == current %} aria-current="true"{% endif %}><img src="/static/img/{{ flag }}" alt="" class="flag">{{ name }}</button>
+    {%- endfor %}
+  </form>
+</details>
 {%- endmacro %}
 
 {#- The loading bar (milestone 10.1 FR-001–FR-006, research R5): a thin primary line hanging under
@@ -105,10 +133,10 @@
     `{% call %}` and sit in a row below; the row is left out when the call block renders only
     white space, so a page may wrap its buttons in an `{% if %}`. The page owns the
     `<section aria-labelledby="{heading_id}">` around the heading and its content. -#}
-{% macro section_heading(title, heading_id, action=None, deactivated=False) -%}
+{% macro section_heading(title, heading_id, action=None, deactivated=False, kind="class") -%}
 {%- set row = caller() | trim if caller is defined else "" -%}
 <div class="page-heading">
-  <h2 id="{{ heading_id }}">{{ title }}{% if deactivated %} {{ status_badge(False) }}{% endif %}</h2>
+  <h2 id="{{ heading_id }}">{{ title }}{% if deactivated %} {{ status_badge(False, kind) }}{% endif %}</h2>
   {%- if action %}
   {{ link_button(action[0], action[1]) }}
   {%- endif %}

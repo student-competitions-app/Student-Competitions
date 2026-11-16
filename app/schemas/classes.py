@@ -9,16 +9,18 @@ form with a message instead of FastAPI's 422 JSON. The form's `type="number"` in
 convenience; this function is the authority.
 """
 
+from app.core.i18n import Text, _
+
 YEAR_MIN = 1
 YEAR_MAX = 12
 
-INVALID_YEAR = "Enter a year of study from 1 to 12."
+INVALID_YEAR = _("Enter a year of study from 1 to 12.")
 
 
 class InvalidYear(ValueError):
     """The year of study breaks a rule; `message` is ready to show in the form."""
 
-    def __init__(self, message: str = INVALID_YEAR) -> None:
+    def __init__(self, message: Text = INVALID_YEAR) -> None:
         super().__init__(message)
         self.message = message
 

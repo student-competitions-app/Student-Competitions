@@ -27,6 +27,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.core.auth import allow_roles
 from app.core.config import AuthSettings
 from app.core.db import SessionDep
+from app.core.i18n import Text, _
 from app.core.sealing import SealExpired, SealInvalid, seal, unseal
 from app.models import AccessLevel, Role, User
 from app.routers.admin import render_admin
@@ -39,6 +40,7 @@ from app.schemas.teachers import (
 )
 from app.services.email import EmailDeliveryError
 from app.services.institutions import (
+    NameOrder,
     SelectableInstitution,
     describe_institutions,
     list_selectable_institutions,
@@ -75,8 +77,8 @@ RepeatedField = Annotated[list[str], Form(default_factory=list)]
 """A repeated form field (the picker's `institution` and `access`), read as plain strings so a
 bad value re-renders the form instead of FastAPI's 422 JSON (research D11)."""
 
-TOO_MANY = "Too many invitations. Please try again later."
-NOT_SENT = "The invitation email could not be sent. Please try again."
+TOO_MANY = _("Too many invitations. Please try again later.")
+NOT_SENT = _("The invitation email could not be sent. Please try again.")
 
 
 @dataclass(frozen=True)
@@ -86,11 +88,13 @@ class PickerRow:
     checked: bool
     level: str
     """The selected option: `read` (the default for a new pick) or `write`."""
+    order: NameOrder
+    """The institution's place in the list, by its name and its region's (milestone 12.5)."""
     kept: bool = False
     """A linked institution that is no longer selectable: level shown as text, no select."""
 
     @property
-    def level_label(self) -> str:
+    def level_label(self) -> Text:
         return AccessLevel(self.level).label
 
 
@@ -125,6 +129,7 @@ def _picker_rows(
             label=item.label,
             checked=item.id in picked,
             level=levels.get(item.id, AccessLevel.READ.value),
+            order=item.order,
         )
         for item in selectable
     ]
@@ -134,11 +139,12 @@ def _picker_rows(
             label=link.label,
             checked=link.institution_id in picked,
             level=link.access_level.value,
+            order=link.order,
             kept=True,
         )
         for link in kept
     ]
-    return sorted(rows, key=lambda row: (row.label.casefold(), row.id))
+    return sorted(rows, key=lambda row: (row.order, row.id))
 
 
 def _not_found(request: Request) -> HTMLResponse:

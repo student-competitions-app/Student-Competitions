@@ -3,15 +3,15 @@
 {% from "components/details.html" import details_list %}
 {% from "components/confirmation.html" import confirmation %}
 
-{% block title %}Remove {{ student.first_name }} {{ student.last_name }} as a student — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Remove %(name)s as a student", name=student.first_name ~ " " ~ student.last_name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(cancel, "Back to “" ~ school_class.name ~ "”") }}
-{% call confirmation("Remove " ~ student.first_name ~ " " ~ student.last_name ~ " as a student?", none, "/teacher/students/" ~ student.user_id ~ "/remove", "Remove", cancel, hidden={"region": carried.region, "institution": carried.institution, "class": carried.class}) %}
+{{ back_link(cancel, pgettext("class", "Back to “%(name)s”", name=school_class.name)) }}
+{% call confirmation(_("Remove %(name)s as a student?", name=student.first_name ~ " " ~ student.last_name), none, "/teacher/students/" ~ student.user_id ~ "/remove", _("Remove"), cancel, hidden={"region": carried.region, "institution": carried.institution, "class": carried.class}) %}
 {{ details_list([
-  ("Class", school_class.label),
-  ("Educational institution", institution.name ~ " (" ~ institution.region_name ~ ")"),
+  (_("Class"), school_class.label),
+  (_("Educational institution"), institution.name ~ " (" ~ institution.region_name ~ ")"),
 ]) }}
-<p>They lose the student role and their class, and are signed out everywhere. If they have no other role, they can no longer sign in. Their email, names and consent records stay until they delete their data.</p>
+<p>{{ _("They lose the student role and their class, and are signed out everywhere. If they have no other role, they can no longer sign in. Their email, names and consent records stay until they delete their data.") }}</p>
 {% endcall %}
 {% endblock %}

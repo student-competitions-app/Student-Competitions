@@ -21,9 +21,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from app.core.auth import allow_roles, clear_session_cookie
 from app.core.config import APP_NAME
 from app.core.db import SessionDep
+from app.core.i18n import _
 from app.core.templates import templates
 from app.models import ALL_ROLES, Role, User
 from app.services.consent import (
+    consent_parts,
     describe_erasure,
     erase_personal_data,
     has_consent_data,
@@ -36,7 +38,7 @@ from app.services.users import get_roles
 
 router = APIRouter()
 
-NOTHING_TO_WITHDRAW = "There is no data stored on your consent to withdraw."
+NOTHING_TO_WITHDRAW = _("There is no data stored on your consent to withdraw.")
 
 
 def _person(request: Request, session: SessionDep) -> User:
@@ -62,6 +64,7 @@ def profile_page(request: Request, session: SessionDep) -> HTMLResponse:
     if Role.STUDENT in get_roles(session, person.id):
         enrolment = get_enrolment_view(session, person.id)
         teams = list_student_teams(session, person.id)
+    records = list_consent_records(session, person.id)
     return templates.TemplateResponse(
         request,
         "pages/profile.html",
@@ -72,7 +75,8 @@ def profile_page(request: Request, session: SessionDep) -> HTMLResponse:
             "teacher": teacher,
             "enrolment": enrolment,
             "teams": teams,
-            "records": list_consent_records(session, person.id),
+            "records": records,
+            "record_parts": [consent_parts(record.text) for record in records],
             "can_withdraw": has_consent_data(person),
         },
     )

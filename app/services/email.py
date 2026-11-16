@@ -13,6 +13,10 @@ Milestone 8 adds two messages, the invitation and the data-deletion link
 (specs/008-teacher-management-consent/contracts/services.md §email). Both are plain text, carry
 their link as given with no tracking, and are never stored: the `memory` outbox exists only in
 tests.
+
+Milestone 12.5 (research R10): the sign-in code and the deletion link are written in the
+request's language, at build time; the invitation in Ukrainian then English, joined by a
+separator line, with the subject "<Ukrainian> / <English>". Every time is Kyiv time, labelled.
 """
 
 import json
@@ -23,7 +27,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Protocol
 
-from app.core.config import APP_VERSION, AuthSettings
+from app.core.config import APP_NAME, APP_VERSION, AuthSettings
+from app.core.i18n import Language, Text, _, _n, use_language
+from app.core.time_zone import format_local_time
+from app.models import Role
 
 
 @dataclass(frozen=True)
@@ -46,81 +53,132 @@ class EmailSender(Protocol):
         ...
 
 
-LOGIN_SUBJECT = "Your Student Competitions sign-in code"
-
 CONSOLE_START = "======== EMAIL (console backend: not sent) ========"
 CONSOLE_END = "======== END EMAIL ========"
 
+LANGUAGE_SEPARATOR = "\n\n———\n\n"
+"""Between the Ukrainian and the English part of a bilingual email."""
+
+
+def _lines(*parts: object) -> str:
+    """The email text: each part on its own line, an empty string for a blank line."""
+    return "\n".join(str(part) for part in parts)
+
 
 def login_code_message(email: str, code: str, minutes: int) -> EmailMessage:
-    """The sign-in email. The code is in the body only, never in the subject, so it does not
-    show in lock-screen previews; and there is no link of any kind (FR-015)."""
-    text = (
-        f"Your Student Competitions sign-in code is: {code}\n"
-        "\n"
-        f"It is valid for {minutes} minutes and can be used once.\n"
-        "If you did not try to sign in, you can ignore this email."
+    """The sign-in email, in the request's language (milestone 12.5 FR-041). The code is in the
+    body only, never in the subject, so it does not show in lock-screen previews; and there is no
+    link of any kind (FR-015)."""
+    text = _lines(
+        _("Your %(app)s sign-in code is: %(code)s", app=APP_NAME, code=code),
+        "",
+        _n(
+            "It is valid for %(num)d minute and can be used once.",
+            "It is valid for %(num)d minutes and can be used once.",
+            minutes,
+        ),
+        _("If you did not try to sign in, you can ignore this email."),
     )
-    return EmailMessage(to=email, subject=LOGIN_SUBJECT, text=text)
+    subject = _("Your %(app)s sign-in code", app=APP_NAME)
+    return EmailMessage(to=email, subject=str(subject), text=text)
 
 
-DELETION_SUBJECT = "Delete your Student Competitions data"
+def _invitation_subject(role: Role) -> Text:
+    """One whole subject per role (milestone 12.5 FR-021)."""
+    if role is Role.TEACHER:
+        return _("You are invited to %(app)s as a teacher", app=APP_NAME)
+    return _("You are invited to %(app)s as a student", app=APP_NAME)
 
 
-def format_utc(moment: datetime) -> str:
-    """`2026-10-22 14:05 UTC`: how a time is shown to people (milestone 8 research D19)."""
-    return moment.strftime("%Y-%m-%d %H:%M UTC")
+def _invitation_opening(role: Role, inviter: str, email: str) -> Text:
+    """One whole opening sentence per role, the inviter in the present tense, so nothing agrees
+    with the inviter's gender in Ukrainian (milestone 12.5 FR-034, research R10)."""
+    if role is Role.TEACHER:
+        return _(
+            "%(inviter)s (%(email)s) invites you to %(app)s as a teacher.",
+            inviter=inviter,
+            email=email,
+            app=APP_NAME,
+        )
+    return _(
+        "%(inviter)s (%(email)s) invites you to %(app)s as a student.",
+        inviter=inviter,
+        email=email,
+        app=APP_NAME,
+    )
 
 
 def invitation_message(
     to: str,
     inviter_display: str,
     inviter_email: str,
-    role_label: str,
-    detail_lines: Sequence[str],
+    role: Role,
+    detail_lines: Sequence[Text],
     link: str,
     expires_at: datetime,
 ) -> EmailMessage:
-    """The invitation email (FR-021). The subject names the role only, never the invited person,
-    so it reveals nothing in a preview; the body says who invites, to what, what will be stored,
-    and that nothing is stored unless the person accepts."""
-    role = role_label.lower()
-    details = "\n".join(f"- {line}" for line in detail_lines)
-    text = (
-        f"{inviter_display} ({inviter_email}) invites you to Student Competitions as a {role}.\n"
-        "\n"
-        f"Role: {role_label}\n"
-        f"{details}\n"
-        "\n"
-        "Nothing about you is stored unless you accept. Open this link to see exactly what will "
-        "be stored and to accept:\n"
-        "\n"
-        f"{link}\n"
-        "\n"
-        f"This invitation expires on {format_utc(expires_at)}.\n"
-        "If you were not expecting it, you can ignore this email."
-    )
+    """The invitation email (FR-021), in Ukrainian then in English, since the invited person has
+    not chosen a language yet (milestone 12.5 FR-042). The subject names the role only, never the
+    invited person, so it reveals nothing in a preview; the body says who invites, to what, what
+    will be stored, and that nothing is stored unless the person accepts. Every time is Kyiv
+    time, labelled."""
+
+    def part() -> tuple[str, str]:
+        text = _lines(
+            _invitation_opening(role, inviter_display, inviter_email),
+            "",
+            _("Role: %(role)s", role=role.label),
+            *(f"- {line}" for line in detail_lines),
+            "",
+            _(
+                "Nothing about you is stored unless you accept. Open this link to see exactly "
+                "what will be stored and to accept:"
+            ),
+            "",
+            link,
+            "",
+            _(
+                "This invitation expires on %(time)s.",
+                time=format_local_time(expires_at, None),
+            ),
+            _("If you were not expecting it, you can ignore this email."),
+        )
+        return str(_invitation_subject(role)), text
+
+    with use_language(Language.UK):
+        uk_subject, uk_text = part()
+    with use_language(Language.EN):
+        en_subject, en_text = part()
     return EmailMessage(
-        to=to, subject=f"You are invited to Student Competitions as a {role}", text=text
+        to=to, subject=f"{uk_subject} / {en_subject}", text=uk_text + LANGUAGE_SEPARATOR + en_text
     )
 
 
 def deletion_message(to: str, link: str, expires_at: datetime) -> EmailMessage:
-    """The data-deletion email (FR-051): what the link does, that it works once and for one hour,
-    and that it can be ignored."""
-    text = (
-        "Someone asked to delete the data Student Competitions stores about this email address.\n"
-        "\n"
-        "Opening this link and confirming erases your first and last name and this email address, "
-        "and removes the roles granted with your consent. The record that you once agreed is kept "
-        "as proof of consent.\n"
-        "\n"
-        f"{link}\n"
-        "\n"
-        f"The link works once, within one hour, until {format_utc(expires_at)}.\n"
-        "If you did not ask for this, you can ignore this email."
+    """The data-deletion email (FR-051), in the request's language: what the link does, that it
+    works once and for one hour, and that it can be ignored. The expiry is Kyiv time, labelled."""
+    text = _lines(
+        _(
+            "Someone asked to delete the data %(app)s stores about this email address.",
+            app=APP_NAME,
+        ),
+        "",
+        _(
+            "Opening this link and confirming erases your first and last name and this email "
+            "address, and removes the roles granted with your consent. The record that you once "
+            "agreed is kept as proof of consent."
+        ),
+        "",
+        link,
+        "",
+        _(
+            "The link works once, within one hour, until %(time)s.",
+            time=format_local_time(expires_at, None),
+        ),
+        _("If you did not ask for this, you can ignore this email."),
     )
-    return EmailMessage(to=to, subject=DELETION_SUBJECT, text=text)
+    subject = _("Delete your %(app)s data", app=APP_NAME)
+    return EmailMessage(to=to, subject=str(subject), text=text)
 
 
 class ConsoleEmailSender:

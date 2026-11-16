@@ -2,15 +2,15 @@
 {% from "components/frame.html" import page_heading %}
 {% from "components/feedback.html" import notice %}
 
-{% block title %}Your data has been erased — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Your data has been erased") }} — {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="narrow">
-  {{ page_heading("Your data has been erased.") }}
+  {{ page_heading(_("Your data has been erased.")) }}
   {% call notice(none, "success") %}
-  <p>Your names, and your email address unless you are an administrator, have been erased, and the roles granted with your consent were removed. The records that you once agreed are kept as proof of consent.</p>
-  <p>Any session you had was ended.</p>
+  <p>{{ _("Your names, and your email address unless you are an administrator, have been erased, and the roles granted with your consent were removed. The records that you once agreed are kept as proof of consent.") }}</p>
+  <p>{{ _("Any session you had was ended.") }}</p>
   {% endcall %}
-  <p><a href="/">Go to the home page</a></p>
+  <p><a href="/">{{ _("Go to the home page") }}</a></p>
 </div>
 {% endblock %}

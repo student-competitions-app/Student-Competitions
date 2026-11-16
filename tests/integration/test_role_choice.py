@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app.core.config import APP_NAME
+from app.core import config
 from app.core.security import SESSION_COOKIE_NAME, hash_token
 from app.main import app
 from app.models import Role, UserSession
@@ -21,6 +21,9 @@ from tests.conftest import (
     ClientAs,
 )
 from tests.integration.test_login_flow import code_from, request_code, submit_code
+
+APP_NAME = str(config.APP_NAME)
+"""The English wording: the suite runs in English (milestone 12.5 FR-067)."""
 
 CHOOSE_ONE = "Choose one of your roles."
 

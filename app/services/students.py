@@ -26,6 +26,7 @@ from sqlmodel import Session, col, select
 
 from app.core.config import AuthSettings
 from app.core.db import utc_now
+from app.core.i18n import _
 from app.models import (
     AccessLevel,
     Enrolment,
@@ -36,6 +37,7 @@ from app.models import (
     User,
     UserRole,
 )
+from app.schemas.names import person_sort_key
 from app.schemas.students import StudentDetails
 from app.schemas.teachers import MAX_ID
 from app.services.availability import class_is_available
@@ -48,10 +50,10 @@ from app.services.users import end_all_sessions, get_roles, get_user_by_email
 
 logger = logging.getLogger("uvicorn.error")
 
-NOT_A_NEW_STUDENT = "This email already belongs to a student"
+NOT_A_NEW_STUDENT = _("This email already belongs to a student")
 """The invitation form's refusal (FR-026). It never names the institution or the class."""
 
-CLASS_DEACTIVATED = "This class is deactivated."
+CLASS_DEACTIVATED = _("This class is deactivated.")
 """A student edit that moves the student into a deactivated class of the same institution."""
 
 
@@ -97,10 +99,16 @@ class _StudentInvitation:
         described = describe_institutions(session, [details.institution_id])
         if details.institution_id in described:
             label = described[details.institution_id].label
-            lines.append(DetailLine(f"Educational institution: {label}"))
+            lines.append(
+                DetailLine(_("Educational institution: %(institution)s", institution=label))
+            )
         school_class = session.get(SchoolClass, details.class_id)
         if school_class is not None:
-            lines.append(DetailLine(f"Class: {ClassView.from_row(school_class).label}"))
+            lines.append(
+                DetailLine(
+                    _("Class: %(class_label)s", class_label=ClassView.from_row(school_class).label)
+                )
+            )
         return lines
 
     def grant(self, session: Session, user: User, details: StudentDetails, now: datetime) -> None:
@@ -171,7 +179,7 @@ def list_students(session: Session, class_id: int) -> list[StudentRow]:
     )
     rows = [_row(user, enrolment) for user, enrolment in session.exec(statement)]
     return sorted(
-        rows, key=lambda row: (row.last_name.casefold(), row.first_name.casefold(), row.user_id)
+        rows, key=lambda row: (person_sort_key(row.last_name, row.first_name), row.user_id)
     )
 
 

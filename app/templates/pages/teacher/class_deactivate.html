@@ -2,12 +2,12 @@
 {% from "components/frame.html" import back_link %}
 {% from "components/confirmation.html" import confirmation %}
 
-{% block title %}Deactivate class “{{ school_class.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Deactivate class “%(name)s”", name=school_class.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(cancel, "Back to “" ~ school_class.name ~ "”") }}
-{% call confirmation("Deactivate class “" ~ school_class.name ~ "”?", none, "/teacher/students/classes/" ~ school_class.id ~ "/deactivate", "Deactivate", cancel) %}
-<p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
-<p>Its students will be signed out and hidden until the class is activated again.</p>
+{{ back_link(cancel, pgettext("class", "Back to “%(name)s”", name=school_class.name)) }}
+{% call confirmation(_("Deactivate class “%(name)s”?", name=school_class.name), none, "/teacher/students/classes/" ~ school_class.id ~ "/deactivate", _("Deactivate"), cancel) %}
+<p>{{ _("Educational institution: %(institution)s", institution=institution.name) }} ({{ institution.region_name }})</p>
+<p>{{ _("Its students will be signed out and hidden until the class is activated again.") }}</p>
 {% endcall %}
 {% endblock %}

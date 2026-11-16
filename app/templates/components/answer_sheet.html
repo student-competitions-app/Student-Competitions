@@ -11,7 +11,7 @@
 {% from "components/card.html" import text_card, text_box %}
 {% from "components/form.html" import textarea_field, form_actions %}
 
-{% macro answer_sheet(items, action, hidden, submit_label="Save answers") -%}
+{% macro answer_sheet(items, action, hidden, submit_label=None) -%}
 {%- if not items %}{{ template_error("answer_sheet: at least one question is required") }}{% endif -%}
 <form method="post" action="{{ action }}">
   {%- for name, value in hidden.items() %}
@@ -20,13 +20,13 @@
   <ol class="answer-sheet">
     {%- for item in items %}
     <li>
-      {% call text_card("Question " ~ item.number) %}
-      {{ text_box("Question", item.text) }}
-      {{ textarea_field(item.field_id, "Answer to question " ~ item.number, value=item.value, error=item.error, hint="Up to 2,000 characters.", placeholder="Not answered", attrs={"maxlength": "2000"}) }}
+      {% call text_card(_("Question %(number)d", number=item.number)) %}
+      {{ text_box(_("Question"), item.text) }}
+      {{ textarea_field(item.field_id, _("Answer to question %(number)d", number=item.number), value=item.value, error=item.error, hint=_("Up to 2,000 characters."), placeholder=_("Not answered"), attrs={"maxlength": "2000"}) }}
       {% endcall %}
     </li>
     {%- endfor %}
   </ol>
-  {{ form_actions(submit_label) }}
+  {{ form_actions(submit_label or _("Save answers")) }}
 </form>
 {%- endmacro %}

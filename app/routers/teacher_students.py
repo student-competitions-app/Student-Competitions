@@ -27,6 +27,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from app.core.auth import AccessDenied, allow_roles
 from app.core.config import AuthSettings
 from app.core.db import SessionDep
+from app.core.i18n import Text, _
 from app.core.sealing import seal
 from app.models import Role, SchoolClass, User
 from app.routers.admin_teachers import (
@@ -86,22 +87,22 @@ router = APIRouter(prefix="/teacher/students")
 TAB = "students"
 TAB_PATH = "/teacher/students"
 
-NOT_LINKED = "You are not linked to any educational institution"
-SELECT_REGION = "Select a region to continue"
-SELECT_INSTITUTION = "Select an educational institution to continue"
-SELECT_CLASS = "Select a class to see its students"
-NO_STUDENTS = "No students in this class yet"
-CLASS_HIDDEN = "This class is deactivated; its students are hidden until it is activated again"
+NOT_LINKED = _("You are not linked to any educational institution")
+SELECT_REGION = _("Select a region to continue")
+SELECT_INSTITUTION = _("Select an educational institution to continue")
+SELECT_CLASS = _("Select a class to see its students")
+NO_STUDENTS = _("No students in this class yet")
+CLASS_HIDDEN = _("This class is deactivated; its students are hidden until it is activated again")
 """The messages of the page in each state (FR-049, FR-054)."""
 
 NEW_CLASS = "new"
 """The `class` value of the **+ Add class** entry (research D7)."""
 
-NO_NEW_STUDENTS = "This class is deactivated. Students cannot be added to it."
+NO_NEW_STUDENTS = _("This class is deactivated. Students cannot be added to it.")
 """The invitation form of a deactivated class (spec Assumptions)."""
 
 
-def selection_path(region_id: int, institution_id: int, class_id: int | None = None) -> str:
+def selection_path(region_id: int, institution_id: int, class_id: int | None = None) -> Text:
     """The Students tab with this region, institution and, if given, class selected."""
     path = f"{TAB_PATH}?region={region_id}&institution={institution_id}"
     if class_id is not None:
@@ -297,7 +298,7 @@ def _class_errors(name: str, year_of_study: str) -> dict[str, str]:
 
 
 def _new_class_heading(institution: ReachableInstitution) -> str:
-    return f"New class in “{institution.name}”"
+    return _("New class in “%(institution)s”", institution=institution.name)
 
 
 @router.get("/institutions/{institution_id:int}/classes/new", response_class=HTMLResponse)
@@ -353,8 +354,8 @@ def create_class_action(
     return _redirect(selection_path(institution.region_id, institution.id, created.id))
 
 
-def _edit_heading(school_class: SchoolClass) -> str:
-    return f"Edit class “{school_class.name}”"
+def _edit_heading(school_class: SchoolClass) -> Text:
+    return _("Edit class “%(name)s”", name=school_class.name)
 
 
 @router.get("/classes/{class_id:int}/edit", response_class=HTMLResponse)

@@ -21,6 +21,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.auth import session_token
 from app.core.config import APP_NAME
 from app.core.db import SessionDep
+from app.core.i18n import _
 from app.core.security import safe_next_path
 from app.core.templates import templates
 from app.models import Role
@@ -30,8 +31,8 @@ router = APIRouter()
 
 logger = logging.getLogger("uvicorn.error")
 
-CHOOSE_ONE = "Choose one of your roles."
-UNAVAILABLE = "Choosing a role is temporarily unavailable. Please try again in a moment."
+CHOOSE_ONE = _("Choose one of your roles.")
+UNAVAILABLE = _("Choosing a role is temporarily unavailable. Please try again in a moment.")
 
 
 def _page(

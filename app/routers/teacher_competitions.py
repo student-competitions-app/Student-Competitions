@@ -39,6 +39,7 @@ questions and teams, imports the public helpers here (`list_path`, `list_query`,
 addresses and answer the same way.
 """
 
+from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 
@@ -49,8 +50,9 @@ from sqlmodel import Session
 from app.core.auth import AccessDenied, allow_roles
 from app.core.config import AuthSettings
 from app.core.db import SessionDep
+from app.core.i18n import Text, _
 from app.core.sealing import SealExpired, SealInvalid, seal, unseal
-from app.core.time_zone import UTC_ZONE, parse_time_zone, read_time_zone, zone_name
+from app.core.time_zone import KYIV, parse_time_zone, read_time_zone, zone_name
 from app.models import Role, Subject, User
 from app.routers.teacher import render_teacher
 from app.schemas.competition import StartErrors, local_parts, parse_start
@@ -87,47 +89,59 @@ TAB = "competitions"
 TAB_PATH = "/teacher/competitions"
 
 SUBJECT_NOT_FOUND = (
-    "Subject not found",
-    "This subject does not exist, or it is deactivated and has no finished competitions.",
+    _("Subject not found"),
+    _("This subject does not exist, or it is deactivated and has no finished competitions."),
 )
 COMPETITION_NOT_FOUND = (
-    "Competition not found",
-    "This competition does not exist, or its subject is deactivated.",
+    _("Competition not found"),
+    _("This competition does not exist, or its subject is deactivated."),
 )
 """The not-found page's heading and text."""
 
 FIELD_ORDER = ["name", "start_date", "start_time"]
 """The fields in page order, for the error summary."""
 
-START_NOT_IN_FUTURE = "The start must be in the future."
+START_NOT_IN_FUTURE = _("The start must be in the future.")
 
-STATUS_OPTIONS = [("", "All"), *((status.value, status.label) for status in CompetitionStatus)]
+STATUS_OPTIONS = [("", _("All")), *((status.value, status.label) for status in CompetitionStatus)]
 """The Status list: All (no value), then each status."""
 
-EDIT_REFUSALS = {
-    CompetitionStatus.IN_PROGRESS: "“{name}” has already started and can no longer be edited.",
-    CompetitionStatus.CANCELLED: "“{name}” has been cancelled and can no longer be edited.",
-    CompetitionStatus.FINISHED: "“{name}” has finished and can no longer be edited.",
+EDIT_REFUSALS: dict[Any, Callable[..., Text]] = {
+    CompetitionStatus.IN_PROGRESS: lambda name: _(
+        "“%(name)s” has already started and can no longer be edited.", name=name
+    ),
+    CompetitionStatus.CANCELLED: lambda name: _(
+        "“%(name)s” has been cancelled and can no longer be edited.", name=name
+    ),
+    CompetitionStatus.FINISHED: lambda name: _(
+        "“%(name)s” has finished and can no longer be edited.", name=name
+    ),
 }
-CANCEL_REFUSALS = {
-    CompetitionStatus.CANCELLED: "“{name}” is already cancelled.",
-    CompetitionStatus.FINISHED: "“{name}” has finished and cannot be cancelled.",
+CANCEL_REFUSALS: dict[Any, Callable[..., Text]] = {
+    CompetitionStatus.CANCELLED: lambda name: _("“%(name)s” is already cancelled.", name=name),
+    CompetitionStatus.FINISHED: lambda name: _(
+        "“%(name)s” has finished and cannot be cancelled.", name=name
+    ),
 }
-FINISH_REFUSALS = {
-    CompetitionStatus.UPCOMING: "“{name}” has not started yet and cannot be finished.",
-    CompetitionStatus.CANCELLED: "“{name}” has been cancelled and cannot be finished.",
-    CompetitionStatus.FINISHED: "“{name}” has already finished.",
+FINISH_REFUSALS: dict[Any, Callable[..., Text]] = {
+    CompetitionStatus.UPCOMING: lambda name: _(
+        "“%(name)s” has not started yet and cannot be finished.", name=name
+    ),
+    CompetitionStatus.CANCELLED: lambda name: _(
+        "“%(name)s” has been cancelled and cannot be finished.", name=name
+    ),
+    CompetitionStatus.FINISHED: lambda name: _("“%(name)s” has already finished.", name=name),
 }
 """The reason of each refusal, by the competition's status (http-routes.md §4, §6; milestone 12.4
 http-routes.md §Refusals)."""
 
 COMPETITION_NOTICE_PURPOSE = "competition-notice"
 COMPETITION_NOTICE_TTL = timedelta(minutes=10)
-NOTICES = {
-    "added": "Competition “{name}” was added",
-    "saved": "Competition “{name}” was saved",
-    "cancelled": "Competition “{name}” was cancelled",
-    "finished": "Competition “{name}” was finished",
+NOTICES: dict[Any, Callable[..., Text]] = {
+    "added": lambda name: _("Competition “%(name)s” was added", name=name),
+    "saved": lambda name: _("Competition “%(name)s” was saved", name=name),
+    "cancelled": lambda name: _("Competition “%(name)s” was cancelled", name=name),
+    "finished": lambda name: _("Competition “%(name)s” was finished", name=name),
 }
 """The success notice of each outcome; the name is read when the list is shown."""
 
@@ -258,7 +272,7 @@ def _read_notice(
     competition = find_competition(session, competition_id, subject)
     if competition is None:
         return None
-    return NOTICES[outcome].format(name=competition.name)
+    return NOTICES[outcome](name=competition.name)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -293,7 +307,7 @@ def competitions_page(
     context: dict[str, Any] = {
         "subjects": [(s.id, s.name) for s in choices.active],
         "groups": (
-            [("Deactivated subjects", [(s.id, s.name) for s in choices.deactivated])]
+            [(_("Deactivated subjects"), [(s.id, s.name) for s in choices.deactivated])]
             if choices.deactivated
             else []
         ),
@@ -377,8 +391,8 @@ def _refused(
             "question": question,
             "reason": reason,
             "back": list_path(subject.id, status, page, anchor=competition_id),
-            "back_link_text": "Back to the competitions",
-            "back_text": "Back to competitions",
+            "back_link_text": _("Back to the competitions"),
+            "back_text": _("Back to competitions"),
         },
         status_code=409,
     )
@@ -392,8 +406,8 @@ def _edit_refused(
     filter_status: CompetitionStatus | None,
     page: int,
 ) -> HTMLResponse:
-    question = f"Edit competition “{competition.name}”?"
-    reason = EDIT_REFUSALS[status].format(name=competition.name)
+    question = _("Edit competition “%(name)s”?", name=competition.name)
+    reason = EDIT_REFUSALS[status](name=competition.name)
     return _refused(request, question, reason, subject, filter_status, page, competition.id)
 
 
@@ -405,8 +419,8 @@ def _cancel_refused(
     filter_status: CompetitionStatus | None,
     page: int,
 ) -> HTMLResponse:
-    question = f"Cancel competition “{competition.name}”?"
-    reason = CANCEL_REFUSALS[status].format(name=competition.name)
+    question = _("Cancel competition “%(name)s”?", name=competition.name)
+    reason = CANCEL_REFUSALS[status](name=competition.name)
     return _refused(request, question, reason, subject, filter_status, page, competition.id)
 
 
@@ -418,14 +432,15 @@ def _finish_refused(
     filter_status: CompetitionStatus | None,
     page: int,
 ) -> HTMLResponse:
-    question = f"Finish competition “{competition.name}”?"
-    reason = FINISH_REFUSALS[status].format(name=competition.name)
+    question = _("Finish competition “%(name)s”?", name=competition.name)
+    reason = FINISH_REFUSALS[status](name=competition.name)
     return _refused(request, question, reason, subject, filter_status, page, competition.id)
 
 
 def _submitted_zone(raw: str) -> str:
-    """The zone the form was shown in, from its hidden field; `UTC` when unknown (FR-022)."""
-    return (parse_time_zone(raw) or UTC_ZONE).key
+    """The zone the form was shown in, from its hidden field; Kyiv when unknown (FR-022, as
+    changed by milestone 12.5 FR-037)."""
+    return (parse_time_zone(raw) or KYIV).key
 
 
 def _field_errors(
@@ -437,7 +452,7 @@ def _field_errors(
         clean_name(name)
     except InvalidName as invalid:
         errors["name"] = invalid.message
-    start = parse_start(start_date, start_time, parse_time_zone(zone_label) or UTC_ZONE)
+    start = parse_start(start_date, start_time, parse_time_zone(zone_label) or KYIV)
     if isinstance(start, StartErrors):
         if start.date:
             errors["start_date"] = start.date

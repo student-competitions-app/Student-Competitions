@@ -82,7 +82,7 @@ def test_no_role_switch_before_a_role_is_chosen(client_as: ClientAs) -> None:
 def test_signed_out_there_is_no_user_menu(client: TestClient) -> None:
     body = client.get("/login").text
     assert user_menus(body) == []
-    assert html.forms(body, "header") == []
+    assert [f.action for f in html.forms(body, "header")] == ["/language"]
 
 
 # ---------------------------------------------------------------------------------------------

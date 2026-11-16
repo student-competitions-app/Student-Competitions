@@ -6,15 +6,15 @@
 {% from "components/form.html" import error_summary, textarea_field, form_actions %}
 {% from "components/feedback.html" import notice %}
 
-{% set heading = "Edit question " ~ question_id if question_id else "Add question" %}
+{% set heading = _("Edit question %(number)d", number=question_id) if question_id else _("Add question") %}
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back, "Back to the questions") }}
+{{ back_link(back, _("Back to the questions")) }}
 {{ page_heading(heading) }}
 {{ error_summary(errors, order=field_order) }}
-{% if saved and not errors %}{{ notice("The question was saved.", "success") }}{% endif %}
-<p>Subject: {{ subject.name }}</p>
+{% if saved and not errors %}{{ notice(_("The question was saved."), "success") }}{% endif %}
+<p>{{ _("Subject: %(subject)s", subject=subject.name) }}</p>
 {% if question_id %}
 <form method="post" action="/teacher/questions/{{ question_id }}/edit">
   <input type="hidden" name="page" value="{{ page }}">
@@ -23,12 +23,12 @@
   <input type="hidden" name="subject" value="{{ subject.id }}">
   <input type="hidden" name="page" value="{{ page }}">
 {% endif %}
-  {{ textarea_field("text", "Question", value=values.text, error=errors.text, hint="Up to 2,000 characters.", attrs={"required": True, "maxlength": "2000"}) }}
-  {{ textarea_field("reference_answer", "Reference answer", value=values.reference_answer, error=errors.reference_answer, hint="Up to 2,000 characters.", attrs={"required": True, "maxlength": "2000"}) }}
+  {{ textarea_field("text", _("Question"), value=values.text, error=errors.text, hint=_("Up to 2,000 characters."), attrs={"required": True, "maxlength": "2000"}) }}
+  {{ textarea_field("reference_answer", _("Reference answer"), value=values.reference_answer, error=errors.reference_answer, hint=_("Up to 2,000 characters."), attrs={"required": True, "maxlength": "2000"}) }}
   {% if question_id %}
-  {{ form_actions("Save question", cancel_href=back) }}
+  {{ form_actions(_("Save question"), cancel_href=back) }}
   {% else %}
-  {{ form_actions("Save question", cancel_href=back, name="then", value="list", secondary={"label": "Save and add one more question", "name": "then", "value": "another"}) }}
+  {{ form_actions(_("Save question"), cancel_href=back, name="then", value="list", secondary={"label": _("Save and add one more question"), "name": "then", "value": "another"}) }}
   {% endif %}
 </form>
 {% endblock %}

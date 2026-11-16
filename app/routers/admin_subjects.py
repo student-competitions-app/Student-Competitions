@@ -16,6 +16,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.auth import allow_roles
 from app.core.db import SessionDep
+from app.core.i18n import _
 from app.models import Role, Subject
 from app.routers.admin import render_admin
 from app.schemas.subject import SubjectNameError
@@ -84,7 +85,7 @@ def subjects_page(request: Request, session: SessionDep) -> HTMLResponse:
 @router.get("/new", response_class=HTMLResponse)
 @allow_roles(Role.ADMIN)
 def new_subject_page(request: Request) -> HTMLResponse:
-    return _form(request, "New subject", LIST_PATH, "")
+    return _form(request, _("New subject"), LIST_PATH, "")
 
 
 @router.post("", response_class=HTMLResponse)
@@ -95,7 +96,7 @@ def create_subject_action(
     try:
         create_subject(session, name)
     except (SubjectNameError, DuplicateSubjectName) as refused:
-        return _form(request, "New subject", LIST_PATH, name, refused.message, 400)
+        return _form(request, _("New subject"), LIST_PATH, name, refused.message, 400)
     return _to_list()
 
 
@@ -106,7 +107,7 @@ def rename_subject_page(request: Request, session: SessionDep, subject_id: int) 
         subject = get_subject(session, subject_id)
     except SubjectNotFound:
         return _not_found(request)
-    return _form(request, "Rename subject", _rename_action(subject_id), subject.name)
+    return _form(request, _("Rename subject"), _rename_action(subject_id), subject.name)
 
 
 @router.post("/{subject_id:int}/rename", response_class=HTMLResponse)
@@ -120,7 +121,7 @@ def rename_subject_action(
         return _not_found(request)
     except (SubjectNameError, DuplicateSubjectName) as refused:
         return _form(
-            request, "Rename subject", _rename_action(subject_id), name, refused.message, 400
+            request, _("Rename subject"), _rename_action(subject_id), name, refused.message, 400
         )
     return _to_list()
 

@@ -12,20 +12,20 @@
 {% from "components/table.html" import row_note %}
 {% from "components/grading_sheet.html" import grading_sheet %}
 
-{% block title %}Grade answers of “{{ sheet.team_name }}” in “{{ competition.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Grade answers of “%(team)s” in “%(competition)s”", team=sheet.team_name, competition=competition.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back, "Back to the grades") }}
-{{ page_heading("Grade answers of “" ~ sheet.team_name ~ "” in “" ~ competition.name ~ "”") }}
-{{ details_list([("Educational institution", sheet.institution_name)]) }}
-{% if sheet.is_deleted %}<p>{{ row_note("(deleted)") }}</p>{% endif %}
+{{ back_link(back, _("Back to the grades")) }}
+{{ page_heading(_("Grade answers of “%(team)s” in “%(competition)s”", team=sheet.team_name, competition=competition.name)) }}
+{{ details_list([(_("Educational institution"), sheet.institution_name)]) }}
+{% if sheet.is_deleted %}<p>{{ row_note(_("(deleted)")) }}</p>{% endif %}
 {{ error_summary(errors, order=field_order) }}
 {% if notice %}{{ notice_box(notice, "success") }}{% endif %}
 {% if not items %}
-{{ empty_state("No questions in this competition") }}
+{{ empty_state(_("No questions in this competition")) }}
 {% else %}
 {% if sheet.count.answered == 0 %}
-<p>“{{ sheet.team_name }}” gave no answers, so there is nothing to grade</p>
+<p>{{ _("“%(team)s” gave no answers, so there is nothing to grade", team=sheet.team_name) }}</p>
 {% endif %}
 {{ grading_sheet(items, action, hidden) }}
 {% endif %}

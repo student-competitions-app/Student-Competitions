@@ -10,12 +10,12 @@
 {% macro page_navigation(paging, href, noun, label) -%}
 {%- if paging.total %}
 <nav class="pagination" aria-label="{{ label }}">
-  <p class="pagination-range">{{ noun }} {{ paging.first_item }}–{{ paging.last_item }} of {{ paging.total }}</p>
+  <p class="pagination-range">{{ _("%(noun)s %(first)d–%(last)d of %(total)d", noun=noun, first=paging.first_item, last=paging.last_item, total=paging.total) }}</p>
   <ul>
     {%- if paging.previous %}
-    <li><a href="{{ href }}{{ paging.previous }}" rel="prev">Previous</a></li>
+    <li><a href="{{ href }}{{ paging.previous }}" rel="prev">{{ _("Previous") }}</a></li>
     {%- else %}
-    <li><span class="pagination-off">Previous</span></li>
+    <li><span class="pagination-off">{{ _("Previous") }}</span></li>
     {%- endif %}
     {%- for link in paging.links %}
     {%- if link.number is none %}
@@ -25,9 +25,9 @@
     {%- endif %}
     {%- endfor %}
     {%- if paging.next %}
-    <li><a href="{{ href }}{{ paging.next }}" rel="next">Next</a></li>
+    <li><a href="{{ href }}{{ paging.next }}" rel="next">{{ _("Next") }}</a></li>
     {%- else %}
-    <li><span class="pagination-off">Next</span></li>
+    <li><span class="pagination-off">{{ _("Next") }}</span></li>
     {%- endif %}
   </ul>
 </nav>

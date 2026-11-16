@@ -15,32 +15,32 @@
 {% from "components/badge.html" import competition_status_badge %}
 {% from "components/time.html" import local_time with context %}
 
-{% block title %}Teams of “{{ competition.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Teams of “%(name)s”", name=competition.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back, "Back to the competitions") }}
-{{ page_heading("Teams of “" ~ competition.name ~ "”", action=("Add team", add_href) if can_change else none) }}
+{{ back_link(back, _("Back to the competitions")) }}
+{{ page_heading(_("Teams of “%(name)s”", name=competition.name), action=(_("Add team"), add_href) if can_change else none) }}
 {% set start %}{{ local_time(competition.starts_at) }}{% endset %}
 {% set badge %}{{ competition_status_badge(competition.status) }}{% endset %}
-{{ details_list([("Subject", subject.name), ("Start", start), ("Status", badge)]) }}
+{{ details_list([(_("Subject"), subject.name), (_("Start"), start), (_("Status"), badge)]) }}
 {% if notice %}{{ notice_box(notice[0], notice[1]) }}{% endif %}
 {% if not listing.groups %}
-{{ empty_state("No teams in this competition yet", "Add teams with Add team." if can_change else none) }}
+{{ empty_state(_("No teams in this competition yet"), _("Add teams with Add team.") if can_change else none) }}
 {% else %}
-{% set columns = ["Team", "Educational institution", "Active members"] + (["Actions"] if show_actions else []) %}
-{{ page_navigation(listing.paging, page_href, "Teams", "Pages, top") }}
+{% set columns = [_("Team"), _("Educational institution"), _("Active members")] + ([_("Actions")] if show_actions else []) %}
+{{ page_navigation(listing.paging, page_href, _("Teams"), _("Pages, top")) }}
 {% for g in listing.groups %}
 {% call region_group(g.region_name, g.total, "region-" ~ g.region_id ~ "-p" ~ listing.paging.number) %}
 {% call data_table(columns) %}
 {% for row in g.rows %}
 <tr id="team-{{ row.team_id }}">
-  {{ cell("Team", row.name) }}
-  {{ cell("Educational institution", row.institution_name) }}
-  {{ cell("Active members", row.active_members) }}
+  {{ cell(_("Team"), row.name) }}
+  {{ cell(_("Educational institution"), row.institution_name) }}
+  {{ cell(_("Active members"), row.active_members) }}
   {% if show_actions %}
   {% call actions_cell() %}
-  {%- if row.is_deleted %}{{ row_note("(deleted)") }}{% endif -%}
-  {%- if can_change %}{{ link_button("Remove", remove_hrefs[row.team_id], kind="destructive", outline=True, small=True) }}{% endif -%}
+  {%- if row.is_deleted %}{{ row_note(_("(deleted)")) }}{% endif -%}
+  {%- if can_change %}{{ link_button(_("Remove"), remove_hrefs[row.team_id], kind="destructive", outline=True, small=True) }}{% endif -%}
   {% endcall %}
   {% endif %}
 </tr>
@@ -48,6 +48,6 @@
 {% endcall %}
 {% endcall %}
 {% endfor %}
-{{ page_navigation(listing.paging, page_href, "Teams", "Pages, bottom") }}
+{{ page_navigation(listing.paging, page_href, _("Teams"), _("Pages, bottom")) }}
 {% endif %}
 {% endblock %}

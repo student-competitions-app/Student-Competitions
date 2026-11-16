@@ -13,6 +13,8 @@ from urllib.error import URLError
 import pytest
 
 from app.core.config import APP_VERSION, AuthSettings
+from app.core.i18n import Language, _, use_language
+from app.models import Role
 from app.services.email import (
     ConsoleEmailSender,
     EmailDeliveryError,
@@ -192,23 +194,31 @@ def an_invitation() -> EmailMessage:
         "olena@example.org",
         "Admin Person",
         "admin@example.com",
-        "Teacher",
+        Role.TEACHER,
         [
-            "Kyiv Lyceum (Kyiv) — Write",
-            "Lviv School (Lviv) — Read",
-            "You will be able to manage competitions and change the question bank.",
+            _("%(institution)s — %(level)s", institution="Kyiv Lyceum (Kyiv)", level="Write"),
+            _("%(institution)s — %(level)s", institution="Lviv School (Lviv)", level="Read"),
+            _("You will be able to manage competitions and change the question bank."),
         ],
         INVITE_LINK,
         EXPIRES,
     )
 
 
+def english_part(message: EmailMessage) -> str:
+    """The English half of a bilingual email (milestone 12.5 FR-042)."""
+    ukrainian, english = message.text.split("\n\n———\n\n")
+    return english
+
+
 def test_the_invitation_states_everything_required() -> None:
     """FR-021: who invites, the role, the institutions with levels, the competitions setting,
-    that nothing is stored unless accepted, the link and its expiry."""
+    that nothing is stored unless accepted, the link and its expiry (Kyiv time since milestone
+    12.5), in the English part."""
     message = an_invitation()
     assert message.to == "olena@example.org"
-    assert message.subject == "You are invited to Student Competitions as a teacher"
+    assert message.subject.endswith(" / You are invited to Student Competitions as a teacher")
+    text = english_part(message)
     for statement in (
         "Admin Person (admin@example.com) invites you",
         "Role: Teacher",
@@ -217,14 +227,14 @@ def test_the_invitation_states_everything_required() -> None:
         "You will be able to manage competitions and change the question bank.",
         "Nothing about you is stored unless you accept.",
         f"\n{INVITE_LINK}\n",
-        "This invitation expires on 2026-10-22 14:05 UTC.",
+        "This invitation expires on 22 October 2026, 17:05 (Kyiv time).",
     ):
-        assert statement in message.text
+        assert statement in text
 
 
 def test_the_invitation_subject_names_nobody() -> None:
     message = invitation_message(
-        "olena@example.org", "Olena Admin", "a@x.org", "Teacher", [], INVITE_LINK, EXPIRES
+        "olena@example.org", "Olena Admin", "a@x.org", Role.TEACHER, [], INVITE_LINK, EXPIRES
     )
     assert "Olena" not in message.subject
     assert "olena" not in message.subject
@@ -239,7 +249,7 @@ def test_the_deletion_message() -> None:
         "erases your first and last name and this email address",
         "removes the roles granted with your consent",
         f"\n{DELETE_LINK}\n",
-        "works once, within one hour, until 2026-10-22 14:05 UTC",
+        "works once, within one hour, until 22 October 2026, 17:05 (Kyiv time)",
         "If you did not ask for this, you can ignore this email.",
     ):
         assert statement in message.text
@@ -250,3 +260,36 @@ def test_both_messages_are_plain_text() -> None:
         assert "<" not in message.text
         assert "href" not in message.text
         assert set(vars(message)) == {"to", "subject", "text"}
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.5: the languages of the emails (FR-041–FR-043, research R10)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_the_login_and_deletion_messages_follow_the_current_language() -> None:
+    with use_language(Language.UK):
+        login = login_code_message("a@x.org", "042917", 20)
+        deletion = deletion_message("a@x.org", DELETE_LINK, EXPIRES)
+    assert "Студентські змагання" in login.subject
+    assert "042917" in login.text and "042917" not in login.subject
+    assert "Студентські змагання" in deletion.subject
+    assert "22 жовтня 2026, 17:05 (за київським часом)" in deletion.text
+    with use_language(Language.EN):
+        assert login_code_message("a@x.org", "042917", 20).subject == SUBJECT
+
+
+def test_the_invitation_is_ukrainian_then_english_whatever_the_language() -> None:
+    for language in Language:
+        with use_language(language):
+            message = an_invitation()
+        assert message == an_invitation()
+    ukrainian, english = message.text.split("\n\n———\n\n")
+    uk_subject, en_subject = message.subject.split(" / ")
+    assert "Студентські змагання" in uk_subject
+    assert en_subject == "You are invited to Student Competitions as a teacher"
+    assert "Admin Person (admin@example.com) запрошує вас" in ukrainian
+    assert "Kyiv Lyceum (Kyiv)" in ukrainian
+    assert "22 жовтня 2026, 17:05 (за київським часом)" in ukrainian
+    assert "Admin Person (admin@example.com) invites you" in english
+    assert ukrainian.count(INVITE_LINK) == english.count(INVITE_LINK) == 1

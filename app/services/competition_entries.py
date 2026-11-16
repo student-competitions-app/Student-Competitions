@@ -60,6 +60,7 @@ from app.models import (
     Subject,
     Team,
 )
+from app.schemas.names import name_sort_key
 from app.services import competitions
 from app.services.competitions import (
     CompetitionStatus,
@@ -254,7 +255,12 @@ def team_entries(session: Session, competition_id: int) -> list[TeamEntry]:
     )
     return sorted(
         session.exec(statement),
-        key=lambda entry: (entry[2].name_key, entry[2].id, entry[0].name_key, entry[0].id),
+        key=lambda entry: (
+            name_sort_key(entry[2].name),
+            entry[2].id,
+            name_sort_key(entry[0].name),
+            entry[0].id,
+        ),
     )
 
 
@@ -421,7 +427,9 @@ def addable_teams(session: Session, region_id: int, p: int) -> AddableTeamPage:
             col(Team.deleted_at).is_(None),
         )
     )
-    entries = sorted(session.exec(statement), key=lambda entry: (entry[0].name_key, entry[0].id))
+    entries = sorted(
+        session.exec(statement), key=lambda entry: (name_sort_key(entry[0].name), entry[0].id)
+    )
     paging = Paging.build(p, len(entries))
     shown = entries[paging.offset : paging.offset + paging.size]
     counts = count_active_members(session, [team.id for team, _ in shown if team.id])

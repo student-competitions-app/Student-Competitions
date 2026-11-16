@@ -36,6 +36,8 @@ from pathlib import Path
 
 import pytest
 from alembic import command
+from babel.messages.mofile import write_mo
+from babel.messages.pofile import read_po
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
@@ -43,6 +45,7 @@ from sqlmodel import Session, select
 
 from app.core.config import AuthSettings, resolve_database_url
 from app.core.db import create_db_engine, utc_now
+from app.core.i18n import LOCALE_DIR, Language
 from app.core.migrations import alembic_config
 from app.core.security import SESSION_COOKIE_NAME, sign_cookie_value
 from app.main import app
@@ -126,24 +129,51 @@ _database_numbers = itertools.count(1)
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
-    """CI must run both halves of the matrix; skipping PostgreSQL there would go green on half."""
+    """CI must run both halves of the matrix; skipping PostgreSQL there would go green on half.
+
+    Both message catalogues are compiled here, from the committed `.po` files, so `uv run pytest`
+    works on a fresh clone and always tests the catalogues as they are (milestone 12.5 FR-060).
+    """
     if os.environ.get("CI") == "true" and not os.environ.get("TEST_POSTGRES_URL"):
         pytest.exit(
             "CI=true but TEST_POSTGRES_URL is not set: the PostgreSQL half of the suite would be "
             "skipped. Configure the postgres service in the workflow.",
             returncode=1,
         )
+    compile_catalogues()
+
+
+def compile_catalogues() -> None:
+    """`scripts/translations.sh compile`, through Babel's Python API."""
+    for language in Language:
+        folder = LOCALE_DIR / language.value / "LC_MESSAGES"
+        with (folder / "messages.po").open("rb") as source:
+            catalogue = read_po(source, locale=language.value)
+        with (folder / "messages.mo").open("wb") as target:
+            write_mo(target, catalogue)
 
 
 @pytest.fixture(autouse=True)
 def _isolate_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """No test inherits a developer's `DATABASE_URL`, `RENDER` flag or sign-in settings from the
-    shell, and no test can send a real email: the backend is always `memory`."""
+    shell, and no test can send a real email: the backend is always `memory`.
+
+    The suite runs in English (milestone 12.5 FR-067): `DEFAULT_LANGUAGE=en`, so every test
+    written before the milestone keeps reading the English wording. A test that needs Ukrainian
+    sends the cookie `sc_lang=uk`, or requests `ukrainian_default`."""
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("RENDER", raising=False)
     for name in AUTH_VARIABLES:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("EMAIL_BACKEND", "memory")
+    monkeypatch.setenv("DEFAULT_LANGUAGE", "en")
+
+
+@pytest.fixture
+def ukrainian_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The deployment's default language is Ukrainian, as in production. Request it **before**
+    `client` in a test's signature, so the application starts with it."""
+    monkeypatch.setenv("DEFAULT_LANGUAGE", "uk")
 
 
 # ---------------------------------------------------------------------------------------------

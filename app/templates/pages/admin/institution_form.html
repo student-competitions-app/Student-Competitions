@@ -6,16 +6,16 @@
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-{{ back_link(cancel, "Back to “" ~ region.name ~ "”") }}
+{{ back_link(cancel, pgettext("region", "Back to “%(name)s”", name=region.name)) }}
 {{ page_heading(heading) }}
 {% if refused %}
-{{ notice("This region is deactivated. New educational institutions cannot be added to it.", "info") }}
+{{ notice(_("This region is deactivated. New educational institutions cannot be added to it."), "info") }}
 {% else %}
 {{ error_summary(errors, order=["name"]) }}
-<p>Region: {{ region.name }}</p>
+<p>{{ _("Region: %(region)s", region=region.name) }}</p>
 <form method="post" action="{{ action }}">
-  {{ field("name", "Name", value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
-  {{ form_actions("Save", cancel_href=cancel) }}
+  {{ field("name", _("Name"), value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
+  {{ form_actions(_("Save"), cancel_href=cancel) }}
 </form>
 {% endif %}
 {% endblock %}

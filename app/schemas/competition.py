@@ -22,26 +22,27 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from zoneinfo import ZoneInfo
 
-from app.core.time_zone import MONTHS
+from app.core.i18n import Text, _
+from app.core.time_zone import KYIV, MONTHS
 
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}", re.ASCII)
 _TIME = re.compile(r"(\d{1,2}):(\d{2})(?::(\d{2}))?", re.ASCII)
 
-DATE_EMPTY = "Enter the start date."
-DATE_INVALID = "Enter a real start date."
-TIME_EMPTY = "Enter the start time."
-TIME_INVALID = "Enter a real start time."
+DATE_EMPTY = _("Enter the start date.")
+DATE_INVALID = _("Enter a real start date.")
+TIME_EMPTY = _("Enter the start time.")
+TIME_INVALID = _("Enter a real start time.")
 
 
 @dataclass(frozen=True)
 class StartErrors:
     """The start's field errors; `None` for a field without one."""
 
-    date: str | None
-    time: str | None
+    date: Text | None
+    time: Text | None
 
 
-def _parse_date(raw: str) -> date | str:
+def _parse_date(raw: str) -> date | Text:
     """The date, or its error message."""
     value = raw.strip()
     if not value:
@@ -54,7 +55,7 @@ def _parse_date(raw: str) -> date | str:
         return DATE_INVALID
 
 
-def _parse_time(raw: str) -> time | str:
+def _parse_time(raw: str) -> time | Text:
     """The time to the minute, or its error message."""
     value = raw.strip()
     if not value:
@@ -68,12 +69,16 @@ def _parse_time(raw: str) -> time | str:
     return time(hour, minute)
 
 
-def gap_message(local: datetime, zone_name: str) -> str:
+def gap_message(local: datetime, zone_name: str) -> Text:
     """The error for a local time the clocks skip in `zone_name`."""
-    day = f"{local.day} {MONTHS[local.month - 1]} {local.year}"
-    return (
-        f"There is no {local:%H:%M} on {day} in {zone_name} because the clocks go forward."
-        " Enter another time."
+    return _(
+        "There is no %(time)s on %(day)d %(month)s %(year)d in %(zone)s because the clocks go "
+        "forward. Enter another time.",
+        time=f"{local:%H:%M}",
+        day=local.day,
+        month=MONTHS[local.month - 1],
+        year=local.year,
+        zone=zone_name,
     )
 
 
@@ -82,10 +87,10 @@ def parse_start(raw_date: str, raw_time: str, zone: ZoneInfo) -> datetime | Star
     errors of both fields."""
     parsed_date = _parse_date(raw_date)
     parsed_time = _parse_time(raw_time)
-    if isinstance(parsed_date, str) or isinstance(parsed_time, str):
+    if isinstance(parsed_date, Text) or isinstance(parsed_time, Text):
         return StartErrors(
-            parsed_date if isinstance(parsed_date, str) else None,
-            parsed_time if isinstance(parsed_time, str) else None,
+            parsed_date if isinstance(parsed_date, Text) else None,
+            parsed_time if isinstance(parsed_time, Text) else None,
         )
     local = datetime.combine(parsed_date, parsed_time)
     aware = local.replace(tzinfo=zone, fold=0)
@@ -100,7 +105,7 @@ def parse_start(raw_date: str, raw_time: str, zone: ZoneInfo) -> datetime | Star
 
 
 def local_parts(moment: datetime, zone: ZoneInfo | None) -> tuple[str, str]:
-    """`moment` in `zone` (UTC when `None`) as the edit form's values: `("2027-03-14",
-    "10:00")`."""
-    local = moment.astimezone(zone or UTC)
+    """`moment` in `zone` (Kyiv when `None`, milestone 12.5 FR-037) as the edit form's values:
+    `("2027-03-14", "10:00")`."""
+    local = moment.astimezone(zone or KYIV)
     return f"{local:%Y-%m-%d}", f"{local:%H:%M}"

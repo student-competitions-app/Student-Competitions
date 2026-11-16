@@ -34,6 +34,7 @@ GALLERY = "/admin/components"
 SECTIONS = {
     "identity": ["Student Competitions", "--sc-page", "--sc-accent", "Heading 1", "Small text"],
     "frame": ["Account menu", "Switch to", "Light", "Dark", "Device", "Back to the frame"],
+    "language": ["Language switch", "Українська", "English", "Closed", "Open"],
     "section-heading": ["KN-21 · year 2", "Add student", "Deactivated", "Activate", "Rockets"],
     "loading": ["Loading bar", "Busy button", "Send invitation"],
     "buttons": ["Primary button", "Secondary link", "Destructive form", "Destructive outline"],
@@ -67,7 +68,6 @@ SECTIONS = {
     ],
     "actions-menu": [
         "Actions",
-        "for “Spring final”",
         "Edit",
         "Questions",
         "Teams",
@@ -77,7 +77,7 @@ SECTIONS = {
         "Cancel competition",
         "Autumn round",
     ],
-    "time": ["14 March 2027, 10:00", "14 March 2027, 08:00 UTC"],
+    "time": ["14 March 2027, 10:00", "14 March 2027, 10:00 (Kyiv time)"],
     "badges": [
         "Active",
         "Deactivated",
@@ -337,7 +337,8 @@ def test_the_actions_menu_variants(admin_client: TestClient) -> None:
     menus = [d for d in section.find_all("details") if "actions-menu" in d.classes()]
     assert [m.attrs.get("name") for m in menus] == ["row-actions"] * 3
     assert ["open" in m.attrs for m in menus] == [True, False, False]
-    summaries = [m.find_all("summary")[0].text() for m in menus]
+    assert [m.find_all("summary")[0].text() for m in menus] == ["Actions"] * 3
+    summaries = [m.find_all("summary")[0].attrs["aria-label"] for m in menus]
     assert summaries[0] == "Actions for “Spring final”"
     assert summaries[1].startswith("Actions for “Regional robotics")
     assert len(summaries[1]) == len("Actions for “”") + 200
@@ -453,7 +454,8 @@ def test_the_local_time_variants(admin_client: TestClient) -> None:
     times = [(t.attrs.get("datetime"), t.text()) for t in section.find_all("time")]
     assert times == [
         ("2027-03-14T08:00Z", "14 March 2027, 10:00"),
-        ("2027-03-14T08:00Z", "14 March 2027, 08:00 UTC"),
+        ("2027-03-14T08:00Z", "14 March 2027, 10:00 (Kyiv time)"),
+        ("2027-03-14", "14 March 2027"),
     ]
 
 
@@ -650,3 +652,49 @@ def test_in_production_it_is_an_unknown_address_for_everyone(
     unknown = browser.get("/no-such-page", follow_redirects=False)
     assert response.status_code == unknown.status_code == 404
     assert response.text.replace(GALLERY, "/no-such-page") == unknown.text
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.5: the language switch (contracts/components.md §1, FR-064)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_the_language_switch_closed_and_open_with_each_language_current(
+    admin_client: TestClient,
+) -> None:
+    section = gallery_section(admin_client.get(GALLERY).text, "language")
+    switches = [d for d in section.find_all("details") if "language-switch" in d.classes()]
+    assert [("open" in d.attrs) for d in switches] == [False, False, True, True]
+    for switch, current in zip(switches, ["uk", "en", "uk", "en"], strict=True):
+        (summary,) = switch.find_all("summary")
+        (name,) = [s for s in summary.find_all("span") if "language-switch-name" in s.classes()]
+        assert name.attrs["lang"] == current
+        assert name.text() == {"uk": "Українська", "en": "English"}[current]
+        (form,) = switch.find_all("form")
+        assert (form.attrs["method"], form.attrs["action"]) == ("post", "/language")
+        buttons = form.find_all("button")
+        assert [(b.attrs["name"], b.attrs["value"], b.attrs["lang"]) for b in buttons] == [
+            ("language", "uk", "uk"),
+            ("language", "en", "en"),
+        ]
+        assert [b.text() for b in buttons] == ["Українська", "English"]
+        assert [b.attrs.get("aria-current") for b in buttons] == [
+            "true" if current == "uk" else None,
+            "true" if current == "en" else None,
+        ]
+        flags = [(i.attrs["src"], i.attrs["alt"]) for i in switch.find_all("img")]
+        assert flags[1:] == [("/static/img/flag-ua.svg", ""), ("/static/img/flag-gb.svg", "")]
+        assert flags[0] == (
+            "/static/img/flag-ua.svg" if current == "uk" else "/static/img/flag-gb.svg",
+            "",
+        )
+
+
+def test_the_gallery_content_stays_english_in_ukrainian(admin_client: TestClient) -> None:
+    """FR-027: the page declares Ukrainian, its frame is Ukrainian, its samples stay English."""
+    admin_client.cookies.set("sc_lang", "uk")
+    body = admin_client.get(GALLERY).text
+    assert html.html_attrs(body)["lang"] == "uk"
+    section = gallery_section(body, "language")
+    assert "Language switch" in section.text()
+    assert "Closed, Ukrainian current" in section.text()

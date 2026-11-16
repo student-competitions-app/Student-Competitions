@@ -12,7 +12,7 @@
 {% from "components/button.html" import post_button %}
 {% from "components/feedback.html" import notice %}
 
-{% macro confirmation(question, consequence, action, verb, cancel_href, hidden={}, back_label="Cancel", kind="destructive") -%}
+{% macro confirmation(question, consequence, action, verb, cancel_href, hidden={}, back_label=None, kind="destructive") -%}
 {%- if kind not in ("destructive", "primary") %}{{ template_error("confirmation: kind must be destructive or primary") }}{% endif -%}
 <section class="confirmation">
   <h1>{{ question }}</h1>
@@ -24,7 +24,7 @@
   {%- endif %}
   <div class="form-actions">
     {{ post_button(action, verb, kind=kind, hidden=hidden) }}
-    <a href="{{ cancel_href }}">{{ back_label }}</a>
+    <a href="{{ cancel_href }}">{{ back_label or _("Cancel") }}</a>
   </div>
 </section>
 {%- endmacro %}

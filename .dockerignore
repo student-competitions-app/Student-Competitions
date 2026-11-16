@@ -31,7 +31,9 @@ scripts/
 .claude/
 README.md
 
-# Caches and build artifacts
+# Caches and build artifacts. Compiled catalogues are left out too: the image compiles its own
+# from the committed `app/locale/**/*.po` (milestone 12.5 FR-060)
+*.mo
 __pycache__/
 *.pyc
 *.pyo

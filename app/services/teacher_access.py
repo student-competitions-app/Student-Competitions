@@ -45,6 +45,7 @@ from app.models import (
     Team,
     User,
 )
+from app.schemas.names import name_sort_key
 from app.services.users import get_roles
 
 
@@ -129,15 +130,17 @@ def list_reachable_institutions(session: Session, teacher_id: int) -> list[Reach
         )
     )
     rows = session.exec(statement).all()
-    rows = sorted(rows, key=lambda row: (row[2].name_key, row[1].name_key, row[1].id))
+    rows = sorted(
+        rows, key=lambda row: (name_sort_key(row[2].name), name_sort_key(row[1].name), row[1].id)
+    )
     return [_reachable(link, institution, region) for link, institution, region in rows]
 
 
 def reachable_regions(institutions: list[ReachableInstitution]) -> list[tuple[int, str]]:
-    """The distinct regions of `institutions`, as `(id, name)`, sorted by name ignoring case,
-    ties by id."""
+    """The distinct regions of `institutions`, as `(id, name)`, sorted by name in the Ukrainian
+    order, ties by id."""
     regions = {item.region_id: item.region_name for item in institutions}
-    return sorted(regions.items(), key=lambda region: (region[1].casefold(), region[0]))
+    return sorted(regions.items(), key=lambda region: (name_sort_key(region[1]), region[0]))
 
 
 def reach_institution(

@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse
 
 from app.core.auth import allow_roles
 from app.core.config import APP_NAME
+from app.core.i18n import _
 from app.core.templates import templates
 from app.models import Role
 
@@ -39,27 +40,27 @@ class Area:
 
 ADMIN_AREA = Area(
     "/admin",
-    "Administrator area",
+    _("Administrator area"),
     frozenset({Role.ADMIN}),
-    "Manage teachers, educational institutions and subjects.",
+    _("Manage teachers, educational institutions and subjects."),
 )
 TEACHER_AREA = Area(
     "/teacher",
-    "Teacher area",
+    _("Teacher area"),
     frozenset({Role.TEACHER}),
-    "Manage your classes, students and teams, and work with the question bank and competitions.",
+    _("Manage your classes, students and teams, and work with the question bank and competitions."),
 )
 STUDENT_AREA = Area(
     "/student",
-    "Student area",
+    _("Student area"),
     frozenset({Role.STUDENT}),
-    "Take part in competitions and see your results.",
+    _("Take part in competitions and see your results."),
 )
 STAFF_AREA = Area(
     "/staff",
-    "Staff area",
+    _("Staff area"),
     frozenset({Role.ADMIN, Role.TEACHER}),
-    "Pages shared by administrators and teachers.",
+    _("Pages shared by administrators and teachers."),
 )
 AREAS = (ADMIN_AREA, TEACHER_AREA, STUDENT_AREA, STAFF_AREA)
 

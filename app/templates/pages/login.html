@@ -3,23 +3,23 @@
 {% from "components/feedback.html" import notice as show_notice %}
 {% from "components/form.html" import error_summary, field, form_actions %}
 
-{% block title %}Sign in — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Sign in") }} — {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="narrow">
-  {{ page_heading("Sign in") }}
+  {{ page_heading(_("Sign in")) }}
   {{ error_summary(errors, form_error, order=["email"]) }}
   {% if notice and not (errors or form_error) %}
   {{ show_notice(notice, "info") }}
   {% elif not (errors or form_error) %}
-  <p>Enter your email address and we will send you a sign-in code.</p>
+  <p>{{ _("Enter your email address and we will send you a sign-in code.") }}</p>
   {% endif %}
   <form method="post" action="/login">
-    {{ field("email", "Email address", value=values.email, error=errors.email, type="email", attrs={"required": True, "autocomplete": "email"}) }}
+    {{ field("email", _("Email address"), value=values.email, error=errors.email, type="email", attrs={"required": True, "autocomplete": "email"}) }}
     <input type="hidden" name="next" value="{{ next }}">
-    {{ form_actions("Send code") }}
+    {{ form_actions(_("Send code")) }}
   </form>
-  <p><a href="/data-deletion">Delete my data</a></p>
-  {{ theme_switch(theme, theme_return, standalone=True) }}
+  <p><a href="/data-deletion">{{ _("Delete my data") }}</a></p>
+  {{ theme_switch(theme, return_path, standalone=True) }}
 </div>
 {% endblock %}

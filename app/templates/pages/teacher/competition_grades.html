@@ -19,44 +19,44 @@
 {% from "components/badge.html" import competition_status_badge %}
 {% from "components/time.html" import local_time with context %}
 
-{% block title %}Grades of “{{ competition.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Grades of “%(name)s”", name=competition.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back, "Back to the competitions") }}
-{{ page_heading("Grades of “" ~ competition.name ~ "”") }}
+{{ back_link(back, _("Back to the competitions")) }}
+{{ page_heading(_("Grades of “%(name)s”", name=competition.name)) }}
 {% set start %}{{ local_time(competition.starts_at) }}{% endset %}
 {% set badge %}{{ competition_status_badge(competition.status) }}{% endset %}
-{{ details_list([("Subject", subject.name), ("Start", start), ("Status", badge)]) }}
-<p>Graded {{ listing.teams_graded }} of {{ listing.teams_total }} {{ "team" if listing.teams_total == 1 else "teams" }}</p>
+{{ details_list([(_("Subject"), subject.name), (_("Start"), start), (_("Status"), badge)]) }}
+<p>{{ ngettext("Graded %(graded)d of %(num)d team", "Graded %(graded)d of %(num)d teams", listing.teams_total, graded=listing.teams_graded) }}</p>
 {% if listing.teams_total == 0 %}
-{{ empty_state("No teams in this competition") }}
+{{ empty_state(_("No teams in this competition")) }}
 {% else %}
-{{ filter_nav(filter_links, "Show") }}
+{{ filter_nav(filter_links, _("Show")) }}
 {% if not listing.groups %}
-{{ empty_state("All teams are graded") }}
+{{ empty_state(_("All teams are graded")) }}
 {% else %}
-{{ page_navigation(listing.paging, page_href, "Teams", "Pages, top") }}
+{{ page_navigation(listing.paging, page_href, _("Teams"), _("Pages, top")) }}
 {% for g in listing.groups %}
 {% call region_group(g.region_name, g.total, "region-" ~ g.region_id ~ "-p" ~ listing.paging.number) %}
-{% call data_table(["Team", "Educational institution", "Active members", "Answered", "Graded", "Score", "Actions"]) %}
+{% call data_table([_("Team"), _("Educational institution"), _("Active members"), _("Answered"), _("Graded"), _("Score"), _("Actions")]) %}
 {% for row in g.rows %}
 <tr id="team-{{ row.team_id }}">
-  {{ cell("Team", row.name) }}
-  {{ cell("Educational institution", row.institution_name) }}
-  {{ cell("Active members", row.active_members) }}
-  {{ cell("Answered", row.answered ~ " of " ~ row.questions, nowrap=True) }}
-  {{ cell("Graded", row.graded ~ " of " ~ row.answered, nowrap=True) }}
-  {{ cell("Score", row.score, nowrap=True) }}
+  {{ cell(_("Team"), row.name) }}
+  {{ cell(_("Educational institution"), row.institution_name) }}
+  {{ cell(_("Active members"), row.active_members) }}
+  {{ cell(_("Answered"), _("%(done)d of %(total)d", done=row.answered, total=row.questions), nowrap=True) }}
+  {{ cell(_("Graded"), _("%(done)d of %(total)d", done=row.graded, total=row.answered), nowrap=True) }}
+  {{ cell(_("Score"), row.score, nowrap=True) }}
   {% call actions_cell() %}
-  {%- if row.is_deleted %}{{ row_note("(deleted)") }}{% endif %}
-  {{ link_button("Grade answers", grade_hrefs[row.team_id], kind="secondary", outline=True, small=True) }}
+  {%- if row.is_deleted %}{{ row_note(_("(deleted)")) }}{% endif %}
+  {{ link_button(_("Grade answers"), grade_hrefs[row.team_id], kind="secondary", outline=True, small=True) }}
   {%- endcall %}
 </tr>
 {% endfor %}
 {% endcall %}
 {% endcall %}
 {% endfor %}
-{{ page_navigation(listing.paging, page_href, "Teams", "Pages, bottom") }}
+{{ page_navigation(listing.paging, page_href, _("Teams"), _("Pages, bottom")) }}
 {% endif %}
 {% endif %}
 {% endblock %}

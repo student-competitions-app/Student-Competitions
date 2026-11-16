@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.auth import allow_roles
 from app.core.config import APP_NAME
+from app.core.i18n import Text, _p
 from app.core.templates import templates
 from app.routers.areas import ADMIN_AREA
 
@@ -28,14 +29,14 @@ router = APIRouter()
 @dataclass(frozen=True)
 class AdminTab:
     key: str
-    label: str
+    label: Text
     path: str
 
 
 ADMIN_TABS = (
-    AdminTab("teachers", "Teachers", "/admin/teachers"),
-    AdminTab("institutions", "Educational institutions", "/admin/institutions"),
-    AdminTab("subjects", "Subjects", "/admin/subjects"),
+    AdminTab("teachers", _p("tab", "Teachers"), "/admin/teachers"),
+    AdminTab("institutions", _p("tab", "Educational institutions"), "/admin/institutions"),
+    AdminTab("subjects", _p("tab", "Subjects"), "/admin/subjects"),
 )
 """The tabs, in the order shown. A milestone that adds a tab adds it here."""
 

@@ -26,9 +26,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
+from app.core.i18n import Text, _
 from app.models import Enrolment, SchoolClass
 from app.schemas.classes import parse_year_of_study
-from app.schemas.names import clean_name, name_key
+from app.schemas.names import clean_name, name_key, name_sort_key
 from app.services.availability import sign_out_students_below
 from app.services.teacher_access import reach_class, reach_institution
 
@@ -41,7 +42,9 @@ class DuplicateClassName(ValueError):
 
     def __init__(self, existing_name: str) -> None:
         self.existing_name = existing_name
-        self.message = f"A class named “{existing_name}” already exists in this institution."
+        self.message = _(
+            "A class named “%(name)s” already exists in this institution.", name=existing_name
+        )
         super().__init__(self.message)
 
 
@@ -66,9 +69,10 @@ class ClassView:
     is_active: bool
 
     @property
-    def label(self) -> str:
-        """ "KN-21 · year 2", wherever a class is listed (spec Assumptions)."""
-        return f"{self.name} · year {self.year_of_study}"
+    def label(self) -> Text:
+        """ "KN-21 · year 2" («KN-21 · 2 курс»), wherever a class is listed (spec Assumptions):
+        one whole message (milestone 12.5 FR-021)."""
+        return _("%(name)s · year %(year)d", name=self.name, year=self.year_of_study)
 
     @classmethod
     def from_row(cls, row: SchoolClass) -> "ClassView":
@@ -86,7 +90,7 @@ def list_classes(session: Session, institution_id: int) -> list[ClassView]:
     """The institution's classes, active and deactivated, sorted ignoring case, ties by id.
     Sorted in Python, as everywhere else."""
     statement = select(SchoolClass).where(SchoolClass.institution_id == institution_id)
-    rows = sorted(session.exec(statement), key=lambda row: (row.name_key, row.id))
+    rows = sorted(session.exec(statement), key=lambda row: (name_sort_key(row.name), row.id))
     return [ClassView.from_row(row) for row in rows]
 
 

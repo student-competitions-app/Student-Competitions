@@ -74,6 +74,14 @@ A web application for running online competitions among students, testing their 
 - Every person can see the personal data stored about them and can withdraw consent at any time, even after being removed. Withdrawing erases their personal data and ends their access.
 - Administrators are the exception: they are set by deployment configuration, not invited. Withdrawing consent does not remove an administrator's role or email.
 
+## Languages
+
+- Ukrainian is the default language of the interface, of the consent texts and of every other communication with users, emails included.
+- English is the alternative. Anyone can switch between the two on any page, signed in or not; the choice is kept per browser, not per account.
+- The consent texts are bilingual: the Ukrainian wording first, then the English one. If the two differ, the Ukrainian wording prevails.
+- What people enter (names, questions, answers) is shown exactly as entered, never translated.
+- Participants come from schools and colleges as well as universities, so the wording suits all of them.
+
 ## Competition
 
 ### How a competition works

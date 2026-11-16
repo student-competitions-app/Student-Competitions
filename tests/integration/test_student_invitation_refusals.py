@@ -117,7 +117,7 @@ def assert_refused(client: TestClient, token: str) -> None:
     before = stored()
     response = agree(client, token)
     assert response.status_code == 400  # type: ignore[attr-defined]
-    assert NEUTRAL in response.text  # type: ignore[attr-defined]
+    assert str(NEUTRAL) in response.text  # type: ignore[attr-defined]
     assert stored() == before
     assert get_user_by_email(Session(app.state.engine), TARAS) is None
 
@@ -143,7 +143,7 @@ def test_an_expired_link_has_its_own_message(client: TestClient, scene: Scene) -
     token = issue(scene, now=utc_now() - timedelta(days=7))
     before = stored()
     response = agree(client, token)
-    assert EXPIRED in response.text  # type: ignore[attr-defined]
+    assert str(EXPIRED) in response.text  # type: ignore[attr-defined]
     assert stored() == before
 
 
@@ -355,7 +355,7 @@ def test_a_changed_consent_text_shows_the_page_again(client: TestClient, scene: 
     before = stored()
     response = agree(client, token, shown)
     assert response.status_code == 409  # type: ignore[attr-defined]
-    assert CONSENT_CHANGED in response.text  # type: ignore[attr-defined]
+    assert str(CONSENT_CHANGED) in response.text  # type: ignore[attr-defined]
     assert "A new student text, version 2." in response.text  # type: ignore[attr-defined]
     assert stored() == before
 

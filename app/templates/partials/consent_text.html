@@ -1,0 +1,26 @@
+{#- A consent text (milestone 12.5 contracts/components.md §7, FR-047): a bilingual text in its two
+    parts, the Ukrainian first, each under its heading and marked with its language. The headings
+    come from the stored text, since they are part of the wording agreed to, not from the
+    catalogue. A text with no parts (`parts` is `None`) is shown whole, in the page's language.
+    Expects `text` and `parts` (`app.services.consent.consent_parts(text)`). The section's class is
+    `consent-parts`: `consent-text` is a retired milestone 9 class (tests/unit/test_stylesheet.py). -#}
+{%- if parts %}
+<section class="consent-parts">
+  <div lang="uk">
+    <h3>Українською</h3>
+    {%- for paragraph in parts.ukrainian %}
+    <p>{{ paragraph }}</p>
+    {%- endfor %}
+  </div>
+  <div lang="en">
+    <h3>English</h3>
+    {%- for paragraph in parts.english %}
+    <p>{{ paragraph }}</p>
+    {%- endfor %}
+  </div>
+</section>
+{%- else %}
+{%- for paragraph in text.split("\n\n") %}
+<p>{{ paragraph }}</p>
+{%- endfor %}
+{%- endif %}

@@ -3,22 +3,22 @@
 {% from "components/confirmation.html" import confirmation, refusal %}
 {% from "components/button.html" import link_button %}
 
-{% block title %}Delete class “{{ school_class.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Delete class “%(name)s”", name=school_class.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
 {% set class_path = "/teacher/students/classes/" ~ school_class.id %}
-{% set question = "Delete class “" ~ school_class.name ~ "”?" %}
-{% set back_text = "Back to “" ~ school_class.name ~ "”" %}
+{% set question = _("Delete class “%(name)s”?", name=school_class.name) %}
+{% set back_text = pgettext("class", "Back to “%(name)s”", name=school_class.name) %}
 {{ back_link(cancel, back_text) }}
 {% if in_use %}
-{% call refusal(question, "“" ~ school_class.name ~ "” has students and cannot be deleted." ~ (" You can deactivate it instead." if school_class.is_active else ""), cancel, back_text) %}
-{% if school_class.is_active %}{{ link_button("Deactivate", class_path ~ "/deactivate", kind="destructive") }}{% endif %}
+{% call refusal(question, _("“%(name)s” has students and cannot be deleted.", name=school_class.name) ~ (" You can deactivate it instead." if school_class.is_active else ""), cancel, back_text) %}
+{% if school_class.is_active %}{{ link_button(_("Deactivate"), class_path ~ "/deactivate", kind="destructive") }}{% endif %}
 {% endcall %}
-<p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
+<p>{{ _("Educational institution: %(institution)s", institution=institution.name) }} ({{ institution.region_name }})</p>
 {% else %}
-{% call confirmation(question, none, class_path ~ "/delete", "Delete", cancel) %}
-<p>Educational institution: {{ institution.name }} ({{ institution.region_name }})</p>
-<p>Deleting a class cannot be undone.</p>
+{% call confirmation(question, none, class_path ~ "/delete", _("Delete"), cancel) %}
+<p>{{ _("Educational institution: %(institution)s", institution=institution.name) }} ({{ institution.region_name }})</p>
+<p>{{ _("Deleting a class cannot be undone.") }}</p>
 {% endcall %}
 {% endif %}
 {% endblock %}

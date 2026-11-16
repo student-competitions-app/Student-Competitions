@@ -1,7 +1,9 @@
 """Application constants and configuration read from the environment.
 
 Single source of truth for the name, tagline and description that appear on the page, in the
-browser tab and in the test assertions — those are literals.
+browser tab and in the test assertions. They are messages (`Text`, milestone 12.5), translated
+when a page is rendered: the Ukrainian name is «Студентські змагання». Where a plain string is
+needed outside any request (FastAPI's `title`, a log line), the English identifier is used.
 
 This module is the only place that reads the environment, for three things:
 
@@ -11,6 +13,8 @@ This module is the only place that reads the environment, for three things:
   `migrations/env.py`, so the two always target the same database. It is a function rather than a
   constant because it creates the local data directory and may refuse to run. See
   specs/003-database-questions/contracts/configuration.md.
+- `resolve_default_language` reads `DEFAULT_LANGUAGE`, the language of a browser that has not
+  chosen one (milestone 12.5 research R6).
 - `resolve_auth_settings` reads and validates the sign-in settings (email backend, secret key,
   the administrator list, Resend key and sender, public base URL), refusing an unsafe production
   setup. See specs/004-email-otp-auth/contracts/configuration.md,
@@ -33,13 +37,14 @@ from urllib.parse import urlsplit
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError
 
+from app.core.i18n import Language, _, parse_language
 from app.core.security import MIN_SECRET_KEY_LENGTH, is_valid_email, normalize_email
 
-APP_NAME = "Student Competitions"
+APP_NAME = _("Student Competitions")
 
-APP_TAGLINE = "Online knowledge competitions for students."
+APP_TAGLINE = _("Online knowledge competitions for students.")
 
-APP_DESCRIPTION = (
+APP_DESCRIPTION = _(
     "Student Competitions is a web application for running online knowledge competitions in "
     "schools and universities. Teachers build a question bank and open a competition, students "
     "answer the questions in writing, and every answer is scored automatically."
@@ -131,6 +136,29 @@ def _normalise(raw: str) -> str:
     if scheme in {"postgres", "postgresql"}:
         return POSTGRESQL_DRIVER + raw[len(scheme) :]
     return raw
+
+
+# ---------------------------------------------------------------------------------------------
+# The default language (milestone 12.5)
+# ---------------------------------------------------------------------------------------------
+
+
+class LanguageConfigError(RuntimeError):
+    """`DEFAULT_LANGUAGE` is not a language the application speaks, so it must not start. The
+    message names the setting, never its value."""
+
+
+def resolve_default_language(environ: Mapping[str, str] = os.environ) -> Language:
+    """The language of a browser that has not chosen one: `DEFAULT_LANGUAGE`, `uk` or `en`
+    exactly. Unset or empty is Ukrainian, so production needs no configuration; anything else is
+    refused, so a typo fails the start instead of silently showing another language."""
+    raw = environ.get("DEFAULT_LANGUAGE", "")
+    if not raw:
+        return Language.UK
+    language = parse_language(raw)
+    if language is None:
+        raise LanguageConfigError("DEFAULT_LANGUAGE must be uk or en")
+    return language
 
 
 # ---------------------------------------------------------------------------------------------

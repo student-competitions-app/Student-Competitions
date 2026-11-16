@@ -170,6 +170,42 @@ Every page is built from the component library in [`app/templates/components/`](
 - **Light, Dark, Device**: the theme switch in the user menu and on the sign-in page keeps the choice in the browser's `sc_theme` cookie (`light` or `dark`; **Device**, the default, deletes it and follows the operating system). The server renders the chosen theme, so there is no flash and no script. The cookie holds only the choice, is not linked to the account and follows no one to another browser.
 - **Fonts**: Open Sans is self-hosted in [`app/static/fonts/`](app/static/fonts/) as four variable `woff2` subsets (Latin, Latin Extended, Cyrillic, Cyrillic Extended), under the SIL Open Font License ([`OFL.txt`](app/static/fonts/OFL.txt)). No page loads a font, a script or a stylesheet from another site.
 
+### Translations
+
+The application is bilingual (milestone 12.5): **Ukrainian by default, English on request**. A browser's choice, made with the language switch in the top bar of every page, lives in its `sc_lang` cookie (`uk` or `en`); a browser that has not chosen gets `DEFAULT_LANGUAGE` (`uk` when unset; the test suite sets `en`). The browser's own language preference is never read. What people enter — names, questions, answers — is shown as entered, never translated. The rules every message follows (whole sentences, named placeholders, the glossary) are in [`docs/requirements/ui-guidelines.md`](docs/requirements/ui-guidelines.md) "Languages" and §7.
+
+**Marking a message.** The identifier is the English wording.
+
+```jinja
+{{ _("Sign in") }}
+{{ _("Delete “%(name)s”?", name=subject.name) }}
+{{ ngettext("%(num)d team", "%(num)d teams", total) }}
+{{ pgettext("class", "Active") }}
+```
+
+```python
+from app.core.i18n import _, _n, _p
+
+NAME_REQUIRED = _("Enter a name.")  # a Text, translated when shown
+_("A subject named “%(name)s” already exists.", name=name)
+_n("%(num)d team", "%(num)d teams", total)
+_p("access level", "Read")
+```
+
+A `Text` is translated when the page is rendered or the email written, in that request's language; never `str()` it earlier.
+
+**The catalogue workflow**, after adding or changing a message:
+
+```bash
+scripts/translations.sh update     # extract into app/locale/messages.pot, merge into both .po files,
+                                   # fill English from the identifiers
+# translate every new or "fuzzy" entry in app/locale/uk/LC_MESSAGES/messages.po, and clear "fuzzy"
+scripts/translations.sh compile    # .po → .mo
+scripts/translations.sh check      # tests/unit/test_catalogues.py
+```
+
+The compiled `.mo` files are never committed: the image compiles them at build time, `uv run pytest` compiles them at the start of every run, and the application refuses to start without them ("Translations are not compiled: run scripts/translations.sh compile"). `tests/unit/test_catalogues.py` fails on a message missing from a catalogue, untranslated, fuzzy or with other placeholders; `tests/unit/test_template_text.py` fails on English text left in a template outside a message.
+
 ### Adding a migration
 
 Every change to the database structure is an Alembic migration in `migrations/versions/`; nothing creates tables any other way.
@@ -255,6 +291,7 @@ The complete configuration surface. Locally every one is optional — the applic
 | `PUBLIC_BASE_URL` | `app/core/config.py` | *(unset: links use the request's address)* | The origin of every emailed link, e.g. `https://brainring.org.ua`: an absolute `http`/`https` URL with no path, query or fragment (a trailing `/` is removed). **Required on Render, and must be `https` there**, so a link is never built from a forged `Host` header. Not a secret; set as a plain value in `render.yaml`. |
 | `RESEND_API_KEY` | `app/core/config.py` | *(unset)* | Resend API key, sending-only and restricted to the domain. **A secret; required for `resend` and on Render.** |
 | `EMAIL_FROM` | `app/core/config.py` | *(unset)* | The sender, `addr@domain` or `Display Name <addr@domain>`, on the verified domain (`Student Competitions <login@brainring.org.ua>`). **Required for `resend` and on Render**; kept in Render's environment like the secrets. |
+| `DEFAULT_LANGUAGE` | `app/core/config.py` | `uk` | The language of a browser that has not chosen one: `uk` or `en`, exactly; anything else stops the start, naming the setting. Not a secret; production needs nothing. |
 | `TEST_POSTGRES_URL` | `tests/conftest.py` only | *(unset: PostgreSQL tests skipped)* | **Tests only** — never read by the application. A PostgreSQL server where the tests may create databases. Not a secret (a disposable, password-less server). |
 
 The application reads five secrets in production: `DATABASE_URL`, `SECRET_KEY`, `ADMIN_EMAILS`, `RESEND_API_KEY` and `EMAIL_FROM`. They live in Render's service environment and nowhere else: not in this repository, not in the image and not in GitHub. `render.yaml` declares them by name only (`sync: false`). The application never logs a login code, a session token, a key, an address, a name or a link token (the access log replaces invitation and deletion tokens with `***`); only the local `console` backend prints an email.
@@ -333,6 +370,7 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 | Frontend | Server-side rendering: Jinja2 + HTMX + Pico.css |
 | Database | SQLModel + Alembic migrations, psycopg 3; SQLite locally and in tests, PostgreSQL 17 on Neon's free plan in production (and in CI) |
 | Authentication | Email OTP + server-side sessions in a signed cookie |
+| Localisation | GNU gettext catalogues with Babel and `jinja2.ext.i18n`: Ukrainian by default, English on request |
 | Answer evaluation | LLM API (Claude or OpenAI) with structured output |
 | Containerization | Docker (two-stage build, non-root, uv-locked dependencies) |
 | Hosting | Render, configured as code by `render.yaml` |
@@ -362,7 +400,9 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 ├── app/                     # FastAPI application
 │   ├── main.py              # App construction: startup (settings, database guard, user reconcile, boot count), access dependency, routers, error handlers
 │   ├── core/                # Settings, security, access control, DB engine
-│   │   ├── config.py        # App constants, COMMIT_SHA, resolve_database_url, resolve_auth_settings
+│   │   ├── config.py        # App constants, COMMIT_SHA, resolve_database_url, resolve_auth_settings, resolve_default_language
+│   │   ├── i18n.py          # Languages: the sc_lang cookie, LanguageMiddleware, Text (_, _n, _p), the Jinja gettext callables
+│   │   ├── return_path.py   # Where the theme and language switches send the browser back to
 │   │   ├── security.py      # Pure helpers: email rules, codes, tokens, cookie signing, keyed hashes, safe return paths, the cross-site rule
 │   │   ├── sealing.py       # seal/unseal: AES-256-GCM sealed links and notices (invitation, data deletion)
 │   │   ├── log_redaction.py # AccessLogRedactor: link tokens and sealed values out of uvicorn's access log
@@ -404,7 +444,8 @@ Apply the branch protection rule with [`scripts/setup_branch_protection.sh`](scr
 │   │   ├── layouts/admin.html # The administrator area's tab row, current tab marked
 │   │   ├── layouts/teacher.html # The teacher area's tab row, current tab marked
 │   │   └── pages/           # home, login, login_code, role_choice, area, error; invitation and invitation_status; profile, profile_withdraw; data_deletion_request, _requested, _confirm, link_status, data_erased; admin/ (placeholder; subjects; institutions and regions; teachers, teacher_invite, teacher_form, teacher_remove, teacher_not_found, _institution_picker, _person_names; region and institution deactivation confirmations); teacher/ (students, class_form, class_deactivate, class_delete, student_invite, student_form, student_remove, questions, question_form, question_delete, question_not_found, teams, team_form, team_delete, team_add_students, team_member_remove, competitions, competition_form, competition_cancel, competition_refused, competition_not_found, competition_questions, competition_questions_add, competition_teams, competition_teams_add, competition_entry_remove, competition_answers, team_answer_sheet, competition_finish, competition_grades, team_grading_sheet, team_answers_read_only)
-│   └── static/              # css/ (vendored pico.min.css + app.css: tokens, Pico mapping, components), fonts/ (Open Sans, OFL), js/, img/ (favicons)
+│   ├── locale/              # messages.pot and the uk and en messages.po catalogues (compiled .mo files are not committed)
+│   └── static/              # css/ (vendored pico.min.css + app.css: tokens, Pico mapping, components), fonts/ (Open Sans, OFL), js/, img/ (favicons, flags)
 ├── migrations/              # Alembic migrations
 │   ├── env.py               # Uses resolve_database_url; one locked transaction on PostgreSQL
 │   └── versions/            # Revisions: tables + boot counter, the sample questions, the sign-in tables, user roles, drop the unused users.role, subjects, regions and institutions, consent and teachers (+ the teacher consent text v1), the one-time retirement of the role lists, classes and enrolments (+ the student consent text v1), the question bank (samples deleted, subject_id and deleted_at, the setting renamed), teams and team memberships (+ the student consent text v1 rewritten in place), competitions, competition questions and teams, team answers, answer grades

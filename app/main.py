@@ -4,18 +4,25 @@ Startup needs a database at the schema this code expects and valid sign-in setti
 `lifespan` runs, in this order (specs/008-teacher-management-consent/contracts/configuration.md
 §Start-up order):
 
-    resolve_database_url → resolve_auth_settings → create engine → ensure_at_head
+    resolve_database_url → resolve_auth_settings → resolve_default_language → load_translations
+      → create engine → ensure_at_head
       → reconcile_users(admin_emails only, one retry) → purge_expired → record_boot
       → install AccessLogRedactor on "uvicorn.access"
 
 The redactor keeps sealed invitation and data-deletion tokens, and the sealed `sent` and
 `prefill` values, out of uvicorn's access log (milestone 8 research D14).
 
-Both settings checks come before any database connection, so a refused start never touches the
-data and is never counted. Only then does uvicorn open the port, so an instance that answers
-`/healthz` at all has a usable database and a safe configuration. On Render that makes a
-misconfigured or unmigrated release fail its deploy while the previous one keeps serving.
+The settings checks and the catalogues come before any database connection, so a refused start
+never touches the data and is never counted. Only then does uvicorn open the port, so an instance
+that answers `/healthz` at all has a usable database and a safe configuration. On Render that
+makes a misconfigured or unmigrated release fail its deploy while the previous one keeps serving.
 Migrations themselves are applied by the container entrypoint, not here.
+
+Every HTTP request first gets its language from `LanguageMiddleware` (milestone 12.5 research R1):
+the `sc_lang` cookie, else `DEFAULT_LANGUAGE`. It is registered at module level, never in the
+lifespan, since Starlette refuses middleware once the application has started, and it sits
+inside the server-error middleware, so the routes and the exception handlers are translated while
+the plain-text 500 is not.
 
 Every route runs `resolve_access` first (registered application-wide below), which resolves the
 signed-in user and their current role from the session cookie and decides access by that role
@@ -51,8 +58,10 @@ from app.core.config import (
     APP_NAME,
     resolve_auth_settings,
     resolve_database_url,
+    resolve_default_language,
 )
 from app.core.db import create_db_engine
+from app.core.i18n import LanguageMiddleware, Text, _, load_translations
 from app.core.log_redaction import AccessLogRedactor
 from app.core.migrations import ensure_at_head
 from app.core.templates import templates
@@ -67,6 +76,7 @@ from app.routers import (
     data_deletion,
     health,
     invitations,
+    language,
     pages,
     profile,
     roles,
@@ -127,6 +137,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """
     database_url = resolve_database_url(os.environ)
     settings = resolve_auth_settings(os.environ)
+    app.state.default_language = resolve_default_language(os.environ)
+    load_translations()
     engine = create_db_engine(database_url)
     try:
         revision = ensure_at_head(engine)
@@ -163,14 +175,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 # off: they are plain Starlette routes that application-wide dependencies do not cover, so leaving
 # them on would publish routes outside the allowlist (FR-028).
 app = FastAPI(
-    title=APP_NAME,
-    description=APP_DESCRIPTION,
+    title=APP_NAME.msgid,
+    description=APP_DESCRIPTION.msgid,
     lifespan=lifespan,
     dependencies=[Depends(resolve_access)],
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
 )
+
+app.add_middleware(LanguageMiddleware)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -196,6 +210,7 @@ app.include_router(invitations.router)
 app.include_router(profile.router)
 app.include_router(data_deletion.router)
 app.include_router(theme.router)
+app.include_router(language.router)
 
 
 @app.exception_handler(LoginRequired)
@@ -220,8 +235,8 @@ async def access_denied_handler(request: Request, exc: AccessDenied) -> HTMLResp
     return _error_page(
         request,
         403,
-        f"Your current role, {exc.current_role.label}, cannot open this page.",
-        heading="Access denied",
+        _("Your current role, %(role)s, cannot open this page.", role=exc.current_role.label),
+        heading=_("Access denied"),
     )
 
 
@@ -231,14 +246,12 @@ async def cross_site_request_handler(request: Request, exc: CrossSiteRequest) ->
     return _error_page(
         request,
         403,
-        "This request was refused because it did not come from this site.",
-        heading="Request refused",
+        _("This request was refused because it did not come from this site."),
+        heading=_("Request refused"),
     )
 
 
-def _error_page(
-    request: Request, status_code: int, detail: object, heading: str | None = None
-) -> HTMLResponse:
+def _error_page(request: Request, status_code: int, detail: object, heading: Text) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "pages/error.html",
@@ -257,6 +270,15 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> HTMLRe
     """Render a friendly page for any HTTP error, never a stack trace or raw JSON.
 
     Registered for `HTTPException` in general rather than only 404, so routes added in later
-    milestones inherit the same page.
+    milestones inherit the same page. The heading is the application's own, translated by status
+    (milestone 12.5 research R16); the framework's `detail` is shown as it comes (FR-026).
     """
-    return _error_page(request, exc.status_code, exc.detail)
+    heading = HTTP_HEADINGS.get(exc.status_code, SOMETHING_WENT_WRONG)
+    return _error_page(request, exc.status_code, exc.detail, heading)
+
+
+HTTP_HEADINGS = {
+    404: _("Page not found"),
+    405: _("This address does not accept that request"),
+}
+SOMETHING_WENT_WRONG = _("Something went wrong")

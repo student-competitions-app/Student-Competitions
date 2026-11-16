@@ -18,42 +18,42 @@
 {% from "components/badge.html" import competition_status_badge %}
 {% from "components/time.html" import local_time with context %}
 
-{% block title %}Answers of “{{ competition.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Answers of “%(name)s”", name=competition.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back, "Back to the competitions") }}
-{{ page_heading("Answers of “" ~ competition.name ~ "”") }}
+{{ back_link(back, _("Back to the competitions")) }}
+{{ page_heading(_("Answers of “%(name)s”", name=competition.name)) }}
 {% set start %}{{ local_time(competition.starts_at) }}{% endset %}
 {% set badge %}{{ competition_status_badge(competition.status) }}{% endset %}
-{{ details_list([("Subject", subject.name), ("Start", start), ("Status", badge)]) }}
+{{ details_list([(_("Subject"), subject.name), (_("Start"), start), (_("Status"), badge)]) }}
 {% if not listing.linked %}
-{{ empty_state("You are not linked to any educational institution") }}
+{{ empty_state(_("You are not linked to any educational institution")) }}
 {% elif not listing.groups %}
-{{ empty_state("No teams from your educational institutions") }}
+{{ empty_state(_("No teams from your educational institutions")) }}
 {% else %}
-{{ page_navigation(listing.paging, page_href, "Teams", "Pages, top") }}
+{{ page_navigation(listing.paging, page_href, _("Teams"), _("Pages, top")) }}
 {% for g in listing.groups %}
 {% call region_group(g.region_name, g.total, "region-" ~ g.region_id ~ "-p" ~ listing.paging.number) %}
 {% set finished = competition.status == "finished" %}
-{% call data_table(["Team", "Educational institution", "Active members", "Answered", "Graded", "Score", "Actions"] if finished else ["Team", "Educational institution", "Active members", "Answered", "Actions"]) %}
+{% call data_table([_("Team"), _("Educational institution"), _("Active members"), _("Answered"), _("Graded"), _("Score"), _("Actions")] if finished else [_("Team"), _("Educational institution"), _("Active members"), _("Answered"), _("Actions")]) %}
 {% for row in g.rows %}
 <tr id="team-{{ row.team_id }}">
-  {{ cell("Team", row.name) }}
-  {{ cell("Educational institution", row.institution_name) }}
-  {{ cell("Active members", row.active_members) }}
-  {{ cell("Answered", row.answered ~ " of " ~ row.questions, nowrap=True) }}
+  {{ cell(_("Team"), row.name) }}
+  {{ cell(_("Educational institution"), row.institution_name) }}
+  {{ cell(_("Active members"), row.active_members) }}
+  {{ cell(_("Answered"), _("%(done)d of %(total)d", done=row.answered, total=row.questions), nowrap=True) }}
   {%- if finished %}
-  {{ cell("Graded", row.graded ~ " of " ~ row.answered, nowrap=True) }}
-  {{ cell("Score", row.score, nowrap=True) }}
+  {{ cell(_("Graded"), _("%(done)d of %(total)d", done=row.graded, total=row.answered), nowrap=True) }}
+  {{ cell(_("Score"), row.score, nowrap=True) }}
   {%- endif %}
   {% call actions_cell() %}
-  {%- if row.can_write and competition.status == "in_progress" %}{{ link_button("Enter answers", sheet_hrefs[row.team_id], kind="secondary", outline=True, small=True) }}{% else %}{{ link_button("View answers", sheet_hrefs[row.team_id], kind="secondary", outline=True, small=True) }}{% endif -%}
+  {%- if row.can_write and competition.status == "in_progress" %}{{ link_button(_("Enter answers"), sheet_hrefs[row.team_id], kind="secondary", outline=True, small=True) }}{% else %}{{ link_button(_("View answers"), sheet_hrefs[row.team_id], kind="secondary", outline=True, small=True) }}{% endif -%}
   {% endcall %}
 </tr>
 {% endfor %}
 {% endcall %}
 {% endcall %}
 {% endfor %}
-{{ page_navigation(listing.paging, page_href, "Teams", "Pages, bottom") }}
+{{ page_navigation(listing.paging, page_href, _("Teams"), _("Pages, bottom")) }}
 {% endif %}
 {% endblock %}

@@ -18,7 +18,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
 import app.routers.pages as pages
-from app.core.config import APP_NAME, APP_TAGLINE, APP_VERSION, COMMIT_SHA
+from app.core import config
+from app.core.config import APP_VERSION, COMMIT_SHA
 from app.core.migrations import head_revision
 from app.core.templates import SHORT_COMMIT_LENGTH
 from app.main import app
@@ -35,6 +36,10 @@ from tests.conftest import (
     make_question,
     make_subject,
 )
+
+APP_NAME = str(config.APP_NAME)
+APP_TAGLINE = str(config.APP_TAGLINE)
+# The English wordings: the suite runs in English (milestone 12.5 FR-067).
 
 VIEWPORT_META = '<meta name="viewport" content="width=device-width, initial-scale=1">'
 
@@ -167,10 +172,14 @@ def _fail_database_reads(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_home_has_no_write_affordance(admin_client: TestClient) -> None:
-    """No form or button in the page's content: only the header's own forms (the theme switch
-    and Log out) (US1-2, FR-018)."""
+    """No form or button in the page's content: only the header's own forms (the language
+    switch, the theme switch and Log out) (US1-2, FR-018)."""
     body = admin_client.get("/").text
-    assert [f.action for f in html.forms(body, within="header")] == ["/theme", "/logout"]
+    assert [f.action for f in html.forms(body, within="header")] == [
+        "/language",
+        "/theme",
+        "/logout",
+    ]
     main = html.parse(body).find_all("main")[0]
     assert main.find_all("form") == []
     assert main.find_all("button") == []

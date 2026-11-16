@@ -228,7 +228,7 @@ def rows(body: str) -> list[Row]:
                 datetime=times[0].attrs.get("datetime") if times else None,
                 status=cells["Status"].text(),
                 menu=[(a.text(), a.attrs["href"]) for m in menus for a in m.find_all("a")],
-                menu_label=menus[0].find_all("summary")[0].text() if menus else None,
+                menu_label=menus[0].find_all("summary")[0].attrs["aria-label"] if menus else None,
             )
         )
     return found
@@ -458,15 +458,16 @@ def test_creating_lands_at_the_competition_with_the_notice(scene: Scene) -> None
     assert (row.cancelled_at, row.stopped_at) == (None, None)
 
 
-def test_without_a_known_zone_times_are_utc(scene: Scene) -> None:
-    """US1-7, US8-3: no cookie, so the form says UTC and the list shows UTC."""
+def test_without_a_known_zone_times_are_kyiv_time(scene: Scene) -> None:
+    """US1-7, US8-3, as changed by milestone 12.5 (FR-037): no cookie, so the form reads the time
+    as Kyiv time and the list shows Kyiv time, labelled."""
     scene.manager.cookies.delete("sc_time_zone")
     body = scene.manager.get(f"{TAB}/new?subject={scene.chemistry}").text
-    assert "Time zone: UTC" in html.text(body, "main")
-    assert html.control(body, "time_zone")["value"] == "UTC"
-    body = follow(scene.manager, create(scene.manager, scene.chemistry, time_zone="UTC"))
+    assert "Time zone: Europe/Kyiv" in html.text(body, "main")
+    assert html.control(body, "time_zone")["value"] == KYIV
+    body = follow(scene.manager, create(scene.manager, scene.chemistry, time_zone=KYIV))
     assert [(r.start, r.datetime) for r in rows(body)] == [
-        ("14 March 2027, 10:00 UTC", "2027-03-14T10:00Z")
+        ("14 March 2027, 10:00 (Kyiv time)", "2027-03-14T08:00Z")
     ]
 
 
@@ -789,8 +790,8 @@ def test_the_edit_form(scene: Scene) -> None:
     }
     scene.manager.cookies.delete("sc_time_zone")
     body = scene.manager.get(url).text
-    assert html.control(body, "start_time")["value"] == "08:00"
-    assert "Time zone: UTC" in html.text(body, "main")
+    assert html.control(body, "start_time")["value"] == "10:00"
+    assert "Time zone: Europe/Kyiv" in html.text(body, "main")
 
 
 def test_saving_lands_on_the_page_that_now_holds_it(scene: Scene) -> None:
@@ -1003,7 +1004,7 @@ def test_the_form_is_read_in_the_zone_it_was_shown_in(
     scene: Scene, submit: Callable[..., Any]
 ) -> None:
     """FR-022: the cookie changed to UTC after the form was shown in Kyiv; the hidden field
-    wins. An unknown zone is UTC."""
+    wins. An unknown zone is Kyiv time (milestone 12.5 FR-037)."""
     scene.manager.cookies.set("sc_time_zone", "UTC")
     response = submit(name="Kyiv", start_date="2027-03-20", start_time="12:00", time_zone=KYIV)
     assert response.status_code == 303
@@ -1012,14 +1013,14 @@ def test_the_form_is_read_in_the_zone_it_was_shown_in(
         name="Mars", start_date="2027-03-21", start_time="12:00", time_zone="Mars/Base"
     )
     assert response.status_code == 303
-    assert saved_start(scene, "Mars") == at(21, 12)
+    assert saved_start(scene, "Mars") == at(21, 10)
 
 
-def test_an_unknown_zone_shows_utc_again(scene: Scene) -> None:
+def test_an_unknown_zone_shows_kyiv_time_again(scene: Scene) -> None:
     response = create(scene.manager, scene.chemistry, name="", time_zone="Mars/Base")
     assert response.status_code == 400
-    assert html.control(response.text, "time_zone")["value"] == "UTC"
-    assert "Time zone: UTC" in html.text(response.text, "main")
+    assert html.control(response.text, "time_zone")["value"] == KYIV
+    assert "Time zone: Europe/Kyiv" in html.text(response.text, "main")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1568,17 +1569,17 @@ def test_every_start_is_shown_in_the_cookies_zone(scene: Scene) -> None:
 
 
 @pytest.mark.parametrize("cookie", [None, "Mars/Base", "utc", "../etc/passwd", "europe/kyiv"])
-def test_without_a_known_zone_every_start_is_utc(scene: Scene, cookie: str | None) -> None:
-    """US8-3, US8-4."""
+def test_without_a_known_zone_every_start_is_kyiv_time(scene: Scene, cookie: str | None) -> None:
+    """US8-3, US8-4, as changed by milestone 12.5 (FR-036): Kyiv time, labelled."""
     competition = make_competition(scene.engine, scene.chemistry, starts_at=at(14, 8))
     scene.manager.cookies.delete("sc_time_zone")
     if cookie is not None:
         scene.manager.cookies.set("sc_time_zone", cookie)
     assert starts_shown(scene, competition) == [
-        ("14 March 2027, 08:00 UTC", "2027-03-14T08:00Z"),
+        ("14 March 2027, 10:00 (Kyiv time)", "2027-03-14T08:00Z"),
         ("2027-03-14", None),
-        ("08:00", "UTC"),
-        ("14 March 2027, 08:00 UTC", "2027-03-14T08:00Z"),
+        ("10:00", KYIV),
+        ("14 March 2027, 10:00 (Kyiv time)", "2027-03-14T08:00Z"),
     ]
 
 
@@ -2053,7 +2054,8 @@ def test_the_menu_per_status_and_setting(scene: Scene) -> None:
     (details,) = [
         d
         for d in html.parse(body).find_all("details")
-        if "actions-menu" in d.classes() and "“Running”" in d.text()
+        if "actions-menu" in d.classes()
+        and "“Running”" in d.find_all("summary")[0].attrs["aria-label"]
     ]
     classes = {a.text(): a.classes() for a in details.find_all("a")}
     assert "actions-menu-link-destructive" not in classes["Finish competition"]

@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.core.db import utc_now
+from app.core.time_zone import format_local_date
 from app.main import app
 from app.models import (
     AccessLevel,
@@ -153,7 +154,7 @@ def test_the_list_is_sorted_and_shows_every_column(
     cells = [value for row in html.table_rows(body) for value in row.values()]
     assert "Yes" in cells and "No" in cells
     assert [row["Can manage competitions"] for row in html.table_rows(body)] == ["Yes", "No", "No"]
-    assert utc_now().strftime("%Y-%m-%d") in cells
+    assert format_local_date(utc_now(), None) in cells
     assert "No teachers yet" not in body
 
 
@@ -431,4 +432,4 @@ def test_the_consent_date_is_the_latest_teacher_record(
         now=earlier,
     )
     rows = html.table_rows(admin_client.get("/admin/teachers").text)
-    assert earlier.strftime("%Y-%m-%d") in [value for row in rows for value in row.values()]
+    assert format_local_date(earlier, None) in [value for row in rows for value in row.values()]

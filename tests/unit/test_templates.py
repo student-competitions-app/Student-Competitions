@@ -16,11 +16,17 @@ def render(source: str, **context: object) -> str:
     return templates.env.from_string(source).render(**context)
 
 
-def test_the_utc_filter() -> None:
-    moment = datetime(2026, 10, 22, 14, 5, 59, tzinfo=UTC)
-    assert render("{{ t|utc }}", t=moment) == "2026-10-22 14:05 UTC"
-    assert render('{{ t|utc("date") }}', t=moment) == "2026-10-22"
-    assert render("{{ t|utc }}", t=None) == ""
+def test_the_utc_filter_is_retired() -> None:
+    """Milestone 12.5 FR-038: `local_time` and `local_date` show every stored time."""
+    assert "utc" not in templates.env.filters
+
+
+def test_local_date() -> None:
+    moment = datetime(2026, 10, 14, 22, 30, tzinfo=UTC)
+    source = '{% from "components/time.html" import local_date %}{{ local_date(t) }}'
+    assert render(source, t=moment, time_zone=None) == (
+        '<time datetime="2026-10-15">15 October 2026</time>'
+    )
 
 
 # ---------------------------------------------------------------------------------------------
@@ -134,8 +140,7 @@ def test_actions_menu_with_entries() -> None:
     )
     assert render(source) == (
         '<details class="actions-menu" name="row-actions">\n'
-        '  <summary>Actions<span class="visually-hidden"> for “Spring &lt;round&gt;”</span>'
-        "</summary>\n"
+        '  <summary aria-label="Actions for “Spring &lt;round&gt;”">Actions</summary>\n'
         '  <ul class="actions-menu-panel">\n'
         '    <li><a href="/e?a=1&amp;b=2" class="actions-menu-link">Edit</a></li>'
         '<li><a href="/c" class="actions-menu-link actions-menu-link-destructive">'
@@ -188,9 +193,9 @@ def test_local_time_in_the_requests_zone() -> None:
     assert out == '<time datetime="2027-03-14T08:00Z">14 March 2027, 10:00</time>'
 
 
-def test_local_time_with_no_zone_is_utc() -> None:
+def test_local_time_with_no_zone_is_kyiv_time() -> None:
     out = render(TIME + "{{ local_time(t) }}", t=MOMENT, time_zone=None)
-    assert out == '<time datetime="2027-03-14T08:00Z">14 March 2027, 08:00 UTC</time>'
+    assert out == '<time datetime="2027-03-14T08:00Z">14 March 2027, 10:00 (Kyiv time)</time>'
 
 
 def test_local_time_needs_a_moment() -> None:

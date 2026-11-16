@@ -37,8 +37,8 @@ uv run python -c "import PIL" 2>&1 | tail -1                     # ModuleNotFoun
 
 ## 3. Checks by hand
 
-Start the application locally (README "Running locally"). Sign in as an administrator, and as a teacher
-with an accepted invitation. For the headless measurements, use the Playwright recipe the project uses
+Start the application locally (README "Run"). Sign in as an administrator, and as a teacher with an
+accepted invitation (README "Signing in locally as each role"). For the headless measurements, use the Playwright recipe the project uses
 for screenshots: `uv run --no-project --with playwright`, not a dependency.
 
 1. **Sharp emblem.** Look at the top bar at 1280 px and 375 px, on a 1× and a 2× or 3× screen (or with

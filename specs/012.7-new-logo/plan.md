@@ -50,8 +50,9 @@ an image, not inline SVG. Nothing else in the UI changes.
 **Tests** (R9):
 
 - The identity tests in `test_layout.py` are rewritten.
-- A new `test_logo.py` covers the files, types and manifest, the macro's errors, "only what is used"
-  and the leftover search.
+- A new `test_logo.py` covers the files, types and manifest, "only what is used" and the leftover
+  search.
+- The macro's markup and errors are tested in `tests/unit/test_templates.py`.
 - New gallery-ink tests in `test_component_gallery.py`.
 - New stylesheet tests in `test_frame_stylesheet.py`.
 
@@ -105,8 +106,8 @@ build context.
   `pages/admin/components.html`, `static/css/app.css`.
 - Images: 3 files deleted from `app/static/img/`, and `app/static/img/logo/` regenerated.
 - Script and dependencies: `scripts/make_logo.py`, `pyproject.toml`, `uv.lock`.
-- Tests, 4 files: `test_layout.py`, the new `test_logo.py`, `test_component_gallery.py`,
-  `test_frame_stylesheet.py`.
+- Tests, 5 files: `test_layout.py`, the new `test_logo.py`, `test_component_gallery.py`,
+  `test_frame_stylesheet.py`, `test_templates.py`.
 - Documentation: `README.md`, `ui-guidelines.md`, `milestones.md`.
 - This folder: `design-approval.md` and `screenshots/`.
 
@@ -181,10 +182,11 @@ pyproject.toml, uv.lock              # + dependency group `logo`
 tests/
 ├── integration/
 │   ├── test_layout.py               # identity tests: the image mark, both languages, new links
-│   ├── test_logo.py                 # new: files and types, manifest, macro errors, only-what-is-used, leftovers
+│   ├── test_logo.py                 # new: files and types, manifest, only-what-is-used, leftovers
 │   └── test_component_gallery.py    # Identity inks per theme
 └── unit/
-    └── test_frame_stylesheet.py     # top bar mark sizes and role offset
+    ├── test_frame_stylesheet.py     # top bar mark sizes and role offset
+    └── test_templates.py            # logo_mark markup per variant and its errors
 
 README.md, docs/requirements/ui-guidelines.md, docs/requirements/milestones.md
 ```

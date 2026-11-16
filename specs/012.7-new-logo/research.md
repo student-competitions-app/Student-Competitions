@@ -319,22 +319,23 @@ does not apply.
     `aria-hidden="true"`, `logo-mark-top-bar`, and its `src` and `srcset` under `/static/img/logo/` in
     light ink only.
   - The link's text is the application's name in the page's language. The test checks it in Ukrainian
-    (the default, «Студентські змагання») and in English (`sc_lang` cookie, "Student Competitions"),
-    signed out and signed in.
+    («Студентські змагання», with the `sc_lang=uk` cookie) and in English ("Student Competitions",
+    the test suite's default since milestone 12.5), signed out and signed in.
   - The page links the six icon and manifest URLs of R6.
 - **A new `tests/integration/test_logo.py`**:
   - Each icon URL and the manifest answer 200 to a signed-out client, with the types of FR-017 (ICO:
     either type).
   - The manifest's JSON has `name` «Студентські змагання», `start_url` `/`, `display` `browser`, both
     colours `#16337a`, and three icons that each answer 200 as `image/png`.
-  - The `logo_mark` macro, rendered through the application's Jinja environment, raises the template
-    error for an unknown size, for `top_bar=True` with a size other than `md`, and for a missing or
-    unknown theme off the top bar.
   - Only what is used: render the sign-in page and the gallery in **Light** and in **Dark**, read the
     manifest, and collect every `/static/img/logo/…` URL. That set must equal the folder's listing
     (FR-018, FR-019). This test catches a stray file and a missing one.
   - No leftovers: no file under `app/` or `tests/` contains the three old paths, `logo-mark-tile` or
     `logo-mark-spark`. The test builds those strings from parts, so it does not match itself.
+- **`tests/unit/test_templates.py`**, beside the other components' refusals (its `render` helper and
+  `TemplateRuntimeError`): `logo_mark` raises the template error for an unknown size, for
+  `top_bar=True` with a size other than `md`, and for a missing or unknown theme off the top bar. The
+  same file checks each variant's markup (contracts/components.md).
 - **`tests/integration/test_component_gallery.py`**: the **Identity** section has three marks with
   classes `logo-mark-lg`, `-md` and `-sm`:
   - **Light**: dark-ink files only, plain `<img>`.

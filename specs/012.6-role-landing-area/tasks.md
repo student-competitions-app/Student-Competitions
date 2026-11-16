@@ -65,7 +65,7 @@ modules.
 
 **Purpose**: Start from a known-good baseline.
 
-- [ ] T001 Confirm the baseline on branch `012.6-role-landing-area`:
+- [X] T001 Confirm the baseline on branch `012.6-role-landing-area`:
   - run `uv run pytest` with `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres`, plus
     `uv run ruff check .` and `uv run ruff format --check .`; all must pass;
   - run `gh run list --branch main --limit 3` and check that the deploy of the 12.5 merge (`da141ce`)
@@ -81,7 +81,7 @@ people changes in one way only: administrator pages gain the database line.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T002 Extend the area declarations in `app/routers/areas.py` (data-model §1–§3). Do **not** remove
+- [X] T002 Extend the area declarations in `app/routers/areas.py` (data-model §1–§3). Do **not** remove
   `STAFF_AREA` yet (US3), and keep the administrator and teacher descriptions for now (US1).
   - `Area` fields become, in this order: `path: str`, `title: Text`, `roles: frozenset[Role]`,
     `description: Text | None = None`, `back_label: Text | None = None`.
@@ -96,7 +96,7 @@ people changes in one way only: administrator pages gain the database line.
     `BackLink(area.path, area.back_label)` for a role in `LANDINGS`, and `HOME_BACK_LINK` for
     `Role.STUDENT` and `None`.
   - Give each new name a one-line docstring in the module's style.
-- [ ] T003 [P] Create `tests/unit/test_areas.py` (data-model §2–§3):
+- [X] T003 [P] Create `tests/unit/test_areas.py` (data-model §2–§3):
   - for every `(role, area)` in `LANDINGS`: `role in area.roles` and `area.back_label is not None`;
   - `landing_area(None)` and `landing_area(Role.STUDENT)` are `None`;
   - `landing_area(Role.ADMIN).path == "/admin"` and `landing_area(Role.TEACHER).path == "/teacher"`;
@@ -106,7 +106,7 @@ people changes in one way only: administrator pages gain the database line.
     - `("/", "Back to the home page")` for `Role.STUDENT` and for `None`.
 
   Render the labels with `use_language(Language.EN)` from `app.core.i18n`, as other unit tests do.
-- [ ] T004 [P] Add `read_database_status_or_none(session: Session) -> DatabaseStatus | None` to
+- [X] T004 [P] Add `read_database_status_or_none(session: Session) -> DatabaseStatus | None` to
   `app/services/database_status.py` (data-model §4, research R4).
   - It calls the module-level `read_database_status(session)`, so tests can patch that one name.
   - On `SQLAlchemyError` it logs `logger.error("Database status unavailable: %s: %s",
@@ -117,20 +117,20 @@ people changes in one way only: administrator pages gain the database line.
     description.
   - It catches nothing else.
   - Its docstring cites milestone 3 FR-026.
-- [ ] T005 Use the helper in `home`, `app/routers/pages.py`:
+- [X] T005 Use the helper in `home`, `app/routers/pages.py`:
   - `db_status = read_database_status_or_none(session)`;
   - the context gets `"db_status": db_status` and `"data_available": db_status is not None`;
   - delete the inline `try/except`, the `SQLAlchemyError` import and the module `logger` if they are
     no longer used.
 
   Depends on T004.
-- [ ] T006 Move the database line into the shared footer (contracts/templates.md):
+- [X] T006 Move the database line into the shared footer (contracts/templates.md):
   - in `app/templates/layouts/base.html`, replace `{% block footer_extra %}{% endblock %}` with
     `{% if db_status %}…{% endif %}`, holding the `{%- set revision %}…{% endset %}` and the
     `<p data-engine=… data-revision=… data-boots=…>` line moved **unchanged** from
     `app/templates/pages/home.html`;
   - delete the whole `{% block footer_extra %}` override from `home.html`.
-- [ ] T007 Give every administrator page the line. In `render_admin`, `app/routers/admin.py`, open
+- [X] T007 Give every administrator page the line. In `render_admin`, `app/routers/admin.py`, open
   `with Session(request.app.state.engine) as session:`, compute
   `read_database_status_or_none(session)`, and add `"db_status"` to the context **before**
   `**(context or {})`.
@@ -139,7 +139,7 @@ people changes in one way only: administrator pages gain the database line.
     it out (spec FR-010, FR-013).
 
   Depends on T004.
-- [ ] T008 [P] Point the existing failure patches at the new seam. In `tests/integration/test_home.py`
+- [X] T008 [P] Point the existing failure patches at the new seam. In `tests/integration/test_home.py`
   (`_fail_database_reads`) and `tests/integration/test_health.py`, replace
   `monkeypatch.setattr(pages, "read_database_status", failing)` with
   `monkeypatch.setattr(database_status, "read_database_status", failing)`, where
@@ -147,14 +147,14 @@ people changes in one way only: administrator pages gain the database line.
 
   Depends on T005: until `home` calls `read_database_status_or_none`, it holds its own imported
   `read_database_status`, and patching the service module does not reach it.
-- [ ] T009 Catalogue: run `scripts/translations.sh update`, then set the Ukrainian `msgstr` in
+- [X] T009 Catalogue: run `scripts/translations.sh update`, then set the Ukrainian `msgstr` in
   `app/locale/uk/LC_MESSAGES/messages.po`:
   - "Back to the administrator area" → «Назад до розділу адміністратора»;
   - "Back to the teacher area" → «Назад до розділу педагога».
 
   Clear any `fuzzy` flag, then run `scripts/translations.sh compile` and `scripts/translations.sh
   check`.
-- [ ] T010 Checkpoint: `uv run pytest` passes. Fix any test that asserted an administrator page has
+- [X] T010 Checkpoint: `uv run pytest` passes. Fix any test that asserted an administrator page has
   **no** database line; none is expected.
 
 **Checkpoint**: The foundation is ready. Administrator pages show the database line, and nothing else
@@ -175,7 +175,7 @@ on their area's first tab with no home page in between, and the brand link bring
 
 > Write these first and make sure they fail before T012.
 
-- [ ] T011 [P] [US1] Create `tests/integration/test_landing.py` with:
+- [X] T011 [P] [US1] Create `tests/integration/test_landing.py` with:
   - **per role**, `follow_redirects=False`:
     - `client_as(ADMIN_EMAIL).get("/")` is 303 with `location == "/admin"`, and following it ends on
       `/admin/teachers` with the **Teachers** tab `aria-current="page"`;
@@ -200,21 +200,21 @@ on their area's first tab with no home page in between, and the brand link bring
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Redirect in `home`, `app/routers/pages.py`. Before any database read, set
+- [X] T012 [US1] Redirect in `home`, `app/routers/pages.py`. Before any database read, set
   `area = landing_area(current_role)`, and when it is not `None` return
   `RedirectResponse(area.path, status_code=303)`. The return type becomes `Response`. Rewrite the
   docstring: `/` lands an administrator or a teacher in their area (spec FR-001, research R1) and shows
   the student's home page otherwise.
-- [ ] T013 [US1] In `app/routers/areas.py`, remove the `description=` of `ADMIN_AREA` and
+- [X] T013 [US1] In `app/routers/areas.py`, remove the `description=` of `ADMIN_AREA` and
   `TEACHER_AREA`, so they default to `None`. Only `STUDENT_AREA` keeps one (data-model §1).
-- [ ] T014 [US1] Catalogue: `scripts/translations.sh update`. Check that "Manage teachers, educational
+- [X] T014 [US1] Catalogue: `scripts/translations.sh update`. Check that "Manage teachers, educational
   institutions and subjects." and "Manage your classes, students and teams, and work with the question
   bank and competitions." are gone from `app/locale/messages.pot` and both `.po` files. Then compile
   and check.
 
 ### Tests rewritten for User Story 1
 
-- [ ] T015 [P] [US1] Rewrite `tests/integration/test_home.py` for a student-only home page:
+- [X] T015 [P] [US1] Rewrite `tests/integration/test_home.py` for a student-only home page:
   - Every test that reads the home page's content through `admin_client.get("/")` uses
     `client_as(STUDENT_EMAIL)` instead. That covers the header, title, viewport, headline, footer,
     status line, unavailable notice, no-write-affordance and greeting tests.
@@ -226,13 +226,13 @@ on their area's first tab with no home page in between, and the brand link bring
   - `test_unavailable_data_keeps_the_cards_and_drops_the_database_line` expects `["/student"]`.
   - `test_the_home_page_lists_no_questions` is parametrised with `STUDENT_EMAIL` only.
   - **Delete** `test_the_teacher_card_names_students_teams_the_question_bank_and_competitions`.
-- [ ] T016 [P] [US1] Update `tests/integration/test_access_control.py`:
+- [X] T016 [P] [US1] Update `tests/integration/test_access_control.py`:
   - In `test_the_access_table`, add a `LANDING = {ADMIN: "/admin", TEACHER: "/teacher"}` branch for
     path `/`: for those roles, assert 303 with that `location`.
   - `HOME_LINKS` keeps only `STUDENT`.
   - `test_the_home_page_lists_exactly_the_allowed_areas` is parametrised with `STUDENT` only.
   - Leave the `/staff` rows for US3.
-- [ ] T017 [P] [US1] Replace the `GET /` probes that meant "still signed in" or "signed out" (research
+- [X] T017 [P] [US1] Replace the `GET /` probes that meant "still signed in" or "signed out" (research
   R7 item 5):
   - **signed-in probes** become `get("/profile", follow_redirects=False).status_code == 200`;
   - **signed-out probes** assert status 303 **and** `response.headers["location"].startswith("/login")`.
@@ -246,7 +246,7 @@ on their area's first tab with no home page in between, and the brand link bring
   - `tests/integration/test_user_reconcile.py` (≈ 389);
   - `tests/integration/test_sessions.py` (≈ 266; lines 276 and 287 already assert the `location` and
     stay).
-- [ ] T018 [P] [US1] Move the tests that used `/` as a sample staff page to the page staff now see:
+- [X] T018 [P] [US1] Move the tests that used `/` as a sample staff page to the page staff now see:
   - `tests/integration/test_layout.py` (≈ 45, 54, 63, 152) → `"/admin/teachers"`; the line at 152
     keeps its database-line assertion there;
   - `tests/integration/test_form_contract.py`, cases `frame-with-role-switch` and `frame-single-role`
@@ -269,7 +269,7 @@ on their area's first tab with no home page in between, and the brand link bring
     `test_the_switch_on_every_role_s_pages_comes_before_the_user_menu` (`/admin/teachers`,
     `/teacher/students`);
   - `test_theme.py`: `test_a_signed_in_person_returns_to_their_page` (`/admin/subjects`).
-- [ ] T019 [US1] Update the pipeline per contracts/pipeline.md:
+- [X] T019 [US1] Update the pipeline per contracts/pipeline.md:
   - In `.github/workflows/checks.yml`, job `image`, rename the step to "Sign in, smoke test the
     landing, restart, and again".
   - Rename `check_home` to `check_landing`. It first asserts that `GET /` with the cookie jar answers
@@ -282,7 +282,7 @@ on their area's first tab with no home page in between, and the brand link bring
   - Keep the anonymous and after-logout `GET /` checks.
   - Reword the step's leading comment, and the comment in `.github/workflows/deploy.yml` (≈ line 55),
     to say the status is read on the administrator area's first tab.
-- [ ] T020 [US1] Checkpoint: `uv run pytest` and `uv run ruff check .` pass. T011 is green.
+- [X] T020 [US1] Checkpoint: `uv run pytest` and `uv run ruff check .` pass. T011 is green.
 
 **Checkpoint**: User Story 1 is complete. Staff land in their area, and students are unchanged.
 
@@ -298,7 +298,7 @@ other role from the user menu. Each step lands in the right area (spec US2).
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T021 [P] [US2] Add to `tests/integration/test_landing.py`:
+- [X] T021 [P] [US2] Add to `tests/integration/test_landing.py`:
   - **no role yet**: `seed_roles_directly(app.state.engine, {ADMIN_STUDENT_EMAIL: [Role.TEACHER]})`,
     then `client_as(ADMIN_STUDENT_EMAIL, None).get("/", follow_redirects=False)` is 303 →
     `/role?next=%2F`;
@@ -312,7 +312,7 @@ other role from the user menu. Each step lands in the right area (spec US2).
     the home page, and switching to `teacher` ends on `/teacher/students`;
   - **real sign-in with several roles**: `submit_code` for `ADMIN_STUDENT_EMAIL` → 303
     `/role?next=%2F`, and choosing `admin` ends on `/admin/teachers`.
-- [ ] T022 [US2] Run T021. If any case fails, fix it in `app/routers/roles.py` without adding a
+- [X] T022 [US2] Run T021. If any case fails, fix it in `app/routers/roles.py` without adding a
   role-specific address (spec FR-006). None is expected to fail. Then review
   `tests/integration/test_role_switch.py` and `tests/integration/test_role_choice.py` for assertions
   that an administrator or a teacher "lands on the home page", and update them to the area.
@@ -330,7 +330,7 @@ signed-out visitor, and no page links to it, in either language (spec US3).
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T023 [P] [US3] In `tests/integration/test_access_control.py`:
+- [X] T023 [P] [US3] In `tests/integration/test_access_control.py`:
   - Remove `/staff` from `ACCESS_TABLE`, `TITLES` and `PLACEHOLDER_AREAS`.
   - Add **one** test, `test_the_staff_area_is_an_unknown_address`. It is the only test under `tests/`
     that mentions `/staff`, "Staff area" or «Розділ працівників» (spec FR-023, US6 scenario 3, the
@@ -347,7 +347,7 @@ signed-out visitor, and no page links to it, in either language (spec US3).
       `request_code` / `submit_code(…, next_path="/staff")` / `code_from`. The answer is 303 →
       `/staff`, and following it ends on 404 **Page not found** with the link
       `("/", "Back to the home page")`.
-- [ ] T024 [P] [US3] Update `tests/integration/test_role_choice.py`:
+- [X] T024 [P] [US3] Update `tests/integration/test_role_choice.py`:
   - in the parametrisation at ≈ line 110, replace `("/staff?x=1", "/role?next=%2Fstaff%3Fx%3D1")` with
     `("/teacher/teams?x=1", "/role?next=%2Fteacher%2Fteams%3Fx%3D1")`;
   - at ≈ lines 213–216, use `next_path="/teacher/teams"`, expect `location == "/teacher/teams"`, and
@@ -355,11 +355,11 @@ signed-out visitor, and no page links to it, in either language (spec US3).
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] In `app/routers/areas.py`:
+- [X] T025 [US3] In `app/routers/areas.py`:
   - delete `STAFF_AREA` and the `staff_area` handler;
   - set `AREAS = (ADMIN_AREA, TEACHER_AREA, STUDENT_AREA)`;
   - `_render` and `student_area` stay.
-- [ ] T026 [US3] Catalogue: `scripts/translations.sh update`. Check that "Staff area" («Розділ
+- [X] T026 [US3] Catalogue: `scripts/translations.sh update`. Check that "Staff area" («Розділ
   працівників») and "Pages shared by administrators and teachers." are gone from
   `app/locale/messages.pot` and both `.po` files. Then compile and check.
 
@@ -377,7 +377,7 @@ page, then make the read fail (spec US4).
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T027 [P] [US4] Create `tests/integration/test_database_line.py`. Reuse the `_status_lines`
+- [X] T027 [P] [US4] Create `tests/integration/test_database_line.py`. Reuse the `_status_lines`
   pattern: elements with a `data-engine` attribute.
   - **Administrator pages** (`admin_client`): each of `[tab.path for tab in ADMIN_TABS]`,
     `/admin/subjects/new`, the 400 page from `POST /admin/subjects` with an empty name, and
@@ -391,7 +391,7 @@ page, then make the read fail (spec US4).
     is 200, has no line, and its body holds none of "OperationalError", "boom" and "SELECT".
     `caplog` holds `"Database status unavailable: OperationalError: …"`, and no record contains
     `DATABASE_URL`'s value.
-- [ ] T028 [P] [US4] Make `tests/integration/test_boot_counter.py` (≈ lines 65, 71, 83, 86) read the
+- [X] T028 [P] [US4] Make `tests/integration/test_boot_counter.py` (≈ lines 65, 71, 83, 86) read the
   line from `/admin/teachers` explicitly, where the pipeline now reads it (contracts/pipeline.md),
   instead of following `/`.
 
@@ -408,7 +408,7 @@ page, then make the read fail (spec US4).
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T029 [P] [US5] In `tests/integration/test_page_patterns.py`, replace the single administrator
+- [X] T029 [P] [US5] In `tests/integration/test_page_patterns.py`, replace the single administrator
   assertion (≈ line 132) with a test parametrised over `(email, role, href, text)`:
   - `(ADMIN_EMAIL, ADMIN, "/admin", "Back to the administrator area")`;
   - `(TEACHER_EMAIL, TEACHER, "/teacher", "Back to the teacher area")`;
@@ -425,7 +425,7 @@ page, then make the read fail (spec US4).
   cases with the cookie `sc_lang=uk` (spec FR-021, SC-007):
   - the administrator, expecting «Назад до розділу адміністратора»;
   - the teacher, expecting «Назад до розділу педагога».
-- [ ] T030 [P] [US5] In `tests/integration/test_access_control.py`, `test_the_access_denied_page`
+- [X] T030 [P] [US5] In `tests/integration/test_access_control.py`, `test_the_access_denied_page`
   expects `BACK = {ADMIN: ("/admin", "Back to the administrator area"), TEACHER: ("/teacher", "Back
   to the teacher area"), STUDENT: ("/", "Back to the home page")}[role]` in
   `html.link_pairs(body, "main")`. Add `test_an_unknown_address_links_home`:
@@ -437,18 +437,18 @@ page, then make the read fail (spec US4).
 
 ### Implementation for User Story 5
 
-- [ ] T031 [P] [US5] Profile back link:
+- [X] T031 [P] [US5] Profile back link:
   - In `profile_page`, `app/routers/profile.py`, add `"back": back_link_for(request.state.current_role)`
     to the context. The route is `@allow_roles(*ALL_ROLES)`, so a role is set.
   - In `app/templates/pages/profile.html`, replace `{{ back_link("/", _("Back to the home page")) }}`
     with `{{ back_link(back.path, back.label) }}`.
-- [ ] T032 [P] [US5] Error page back link:
+- [X] T032 [P] [US5] Error page back link:
   - In `_error_page`, `app/main.py`, add
     `"back": back_link_for(getattr(request.state, "current_role", None))` to the context.
   - In `app/templates/pages/error.html`, replace the fixed link with
     `<p><a href="{{ back.path }}">{{ back.label }}</a></p>`.
   - Leave `app/templates/pages/data_erased.html` unchanged (spec FR-017).
-- [ ] T033 [US5] Checkpoint: T029, T030 and `tests/unit/test_template_text.py` pass, so no English
+- [X] T033 [US5] Checkpoint: T029, T030 and `tests/unit/test_template_text.py` pass, so no English
   text is left in a template outside a message. The "Back to the home page" message stays in the
   catalogues, now used from `areas.py`.
 
@@ -464,7 +464,7 @@ page (spec FR-019 to FR-030).
 **Independent Test**: The leftover searches in quickstart §2 return only the allowed hits, the catalogue
 check passes, and the whole suite passes.
 
-- [ ] T034 [P] [US6] Correct the comments and docstrings (research R10):
+- [X] T034 [P] [US6] Correct the comments and docstrings (research R10):
   - `app/routers/areas.py`: the module docstring describes three areas, the landings and the back
     links, with no "four areas" and no "home page keeps its link";
   - `app/routers/admin.py` and `app/routers/teacher.py`: the module docstrings drop "the home page
@@ -475,7 +475,7 @@ check passes, and the whole suite passes.
   - `app/static/css/app.css` (≈ line 839): the footer comment says the database line is on the
     administrator area's pages and the student's home page;
   - `tests/integration/test_routes.py` (≈ line 408): the docstring.
-- [ ] T035 [P] [US6] Update `README.md` (research R9):
+- [X] T035 [P] [US6] Update `README.md` (research R9):
   - the access table (≈ lines 74–80): delete the `/staff` row; the `/` row says "administrator →
     `/admin`, teacher → `/teacher`, student → home page";
   - the areas paragraph (≈ line 82): "The student area is a placeholder…"; administrators and teachers
@@ -486,26 +486,26 @@ check passes, and the whole suite passes.
   - the source tree (≈ lines 418, 421): `pages.py` "GET / → landing redirect for staff, the
     student's home page"; `areas.py` "/student placeholder; the areas, their landings and back
     links".
-- [ ] T036 [P] [US6] Update `docs/requirements/ui-guidelines.md` (research R9):
+- [X] T036 [P] [US6] Update `docs/requirements/ui-guidelines.md` (research R9):
   - frame item 1 (≈ line 172): the wordmark links to `/`, which opens the current role's area
     (milestone 12.6);
   - frame item 5 (≈ line 179): the footer has the version and build, and on the administrator area's
     pages and the student's home page the database line;
   - check the card section (≈ line 309): "as on the home page" stays true for students.
-- [ ] T037 [P] [US6] In `docs/requirements/milestones.md`, Delivered, milestone 3: "The home page
+- [X] T037 [P] [US6] In `docs/requirements/milestones.md`, Delivered, milestone 3: "The home page
   shows a database status line…" becomes "The database status line (in the footer of the
   administrator area and the student's home page since milestone 12.6) …". Keep its link and style.
   Check the other Delivered summaries; none should name the home page or the Staff area. Leave
   `product-requirements.md` and `technical-requirements.md` unchanged (they mention neither) and every
   `specs/` file except this feature's.
-- [ ] T038 [US6] Dead-code sweep (spec FR-019, FR-023):
+- [X] T038 [US6] Dead-code sweep (spec FR-019, FR-023):
   - `uv run ruff check .` reports no unused import;
   - `grep -rn` each test constant and helper touched in T015–T030 (`HOME_LINKS`, `PLACEHOLDER_AREAS`,
     `area_cards`, `area_links`, `_questions_section`, `pages` imports) and delete any left without a
     caller;
   - check `app/static/css/app.css` for rules used only by staff home cards (`card-grid` stays: the
     student's home page uses it).
-- [ ] T039 [US6] Run the leftover searches in quickstart §2. The only `/staff` or "Staff area" hits
+- [X] T039 [US6] Run the leftover searches in quickstart §2. The only `/staff` or "Staff area" hits
   allowed are the single T023 test and milestone 12.6's text in `docs/requirements/milestones.md`. Every
   "home page" hit is about the student's page, the back or "Go to" links, or the signed-out redirect.
 
@@ -515,10 +515,10 @@ check passes, and the whole suite passes.
 
 ## Phase 9: Polish & Cross-Cutting Concerns
 
-- [ ] T040 Run the full gate: `TEST_POSTGRES_URL=… uv run pytest` on both engines (0 skipped
+- [X] T040 Run the full gate: `TEST_POSTGRES_URL=… uv run pytest` on both engines (0 skipped
   because of this milestone), `uv run ruff check .`, `uv run ruff format --check .` and
   `scripts/translations.sh check`.
-- [ ] T041 Walk through quickstart §3 by hand, or take headless screenshots of the administrator's
+- [X] T041 Walk through quickstart §3 by hand, or take headless screenshots of the administrator's
   landing, the teacher's landing, the student's home page and `/staff` in both languages (memory: Playwright via `uv run --with playwright`, a database
   copy, port 8765).
 - [ ] T042 Push the branch, open the PR (body ends with the attribution line), and check that the

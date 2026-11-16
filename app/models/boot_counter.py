@@ -1,7 +1,8 @@
 """The `boot_counter` table: how many times the application has started against this database.
 
-It makes persistence observable: the home page shows the count, and it rises by exactly one per
-start and never per page view (FR-027, FR-028). See
+It makes persistence observable: the database status line shows the count (in the footer of the
+administrator area and of the student's home page since milestone 12.6), and it rises by exactly
+one per start and never per page view (FR-027, FR-028). See
 specs/003-database-questions/data-model.md#2-bootcounter--table-boot_counter.
 """
 

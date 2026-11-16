@@ -24,6 +24,7 @@ from app.core.db import SessionDep
 from app.core.i18n import _
 from app.core.templates import templates
 from app.models import ALL_ROLES, Role, User
+from app.routers.areas import back_link_for
 from app.services.consent import (
     consent_parts,
     describe_erasure,
@@ -78,6 +79,9 @@ def profile_page(request: Request, session: SessionDep) -> HTMLResponse:
             "records": records,
             "record_parts": [consent_parts(record.text) for record in records],
             "can_withdraw": has_consent_data(person),
+            # The route needs a chosen role, so the link names the person's area or home
+            # (specs/012.6-role-landing-area FR-014 to FR-016).
+            "back": back_link_for(request.state.current_role),
         },
     )
 

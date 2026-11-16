@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  student-competitions\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-15 18:13+0200\n"
+"POT-Creation-Date: 2026-11-16 12:37+0200\n"
 "PO-Revision-Date: 2026-11-15 17:00+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -129,15 +129,15 @@ msgstr "This request was refused because it did not come from this site."
 msgid "Request refused"
 msgstr "Request refused"
 
-#: app/main.py:281
+#: app/main.py:285
 msgid "Page not found"
 msgstr "Page not found"
 
-#: app/main.py:282
+#: app/main.py:286
 msgid "This address does not accept that request"
 msgstr "This address does not accept that request"
 
-#: app/main.py:284
+#: app/main.py:288
 msgid "Something went wrong"
 msgstr "Something went wrong"
 
@@ -165,17 +165,17 @@ msgstr "Teacher"
 msgid "Student"
 msgstr "Student"
 
-#: app/routers/admin.py:37
+#: app/routers/admin.py:39
 msgctxt "tab"
 msgid "Teachers"
 msgstr "Teachers"
 
-#: app/routers/admin.py:38
+#: app/routers/admin.py:40
 msgctxt "tab"
 msgid "Educational institutions"
 msgstr "Educational institutions"
 
-#: app/routers/admin.py:39
+#: app/routers/admin.py:41
 msgctxt "tab"
 msgid "Subjects"
 msgstr "Subjects"
@@ -234,41 +234,33 @@ msgstr "Too many invitations. Please try again later."
 msgid "The invitation email could not be sent. Please try again."
 msgstr "The invitation email could not be sent. Please try again."
 
-#: app/routers/areas.py:43 app/templates/layouts/admin.html:4
+#: app/routers/areas.py:45 app/templates/layouts/admin.html:4
 msgid "Administrator area"
 msgstr "Administrator area"
 
-#: app/routers/areas.py:45
-msgid "Manage teachers, educational institutions and subjects."
-msgstr "Manage teachers, educational institutions and subjects."
+#: app/routers/areas.py:47
+msgid "Back to the administrator area"
+msgstr "Back to the administrator area"
 
-#: app/routers/areas.py:49 app/templates/layouts/teacher.html:4
+#: app/routers/areas.py:51 app/templates/layouts/teacher.html:4
 msgid "Teacher area"
 msgstr "Teacher area"
 
-#: app/routers/areas.py:51
-msgid ""
-"Manage your classes, students and teams, and work with the question bank "
-"and competitions."
-msgstr ""
-"Manage your classes, students and teams, and work with the question bank "
-"and competitions."
+#: app/routers/areas.py:53
+msgid "Back to the teacher area"
+msgstr "Back to the teacher area"
 
-#: app/routers/areas.py:55
+#: app/routers/areas.py:57
 msgid "Student area"
 msgstr "Student area"
 
-#: app/routers/areas.py:57
+#: app/routers/areas.py:59
 msgid "Take part in competitions and see your results."
 msgstr "Take part in competitions and see your results."
 
-#: app/routers/areas.py:61
-msgid "Staff area"
-msgstr "Staff area"
-
-#: app/routers/areas.py:63
-msgid "Pages shared by administrators and teachers."
-msgstr "Pages shared by administrators and teachers."
+#: app/routers/areas.py:75
+msgid "Back to the home page"
+msgstr "Back to the home page"
 
 #: app/routers/auth.py:48 app/schemas/people.py:20
 msgid "Enter a valid email address."
@@ -352,7 +344,7 @@ msgstr "You are already a student."
 msgid "Sign in"
 msgstr "Sign in"
 
-#: app/routers/profile.py:41 app/templates/pages/profile_withdraw.html:12
+#: app/routers/profile.py:42 app/templates/pages/profile_withdraw.html:12
 msgid "There is no data stored on your consent to withdraw."
 msgstr "There is no data stored on your consent to withdraw."
 
@@ -1239,35 +1231,35 @@ msgstr "There is a problem"
 msgid "Time zone: %(zone)s"
 msgstr "Time zone: %(zone)s"
 
-#: app/templates/components/frame.html:34
+#: app/templates/components/frame.html:37
 msgid "Account menu"
 msgstr "Account menu"
 
-#: app/templates/components/frame.html:39
+#: app/templates/components/frame.html:42
 msgid "Switch to"
 msgstr "Switch to"
 
-#: app/templates/components/frame.html:48
+#: app/templates/components/frame.html:51
 msgid "Log out"
 msgstr "Log out"
 
-#: app/templates/components/frame.html:60
+#: app/templates/components/frame.html:63
 msgid "Theme"
 msgstr "Theme"
 
-#: app/templates/components/frame.html:63
+#: app/templates/components/frame.html:66
 msgid "Light"
 msgstr "Light"
 
-#: app/templates/components/frame.html:63
+#: app/templates/components/frame.html:66
 msgid "Dark"
 msgstr "Dark"
 
-#: app/templates/components/frame.html:63
+#: app/templates/components/frame.html:66
 msgid "Device"
 msgstr "Device"
 
-#: app/templates/components/frame.html:82
+#: app/templates/components/frame.html:85
 msgid "Language"
 msgstr "Language"
 
@@ -1359,6 +1351,11 @@ msgstr "Skip to main content"
 #, python-format
 msgid "%(app)s v%(version)s · build %(commit)s"
 msgstr "%(app)s v%(version)s · build %(commit)s"
+
+#: app/templates/layouts/base.html:37
+#, python-format
+msgid "Database: %(engine)s · schema revision %(revision)s · boot #%(boots)d"
+msgstr "Database: %(engine)s · schema revision %(revision)s · boot #%(boots)d"
 
 #: app/templates/pages/admin/_institution_picker.html:14
 #: app/templates/pages/admin/_institution_picker.html:18
@@ -1900,10 +1897,6 @@ msgstr "Any session you had was ended."
 msgid "Go to the home page"
 msgstr "Go to the home page"
 
-#: app/templates/pages/error.html:9 app/templates/pages/profile.html:12
-msgid "Back to the home page"
-msgstr "Back to the home page"
-
 #: app/templates/pages/home.html:8
 #, python-format
 msgid "Welcome to %(app)s"
@@ -1916,11 +1909,6 @@ msgstr "Your areas"
 #: app/templates/pages/home.html:19
 msgid "Question data is temporarily unavailable. Please try again in a moment."
 msgstr "Question data is temporarily unavailable. Please try again in a moment."
-
-#: app/templates/pages/home.html:26
-#, python-format
-msgid "Database: %(engine)s · schema revision %(revision)s · boot #%(boots)d"
-msgstr "Database: %(engine)s · schema revision %(revision)s · boot #%(boots)d"
 
 #: app/templates/pages/invitation.html:11
 #, python-format

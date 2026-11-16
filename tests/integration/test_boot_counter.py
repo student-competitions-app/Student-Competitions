@@ -20,6 +20,10 @@ from tests.conftest import ADMIN_EMAIL, sign_in_directly
 
 THREADS = 8
 
+STATUS_PAGE = "/admin/teachers"
+"""Where the administrator reads the line since milestone 12.6: their area's first tab, as the
+pipeline's `image` job does (specs/012.6-role-landing-area/contracts/pipeline.md)."""
+
 
 def _boots(body: str) -> str:
     match = re.search(r'data-boots="(\d+)"', body)
@@ -62,13 +66,13 @@ def test_reading_the_status_does_not_count(session: Session) -> None:
 
 
 def test_the_page_shows_the_first_start(admin_client: TestClient) -> None:
-    assert _boots(admin_client.get("/").text) == "1"
+    assert _boots(admin_client.get(STATUS_PAGE).text) == "1"
 
 
 def test_page_views_do_not_count(admin_client: TestClient) -> None:
     """US2-4: reloading the page leaves the number where it was."""
     for _ in range(3):
-        body = admin_client.get("/").text
+        body = admin_client.get(STATUS_PAGE).text
     assert _boots(body) == "1"
 
 
@@ -80,7 +84,7 @@ def test_a_restart_counts(monkeypatch: pytest.MonkeyPatch, database_url: str) ->
     with TestClient(app) as first:
         sign_in_directly(first, ADMIN_EMAIL)
         cookie = first.cookies[SESSION_COOKIE_NAME]
-        assert _boots(first.get("/").text) == "1"
+        assert _boots(first.get(STATUS_PAGE).text) == "1"
     with TestClient(app) as second:
         second.cookies.set(SESSION_COOKIE_NAME, cookie)
-        assert _boots(second.get("/").text) == "2"
+        assert _boots(second.get(STATUS_PAGE).text) == "2"

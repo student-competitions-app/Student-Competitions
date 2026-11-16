@@ -4,11 +4,11 @@ See specs/006-admin-area/research.md D6–D7 and contracts/http-routes.md "Area 
 declared once, in `ADMIN_TABS`, and every administrator page renders them through `render_admin`
 and `layouts/admin.html`, which marks the current tab. Tabs are ordinary links: no script.
 
-`GET /admin` keeps milestone 5's address (the home page links to it) and sends the browser on to
-the first tab. The Teachers tab lives in `app.routers.admin_teachers` (milestone 8), the
-Educational institutions tab in `app.routers.admin_institutions`, and the Subjects tab in
-`app.routers.admin_subjects`. `_placeholder` and `pages/admin/placeholder.html` stay for tabs whose
-features arrive later.
+`GET /admin` keeps milestone 5's address, where `/` sends an administrator since milestone 12.6,
+and sends the browser on to the first tab. The Teachers tab lives in `app.routers.admin_teachers`
+(milestone 8), the Educational institutions tab in `app.routers.admin_institutions`, and the
+Subjects tab in `app.routers.admin_subjects`. `_placeholder` and `pages/admin/placeholder.html`
+stay for tabs whose features arrive later.
 """
 
 from dataclasses import dataclass
@@ -16,12 +16,14 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlmodel import Session
 
 from app.core.auth import allow_roles
 from app.core.config import APP_NAME
 from app.core.i18n import Text, _p
 from app.core.templates import templates
 from app.routers.areas import ADMIN_AREA
+from app.services.database_status import read_database_status_or_none
 
 router = APIRouter()
 
@@ -50,7 +52,13 @@ def render_admin(
 ) -> HTMLResponse:
     """Render an administrator page with the tab row, `active_tab` marked current (FR-004). With
     `None`, no tab is current: a page of the area that is not one of its tabs, such as the
-    component gallery (milestone 10 FR-038)."""
+    component gallery (milestone 10 FR-038).
+
+    Every administrator page shows the database line in its footer, read through a short session
+    of its own. A failed read leaves the line out and never fails the page
+    (specs/012.6-role-landing-area FR-010, FR-013, research R4)."""
+    with Session(request.app.state.engine) as session:
+        db_status = read_database_status_or_none(session)
     return templates.TemplateResponse(
         request,
         template,
@@ -58,6 +66,7 @@ def render_admin(
             "app_name": APP_NAME,
             "admin_tabs": ADMIN_TABS,
             "active_tab": active_tab,
+            "db_status": db_status,
             **(context or {}),
         },
         status_code=status_code,

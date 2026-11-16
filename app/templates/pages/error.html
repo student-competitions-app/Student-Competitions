@@ -6,5 +6,5 @@
 {% block content %}
 {{ page_heading(heading) }}
 <p>{{ detail }}</p>
-<p><a href="/">{{ _("Back to the home page") }}</a></p>
+<p><a href="{{ back.path }}">{{ back.label }}</a></p>
 {% endblock %}

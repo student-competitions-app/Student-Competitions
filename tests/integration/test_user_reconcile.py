@@ -386,7 +386,7 @@ def test_a_restart_with_the_same_list_changes_nothing(start: Any, session: Sessi
     with start(CAST_ADMIN_EMAILS):
         browser = TestClient(app)
         browser.cookies.set(SESSION_COOKIE_NAME, cookie)
-        assert browser.get("/", follow_redirects=False).status_code == 200
+        assert browser.get("/profile", follow_redirects=False).status_code == 200
     assert {email: user.updated_at for email, user in all_users(session).items()} == before
 
 

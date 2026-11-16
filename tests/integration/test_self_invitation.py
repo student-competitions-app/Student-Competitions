@@ -68,4 +68,6 @@ def test_an_administrator_invites_accepts_and_withdraws_for_themselves(
         assert get_roles(session, me.id) == (Role.ADMIN,)
         assert me.first_name is None
         assert me.is_active is True
-    assert admin_client.get("/", follow_redirects=False).status_code == 303
+    signed_out = admin_client.get("/", follow_redirects=False)
+    assert signed_out.status_code == 303
+    assert signed_out.headers["location"].startswith("/login")

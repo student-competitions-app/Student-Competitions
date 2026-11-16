@@ -78,7 +78,7 @@ def test_a_cross_site_logout_changes_nothing(client_as: ClientAs) -> None:
     response = browser.post("/logout", headers={"Origin": "https://evil.example"})
     assert response.status_code == 403
     assert "set-cookie" not in response.headers
-    assert browser.get("/", follow_redirects=False).status_code == 200
+    assert browser.get("/profile", follow_redirects=False).status_code == 200
 
 
 def test_a_cross_site_sign_in_is_refused(client: TestClient) -> None:
@@ -121,7 +121,7 @@ def test_this_sites_own_writes_are_accepted(
 def test_a_cross_site_page_view_is_unaffected(client_as: ClientAs) -> None:
     """Arriving by a link from another site still works: `GET` changes nothing."""
     browser = client_as(ADMIN_EMAIL)
-    assert browser.get("/", headers={"Sec-Fetch-Site": "cross-site"}).status_code == 200
+    assert browser.get("/profile", headers={"Sec-Fetch-Site": "cross-site"}).status_code == 200
 
 
 @pytest.mark.parametrize("forged", CROSS_SITE_HEADERS)

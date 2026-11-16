@@ -626,7 +626,9 @@ def test_anonymous_visitors_are_sent_to_sign_in(client: TestClient) -> None:
 
 def test_the_gallery_reads_no_data(admin_client: TestClient) -> None:
     """FR-037: the handler takes no session. Every request still reads the visitor's session and
-    roles to authorise it (`resolve_access`), so those are the only statements allowed."""
+    roles to authorise it (`resolve_access`), and since milestone 12.6 every administrator page,
+    the gallery included, reads the database line for its footer (specs/012.6-role-landing-area
+    FR-010). Those are the only statements allowed: no domain data."""
     statements: list[str] = []
 
     def record(*args: Any) -> None:
@@ -639,7 +641,10 @@ def test_the_gallery_reads_no_data(admin_client: TestClient) -> None:
         event.remove(app.state.engine, "before_cursor_execute", record)
     tables = {table for statement in statements for table in re.findall(r"FROM (\w+)", statement)}
     assert tables, "no statement was recorded"
-    assert tables <= {"sessions", "users", "user_roles"}, tables
+    # The status line reads `boot_counter` and the Alembic revision; on PostgreSQL Alembic first
+    # looks its table up in `pg_catalog`.
+    status_line = {"boot_counter", "alembic_version", "pg_catalog"}
+    assert tables <= {"sessions", "users", "user_roles"} | status_line, tables
 
 
 @pytest.mark.usefixtures("production")

@@ -438,7 +438,7 @@ body > main {
   top: var(--sc-space-1);
 }
 
-/* The top bar (FR-018): the mark and the name link home; the current role sits under the name on
+/* The top bar (FR-018): the mark and the name link to `/`; the current role sits under the name on
    a phone and beside it from 768 px; the user menu is last. */
 .top-bar {
   background: var(--sc-top-bar);
@@ -836,7 +836,8 @@ nav.area-tabs li a[aria-current="page"] {
   }
 }
 
-/* The footer (FR-036): the release, and on the home page the database line. Quiet and small. */
+/* The footer (FR-036): the release, and on the administrator area's pages and the student's home
+   page the database line (milestone 12.6). Quiet and small. */
 body > footer.site-footer {
   padding-block: var(--sc-space-3);
 }

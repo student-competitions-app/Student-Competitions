@@ -15,7 +15,7 @@ The ladder follows a "walking skeleton" approach: first ship an empty skeleton t
    - The application is public over HTTPS. Pull requests are gated by tests and style checks, every merge to `main` is deployed automatically, and a status address reports health and version.
 
 3. **Database + first entity.** _Spec:_ [003-database-questions](../../specs/003-database-questions/spec.md)
-   - A persistent database with the first entity, the question (text and reference answer). The home page shows a database status line and stays up when the database is unreachable.
+   - A persistent database with the first entity, the question (text and reference answer). A database status line (in the footer of the administrator area and the student's home page since milestone 12.6), and its page stays up when the database is unreachable.
 
 4. **Email code authentication.** _Spec:_ [004-email-otp-auth](../../specs/004-email-otp-auth/spec.md)
    - Passwordless sign-in with a one-time emailed code, only for users already known to the application, with rate limits, no account enumeration and 14-day sessions. Every page except sign-in, status and static files requires sign-in.

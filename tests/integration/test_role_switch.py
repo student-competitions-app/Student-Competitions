@@ -58,7 +58,7 @@ def admin_student(client_as: ClientAs) -> TestClient:
 
 def test_the_header_offers_the_other_role(client_as: ClientAs) -> None:
     """US4-1, FR-018: one button per other role, and no `next`, so a switch lands on `/`."""
-    form = switch_form(admin_student(client_as).get("/").text)
+    form = switch_form(admin_student(client_as).get("/admin/teachers").text)
     assert form is not None
     assert "Switch to" in form.text
     assert [(b.name, b.value) for b in form.buttons] == [("role", "student")]
@@ -121,7 +121,7 @@ def test_the_access_denied_page_still_offers_the_switch(client_as: ClientAs) -> 
 
 def test_a_single_role_header_has_no_switch(client_as: ClientAs) -> None:
     """US4-2."""
-    assert switch_form(client_as(TEACHER_EMAIL).get("/").text) is None
+    assert switch_form(client_as(TEACHER_EMAIL).get("/teacher/students").text) is None
 
 
 def test_each_browser_keeps_its_own_role(client_as: ClientAs, session: Session) -> None:

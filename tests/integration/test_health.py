@@ -10,10 +10,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
 import app.core.auth as auth
-import app.routers.pages as pages
 from app.core.config import APP_VERSION
 from app.core.security import SESSION_COOKIE_NAME
-from tests.conftest import ADMIN_EMAIL, sign_in_directly
+from app.services import database_status
+from tests.conftest import ADMIN_EMAIL, STUDENT_EMAIL, ClientAs, sign_in_directly
 
 
 def test_healthz_returns_ok(client: TestClient) -> None:
@@ -48,7 +48,7 @@ def test_healthz_commit_is_a_non_empty_string(client: TestClient) -> None:
 
 
 def test_healthz_stays_ok_while_the_database_is_failing(
-    client: TestClient, admin_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, client_as: ClientAs, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Liveness never depends on the database, so a blip cannot make Render restart a healthy
     process in a loop (FR-029)."""
@@ -56,9 +56,9 @@ def test_healthz_stays_ok_while_the_database_is_failing(
     def failing(*args: Any, **kwargs: Any) -> Any:
         raise OperationalError("SELECT 1", {}, Exception("boom"))
 
-    monkeypatch.setattr(pages, "read_database_status", failing)
+    monkeypatch.setattr(database_status, "read_database_status", failing)
 
-    home = admin_client.get("/")
+    home = client_as(STUDENT_EMAIL).get("/")
     assert home.status_code == 200
     assert "Question data is temporarily unavailable" in home.text
 

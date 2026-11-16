@@ -252,6 +252,9 @@ async def cross_site_request_handler(request: Request, exc: CrossSiteRequest) ->
 
 
 def _error_page(request: Request, status_code: int, detail: object, heading: Text) -> HTMLResponse:
+    """The friendly error page. Its back link leads to the current role's area, or home when the
+    role was never read: an unknown address and a refused cross-site request are answered before
+    the session is (specs/012.6-role-landing-area FR-014 to FR-016, research R3)."""
     return templates.TemplateResponse(
         request,
         "pages/error.html",
@@ -260,6 +263,7 @@ def _error_page(request: Request, status_code: int, detail: object, heading: Tex
             "status_code": status_code,
             "heading": heading,
             "detail": detail,
+            "back": areas.back_link_for(getattr(request.state, "current_role", None)),
         },
         status_code=status_code,
     )

@@ -33,7 +33,8 @@ from tests.integration.test_login_flow import sign_in
 
 
 def is_signed_in(client: TestClient) -> bool:
-    response = client.get("/", follow_redirects=False)
+    """`/profile` answers 200 to any signed-in role; `/` would send staff on to their area."""
+    response = client.get("/profile", follow_redirects=False)
     assert response.status_code in {200, 303}, response.status_code
     return response.status_code == 200
 
@@ -263,7 +264,7 @@ def test_a_pre_milestone_session_keeps_working(client: TestClient, session: Sess
     """SC-010, spec edge case: an administrator signed in before the release is not signed out,
     and their session now records the administrator role."""
     token = sign_in_directly(client, ADMIN_EMAIL, None)
-    assert client.get("/", follow_redirects=False).status_code == 200
+    assert client.get("/profile", follow_redirects=False).status_code == 200
     row = stored_session(session, token)
     assert row is not None and row.current_role == "admin"
 

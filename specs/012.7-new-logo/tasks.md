@@ -393,7 +393,7 @@ its date in this milestone's own design approval.
   `specs/012.7-new-logo/screenshots/` as `{view}-{width}-{theme}.png`, with `view` one of `sign-in`,
   `area`, `identity`, `tab`. (FR-025, depends on T013 and T023; the phone check T019 does not block the
   screenshots)
-- [ ] T025 [US4] Create `specs/012.7-new-logo/design-approval.md` in the form of
+- [X] T025 [US4] Create `specs/012.7-new-logo/design-approval.md` in the form of
   `specs/010-design-system-ui-guidelines/design-approval.md`:
   - **Approver**: the product owner.
   - **Feature**: a link to spec.md (User Story 4, FR-025, FR-026).

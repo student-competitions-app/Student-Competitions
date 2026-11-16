@@ -14,6 +14,8 @@ data/
 
 # Review screenshots of milestone 10 (research D1): a throw-away aid, never committed
 screenshots/
+# ...except milestone 12.7's, the record its design approval points at (research R10)
+!specs/012.7-new-logo/screenshots/
 
 # Compiled message catalogues (milestone 12.5 FR-060): built by `scripts/translations.sh compile`,
 # by the image build and by the test session; only the `.po` sources are committed

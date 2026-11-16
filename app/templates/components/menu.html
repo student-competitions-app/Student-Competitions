@@ -1,6 +1,7 @@
 {#- The actions menu (milestone 12.1 contracts/components.md §1, research R14): a row's actions behind
     one button, a native <details> like the user menu, so it opens and closes without JavaScript.
-    The button reads `label` and is announced "<label> for “<item_name>”". The entries come through
+    The button reads "Actions" and is announced "Actions for “<item_name>”", one whole message in
+    its `aria-label` (milestone 12.5 contracts/components.md §8). The entries come through
     `{% call %}` as `menu_link`s; when the call block renders only white space, nothing is emitted,
     so a row with no action has no menu button. `name="row-actions"` makes the menus of a page one
     exclusive group where the browser supports it: opening one closes the others.
@@ -9,12 +10,12 @@
     destructive action still goes through its confirmation. Only the gallery passes `open=True`, to
     show the open panel. -#}
 
-{% macro actions_menu(item_name, label="Actions", open=False) -%}
+{% macro actions_menu(item_name, open=False) -%}
 {%- if not item_name %}{{ template_error("actions_menu: the item name is required") }}{% endif -%}
 {%- set entries = caller() | trim -%}
 {%- if entries -%}
 <details class="actions-menu" name="row-actions"{% if open %} open{% endif %}>
-  <summary>{{ label }}<span class="visually-hidden"> for “{{ item_name }}”</span></summary>
+  <summary aria-label="{{ _('Actions for “%(item)s”', item=item_name) }}">{{ _("Actions") }}</summary>
   <ul class="actions-menu-panel">
     {{ entries }}
   </ul>

@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.auth import allow_roles
 from app.core.config import APP_NAME
+from app.core.i18n import Text, _p
 from app.core.templates import templates
 from app.routers.areas import TEACHER_AREA
 
@@ -29,15 +30,15 @@ router = APIRouter()
 @dataclass(frozen=True)
 class TeacherTab:
     key: str
-    label: str
+    label: Text
     path: str
 
 
 TEACHER_TABS = (
-    TeacherTab("students", "Students", "/teacher/students"),
-    TeacherTab("teams", "Teams", "/teacher/teams"),
-    TeacherTab("questions", "Questions", "/teacher/questions"),
-    TeacherTab("competitions", "Competitions", "/teacher/competitions"),
+    TeacherTab("students", _p("tab", "Students"), "/teacher/students"),
+    TeacherTab("teams", _p("tab", "Teams"), "/teacher/teams"),
+    TeacherTab("questions", _p("tab", "Questions"), "/teacher/questions"),
+    TeacherTab("competitions", _p("tab", "Competitions"), "/teacher/competitions"),
 )
 """The tabs, in the order shown. A milestone that adds a tab adds it here."""
 

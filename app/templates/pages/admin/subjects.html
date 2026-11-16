@@ -5,30 +5,30 @@
 {% from "components/button.html" import link_button, post_button %}
 {% from "components/feedback.html" import empty_state %}
 
-{% block title %}Subjects — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Subjects") }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-{{ page_heading("Subjects", ("Create subject", "/admin/subjects/new")) }}
+{{ page_heading(_("Subjects"), (_("Create subject"), "/admin/subjects/new")) }}
 {% if subjects %}
-{% call data_table(["Name", "Status", "Actions"]) %}
+{% call data_table([_("Name"), _("Status"), _("Actions")]) %}
 {% for s in subjects %}
 {% set path = "/admin/subjects/" ~ s.id %}
 <tr>
-  {{ cell("Name", s.name) }}
-  {% call cell("Status") %}{{ status_badge(s.is_active) }}{% endcall %}
+  {{ cell(_("Name"), s.name) }}
+  {% call cell(_("Status")) %}{{ status_badge(s.is_active, "subject") }}{% endcall %}
   {% call actions_cell() %}
-  {{- link_button("Rename", path ~ "/rename", kind="secondary", outline=True, small=True) -}}
+  {{- link_button(_("Rename"), path ~ "/rename", kind="secondary", outline=True, small=True) -}}
   {%- if s.is_active -%}
-  {{- post_button(path ~ "/deactivate", "Deactivate", kind="destructive", outline=True, small=True) -}}
+  {{- post_button(path ~ "/deactivate", _("Deactivate"), kind="destructive", outline=True, small=True) -}}
   {%- else -%}
-  {{- post_button(path ~ "/activate", "Activate", kind="secondary", outline=True, small=True) -}}
+  {{- post_button(path ~ "/activate", _("Activate"), kind="secondary", outline=True, small=True) -}}
   {%- endif -%}
-  {{- link_button("Delete", path ~ "/delete", kind="destructive", outline=True, small=True) -}}
+  {{- link_button(_("Delete"), path ~ "/delete", kind="destructive", outline=True, small=True) -}}
   {% endcall %}
 </tr>
 {% endfor %}
 {% endcall %}
 {% else %}
-{{ empty_state("No subjects yet", "Create the first subject with Create subject.") }}
+{{ empty_state(_("No subjects yet"), _("Create the first subject with Create subject.")) }}
 {% endif %}
 {% endblock %}

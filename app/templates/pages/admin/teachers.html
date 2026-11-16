@@ -4,28 +4,29 @@
 {% from "components/badge.html" import status_badge, access_badge %}
 {% from "components/feedback.html" import notice, empty_state %}
 
-{% block title %}Teachers — {{ app_name }}{% endblock %}
+{% from "components/time.html" import local_date with context %}
+{% block title %}{{ _("Teachers") }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-{{ page_heading("Teachers", ("Invite teacher", "/admin/teachers/invite")) }}
-{% if sent_to %}{{ notice("Invitation sent to " ~ sent_to, "success") }}{% endif %}
+{{ page_heading(_("Teachers"), (_("Invite teacher"), "/admin/teachers/invite")) }}
+{% if sent_to %}{{ notice(_("Invitation sent to %(email)s", email=sent_to), "success") }}{% endif %}
 {% if teachers %}
-{% call data_table(["Name", "Email", "Educational institutions", "Can manage competitions", "Date of consent"]) %}
+{% call data_table([_("Name"), _("Email"), _("Educational institutions"), _("Can manage competitions"), _("Date of consent")]) %}
 {% for t in teachers %}
 <tr>
-  {% call cell("Name") %}<a href="/admin/teachers/{{ t.user_id }}">{{ t.first_name }} {{ t.last_name }}</a>{% endcall %}
-  {{ cell("Email", t.email) }}
-  {% call cell("Educational institutions") %}
+  {% call cell(_("Name")) %}<a href="/admin/teachers/{{ t.user_id }}">{{ t.first_name }} {{ t.last_name }}</a>{% endcall %}
+  {{ cell(_("Email"), t.email) }}
+  {% call cell(_("Educational institutions")) %}
   {% for link in t.links %}
-  <div>{{ link.label }} {{ access_badge(link.access_level) }}{% if not link.is_selectable %} {{ status_badge(False) }}{% endif %}</div>
+  <div>{{ link.label }} {{ access_badge(link.access_level) }}{% if not link.is_selectable %} {{ status_badge(False, "institution") }}{% endif %}</div>
   {% endfor %}
   {% endcall %}
-  {{ cell("Can manage competitions", "Yes" if t.can_manage_competitions else "No") }}
-  {{ cell("Date of consent", t.consented_at|utc("date")) }}
+  {{ cell(_("Can manage competitions"), _("Yes") if t.can_manage_competitions else _("No")) }}
+  {% call cell(_("Date of consent")) %}{% if t.consented_at %}{{ local_date(t.consented_at) }}{% endif %}{% endcall %}
 </tr>
 {% endfor %}
 {% endcall %}
 {% else %}
-{{ empty_state("No teachers yet", "Invite the first teacher with Invite teacher.") }}
+{{ empty_state(_("No teachers yet"), _("Invite the first teacher with Invite teacher.")) }}
 {% endif %}
 {% endblock %}

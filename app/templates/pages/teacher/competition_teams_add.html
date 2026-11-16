@@ -11,44 +11,44 @@
 {% from "components/table.html" import data_table, cell, actions_cell, row_note %}
 {% from "components/button.html" import post_button %}
 
-{% block title %}Add teams to “{{ competition.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Add teams to “%(name)s”", name=competition.name) }} — {{ app_name }}{% endblock %}
 
 {% block scripts %}<script src="/static/js/auto-submit.js" defer></script>{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back_href, "Back to the teams") }}
-{{ page_heading("Add teams to “" ~ competition.name ~ "”") }}
+{{ back_link(back_href, _("Back to the teams")) }}
+{{ page_heading(_("Add teams to “%(name)s”", name=competition.name)) }}
 {% if notice %}{{ notice_box(notice[0], notice[1]) }}{% endif %}
 {{ chained_lists([
-  {"id": "region", "name": "region", "label": "Region", "placeholder": "Choose a region",
+  {"id": "region", "name": "region", "label": _("Region"), "placeholder": _("Choose a region"),
    "options": regions, "selected": selected.id if selected else none, "disabled": not regions,
    "carry": [("subject", hidden.subject), ("status", hidden.status), ("page", hidden.page), ("back", back)]},
 ], "/teacher/competitions/" ~ competition.id ~ "/teams/add") }}
 
 {% if not regions %}
-{{ empty_state("No teams yet") }}
+{{ empty_state(_("No teams yet")) }}
 {% elif not selected %}
-{{ empty_state("Select a region", "Choose a region in the list above to see its teams.") }}
+{{ empty_state(_("Select a region"), _("Choose a region in the list above to see its teams.")) }}
 {% elif not listing.teams %}
-{{ empty_state("No teams in this region yet", "Choose another region.") }}
+{{ empty_state(_("No teams in this region yet"), _("Choose another region.")) }}
 {% else %}
-{{ page_navigation(listing.paging, page_href, "Teams", "Pages, top") }}
-{% call data_table(["Team", "Educational institution", "Active members", "Actions"]) %}
+{{ page_navigation(listing.paging, page_href, _("Teams"), _("Pages, top")) }}
+{% call data_table([_("Team"), _("Educational institution"), _("Active members"), _("Actions")]) %}
 {% for t in listing.teams %}
 <tr id="team-{{ t.team_id }}">
-  {{ cell("Team", t.name) }}
-  {{ cell("Educational institution", t.institution_name) }}
-  {{ cell("Active members", t.active_members) }}
+  {{ cell(_("Team"), t.name) }}
+  {{ cell(_("Educational institution"), t.institution_name) }}
+  {{ cell(_("Active members"), t.active_members) }}
   {% call actions_cell() %}
   {%- if t.team_id in in_competition -%}
-  {{ row_note("Already in this competition") }}
+  {{ row_note(_("Already in this competition")) }}
   {%- else -%}
-  {{ post_button("/teacher/competitions/" ~ competition.id ~ "/teams", "Add", kind="secondary", outline=True, small=True, hidden=dict(hidden, back=back, region=selected.id, p=listing.paging.number, team=t.team_id)) }}
+  {{ post_button("/teacher/competitions/" ~ competition.id ~ "/teams", _("Add"), kind="secondary", outline=True, small=True, hidden=dict(hidden, back=back, region=selected.id, p=listing.paging.number, team=t.team_id)) }}
   {%- endif -%}
   {% endcall %}
 </tr>
 {% endfor %}
 {% endcall %}
-{{ page_navigation(listing.paging, page_href, "Teams", "Pages, bottom") }}
+{{ page_navigation(listing.paging, page_href, _("Teams"), _("Pages, bottom")) }}
 {% endif %}
 {% endblock %}

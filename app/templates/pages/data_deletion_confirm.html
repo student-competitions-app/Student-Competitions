@@ -2,16 +2,16 @@
 {% from "components/confirmation.html" import confirmation %}
 {% from "components/details.html" import details_list %}
 
-{% block title %}Delete my data — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Delete my data") }} — {{ app_name }}{% endblock %}
 
 {% block content %}
 {#- The form posts to this same address, so the action is the request's own path. -#}
-{% call confirmation("Delete my data", "Pressing the button below erases this data:", request.url.path, "Delete my data", "/") %}
-{{ details_list([("Email", plan.email), ("First name", plan.first_name), ("Last name", plan.last_name)]) }}
+{% call confirmation(_("Delete my data"), _("Pressing the button below erases this data:"), request.url.path, _("Delete my data"), "/") %}
+{{ details_list([(_("Email"), plan.email), (_("First name"), plan.first_name), (_("Last name"), plan.last_name)]) }}
 {% if plan.roles_to_remove %}
-<p>These roles are removed: {{ plan.roles_to_remove | map(attribute="label") | join(", ") }}.</p>
+<p>{{ _("These roles are removed: %(roles)s.", roles=plan.roles_to_remove | map(attribute="label") | join(", ")) }}</p>
 {% endif %}
-{% if plan.email_kept %}<p>Your administrator role and email stay.</p>{% endif %}
-<p>You will be signed out everywhere. The record that you agreed is kept as proof of consent.</p>
+{% if plan.email_kept %}<p>{{ _("Your administrator role and email stay.") }}</p>{% endif %}
+<p>{{ _("You will be signed out everywhere. The record that you agreed is kept as proof of consent.") }}</p>
 {% endcall %}
 {% endblock %}

@@ -11,7 +11,8 @@ records the method, the action (empty means the request path; numeric path segme
 `{id}`, and invitation and deletion tokens `{token}`), the sorted field names of its inputs,
 selects, textareas and named buttons, and the sorted `(name, value)` pairs of its named buttons.
 A case's records are compared as a sorted list, so moving a form on the page is not a change.
-The theme switch's forms (`/theme`) are left out: they are new in milestone 10.
+The theme switch's forms (`/theme`) are left out: they are new in milestone 10; so are the
+language switch's (`/language`), new in milestone 12.5.
 
 The expected records live in `form_contract.json`, generated once from the milestone 9 templates
 with `UPDATE_FORM_CONTRACT=1` and never regenerated in milestone 10: a mismatch means a template
@@ -40,6 +41,8 @@ Deliberate changes since (each is a contract change, recorded here):
   for those cases only. A grade field's name holds its question's id, `grade-<id>`, recorded as
   `grade-{id}`. The new **Grades** and **Finish competition** menu entries of
   `teacher-competitions` are links, so that case is unchanged.
+- **Milestone 12.5**: the language switch's form (`/language`) is on every page, in the top bar;
+  it is left out like the theme switch's. No other form changes.
 """
 
 import json
@@ -138,7 +141,7 @@ def records(response: Response) -> list[dict[str, Any]]:
     request_path = response.url.path
     found = []
     for form in html.forms(response.text):
-        if form.action == "/theme":
+        if form.action in ("/theme", "/language"):
             continue
         fields = {i.name for i in form.inputs if i.name} | {b.name for b in form.buttons if b.name}
         fields = {re.sub(r"^(answer|grade)-\d+$", r"\1-{id}", name) for name in fields}

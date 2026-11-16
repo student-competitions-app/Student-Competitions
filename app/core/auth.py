@@ -67,6 +67,8 @@ PUBLIC_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # Milestone 10: the theme switch reads and writes no data and acts only on the requesting
         # browser's own cookie, so it is open signed out and to every role (research D6).
         ("POST", "/theme"),
+        # Milestone 12.5: the language switch, likewise (research R7).
+        ("POST", "/language"),
     }
 )
 """The complete allowlist of `(method, path)` pairs served to anonymous visitors, and to anyone

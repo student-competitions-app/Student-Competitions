@@ -1,0 +1,2801 @@
+# Translations template for student-competitions.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the
+# student-competitions project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: student-competitions VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-11-15 18:13+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: app/core/config.py:43
+msgid "Student Competitions"
+msgstr ""
+
+#: app/core/config.py:45
+msgid "Online knowledge competitions for students."
+msgstr ""
+
+#: app/core/config.py:48
+msgid ""
+"Student Competitions is a web application for running online knowledge "
+"competitions in schools and universities. Teachers build a question bank "
+"and open a competition, students answer the questions in writing, and "
+"every answer is scored automatically."
+msgstr ""
+
+#: app/core/time_zone.py:36
+msgctxt "genitive month"
+msgid "January"
+msgstr ""
+
+#: app/core/time_zone.py:37
+msgctxt "genitive month"
+msgid "February"
+msgstr ""
+
+#: app/core/time_zone.py:38
+msgctxt "genitive month"
+msgid "March"
+msgstr ""
+
+#: app/core/time_zone.py:39
+msgctxt "genitive month"
+msgid "April"
+msgstr ""
+
+#: app/core/time_zone.py:40
+msgctxt "genitive month"
+msgid "May"
+msgstr ""
+
+#: app/core/time_zone.py:41
+msgctxt "genitive month"
+msgid "June"
+msgstr ""
+
+#: app/core/time_zone.py:42
+msgctxt "genitive month"
+msgid "July"
+msgstr ""
+
+#: app/core/time_zone.py:43
+msgctxt "genitive month"
+msgid "August"
+msgstr ""
+
+#: app/core/time_zone.py:44
+msgctxt "genitive month"
+msgid "September"
+msgstr ""
+
+#: app/core/time_zone.py:45
+msgctxt "genitive month"
+msgid "October"
+msgstr ""
+
+#: app/core/time_zone.py:46
+msgctxt "genitive month"
+msgid "November"
+msgstr ""
+
+#: app/core/time_zone.py:47
+msgctxt "genitive month"
+msgid "December"
+msgstr ""
+
+#: app/core/time_zone.py:85
+#, python-format
+msgid "%(day)d %(month)s %(year)d, %(time)s"
+msgstr ""
+
+#: app/core/time_zone.py:92
+#, python-format
+msgid "%(moment)s (Kyiv time)"
+msgstr ""
+
+#: app/core/time_zone.py:103
+#, python-format
+msgid "%(day)d %(month)s %(year)d"
+msgstr ""
+
+#: app/main.py:238
+#, python-format
+msgid "Your current role, %(role)s, cannot open this page."
+msgstr ""
+
+#: app/main.py:239
+msgid "Access denied"
+msgstr ""
+
+#: app/main.py:249
+msgid "This request was refused because it did not come from this site."
+msgstr ""
+
+#: app/main.py:250
+msgid "Request refused"
+msgstr ""
+
+#: app/main.py:281
+msgid "Page not found"
+msgstr ""
+
+#: app/main.py:282
+msgid "This address does not accept that request"
+msgstr ""
+
+#: app/main.py:284
+msgid "Something went wrong"
+msgstr ""
+
+#: app/models/teacher.py:39 app/templates/components/badge.html:26
+#: app/templates/pages/admin/_institution_picker.html:22
+msgctxt "access level"
+msgid "Read"
+msgstr ""
+
+#: app/models/teacher.py:40 app/templates/components/badge.html:26
+#: app/templates/pages/admin/_institution_picker.html:23
+msgctxt "access level"
+msgid "Write"
+msgstr ""
+
+#: app/models/user.py:50
+msgid "Administrator"
+msgstr ""
+
+#: app/models/user.py:50
+msgid "Teacher"
+msgstr ""
+
+#: app/models/user.py:50
+msgid "Student"
+msgstr ""
+
+#: app/routers/admin.py:37
+msgctxt "tab"
+msgid "Teachers"
+msgstr ""
+
+#: app/routers/admin.py:38
+msgctxt "tab"
+msgid "Educational institutions"
+msgstr ""
+
+#: app/routers/admin.py:39
+msgctxt "tab"
+msgid "Subjects"
+msgstr ""
+
+#: app/routers/admin_institutions.py:91
+msgid "This region does not exist. It may have been deleted."
+msgstr ""
+
+#: app/routers/admin_institutions.py:91
+#: app/routers/teacher_competition_entries.py:106
+msgid "Region not found"
+msgstr ""
+
+#: app/routers/admin_institutions.py:99
+msgid "Educational institution not found"
+msgstr ""
+
+#: app/routers/admin_institutions.py:100
+msgid ""
+"This educational institution does not exist in this region. It may have "
+"been deleted."
+msgstr ""
+
+#: app/routers/admin_institutions.py:164 app/routers/admin_institutions.py:178
+msgid "New region"
+msgstr ""
+
+#: app/routers/admin_institutions.py:208 app/routers/admin_institutions.py:225
+msgid "Rename region"
+msgstr ""
+
+#: app/routers/admin_institutions.py:345
+#, python-format
+msgid "New educational institution in “%(region)s”"
+msgstr ""
+
+#: app/routers/admin_institutions.py:418 app/routers/admin_institutions.py:451
+msgid "Rename educational institution"
+msgstr ""
+
+#: app/routers/admin_subjects.py:88 app/routers/admin_subjects.py:99
+msgid "New subject"
+msgstr ""
+
+#: app/routers/admin_subjects.py:110 app/routers/admin_subjects.py:124
+msgid "Rename subject"
+msgstr ""
+
+#: app/routers/admin_teachers.py:80
+msgid "Too many invitations. Please try again later."
+msgstr ""
+
+#: app/routers/admin_teachers.py:81
+msgid "The invitation email could not be sent. Please try again."
+msgstr ""
+
+#: app/routers/areas.py:43 app/templates/layouts/admin.html:4
+msgid "Administrator area"
+msgstr ""
+
+#: app/routers/areas.py:45
+msgid "Manage teachers, educational institutions and subjects."
+msgstr ""
+
+#: app/routers/areas.py:49 app/templates/layouts/teacher.html:4
+msgid "Teacher area"
+msgstr ""
+
+#: app/routers/areas.py:51
+msgid ""
+"Manage your classes, students and teams, and work with the question bank "
+"and competitions."
+msgstr ""
+
+#: app/routers/areas.py:55
+msgid "Student area"
+msgstr ""
+
+#: app/routers/areas.py:57
+msgid "Take part in competitions and see your results."
+msgstr ""
+
+#: app/routers/areas.py:61
+msgid "Staff area"
+msgstr ""
+
+#: app/routers/areas.py:63
+msgid "Pages shared by administrators and teachers."
+msgstr ""
+
+#: app/routers/auth.py:48 app/schemas/people.py:20
+msgid "Enter a valid email address."
+msgstr ""
+
+#: app/routers/auth.py:49
+msgid "Invalid or expired code. Request a new code if needed."
+msgstr ""
+
+#: app/routers/auth.py:50
+msgid "Sign-in is temporarily unavailable. Please try again in a moment."
+msgstr ""
+
+#: app/routers/auth.py:51
+msgid "Too many attempts. Please try again later."
+msgstr ""
+
+#: app/routers/auth.py:53
+msgid "Your account is ready. Send yourself a sign-in code to continue."
+msgstr ""
+
+#: app/routers/data_deletion.py:44
+msgid "This link has expired; request a new one."
+msgstr ""
+
+#: app/routers/data_deletion.py:45
+msgid "This link cannot be used. Request a new one."
+msgstr ""
+
+#: app/routers/data_deletion.py:112
+msgid "Link expired"
+msgstr ""
+
+#: app/routers/data_deletion.py:114
+msgid "Link not valid"
+msgstr ""
+
+#: app/routers/invitations.py:43
+msgid ""
+"This invitation cannot be accepted. Ask the person who invited you to "
+"send a new one."
+msgstr ""
+
+#: app/routers/invitations.py:44
+msgid "This invitation has expired; ask for a new one."
+msgstr ""
+
+#: app/routers/invitations.py:46
+msgid ""
+"The consent text has changed since you opened this page. Please read it "
+"again."
+msgstr ""
+
+#: app/routers/invitations.py:81 app/routers/invitations.py:99
+#: app/templates/pages/invitation.html:8
+msgid "Invitation"
+msgstr ""
+
+#: app/routers/invitations.py:85
+msgid "Invitation expired"
+msgstr ""
+
+#: app/routers/invitations.py:89
+msgid "You are already an administrator."
+msgstr ""
+
+#: app/routers/invitations.py:90
+msgid "You are already a teacher."
+msgstr ""
+
+#: app/routers/invitations.py:91
+msgid "You are already a student."
+msgstr ""
+
+#: app/routers/invitations.py:102 app/templates/pages/login.html:6
+#: app/templates/pages/login.html:10 app/templates/pages/login_code.html:20
+msgid "Sign in"
+msgstr ""
+
+#: app/routers/profile.py:41 app/templates/pages/profile_withdraw.html:12
+msgid "There is no data stored on your consent to withdraw."
+msgstr ""
+
+#: app/routers/roles.py:34
+msgid "Choose one of your roles."
+msgstr ""
+
+#: app/routers/roles.py:35
+msgid "Choosing a role is temporarily unavailable. Please try again in a moment."
+msgstr ""
+
+#: app/routers/teacher.py:38
+msgctxt "tab"
+msgid "Students"
+msgstr ""
+
+#: app/routers/teacher.py:39
+msgctxt "tab"
+msgid "Teams"
+msgstr ""
+
+#: app/routers/teacher.py:40
+msgctxt "tab"
+msgid "Questions"
+msgstr ""
+
+#: app/routers/teacher.py:41
+msgctxt "tab"
+msgid "Competitions"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:107
+msgid "This region does not exist, or it is deactivated."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:110
+#: app/routers/teacher_questions.py:58 app/routers/teacher_team_answers.py:95
+msgid "Question not found"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:111
+msgid "This question does not exist, or it cannot be added to this competition."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:114
+#: app/routers/teacher_team_answers.py:92
+msgid "Team not found"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:115
+msgid "This team does not exist, or it cannot be added to this competition."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:126
+#, python-format
+msgid "“%(name)s” has already started and its questions can no longer be changed."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:131
+#, python-format
+msgid "“%(name)s” has been cancelled and its questions can no longer be changed."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:134
+#, python-format
+msgid "“%(name)s” has finished and its questions can no longer be changed."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:137
+#, python-format
+msgid "“%(name)s” has already started and its teams can no longer be changed."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:140
+#, python-format
+msgid "“%(name)s” has been cancelled and its teams can no longer be changed."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:141
+#, python-format
+msgid "“%(name)s” has finished and its teams can no longer be changed."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:153
+#, python-format
+msgid "Question %(number)d was added to “%(name)s”"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:155
+#, python-format
+msgid "Question %(number)d is already in “%(name)s”"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:157
+#, python-format
+msgid "Question %(number)d was removed from “%(name)s”"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:158
+#, python-format
+msgid "Question %(number)d is not in “%(name)s”"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:164
+#, python-format
+msgid "Team “%(team)s” was added to “%(name)s”"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:166
+#, python-format
+msgid "Team “%(team)s” is already in “%(name)s”"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:168
+#, python-format
+msgid "Team “%(team)s” was removed from “%(name)s”"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:169
+#, python-format
+msgid "Team “%(team)s” is not in “%(name)s”"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:172
+#: app/templates/pages/teacher/competition_questions_add.html:16
+#: app/templates/pages/teacher/question_delete.html:9
+#: app/templates/pages/teacher/question_form.html:13
+#: app/templates/pages/teacher/question_not_found.html:9
+msgid "Back to the questions"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:172
+#: app/templates/pages/teacher/competition_teams_add.html:19
+msgid "Back to the teams"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:405
+#, python-format
+msgid "Change the questions of “%(name)s”?"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:407
+#, python-format
+msgid "Change the teams of “%(name)s”?"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:412
+msgid "Back to the competition"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:630
+msgid "The question was deleted from the question bank and cannot be added again."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:632
+msgid "The question stays in the question bank and can be added again."
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:642
+#, python-format
+msgid "Remove question %(number)d from “%(name)s”?"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:950
+#, python-format
+msgid "Remove team “%(team)s” of %(institution)s, %(region)s from “%(name)s”?"
+msgstr ""
+
+#: app/routers/teacher_competition_entries.py:956
+msgid "The team and its members are not changed, and the team can be added again."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:92 app/routers/teacher_questions.py:56
+#: app/templates/pages/admin/subject_not_found.html:4
+#: app/templates/pages/admin/subject_not_found.html:8
+msgid "Subject not found"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:93
+msgid ""
+"This subject does not exist, or it is deactivated and has no finished "
+"competitions."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:96
+msgid "Competition not found"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:97
+msgid "This competition does not exist, or its subject is deactivated."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:104
+msgid "The start must be in the future."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:106
+msgid "All"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:111
+#, python-format
+msgid "“%(name)s” has already started and can no longer be edited."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:114
+#, python-format
+msgid "“%(name)s” has been cancelled and can no longer be edited."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:117
+#, python-format
+msgid "“%(name)s” has finished and can no longer be edited."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:121
+#, python-format
+msgid "“%(name)s” is already cancelled."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:123
+#, python-format
+msgid "“%(name)s” has finished and cannot be cancelled."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:128
+#, python-format
+msgid "“%(name)s” has not started yet and cannot be finished."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:131
+#, python-format
+msgid "“%(name)s” has been cancelled and cannot be finished."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:133
+#, python-format
+msgid "“%(name)s” has already finished."
+msgstr ""
+
+#: app/routers/teacher_competitions.py:141
+#, python-format
+msgid "Competition “%(name)s” was added"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:142
+#, python-format
+msgid "Competition “%(name)s” was saved"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:143
+#, python-format
+msgid "Competition “%(name)s” was cancelled"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:144
+#, python-format
+msgid "Competition “%(name)s” was finished"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:310
+msgid "Deactivated subjects"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:394 app/routers/teacher_grades.py:210
+#: app/routers/teacher_team_answers.py:204
+#: app/templates/pages/teacher/competition_answers.html:24
+#: app/templates/pages/teacher/competition_cancel.html:12
+#: app/templates/pages/teacher/competition_finish.html:13
+#: app/templates/pages/teacher/competition_form.html:13
+#: app/templates/pages/teacher/competition_grades.html:25
+#: app/templates/pages/teacher/competition_not_found.html:10
+#: app/templates/pages/teacher/competition_questions.html:19
+#: app/templates/pages/teacher/competition_teams.html:21
+msgid "Back to the competitions"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:395 app/routers/teacher_grades.py:211
+#: app/routers/teacher_team_answers.py:205
+msgid "Back to competitions"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:409
+#, python-format
+msgid "Edit competition “%(name)s”?"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:422
+#, python-format
+msgid "Cancel competition “%(name)s”?"
+msgstr ""
+
+#: app/routers/teacher_competitions.py:435
+#, python-format
+msgid "Finish competition “%(name)s”?"
+msgstr ""
+
+#: app/routers/teacher_grades.py:99
+#, python-format
+msgid "“%(name)s” has not started yet, so its answers cannot be graded."
+msgstr ""
+
+#: app/routers/teacher_grades.py:102
+#, python-format
+msgid ""
+"“%(name)s” is still in progress, so its answers cannot be graded until it"
+" is finished."
+msgstr ""
+
+#: app/routers/teacher_grades.py:106
+#, python-format
+msgid "“%(name)s” has been cancelled, so its answers cannot be graded."
+msgstr ""
+
+#: app/routers/teacher_grades.py:186
+#, python-format
+msgid "Grades of “%(name)s” were saved"
+msgstr ""
+
+#: app/routers/teacher_grades.py:207
+#, python-format
+msgid "Grade answers of “%(name)s”?"
+msgstr ""
+
+#: app/routers/teacher_grades.py:273
+msgid "All teams"
+msgstr ""
+
+#: app/routers/teacher_grades.py:278
+msgid "Ungraded only"
+msgstr ""
+
+#: app/routers/teacher_questions.py:56
+msgid "This subject does not exist or is deactivated."
+msgstr ""
+
+#: app/routers/teacher_questions.py:59
+msgid "This question does not exist, was deleted, or its subject is deactivated."
+msgstr ""
+
+#: app/routers/teacher_students.py:90 app/routers/teacher_teams.py:79
+#: app/templates/pages/teacher/competition_answers.html:30
+msgid "You are not linked to any educational institution"
+msgstr ""
+
+#: app/routers/teacher_students.py:91 app/routers/teacher_teams.py:80
+msgid "Select a region to continue"
+msgstr ""
+
+#: app/routers/teacher_students.py:92 app/routers/teacher_teams.py:81
+msgid "Select an educational institution to continue"
+msgstr ""
+
+#: app/routers/teacher_students.py:93 app/routers/teacher_teams.py:87
+msgid "Select a class to see its students"
+msgstr ""
+
+#: app/routers/teacher_students.py:94 app/routers/teacher_teams.py:88
+msgid "No students in this class yet"
+msgstr ""
+
+#: app/routers/teacher_students.py:95
+msgid ""
+"This class is deactivated; its students are hidden until it is activated "
+"again"
+msgstr ""
+
+#: app/routers/teacher_students.py:101
+#: app/templates/pages/teacher/student_invite.html:18
+msgid "This class is deactivated. Students cannot be added to it."
+msgstr ""
+
+#: app/routers/teacher_students.py:301
+#, python-format
+msgid "New class in “%(institution)s”"
+msgstr ""
+
+#: app/routers/teacher_students.py:358
+#, python-format
+msgid "Edit class “%(name)s”"
+msgstr ""
+
+#: app/routers/teacher_team_answers.py:93
+msgid "This team does not exist, or it is not in this competition."
+msgstr ""
+
+#: app/routers/teacher_team_answers.py:95
+msgid "This question is not in this competition."
+msgstr ""
+
+#: app/routers/teacher_team_answers.py:100
+#, python-format
+msgid "“%(name)s” has not started yet, so its answers cannot be entered yet."
+msgstr ""
+
+#: app/routers/teacher_team_answers.py:103
+#, python-format
+msgid "“%(name)s” has been cancelled, so its answers can no longer be entered."
+msgstr ""
+
+#: app/routers/teacher_team_answers.py:106
+#, python-format
+msgid "“%(name)s” has finished, so its answers can no longer be entered."
+msgstr ""
+
+#: app/routers/teacher_team_answers.py:180
+#, python-format
+msgid "Answers of “%(name)s” were saved"
+msgstr ""
+
+#: app/routers/teacher_team_answers.py:201
+#, python-format
+msgid "Enter answers for “%(name)s”?"
+msgstr ""
+
+#: app/routers/teacher_teams.py:82
+#: app/templates/pages/teacher/competition_teams_add.html:29
+msgid "No teams yet"
+msgstr ""
+
+#: app/routers/teacher_teams.py:83
+msgid "Select a team to see its members"
+msgstr ""
+
+#: app/routers/teacher_teams.py:84
+msgid "No members in this team yet"
+msgstr ""
+
+#: app/routers/teacher_teams.py:89
+#: app/templates/pages/teacher/team_add_students.html:16
+msgid "This team already has 50 members"
+msgstr ""
+
+#: app/routers/teacher_teams.py:98
+#, python-format
+msgid "%(name)s was added to the team."
+msgstr ""
+
+#: app/routers/teacher_teams.py:99
+#, python-format
+msgid "%(name)s is already in this team."
+msgstr ""
+
+#: app/routers/teacher_teams.py:341
+#, python-format
+msgid "New team in “%(institution)s”"
+msgstr ""
+
+#: app/routers/teacher_teams.py:344
+msgid "Back to Teams"
+msgstr ""
+
+#: app/routers/teacher_teams.py:399
+#: app/templates/pages/teacher/team_add_students.html:14
+#: app/templates/pages/teacher/team_delete.html:9
+#: app/templates/pages/teacher/team_member_remove.html:9
+#, python-format
+msgctxt "team"
+msgid "Back to “%(name)s”"
+msgstr ""
+
+#: app/routers/teacher_teams.py:408 app/routers/teacher_teams.py:425
+#, python-format
+msgid "Rename team “%(name)s”"
+msgstr ""
+
+#: app/schemas/answer.py:36
+#, python-format
+msgid "Answer to question %(number)d cannot contain a null character."
+msgstr ""
+
+#: app/schemas/answer.py:41
+#, python-format
+msgid "Answer to question %(number)d can be at most 2,000 characters."
+msgstr ""
+
+#: app/schemas/classes.py:17
+msgid "Enter a year of study from 1 to 12."
+msgstr ""
+
+#: app/schemas/competition.py:31
+msgid "Enter the start date."
+msgstr ""
+
+#: app/schemas/competition.py:32
+msgid "Enter a real start date."
+msgstr ""
+
+#: app/schemas/competition.py:33
+msgid "Enter the start time."
+msgstr ""
+
+#: app/schemas/competition.py:34
+msgid "Enter a real start time."
+msgstr ""
+
+#: app/schemas/competition.py:75
+#, python-format
+msgid ""
+"There is no %(time)s on %(day)d %(month)s %(year)d in %(zone)s because "
+"the clocks go forward. Enter another time."
+msgstr ""
+
+#: app/schemas/grade.py:21
+msgid "Enter a whole number from 0 to 10."
+msgstr ""
+
+#: app/schemas/names.py:51
+msgid "The name cannot contain tabs, line breaks or other control characters."
+msgstr ""
+
+#: app/schemas/names.py:55
+msgid "Enter a name."
+msgstr ""
+
+#: app/schemas/names.py:57
+#, python-format
+msgid "The name can be at most %(max)d characters."
+msgstr ""
+
+#: app/schemas/people.py:44
+msgid ""
+"The first name cannot contain tabs, line breaks or other control "
+"characters."
+msgstr ""
+
+#: app/schemas/people.py:45
+msgid "Enter a first name."
+msgstr ""
+
+#: app/schemas/people.py:46
+#, python-format
+msgid "The first name can be at most %(max)d characters."
+msgstr ""
+
+#: app/schemas/people.py:49
+msgid ""
+"The last name cannot contain tabs, line breaks or other control "
+"characters."
+msgstr ""
+
+#: app/schemas/people.py:50
+msgid "Enter a last name."
+msgstr ""
+
+#: app/schemas/people.py:51
+#, python-format
+msgid "The last name can be at most %(max)d characters."
+msgstr ""
+
+#: app/schemas/question.py:23
+msgid "Enter the question text."
+msgstr ""
+
+#: app/schemas/question.py:24
+msgid "The question text can be at most 2,000 characters."
+msgstr ""
+
+#: app/schemas/question.py:25
+msgid "The question text cannot contain a null character."
+msgstr ""
+
+#: app/schemas/question.py:28
+msgid "Enter the reference answer."
+msgstr ""
+
+#: app/schemas/question.py:29
+msgid "The reference answer can be at most 2,000 characters."
+msgstr ""
+
+#: app/schemas/question.py:30
+msgid "The reference answer cannot contain a null character."
+msgstr ""
+
+#: app/schemas/teachers.py:19
+msgid "Pick at least one educational institution."
+msgstr ""
+
+#: app/schemas/teachers.py:20
+msgid "This educational institution cannot be selected."
+msgstr ""
+
+#: app/schemas/teachers.py:21
+msgid "Each educational institution can be picked only once."
+msgstr ""
+
+#: app/schemas/teachers.py:22
+msgid "Choose Read or Write access for each educational institution."
+msgstr ""
+
+#: app/services/classes.py:46
+#, python-format
+msgid "A class named “%(name)s” already exists in this institution."
+msgstr ""
+
+#: app/services/classes.py:75
+#, python-format
+msgid "%(name)s · year %(year)d"
+msgstr ""
+
+#: app/services/competitions.py:77 app/templates/components/badge.html:33
+msgid "Upcoming"
+msgstr ""
+
+#: app/services/competitions.py:78 app/templates/components/badge.html:34
+msgid "In progress"
+msgstr ""
+
+#: app/services/competitions.py:79 app/templates/components/badge.html:35
+msgid "Finished"
+msgstr ""
+
+#: app/services/competitions.py:80 app/templates/components/badge.html:36
+msgid "Cancelled"
+msgstr ""
+
+#: app/services/competitions.py:146
+#, python-format
+msgid "A competition named “%(name)s” already exists in this subject."
+msgstr ""
+
+#: app/services/email.py:73
+#, python-format
+msgid "Your %(app)s sign-in code is: %(code)s"
+msgstr ""
+
+#: app/services/email.py:76
+#, python-format
+msgid "It is valid for %(num)d minute and can be used once."
+msgid_plural "It is valid for %(num)d minutes and can be used once."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/services/email.py:80
+msgid "If you did not try to sign in, you can ignore this email."
+msgstr ""
+
+#: app/services/email.py:82
+#, python-format
+msgid "Your %(app)s sign-in code"
+msgstr ""
+
+#: app/services/email.py:89
+#, python-format
+msgid "You are invited to %(app)s as a teacher"
+msgstr ""
+
+#: app/services/email.py:90
+#, python-format
+msgid "You are invited to %(app)s as a student"
+msgstr ""
+
+#: app/services/email.py:98
+#, python-format
+msgid "%(inviter)s (%(email)s) invites you to %(app)s as a teacher."
+msgstr ""
+
+#: app/services/email.py:104
+#, python-format
+msgid "%(inviter)s (%(email)s) invites you to %(app)s as a student."
+msgstr ""
+
+#: app/services/email.py:130
+#, python-format
+msgid "Role: %(role)s"
+msgstr ""
+
+#: app/services/email.py:134
+msgid ""
+"Nothing about you is stored unless you accept. Open this link to see "
+"exactly what will be stored and to accept:"
+msgstr ""
+
+#: app/services/email.py:141 app/templates/pages/invitation.html:33
+#, python-format
+msgid "This invitation expires on %(time)s."
+msgstr ""
+
+#: app/services/email.py:144
+msgid "If you were not expecting it, you can ignore this email."
+msgstr ""
+
+#: app/services/email.py:162
+#, python-format
+msgid "Someone asked to delete the data %(app)s stores about this email address."
+msgstr ""
+
+#: app/services/email.py:167
+msgid ""
+"Opening this link and confirming erases your first and last name and this"
+" email address, and removes the roles granted with your consent. The "
+"record that you once agreed is kept as proof of consent."
+msgstr ""
+
+#: app/services/email.py:175
+#, python-format
+msgid "The link works once, within one hour, until %(time)s."
+msgstr ""
+
+#: app/services/email.py:178
+msgid "If you did not ask for this, you can ignore this email."
+msgstr ""
+
+#: app/services/email.py:180
+#, python-format
+msgid "Delete your %(app)s data"
+msgstr ""
+
+#: app/services/institutions.py:56
+#, python-format
+msgid "An educational institution named “%(name)s” already exists in this region."
+msgstr ""
+
+#: app/services/regions.py:46
+#, python-format
+msgid "A region named “%(name)s” already exists."
+msgstr ""
+
+#: app/services/students.py:53
+msgid "This email already belongs to a student"
+msgstr ""
+
+#: app/services/students.py:56
+msgid "This class is deactivated."
+msgstr ""
+
+#: app/services/students.py:103
+#: app/templates/pages/teacher/class_deactivate.html:10
+#: app/templates/pages/teacher/class_delete.html:17
+#: app/templates/pages/teacher/class_delete.html:20
+#: app/templates/pages/teacher/class_form.html:15
+#: app/templates/pages/teacher/team_form.html:11
+#, python-format
+msgid "Educational institution: %(institution)s"
+msgstr ""
+
+#: app/services/students.py:109
+#, python-format
+msgid "Class: %(class_label)s"
+msgstr ""
+
+#: app/services/subjects.py:46
+#, python-format
+msgid "A subject named “%(name)s” already exists."
+msgstr ""
+
+#: app/services/teachers.py:111
+#, python-format
+msgid "%(institution)s — %(level)s"
+msgstr ""
+
+#: app/services/teachers.py:121
+msgid "Can manage competitions: Yes"
+msgstr ""
+
+#: app/services/teachers.py:122
+msgid "You will be able to manage competitions and change the question bank."
+msgstr ""
+
+#: app/services/teachers.py:128
+msgid "Can manage competitions: No"
+msgstr ""
+
+#: app/services/teachers.py:129
+msgid "You will not be able to manage competitions or change the question bank."
+msgstr ""
+
+#: app/services/teams.py:80
+#, python-format
+msgid "A team named “%(name)s” already exists."
+msgstr ""
+
+#: app/templates/components/answer_sheet.html:23
+#: app/templates/components/grading_sheet.html:28
+#: app/templates/components/grading_sheet.html:63
+#: app/templates/pages/teacher/competition_questions.html:32
+#: app/templates/pages/teacher/competition_questions_add.html:26
+#: app/templates/pages/teacher/questions.html:40
+#, python-format
+msgid "Question %(number)d"
+msgstr ""
+
+#: app/templates/components/answer_sheet.html:24
+#: app/templates/components/grading_sheet.html:29
+#: app/templates/components/grading_sheet.html:64
+#: app/templates/pages/teacher/competition_questions.html:33
+#: app/templates/pages/teacher/competition_questions_add.html:27
+#: app/templates/pages/teacher/question_form.html:26
+#: app/templates/pages/teacher/questions.html:41
+msgid "Question"
+msgstr ""
+
+#: app/templates/components/answer_sheet.html:25
+#: app/templates/components/grading_sheet.html:32
+#: app/templates/components/grading_sheet.html:66
+#, python-format
+msgid "Answer to question %(number)d"
+msgstr ""
+
+#: app/templates/components/answer_sheet.html:25
+#: app/templates/components/grading_sheet.html:35
+#: app/templates/components/grading_sheet.html:75
+msgid "Not answered"
+msgstr ""
+
+#: app/templates/components/answer_sheet.html:25
+#: app/templates/pages/teacher/question_form.html:26
+#: app/templates/pages/teacher/question_form.html:27
+msgid "Up to 2,000 characters."
+msgstr ""
+
+#: app/templates/components/answer_sheet.html:30
+msgid "Save answers"
+msgstr ""
+
+#: app/templates/components/badge.html:16
+msgctxt "subject"
+msgid "Active"
+msgstr ""
+
+#: app/templates/components/badge.html:16
+msgctxt "subject"
+msgid "Deactivated"
+msgstr ""
+
+#: app/templates/components/badge.html:17
+msgctxt "region"
+msgid "Active"
+msgstr ""
+
+#: app/templates/components/badge.html:17
+msgctxt "region"
+msgid "Deactivated"
+msgstr ""
+
+#: app/templates/components/badge.html:18
+msgctxt "institution"
+msgid "Active"
+msgstr ""
+
+#: app/templates/components/badge.html:18
+msgctxt "institution"
+msgid "Deactivated"
+msgstr ""
+
+#: app/templates/components/badge.html:19
+msgctxt "class"
+msgid "Active"
+msgstr ""
+
+#: app/templates/components/badge.html:19
+msgctxt "class"
+msgid "Deactivated"
+msgstr ""
+
+#: app/templates/components/confirmation.html:27
+#: app/templates/components/form.html:133
+msgid "Cancel"
+msgstr ""
+
+#: app/templates/components/form.html:30
+msgid "There is a problem"
+msgstr ""
+
+#: app/templates/components/form.html:110
+#, python-format
+msgid "Time zone: %(zone)s"
+msgstr ""
+
+#: app/templates/components/frame.html:34
+msgid "Account menu"
+msgstr ""
+
+#: app/templates/components/frame.html:39
+msgid "Switch to"
+msgstr ""
+
+#: app/templates/components/frame.html:48
+msgid "Log out"
+msgstr ""
+
+#: app/templates/components/frame.html:60
+msgid "Theme"
+msgstr ""
+
+#: app/templates/components/frame.html:63
+msgid "Light"
+msgstr ""
+
+#: app/templates/components/frame.html:63
+msgid "Dark"
+msgstr ""
+
+#: app/templates/components/frame.html:63
+msgid "Device"
+msgstr ""
+
+#: app/templates/components/frame.html:82
+msgid "Language"
+msgstr ""
+
+#: app/templates/components/grading_sheet.html:30
+#: app/templates/pages/teacher/competition_questions.html:34
+#: app/templates/pages/teacher/competition_questions_add.html:28
+#: app/templates/pages/teacher/question_form.html:27
+#: app/templates/pages/teacher/questions.html:42
+msgid "Reference answer"
+msgstr ""
+
+#: app/templates/components/grading_sheet.html:33
+#, python-format
+msgid "Grade for question %(number)d"
+msgstr ""
+
+#: app/templates/components/grading_sheet.html:33
+msgid "A whole number from 0 to 10."
+msgstr ""
+
+#: app/templates/components/grading_sheet.html:33
+msgid "Not graded"
+msgstr ""
+
+#: app/templates/components/grading_sheet.html:51
+msgid "Save grades"
+msgstr ""
+
+#: app/templates/components/grading_sheet.html:69
+#, python-format
+msgid "Grade: %(grade)d of 10"
+msgstr ""
+
+#: app/templates/components/grading_sheet.html:71
+msgid "Not graded yet"
+msgstr ""
+
+#: app/templates/components/group.html:13
+#, python-format
+msgid "%(num)d team"
+msgid_plural "%(num)d teams"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/templates/components/menu.html:18
+#, python-format
+msgid "Actions for “%(item)s”"
+msgstr ""
+
+#: app/templates/components/menu.html:18
+#: app/templates/pages/admin/institutions.html:37
+#: app/templates/pages/admin/subjects.html:13
+#: app/templates/pages/teacher/competition_answers.html:38
+#: app/templates/pages/teacher/competition_grades.html:41
+#: app/templates/pages/teacher/competition_teams.html:30
+#: app/templates/pages/teacher/competition_teams_add.html:36
+#: app/templates/pages/teacher/competitions.html:54
+#: app/templates/pages/teacher/students.html:61
+#: app/templates/pages/teacher/team_add_students.html:28
+#: app/templates/pages/teacher/teams.html:55
+msgid "Actions"
+msgstr ""
+
+#: app/templates/components/pagination.html:13
+#, python-format
+msgid "%(noun)s %(first)d–%(last)d of %(total)d"
+msgstr ""
+
+#: app/templates/components/pagination.html:16
+#: app/templates/components/pagination.html:18
+msgid "Previous"
+msgstr ""
+
+#: app/templates/components/pagination.html:28
+#: app/templates/components/pagination.html:30
+msgid "Next"
+msgstr ""
+
+#: app/templates/components/selectors.html:52
+#: app/templates/pages/teacher/competition_grades.html:34
+msgid "Show"
+msgstr ""
+
+#: app/templates/layouts/base.html:21
+msgid "Skip to main content"
+msgstr ""
+
+#: app/templates/layouts/base.html:33
+#, python-format
+msgid "%(app)s v%(version)s · build %(commit)s"
+msgstr ""
+
+#: app/templates/pages/admin/_institution_picker.html:14
+#: app/templates/pages/admin/_institution_picker.html:18
+msgid "Access"
+msgstr ""
+
+#: app/templates/pages/admin/_institution_picker.html:21
+#, python-format
+msgid "Access to %(institution)s"
+msgstr ""
+
+#: app/templates/pages/admin/_institution_picker.html:31
+msgid ""
+"No educational institution can be selected yet. Create one on the "
+"Educational institutions tab."
+msgstr ""
+
+#: app/templates/pages/admin/institution_deactivate.html:5
+#, python-format
+msgid "Deactivate educational institution “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/admin/institution_deactivate.html:9
+#: app/templates/pages/admin/institution_delete.html:12
+#: app/templates/pages/admin/institution_delete.html:14
+#: app/templates/pages/admin/institution_form.html:9
+#: app/templates/pages/admin/region_deactivate.html:9
+#: app/templates/pages/admin/region_delete.html:10
+#: app/templates/pages/admin/region_delete.html:12
+#: app/templates/pages/admin/region_form.html:9
+#, python-format
+msgctxt "region"
+msgid "Back to “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/admin/institution_deactivate.html:10
+#, python-format
+msgid "Deactivate educational institution “%(name)s”?"
+msgstr ""
+
+#: app/templates/pages/admin/institution_deactivate.html:10
+#: app/templates/pages/admin/institution_delete.html:15
+#: app/templates/pages/admin/institutions.html:22
+#: app/templates/pages/admin/institutions.html:46
+#: app/templates/pages/admin/region_deactivate.html:10
+#: app/templates/pages/admin/subject_delete.html:13
+#: app/templates/pages/admin/subjects.html:22
+#: app/templates/pages/teacher/class_deactivate.html:9
+#: app/templates/pages/teacher/class_delete.html:15
+#: app/templates/pages/teacher/students.html:51
+msgid "Deactivate"
+msgstr ""
+
+#: app/templates/pages/admin/institution_deactivate.html:11
+#: app/templates/pages/admin/institution_delete.html:17
+#: app/templates/pages/admin/institution_delete.html:20
+#: app/templates/pages/admin/institution_form.html:15
+#, python-format
+msgid "Region: %(region)s"
+msgstr ""
+
+#: app/templates/pages/admin/institution_deactivate.html:12
+#: app/templates/pages/admin/region_deactivate.html:10
+msgid "Its students will be signed out and hidden until it is activated again."
+msgstr ""
+
+#: app/templates/pages/admin/institution_delete.html:6
+#, python-format
+msgid "Delete educational institution “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/admin/institution_delete.html:11
+#, python-format
+msgid "Delete educational institution “%(name)s”?"
+msgstr ""
+
+#: app/templates/pages/admin/institution_delete.html:14
+#, python-format
+msgctxt "institution"
+msgid "“%(name)s” is in use and cannot be deleted. You can deactivate it instead."
+msgstr ""
+
+#: app/templates/pages/admin/institution_delete.html:19
+#: app/templates/pages/admin/institutions.html:26
+#: app/templates/pages/admin/institutions.html:50
+#: app/templates/pages/admin/region_delete.html:14
+#: app/templates/pages/admin/subject_delete.html:16
+#: app/templates/pages/admin/subjects.html:26
+#: app/templates/pages/teacher/class_delete.html:19
+#: app/templates/pages/teacher/question_delete.html:10
+#: app/templates/pages/teacher/questions.html:46
+#: app/templates/pages/teacher/students.html:55
+#: app/templates/pages/teacher/team_delete.html:10
+#: app/templates/pages/teacher/teams.html:50
+msgid "Delete"
+msgstr ""
+
+#: app/templates/pages/admin/institution_delete.html:21
+msgid "Its class will be deleted too."
+msgstr ""
+
+#: app/templates/pages/admin/institution_delete.html:21
+#, python-format
+msgid "Its %(num)d class will be deleted too."
+msgid_plural "Its %(num)d classes will be deleted too."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/templates/pages/admin/institution_delete.html:22
+msgid "Deleting an educational institution cannot be undone."
+msgstr ""
+
+#: app/templates/pages/admin/institution_form.html:12
+#: app/templates/pages/admin/institutions.html:34
+msgid ""
+"This region is deactivated. New educational institutions cannot be added "
+"to it."
+msgstr ""
+
+#: app/templates/pages/admin/institution_form.html:17
+#: app/templates/pages/admin/institutions.html:37
+#: app/templates/pages/admin/institutions.html:41
+#: app/templates/pages/admin/region_form.html:16
+#: app/templates/pages/admin/subject_form.html:12
+#: app/templates/pages/admin/subjects.html:13
+#: app/templates/pages/admin/subjects.html:17
+#: app/templates/pages/admin/teachers.html:14
+#: app/templates/pages/admin/teachers.html:17
+#: app/templates/pages/teacher/class_form.html:17
+#: app/templates/pages/teacher/competition_form.html:21
+#: app/templates/pages/teacher/competitions.html:54
+#: app/templates/pages/teacher/competitions.html:57
+#: app/templates/pages/teacher/students.html:61
+#: app/templates/pages/teacher/students.html:64
+#: app/templates/pages/teacher/team_add_students.html:28
+#: app/templates/pages/teacher/team_add_students.html:31
+#: app/templates/pages/teacher/team_form.html:13
+#: app/templates/pages/teacher/teams.html:55
+#: app/templates/pages/teacher/teams.html:58
+msgid "Name"
+msgstr ""
+
+#: app/templates/pages/admin/institution_form.html:18
+#: app/templates/pages/admin/region_form.html:17
+#: app/templates/pages/admin/subject_form.html:13
+#: app/templates/pages/admin/teacher_form.html:17
+#: app/templates/pages/teacher/class_form.html:19
+#: app/templates/pages/teacher/student_form.html:25
+#: app/templates/pages/teacher/team_form.html:14
+msgid "Save"
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:13
+msgid "Regions"
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:15
+msgid "Create region"
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:16
+msgid "No regions yet"
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:16
+msgid "Create the first region with Create region."
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:20
+#: app/templates/pages/admin/institutions.html:44
+#: app/templates/pages/admin/subjects.html:20
+#: app/templates/pages/teacher/teams.html:49
+msgid "Rename"
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:24
+#: app/templates/pages/admin/institutions.html:48
+#: app/templates/pages/admin/subjects.html:24
+#: app/templates/pages/teacher/students.html:53
+msgid "Activate"
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:30
+#, python-format
+msgid "Educational institutions in “%(region)s”"
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:32
+msgid "Create educational institution"
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:37
+#: app/templates/pages/admin/institutions.html:42
+#: app/templates/pages/admin/subjects.html:13
+#: app/templates/pages/admin/subjects.html:18
+#: app/templates/pages/teacher/competition_answers.html:28
+#: app/templates/pages/teacher/competition_grades.html:29
+#: app/templates/pages/teacher/competition_questions.html:23
+#: app/templates/pages/teacher/competition_teams.html:25
+#: app/templates/pages/teacher/competitions.html:34
+#: app/templates/pages/teacher/competitions.html:54
+#: app/templates/pages/teacher/competitions.html:59
+msgid "Status"
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:56
+msgid "No educational institutions yet"
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:56
+msgid "Create the first one with Create educational institution."
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:60
+msgid "Choose a region from the list to see its educational institutions."
+msgstr ""
+
+#: app/templates/pages/admin/institutions.html:60
+#: app/templates/pages/teacher/competition_teams_add.html:31
+#: app/templates/pages/teacher/students.html:20
+#: app/templates/pages/teacher/teams.html:20
+msgid "Select a region"
+msgstr ""
+
+#: app/templates/pages/admin/institutions_not_found.html:7
+#: app/templates/pages/admin/region_form.html:11
+msgid "Back to the educational institutions"
+msgstr ""
+
+#: app/templates/pages/admin/region_deactivate.html:5
+#, python-format
+msgid "Deactivate region “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/admin/region_deactivate.html:10
+#, python-format
+msgid "Deactivate region “%(name)s”?"
+msgstr ""
+
+#: app/templates/pages/admin/region_delete.html:5
+#, python-format
+msgid "Delete region “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/admin/region_delete.html:9
+#, python-format
+msgid "Delete region “%(name)s”?"
+msgstr ""
+
+#: app/templates/pages/admin/region_delete.html:12
+#, python-format
+msgid ""
+"“%(name)s” still holds educational institutions and cannot be deleted. "
+"Delete its institutions first."
+msgstr ""
+
+#: app/templates/pages/admin/region_delete.html:14
+msgid "Deleting a region cannot be undone."
+msgstr ""
+
+#: app/templates/pages/admin/subject_delete.html:6
+#, python-format
+msgid "Delete “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/admin/subject_delete.html:9
+#: app/templates/pages/admin/subject_delete.html:12
+#: app/templates/pages/admin/subject_form.html:8
+#: app/templates/pages/admin/subject_not_found.html:7
+msgid "Back to the subjects"
+msgstr ""
+
+#: app/templates/pages/admin/subject_delete.html:10
+#, python-format
+msgid "Delete “%(name)s”?"
+msgstr ""
+
+#: app/templates/pages/admin/subject_delete.html:12
+#, python-format
+msgctxt "subject"
+msgid "“%(name)s” is in use and cannot be deleted. You can deactivate it instead."
+msgstr ""
+
+#: app/templates/pages/admin/subject_delete.html:16
+msgid "Deleting a subject cannot be undone."
+msgstr ""
+
+#: app/templates/pages/admin/subject_not_found.html:9
+msgid "This subject does not exist. It may have been deleted."
+msgstr ""
+
+#: app/templates/pages/admin/subjects.html:8
+#: app/templates/pages/admin/subjects.html:11
+msgid "Subjects"
+msgstr ""
+
+#: app/templates/pages/admin/subjects.html:11
+msgid "Create subject"
+msgstr ""
+
+#: app/templates/pages/admin/subjects.html:32
+msgid "Create the first subject with Create subject."
+msgstr ""
+
+#: app/templates/pages/admin/subjects.html:32
+#: app/templates/pages/teacher/competitions.html:43
+#: app/templates/pages/teacher/questions.html:30
+msgid "No subjects yet"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_form.html:9
+#: app/templates/pages/admin/teacher_invite.html:8
+#: app/templates/pages/admin/teacher_not_found.html:7
+msgid "Back to the teachers"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_form.html:12
+#, python-format
+msgid "Email: %(email)s"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_form.html:19
+msgid "Remove teacher"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_invite.html:5
+#: app/templates/pages/admin/teacher_invite.html:9
+#: app/templates/pages/admin/teachers.html:11
+msgid "Invite teacher"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_invite.html:11
+#: app/templates/pages/teacher/student_invite.html:20
+msgid ""
+"The person receives an email with a link. Nothing about them is stored "
+"unless they accept."
+msgstr ""
+
+#: app/templates/pages/admin/teacher_invite.html:17
+#: app/templates/pages/teacher/student_invite.html:24
+msgid "Send invitation"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_not_found.html:4
+#: app/templates/pages/admin/teacher_not_found.html:8
+msgid "Teacher not found"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_not_found.html:9
+msgid "This person is not a teacher. They may have been removed."
+msgstr ""
+
+#: app/templates/pages/admin/teacher_remove.html:5
+#, python-format
+msgid "Remove %(name)s as a teacher"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_remove.html:9
+#, python-format
+msgid "Back to %(name)s"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_remove.html:10
+#, python-format
+msgid "Remove %(name)s as a teacher?"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_remove.html:10
+msgid ""
+"They lose the teacher role, their institutions and the competitions "
+"setting. If they have no other role, they can no longer sign in. Their "
+"email, names and consent records stay until they delete their data."
+msgstr ""
+
+#: app/templates/pages/admin/teacher_remove.html:10
+#: app/templates/pages/teacher/competition_entry_remove.html:13
+#: app/templates/pages/teacher/competition_questions.html:38
+#: app/templates/pages/teacher/competition_teams.html:43
+#: app/templates/pages/teacher/student_form.html:28
+#: app/templates/pages/teacher/student_remove.html:10
+#: app/templates/pages/teacher/students.html:69
+#: app/templates/pages/teacher/team_member_remove.html:10
+#: app/templates/pages/teacher/teams.html:62
+msgid "Remove"
+msgstr ""
+
+#: app/templates/pages/admin/teachers.html:8
+#: app/templates/pages/admin/teachers.html:11
+msgid "Teachers"
+msgstr ""
+
+#: app/templates/pages/admin/teachers.html:12
+#: app/templates/pages/teacher/students.html:14
+#, python-format
+msgid "Invitation sent to %(email)s"
+msgstr ""
+
+#: app/templates/pages/admin/teachers.html:14
+#: app/templates/pages/admin/teachers.html:25
+msgid "Date of consent"
+msgstr ""
+
+#: app/templates/pages/admin/teachers.html:30
+msgid "No teachers yet"
+msgstr ""
+
+#: app/templates/pages/admin/teachers.html:30
+msgid "Invite the first teacher with Invite teacher."
+msgstr ""
+
+#: app/templates/pages/area.html:9
+msgid "The features of this area will arrive in a later milestone."
+msgstr ""
+
+#: app/templates/pages/data_deletion_confirm.html:5
+#: app/templates/pages/data_deletion_confirm.html:9
+#: app/templates/pages/data_deletion_request.html:5
+#: app/templates/pages/data_deletion_request.html:10
+#: app/templates/pages/login.html:22
+msgid "Delete my data"
+msgstr ""
+
+#: app/templates/pages/data_deletion_confirm.html:9
+msgid "Pressing the button below erases this data:"
+msgstr ""
+
+#: app/templates/pages/admin/teachers.html:14
+#: app/templates/pages/admin/teachers.html:18
+#: app/templates/pages/data_deletion_confirm.html:10
+#: app/templates/pages/invitation.html:20 app/templates/pages/profile.html:16
+#: app/templates/pages/teacher/student_form.html:14
+#: app/templates/pages/teacher/students.html:61
+#: app/templates/pages/teacher/students.html:65
+msgid "Email"
+msgstr ""
+
+#: app/templates/pages/admin/_person_names.html:3
+#: app/templates/pages/data_deletion_confirm.html:10
+#: app/templates/pages/invitation.html:21 app/templates/pages/profile.html:17
+msgid "First name"
+msgstr ""
+
+#: app/templates/pages/admin/_person_names.html:4
+#: app/templates/pages/data_deletion_confirm.html:10
+#: app/templates/pages/invitation.html:22 app/templates/pages/profile.html:18
+msgid "Last name"
+msgstr ""
+
+#: app/templates/pages/data_deletion_confirm.html:12
+#: app/templates/pages/profile_withdraw.html:21
+#, python-format
+msgid "These roles are removed: %(roles)s."
+msgstr ""
+
+#: app/templates/pages/data_deletion_confirm.html:14
+msgid "Your administrator role and email stay."
+msgstr ""
+
+#: app/templates/pages/data_deletion_confirm.html:15
+msgid ""
+"You will be signed out everywhere. The record that you agreed is kept as "
+"proof of consent."
+msgstr ""
+
+#: app/templates/pages/data_deletion_request.html:9
+#: app/templates/pages/data_deletion_requested.html:9
+msgid "Back to sign in"
+msgstr ""
+
+#: app/templates/pages/data_deletion_request.html:13
+msgid ""
+"Enter your email address and we will send you a link. The link erases the"
+" data stored with your consent: your names and your email address, and "
+"the roles granted with your consent. It works once, within one hour."
+msgstr ""
+
+#: app/templates/pages/admin/teacher_invite.html:13
+#: app/templates/pages/data_deletion_request.html:15
+#: app/templates/pages/login.html:18
+#: app/templates/pages/teacher/student_invite.html:22
+msgid "Email address"
+msgstr ""
+
+#: app/templates/pages/data_deletion_request.html:16
+msgid "Send link"
+msgstr ""
+
+#: app/templates/pages/data_deletion_requested.html:5
+msgid "Link requested"
+msgstr ""
+
+#: app/templates/pages/data_deletion_requested.html:10
+msgid "Check your email"
+msgstr ""
+
+#: app/templates/pages/data_deletion_requested.html:11
+msgid "If this email is registered, we have sent you a link."
+msgstr ""
+
+#: app/templates/pages/data_erased.html:5
+msgid "Your data has been erased"
+msgstr ""
+
+#: app/templates/pages/data_erased.html:9
+msgid "Your data has been erased."
+msgstr ""
+
+#: app/templates/pages/data_erased.html:11
+msgid ""
+"Your names, and your email address unless you are an administrator, have "
+"been erased, and the roles granted with your consent were removed. The "
+"records that you once agreed are kept as proof of consent."
+msgstr ""
+
+#: app/templates/pages/data_erased.html:12
+msgid "Any session you had was ended."
+msgstr ""
+
+#: app/templates/pages/data_erased.html:14
+msgid "Go to the home page"
+msgstr ""
+
+#: app/templates/pages/error.html:9 app/templates/pages/profile.html:12
+msgid "Back to the home page"
+msgstr ""
+
+#: app/templates/pages/home.html:8
+#, python-format
+msgid "Welcome to %(app)s"
+msgstr ""
+
+#: app/templates/pages/home.html:11
+msgid "Your areas"
+msgstr ""
+
+#: app/templates/pages/home.html:19
+msgid "Question data is temporarily unavailable. Please try again in a moment."
+msgstr ""
+
+#: app/templates/pages/home.html:26
+#, python-format
+msgid "Database: %(engine)s · schema revision %(revision)s · boot #%(boots)d"
+msgstr ""
+
+#: app/templates/pages/invitation.html:11
+#, python-format
+msgid "Invitation to %(app)s"
+msgstr ""
+
+#: app/templates/pages/invitation.html:14
+#, python-format
+msgid "%(inviter)s (%(email)s) invites you to join as a teacher."
+msgstr ""
+
+#: app/templates/pages/invitation.html:16
+#, python-format
+msgid "%(inviter)s (%(email)s) invites you to join as a student."
+msgstr ""
+
+#: app/templates/pages/invitation.html:18
+msgid "What will be stored if you agree"
+msgstr ""
+
+#: app/templates/pages/invitation.html:23
+msgid "Role"
+msgstr ""
+
+#: app/templates/pages/invitation.html:24
+msgid "Details"
+msgstr ""
+
+#: app/templates/pages/invitation.html:32
+msgid "If you are already a teacher or a student, your current names are kept."
+msgstr ""
+
+#: app/templates/pages/invitation.html:34
+msgid "Consent"
+msgstr ""
+
+#: app/templates/pages/invitation.html:40
+msgid "I agree"
+msgstr ""
+
+#: app/templates/pages/invitation.html:42
+msgid ""
+"If any detail is wrong, ask the person who invited you for a new "
+"invitation, or accept and ask them to correct it."
+msgstr ""
+
+#: app/templates/pages/link_status.html:11
+msgid "Request a new link"
+msgstr ""
+
+#: app/templates/pages/login.html:15
+msgid "Enter your email address and we will send you a sign-in code."
+msgstr ""
+
+#: app/templates/pages/login.html:20
+msgid "Send code"
+msgstr ""
+
+#: app/templates/pages/login_code.html:7 app/templates/pages/login_code.html:11
+msgid "Enter your code"
+msgstr ""
+
+#: app/templates/pages/login_code.html:14
+msgid ""
+"If this address belongs to an account, we have sent a code to it. The "
+"code is valid for 20 minutes."
+msgstr ""
+
+#: app/templates/pages/login_code.html:19
+msgid "Sign-in code"
+msgstr ""
+
+#: app/templates/pages/login_code.html:23
+msgid "Send a new code"
+msgstr ""
+
+#: app/templates/pages/login_code.html:24
+msgid "Use a different email"
+msgstr ""
+
+#: app/templates/pages/profile.html:9 app/templates/pages/profile.html:13
+msgid "Your profile"
+msgstr ""
+
+#: app/templates/pages/profile.html:19
+msgid "Roles"
+msgstr ""
+
+#: app/templates/pages/admin/_institution_picker.html:11
+#: app/templates/pages/admin/institutions.html:9
+#: app/templates/pages/admin/institutions.html:12
+#: app/templates/pages/admin/institutions.html:59
+#: app/templates/pages/admin/teachers.html:14
+#: app/templates/pages/admin/teachers.html:19
+#: app/templates/pages/profile.html:20 app/templates/pages/profile.html:27
+msgid "Educational institutions"
+msgstr ""
+
+#: app/templates/pages/admin/teacher_form.html:16
+#: app/templates/pages/admin/teacher_invite.html:16
+#: app/templates/pages/admin/teachers.html:14
+#: app/templates/pages/admin/teachers.html:24
+#: app/templates/pages/profile.html:21
+msgid "Can manage competitions"
+msgstr ""
+
+#: app/templates/pages/admin/teachers.html:24
+#: app/templates/pages/profile.html:21
+msgid "Yes"
+msgstr ""
+
+#: app/templates/pages/admin/teachers.html:24
+#: app/templates/pages/profile.html:21
+msgid "No"
+msgstr ""
+
+#: app/templates/pages/admin/_institution_picker.html:14
+#: app/templates/pages/admin/_institution_picker.html:17
+#: app/templates/pages/profile.html:22
+#: app/templates/pages/teacher/competition_answers.html:38
+#: app/templates/pages/teacher/competition_answers.html:42
+#: app/templates/pages/teacher/competition_grades.html:41
+#: app/templates/pages/teacher/competition_grades.html:45
+#: app/templates/pages/teacher/competition_teams.html:30
+#: app/templates/pages/teacher/competition_teams.html:38
+#: app/templates/pages/teacher/competition_teams_add.html:36
+#: app/templates/pages/teacher/competition_teams_add.html:40
+#: app/templates/pages/teacher/student_form.html:15
+#: app/templates/pages/teacher/student_invite.html:14
+#: app/templates/pages/teacher/student_remove.html:13
+#: app/templates/pages/teacher/students.html:22
+#: app/templates/pages/teacher/team_answer_sheet.html:17
+#: app/templates/pages/teacher/team_answers_read_only.html:18
+#: app/templates/pages/teacher/team_delete.html:12
+#: app/templates/pages/teacher/team_grading_sheet.html:20
+#: app/templates/pages/teacher/teams.html:22
+msgid "Educational institution"
+msgstr ""
+
+#: app/templates/pages/profile.html:23 app/templates/pages/profile.html:33
+#: app/templates/pages/teacher/student_form.html:24
+#: app/templates/pages/teacher/student_invite.html:15
+#: app/templates/pages/teacher/student_remove.html:12
+#: app/templates/pages/teacher/students.html:27
+#: app/templates/pages/teacher/team_add_students.html:20
+#: app/templates/pages/teacher/team_member_remove.html:11
+#: app/templates/pages/teacher/teams.html:55
+#: app/templates/pages/teacher/teams.html:59
+msgid "Class"
+msgstr ""
+
+#: app/templates/pages/profile.html:24
+#: app/templates/pages/teacher/class_form.html:18
+msgid "Year of study"
+msgstr ""
+
+#: app/templates/pages/profile.html:25 app/templates/pages/profile.html:35
+#: app/templates/pages/teacher/competition_answers.html:34
+#: app/templates/pages/teacher/competition_answers.html:57
+#: app/templates/pages/teacher/competition_grades.html:38
+#: app/templates/pages/teacher/competition_grades.html:59
+#: app/templates/pages/teacher/competition_teams.html:31
+#: app/templates/pages/teacher/competition_teams.html:51
+#: app/templates/pages/teacher/competition_teams_add.html:35
+#: app/templates/pages/teacher/competition_teams_add.html:52
+#: app/templates/pages/teacher/competitions.html:64
+#: app/templates/pages/teacher/teams.html:8
+#: app/templates/pages/teacher/teams.html:13
+msgid "Teams"
+msgstr ""
+
+#: app/templates/pages/profile.html:39
+#: app/templates/pages/teacher/competition_grades.html:51
+#: app/templates/pages/teacher/competition_teams.html:42
+#: app/templates/pages/teacher/team_grading_sheet.html:21
+msgid "(deleted)"
+msgstr ""
+
+#: app/templates/pages/profile.html:43
+msgid "You are not in any team."
+msgstr ""
+
+#: app/templates/pages/profile.html:47
+msgid ""
+"Corrections to student data are made by a teacher of your educational "
+"institution."
+msgstr ""
+
+#: app/templates/pages/profile.html:48
+msgid "Corrections to teacher data are made by an administrator."
+msgstr ""
+
+#: app/templates/pages/profile.html:51
+msgid "Your consent"
+msgstr ""
+
+#: app/templates/pages/profile.html:54
+#, python-format
+msgid "Accepted %(time)s · %(role)s · version %(version)s"
+msgstr ""
+
+#: app/templates/pages/profile.html:61
+#: app/templates/pages/profile_withdraw.html:6
+#: app/templates/pages/profile_withdraw.html:11
+#: app/templates/pages/profile_withdraw.html:14
+msgid "Withdraw consent"
+msgstr ""
+
+#: app/templates/pages/profile_withdraw.html:9
+msgid "Back to your profile"
+msgstr ""
+
+#: app/templates/pages/profile_withdraw.html:15
+msgid "Withdrawing your consent erases this data:"
+msgstr ""
+
+#: app/templates/pages/profile_withdraw.html:17
+#, python-format
+msgid "Your first name (%(first)s) and last name (%(last)s)"
+msgstr ""
+
+#: app/templates/pages/profile_withdraw.html:18
+#, python-format
+msgid "Your email address (%(email)s)"
+msgstr ""
+
+#: app/templates/pages/profile_withdraw.html:23
+msgid ""
+"Your administrator role and email stay: they come from the deployment "
+"configuration."
+msgstr ""
+
+#: app/templates/pages/profile_withdraw.html:24
+msgid "You will be signed out everywhere."
+msgstr ""
+
+#: app/templates/pages/profile_withdraw.html:25
+msgid "You will no longer be able to sign in."
+msgstr ""
+
+#: app/templates/pages/profile_withdraw.html:26
+msgid "The record that you agreed is kept as proof of your consent."
+msgstr ""
+
+#: app/templates/pages/role_choice.html:6
+#: app/templates/pages/role_choice.html:10
+msgid "Choose a role"
+msgstr ""
+
+#: app/templates/pages/role_choice.html:12
+msgid ""
+"You have more than one role. Choose the one to use now. You can switch at"
+" any time from the menu at the top of the page."
+msgstr ""
+
+#: app/templates/pages/teacher/class_deactivate.html:5
+#, python-format
+msgid "Deactivate class “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/class_deactivate.html:8
+#: app/templates/pages/teacher/class_delete.html:11
+#: app/templates/pages/teacher/class_form.html:9
+#: app/templates/pages/teacher/student_form.html:10
+#: app/templates/pages/teacher/student_invite.html:10
+#: app/templates/pages/teacher/student_remove.html:9
+#, python-format
+msgctxt "class"
+msgid "Back to “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/class_deactivate.html:9
+#, python-format
+msgid "Deactivate class “%(name)s”?"
+msgstr ""
+
+#: app/templates/pages/teacher/class_deactivate.html:11
+msgid ""
+"Its students will be signed out and hidden until the class is activated "
+"again."
+msgstr ""
+
+#: app/templates/pages/teacher/class_delete.html:6
+#, python-format
+msgid "Delete class “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/class_delete.html:10
+#, python-format
+msgid "Delete class “%(name)s”?"
+msgstr ""
+
+#: app/templates/pages/teacher/class_delete.html:14
+#, python-format
+msgid "“%(name)s” has students and cannot be deleted."
+msgstr ""
+
+#: app/templates/pages/teacher/class_delete.html:21
+msgid "Deleting a class cannot be undone."
+msgstr ""
+
+#: app/templates/pages/teacher/class_form.html:11
+msgid "Back to Students"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:21
+#: app/templates/pages/teacher/competition_answers.html:25
+#, python-format
+msgid "Answers of “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:28
+#: app/templates/pages/teacher/competition_form.html:22
+#: app/templates/pages/teacher/competition_grades.html:29
+#: app/templates/pages/teacher/competition_questions.html:23
+#: app/templates/pages/teacher/competition_teams.html:25
+#: app/templates/pages/teacher/competitions.html:54
+#: app/templates/pages/teacher/competitions.html:58
+msgid "Start"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:28
+#: app/templates/pages/teacher/competition_grades.html:29
+#: app/templates/pages/teacher/competition_questions.html:23
+#: app/templates/pages/teacher/competition_teams.html:25
+#: app/templates/pages/teacher/competitions.html:30
+#: app/templates/pages/teacher/questions.html:24
+msgid "Subject"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:32
+msgid "No teams from your educational institutions"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:34
+#: app/templates/pages/teacher/competition_grades.html:38
+#: app/templates/pages/teacher/competition_questions.html:28
+#: app/templates/pages/teacher/competition_questions_add.html:22
+#: app/templates/pages/teacher/competition_teams.html:31
+#: app/templates/pages/teacher/competition_teams_add.html:35
+#: app/templates/pages/teacher/competitions.html:53
+#: app/templates/pages/teacher/questions.html:36
+msgid "Pages, top"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:38
+#: app/templates/pages/teacher/competition_answers.html:41
+#: app/templates/pages/teacher/competition_grades.html:41
+#: app/templates/pages/teacher/competition_grades.html:44
+#: app/templates/pages/teacher/competition_teams.html:30
+#: app/templates/pages/teacher/competition_teams.html:37
+#: app/templates/pages/teacher/competition_teams_add.html:36
+#: app/templates/pages/teacher/competition_teams_add.html:39
+#: app/templates/pages/teacher/teams.html:27
+msgid "Team"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:38
+#: app/templates/pages/teacher/competition_answers.html:43
+#: app/templates/pages/teacher/competition_grades.html:41
+#: app/templates/pages/teacher/competition_grades.html:46
+#: app/templates/pages/teacher/competition_teams.html:30
+#: app/templates/pages/teacher/competition_teams.html:39
+#: app/templates/pages/teacher/competition_teams_add.html:36
+#: app/templates/pages/teacher/competition_teams_add.html:41
+msgid "Active members"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:38
+#: app/templates/pages/teacher/competition_answers.html:44
+#: app/templates/pages/teacher/competition_grades.html:41
+#: app/templates/pages/teacher/competition_grades.html:47
+msgid "Answered"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:38
+#: app/templates/pages/teacher/competition_answers.html:46
+#: app/templates/pages/teacher/competition_grades.html:41
+#: app/templates/pages/teacher/competition_grades.html:48
+msgid "Graded"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:38
+#: app/templates/pages/teacher/competition_answers.html:47
+#: app/templates/pages/teacher/competition_grades.html:41
+#: app/templates/pages/teacher/competition_grades.html:49
+msgid "Score"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:44
+#: app/templates/pages/teacher/competition_answers.html:46
+#: app/templates/pages/teacher/competition_grades.html:47
+#: app/templates/pages/teacher/competition_grades.html:48
+#, python-format
+msgid "%(done)d of %(total)d"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:50
+msgid "Enter answers"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:50
+msgid "View answers"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_answers.html:57
+#: app/templates/pages/teacher/competition_grades.html:59
+#: app/templates/pages/teacher/competition_questions.html:45
+#: app/templates/pages/teacher/competition_questions_add.html:40
+#: app/templates/pages/teacher/competition_teams.html:51
+#: app/templates/pages/teacher/competition_teams_add.html:52
+#: app/templates/pages/teacher/competitions.html:74
+#: app/templates/pages/teacher/questions.html:53
+msgid "Pages, bottom"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_cancel.html:9
+#, python-format
+msgid "Cancel competition “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_cancel.html:13
+#, python-format
+msgid "Cancel competition “%(name)s” of %(subject)s, starting %(time)s?"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_cancel.html:14
+msgid ""
+"The competition will be marked Cancelled and stays in the list. It cannot"
+" be edited, started or restored."
+msgstr ""
+
+#: app/templates/pages/teacher/competition_cancel.html:14
+msgid "Keep competition"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_cancel.html:14
+#: app/templates/pages/teacher/competitions.html:68
+msgid "Cancel competition"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_finish.html:10
+#, python-format
+msgid "Finish competition “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_finish.html:14
+#, python-format
+msgid "Finish competition “%(name)s” of %(subject)s, started %(time)s?"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_finish.html:15
+msgid ""
+"The competition will be marked Finished. Its answers can no longer be "
+"entered or changed, and it cannot be cancelled or restarted. Its answers "
+"can then be graded."
+msgstr ""
+
+#: app/templates/pages/teacher/competition_finish.html:15
+msgid "Keep in progress"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_finish.html:15
+#: app/templates/pages/teacher/competitions.html:67
+msgid "Finish competition"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_form.html:9
+#, python-format
+msgid "Edit competition “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_form.html:9
+#: app/templates/pages/teacher/competitions.html:26
+msgid "Add competition"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_form.html:16
+#: app/templates/pages/teacher/question_form.html:17
+#, python-format
+msgid "Subject: %(subject)s"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_form.html:21
+msgid "Up to 200 characters."
+msgstr ""
+
+#: app/templates/pages/teacher/competition_form.html:22
+msgid "Start date"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_form.html:22
+msgid "Start time"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_form.html:23
+msgid "Save competition"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_grades.html:22
+#: app/templates/pages/teacher/competition_grades.html:26
+#, python-format
+msgid "Grades of “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_grades.html:30
+#, python-format
+msgid "Graded %(graded)d of %(num)d team"
+msgid_plural "Graded %(graded)d of %(num)d teams"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/templates/pages/teacher/competition_grades.html:32
+msgid "No teams in this competition"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_grades.html:36
+msgid "All teams are graded"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_grades.html:52
+msgid "Grade answers"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_questions.html:16
+#: app/templates/pages/teacher/competition_questions.html:20
+#, python-format
+msgid "Questions of “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_questions.html:20
+#: app/templates/pages/teacher/question_form.html:9
+#: app/templates/pages/teacher/questions.html:19
+msgid "Add question"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_questions.html:26
+msgid "No questions in this competition yet"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_questions.html:26
+msgid "Add questions with Add question."
+msgstr ""
+
+#: app/templates/pages/teacher/competition_questions.html:28
+#: app/templates/pages/teacher/competition_questions.html:45
+#: app/templates/pages/teacher/competition_questions_add.html:22
+#: app/templates/pages/teacher/competition_questions_add.html:40
+#: app/templates/pages/teacher/competitions.html:63
+#: app/templates/pages/teacher/questions.html:12
+#: app/templates/pages/teacher/questions.html:19
+#: app/templates/pages/teacher/questions.html:21
+#: app/templates/pages/teacher/questions.html:36
+#: app/templates/pages/teacher/questions.html:53
+msgid "Questions"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_questions.html:37
+msgid "Deleted from the question bank"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_questions_add.html:13
+#: app/templates/pages/teacher/competition_questions_add.html:17
+#, python-format
+msgid "Add questions to “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_questions_add.html:20
+msgid "No questions in this subject yet"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_questions_add.html:31
+#: app/templates/pages/teacher/competition_teams_add.html:44
+msgid "Already in this competition"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_questions_add.html:33
+#: app/templates/pages/teacher/competition_teams_add.html:46
+#: app/templates/pages/teacher/team_add_students.html:36
+msgid "Add"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_teams.html:18
+#: app/templates/pages/teacher/competition_teams.html:22
+#, python-format
+msgid "Teams of “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_teams.html:22
+msgid "Add team"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_teams.html:28
+msgid "No teams in this competition yet"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_teams.html:28
+msgid "Add teams with Add team."
+msgstr ""
+
+#: app/templates/pages/teacher/competition_teams_add.html:14
+#: app/templates/pages/teacher/competition_teams_add.html:20
+#, python-format
+msgid "Add teams to “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_teams_add.html:23
+msgid "Choose a region"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_teams_add.html:23
+#: app/templates/pages/teacher/students.html:20
+#: app/templates/pages/teacher/teams.html:20
+msgid "Region"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_teams_add.html:31
+msgid "Choose a region in the list above to see its teams."
+msgstr ""
+
+#: app/templates/pages/teacher/competition_teams_add.html:33
+msgid "No teams in this region yet"
+msgstr ""
+
+#: app/templates/pages/teacher/competition_teams_add.html:33
+msgid "Choose another region."
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:20
+#: app/templates/pages/teacher/competitions.html:26
+#: app/templates/pages/teacher/competitions.html:28
+#: app/templates/pages/teacher/competitions.html:53
+#: app/templates/pages/teacher/competitions.html:74
+msgid "Competitions"
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:30
+#: app/templates/pages/teacher/questions.html:24
+msgid "Choose a subject"
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:43
+#: app/templates/pages/teacher/questions.html:30
+msgid "Ask an administrator to add a subject."
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:45
+msgid "Choose a subject in the list above to see its competitions."
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:45
+#: app/templates/pages/teacher/questions.html:32
+msgid "Select a subject"
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:49
+msgid "No competitions yet"
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:49
+msgid "Add the first competition with Add competition."
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:51
+msgid "No competitions with this status"
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:51
+msgid "Choose another status, or All."
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:62
+#: app/templates/pages/teacher/questions.html:45
+#: app/templates/pages/teacher/students.html:49
+#: app/templates/pages/teacher/students.html:68
+msgid "Edit"
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:65
+msgid "Answers"
+msgstr ""
+
+#: app/templates/pages/teacher/competitions.html:66
+msgid "Grades"
+msgstr ""
+
+#: app/templates/pages/teacher/question_delete.html:6
+#, python-format
+msgid "Delete question %(number)d"
+msgstr ""
+
+#: app/templates/pages/teacher/question_delete.html:10
+#, python-format
+msgid "Delete question %(number)d?"
+msgstr ""
+
+#: app/templates/pages/teacher/question_delete.html:10
+msgid ""
+"The question will be hidden from this list and can no longer be added to "
+"new competitions. It is not erased, but it cannot be restored."
+msgstr ""
+
+#: app/templates/pages/teacher/question_form.html:9
+#, python-format
+msgid "Edit question %(number)d"
+msgstr ""
+
+#: app/templates/pages/teacher/question_form.html:16
+msgid "The question was saved."
+msgstr ""
+
+#: app/templates/pages/teacher/question_form.html:29
+#: app/templates/pages/teacher/question_form.html:31
+msgid "Save question"
+msgstr ""
+
+#: app/templates/pages/teacher/question_form.html:31
+msgid "Save and add one more question"
+msgstr ""
+
+#: app/templates/pages/teacher/questions.html:32
+msgid "Choose a subject in the list above to see its questions."
+msgstr ""
+
+#: app/templates/pages/teacher/questions.html:34
+msgid "No questions yet"
+msgstr ""
+
+#: app/templates/pages/teacher/questions.html:34
+msgid "Add the first question with Add question."
+msgstr ""
+
+#: app/templates/pages/teacher/student_invite.html:7
+#: app/templates/pages/teacher/student_invite.html:11
+#, python-format
+msgid "Invite a student to “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/student_remove.html:6
+#, python-format
+msgid "Remove %(name)s as a student"
+msgstr ""
+
+#: app/templates/pages/teacher/student_remove.html:10
+#, python-format
+msgid "Remove %(name)s as a student?"
+msgstr ""
+
+#: app/templates/pages/teacher/student_remove.html:15
+msgid ""
+"They lose the student role and their class, and are signed out "
+"everywhere. If they have no other role, they can no longer sign in. Their"
+" email, names and consent records stay until they delete their data."
+msgstr ""
+
+#: app/templates/pages/teacher/students.html:8
+#: app/templates/pages/teacher/students.html:13
+msgid "Students"
+msgstr ""
+
+#: app/templates/pages/teacher/students.html:23
+#: app/templates/pages/teacher/teams.html:23
+msgid "Select an educational institution"
+msgstr ""
+
+#: app/templates/pages/teacher/students.html:27
+#: app/templates/pages/teacher/team_add_students.html:20
+msgid "Select a class"
+msgstr ""
+
+#: app/templates/pages/teacher/students.html:36
+#: app/templates/pages/teacher/teams.html:36
+msgid "Ask an administrator to link you to an educational institution."
+msgstr ""
+
+#: app/templates/pages/teacher/students.html:37
+#: app/templates/pages/teacher/teams.html:37
+msgid "Choose a region in the first list."
+msgstr ""
+
+#: app/templates/pages/teacher/students.html:38
+#: app/templates/pages/teacher/teams.html:38
+msgid "Choose an educational institution in the second list."
+msgstr ""
+
+#: app/templates/pages/teacher/students.html:39
+msgid "Choose a class in the third list."
+msgstr ""
+
+#: app/templates/pages/teacher/students.html:40
+msgid "Add the first student with Add student."
+msgstr ""
+
+#: app/templates/pages/teacher/students.html:41
+msgid "Activate the class to see its students."
+msgstr ""
+
+#: app/templates/pages/teacher/students.html:47
+msgid "Add student"
+msgstr ""
+
+#: app/templates/pages/teacher/team_add_students.html:8
+#: app/templates/pages/teacher/team_add_students.html:15
+#, python-format
+msgid "Add students to “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/team_add_students.html:26
+msgid "Choose a class in the list."
+msgstr ""
+
+#: app/templates/pages/teacher/team_add_students.html:34
+msgid "In this team"
+msgstr ""
+
+#: app/templates/pages/teacher/team_answer_sheet.html:12
+#: app/templates/pages/teacher/team_answer_sheet.html:16
+#: app/templates/pages/teacher/team_answers_read_only.html:13
+#: app/templates/pages/teacher/team_answers_read_only.html:17
+#, python-format
+msgid "Answers of “%(team)s” in “%(competition)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/team_answer_sheet.html:15
+#: app/templates/pages/teacher/team_answers_read_only.html:16
+msgid "Back to the answers"
+msgstr ""
+
+#: app/templates/pages/teacher/team_answer_sheet.html:21
+#: app/templates/pages/teacher/team_answers_read_only.html:26
+#: app/templates/pages/teacher/team_grading_sheet.html:25
+msgid "No questions in this competition"
+msgstr ""
+
+#: app/templates/pages/teacher/team_answers_read_only.html:20
+#, python-format
+msgid "You have Read access to “%(name)s”, so you cannot change these answers."
+msgstr ""
+
+#: app/templates/pages/teacher/team_answers_read_only.html:22
+#, python-format
+msgid "Score: %(score)s"
+msgstr ""
+
+#: app/templates/pages/teacher/team_answers_read_only.html:23
+#, python-format
+msgid "Graded %(graded)d of %(num)d answer"
+msgid_plural "Graded %(graded)d of %(num)d answers"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/templates/pages/teacher/team_delete.html:6
+#, python-format
+msgid "Delete team “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/team_delete.html:10
+#, python-format
+msgid "Delete team “%(name)s”?"
+msgstr ""
+
+#: app/templates/pages/teacher/team_delete.html:13
+msgid "Members"
+msgstr ""
+
+#: app/templates/pages/teacher/team_delete.html:15
+msgid ""
+"The team will be hidden and taken out of every competition that has not "
+"finished. It can no longer join new competitions. Its members keep their "
+"accounts, classes and other teams. A deleted team cannot be restored."
+msgstr ""
+
+#: app/templates/pages/teacher/team_grading_sheet.html:15
+#: app/templates/pages/teacher/team_grading_sheet.html:19
+#, python-format
+msgid "Grade answers of “%(team)s” in “%(competition)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/team_grading_sheet.html:18
+msgid "Back to the grades"
+msgstr ""
+
+#: app/templates/pages/teacher/team_grading_sheet.html:28
+#, python-format
+msgid "“%(team)s” gave no answers, so there is nothing to grade"
+msgstr ""
+
+#: app/templates/pages/teacher/team_member_remove.html:6
+#, python-format
+msgid "Remove %(name)s from team “%(team)s”"
+msgstr ""
+
+#: app/templates/pages/teacher/team_member_remove.html:10
+#, python-format
+msgid "Remove %(name)s from team “%(team)s”?"
+msgstr ""
+
+#: app/templates/pages/teacher/team_member_remove.html:12
+msgid "They stay in their class and keep their account and their other teams."
+msgstr ""
+
+#: app/templates/pages/teacher/teams.html:27
+msgid "Select a team"
+msgstr ""
+
+#: app/templates/pages/teacher/teams.html:39
+msgid "Create the first team with + Add team."
+msgstr ""
+
+#: app/templates/pages/teacher/teams.html:39
+msgid "A teacher with Write access to this institution creates its teams."
+msgstr ""
+
+#: app/templates/pages/teacher/teams.html:40
+msgid "Choose a team in the third list."
+msgstr ""
+
+#: app/templates/pages/teacher/teams.html:41
+msgid "Add the first student with Add students."
+msgstr ""
+
+#: app/templates/pages/teacher/teams.html:47
+msgid "Add students"
+msgstr ""
+

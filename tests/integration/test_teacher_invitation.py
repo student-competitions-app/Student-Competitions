@@ -153,7 +153,7 @@ def test_an_invitation_is_sent_opened_accepted_and_used_to_sign_in(
         "Lviv School (Lviv) — Read",
         "Can manage competitions: Yes",
         "This invitation expires on ",
-        " UTC.",
+        "(Kyiv time)</time>.",
         "Resend",
         "I agree",
         "If any detail is wrong, ask the person who invited you for a new invitation, or accept "

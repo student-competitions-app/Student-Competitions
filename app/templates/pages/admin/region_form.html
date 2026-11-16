@@ -6,14 +6,14 @@
 
 {% block admin_content %}
 {% if region_name %}
-{{ back_link(cancel, "Back to “" ~ region_name ~ "”") }}
+{{ back_link(cancel, pgettext("region", "Back to “%(name)s”", name=region_name)) }}
 {% else %}
-{{ back_link(cancel, "Back to the educational institutions") }}
+{{ back_link(cancel, _("Back to the educational institutions")) }}
 {% endif %}
 {{ page_heading(heading) }}
 {{ error_summary(errors, order=["name"]) }}
 <form method="post" action="{{ action }}">
-  {{ field("name", "Name", value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
-  {{ form_actions("Save", cancel_href=cancel) }}
+  {{ field("name", _("Name"), value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
+  {{ form_actions(_("Save"), cancel_href=cancel) }}
 </form>
 {% endblock %}

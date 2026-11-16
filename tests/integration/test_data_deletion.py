@@ -155,7 +155,7 @@ def test_opening_the_link_changes_nothing_and_confirming_erases(
     for method in ("GET", "POST"):
         again = client.request(method, link)
         assert again.status_code == 410
-        assert LINK_EXPIRED in again.text
+        assert str(LINK_EXPIRED) in again.text
         assert "/data-deletion" in [link.href for link in html.content_links(again.text)]
         assert_link_headers(again)
 
@@ -180,14 +180,14 @@ def test_an_old_link_is_expired_and_a_tampered_one_invalid(client: TestClient, s
     for method in ("GET", "POST"):
         expired = client.request(method, f"/data-deletion/confirm/{old}")
         assert expired.status_code == 410
-        assert LINK_EXPIRED in expired.text
+        assert str(LINK_EXPIRED) in expired.text
     fresh = seal(key, "data-deletion", {"user": user_id})
     middle = len(fresh) // 2
     tampered = fresh[:middle] + ("A" if fresh[middle] != "A" else "B") + fresh[middle + 1 :]
     for method in ("GET", "POST"):
         invalid = client.request(method, f"/data-deletion/confirm/{tampered}")
         assert invalid.status_code == 400
-        assert LINK_INVALID in invalid.text
+        assert str(LINK_INVALID) in invalid.text
         assert_link_headers(invalid)
     assert person(user_id).first_name == "Olena"
 

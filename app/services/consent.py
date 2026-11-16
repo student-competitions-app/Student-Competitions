@@ -36,6 +36,32 @@ from app.services.users import end_all_sessions, get_roles
 logger = logging.getLogger("uvicorn.error")
 
 
+@dataclass(frozen=True)
+class ConsentParts:
+    """A bilingual consent text split for display (milestone 12.5 data-model §4, research R11):
+    the paragraphs after «Українською» and before `English`, and those after `English`."""
+
+    ukrainian: tuple[str, ...]
+    english: tuple[str, ...]
+
+
+UKRAINIAN_HEADING = "Українською"
+ENGLISH_HEADING = "English"
+
+
+def consent_parts(text: str) -> ConsentParts | None:
+    """The two parts of a bilingual text, without their heading paragraphs; `None` for a text
+    with no paragraph that is exactly `English`, which is then shown whole."""
+    paragraphs = text.split("\n\n")
+    if ENGLISH_HEADING not in paragraphs:
+        return None
+    at = paragraphs.index(ENGLISH_HEADING)
+    ukrainian = paragraphs[:at]
+    if ukrainian and ukrainian[0] == UKRAINIAN_HEADING:
+        ukrainian = ukrainian[1:]
+    return ConsentParts(tuple(ukrainian), tuple(paragraphs[at + 1 :]))
+
+
 def current_consent_text(session: Session, role: Role) -> ConsentText:
     """The text a person must agree to now for `role`: its highest version."""
     statement = (

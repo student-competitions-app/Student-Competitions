@@ -4,24 +4,24 @@
 {% from "components/form.html" import error_summary, field, form_actions %}
 {% from "components/feedback.html" import notice %}
 
-{% block title %}Invite a student to “{{ school_class.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Invite a student to “%(name)s”", name=school_class.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(cancel, "Back to “" ~ school_class.name ~ "”") }}
-{{ page_heading("Invite a student to “" ~ school_class.name ~ "”") }}
+{{ back_link(cancel, pgettext("class", "Back to “%(name)s”", name=school_class.name)) }}
+{{ page_heading(_("Invite a student to “%(name)s”", name=school_class.name)) }}
 {% if not refused %}{{ error_summary(errors, form_error, order=["email", "first_name", "last_name"]) }}{% endif %}
 {{ details_list([
-  ("Educational institution", institution.name ~ " (" ~ institution.region_name ~ ")"),
-  ("Class", school_class.label),
+  (_("Educational institution"), institution.name ~ " (" ~ institution.region_name ~ ")"),
+  (_("Class"), school_class.label),
 ]) }}
 {% if refused %}
-{{ notice("This class is deactivated. Students cannot be added to it.", "info") }}
+{{ notice(_("This class is deactivated. Students cannot be added to it."), "info") }}
 {% else %}
-<p>The person receives an email with a link. Nothing about them is stored unless they accept.</p>
+<p>{{ _("The person receives an email with a link. Nothing about them is stored unless they accept.") }}</p>
 <form method="post" action="/teacher/students/classes/{{ school_class.id }}/invite">
-  {{ field("email", "Email address", value=values.email, error=errors.email, type="email", attrs={"maxlength": "254", "required": True}) }}
+  {{ field("email", _("Email address"), value=values.email, error=errors.email, type="email", attrs={"maxlength": "254", "required": True}) }}
   {% include "pages/admin/_person_names.html" %}
-  {{ form_actions("Send invitation", cancel_href=cancel) }}
+  {{ form_actions(_("Send invitation"), cancel_href=cancel) }}
 </form>
 {% endif %}
 {% endblock %}

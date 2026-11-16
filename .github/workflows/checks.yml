@@ -218,6 +218,8 @@ jobs:
 
           echo "GET $url → $status, $body"
 
+      # Since milestone 12.5 the image opens in Ukrainian; the job checks that, then chooses
+      # English with the language switch so the checks below can read English text.
       # The home page is private, so the job signs in through the real flow: it requests a code,
       # reads it from the console backend's output in `docker logs` (as a developer would), and
       # submits it. The page is then checked twice: once as started, and once after a restart
@@ -253,8 +255,27 @@ jobs:
             *) fail "Anonymous GET $url returned '$result' (expected 303 to /login?next=%2F)." ;;
           esac
 
+          # The image speaks Ukrainian by default (milestone 12.5 FR-001): the sign-in page opens in
+          # Ukrainian with no language chosen.
+          status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 "$base/login" || true)
+          [ "$status" = "200" ] || fail "GET $base/login returned $status (expected 200)."
+          grep -q '<html lang="uk">' /tmp/home.html ||
+            fail "GET $base/login is not in Ukrainian (expected <html lang=\"uk\"> by default)."
+          echo "GET $base/login → $status, lang=\"uk\""
+
+          # The rest of the job reads English text, so it chooses English through the language
+          # switch, as a visitor would. The cookie stays in the jar for every later request,
+          # including after the restart, and the sign-in code email follows it.
+          result=$(curl -s -o /tmp/home.html -w '%{http_code} %{redirect_url}' --max-time 10 -c "$jar" \
+            --data-urlencode "language=en" --data-urlencode "next=/login" "$base/language" || true)
+          case "$result" in
+            "303 $base/login") echo "POST $base/language (en) → $result" ;;
+            *) fail "POST $base/language returned '$result' (expected 303 to $base/login)." ;;
+          esac
+          grep -q 'sc_lang' "$jar" || fail "POST $base/language set no sc_lang cookie."
+
           # Step 1: request a code.
-          status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 -c "$jar" \
+          status=$(curl -s -o /tmp/home.html -w '%{http_code}' --max-time 10 -b "$jar" -c "$jar" \
             --data-urlencode "email=$admin" "$base/login" || true)
           [ "$status" = "200" ] || fail "POST $base/login returned $status (expected 200)."
 

@@ -9,6 +9,7 @@ specs/008-teacher-management-consent/contracts/configuration.md.
 """
 
 import logging
+from pathlib import Path
 
 import pytest
 from alembic.script import ScriptDirectory
@@ -16,7 +17,9 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 import app.core.config as config
+from app.core import i18n
 from app.core.db import create_db_engine
+from app.core.i18n import Language, LanguageMiddleware
 from app.core.log_redaction import AccessLogRedactor
 from app.core.migrations import alembic_config, head_revision
 from app.main import app
@@ -173,3 +176,47 @@ def test_the_access_log_redactor_is_installed_once(
             pass
         redactors = [f for f in access_logger.filters if isinstance(f, AccessLogRedactor)]
         assert len(redactors) == 1
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.5: the default language and the catalogues (research R1, R5, R6)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_the_language_middleware_is_registered() -> None:
+    assert any(m.cls is LanguageMiddleware for m in app.user_middleware)
+
+
+def test_an_unknown_default_language_stops_the_start(
+    monkeypatch: pytest.MonkeyPatch, database_url: str
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.setenv("DEFAULT_LANGUAGE", "fr")
+    with pytest.raises(config.LanguageConfigError) as caught, TestClient(app):
+        pass
+    assert "DEFAULT_LANGUAGE" in str(caught.value)
+    assert "fr" not in str(caught.value)
+    assert _boots(database_url) == 0
+
+
+def test_an_unset_default_language_is_ukrainian(
+    monkeypatch: pytest.MonkeyPatch, database_url: str
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.delenv("DEFAULT_LANGUAGE")
+    with TestClient(app):
+        assert app.state.default_language is Language.UK
+
+
+def test_uncompiled_translations_stop_the_start(
+    monkeypatch: pytest.MonkeyPatch, database_url: str, tmp_path: Path
+) -> None:
+    """`load_translations` keeps what it loaded, so the cache is emptied too: otherwise an earlier
+    load would hide the missing files."""
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.setattr(i18n, "LOCALE_DIR", tmp_path)
+    monkeypatch.setattr(i18n, "_TRANSLATIONS", {})
+    with pytest.raises(i18n.TranslationsNotCompiled) as caught, TestClient(app):
+        pass
+    assert str(caught.value) == "Translations are not compiled: run scripts/translations.sh compile"
+    assert _boots(database_url) == 0

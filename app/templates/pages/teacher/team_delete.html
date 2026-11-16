@@ -3,15 +3,15 @@
 {% from "components/details.html" import details_list %}
 {% from "components/confirmation.html" import confirmation %}
 
-{% block title %}Delete team “{{ team.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Delete team “%(name)s”", name=team.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(cancel, "Back to “" ~ team.name ~ "”") }}
-{% call confirmation("Delete team “" ~ team.name ~ "”?", none, "/teacher/teams/" ~ team.id ~ "/delete", "Delete", cancel) %}
+{{ back_link(cancel, pgettext("team", "Back to “%(name)s”", name=team.name)) }}
+{% call confirmation(_("Delete team “%(name)s”?", name=team.name), none, "/teacher/teams/" ~ team.id ~ "/delete", _("Delete"), cancel) %}
 {{ details_list([
-  ("Educational institution", institution.name ~ " (" ~ institution.region_name ~ ")"),
-  ("Members", members | string),
+  (_("Educational institution"), institution.name ~ " (" ~ institution.region_name ~ ")"),
+  (_("Members"), members | string),
 ]) }}
-<p>The team will be hidden and taken out of every competition that has not finished. It can no longer join new competitions. Its members keep their accounts, classes and other teams. A deleted team cannot be restored.</p>
+<p>{{ _("The team will be hidden and taken out of every competition that has not finished. It can no longer join new competitions. Its members keep their accounts, classes and other teams. A deleted team cannot be restored.") }}</p>
 {% endcall %}
 {% endblock %}

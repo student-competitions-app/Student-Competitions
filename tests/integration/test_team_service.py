@@ -409,7 +409,7 @@ def test_a_live_name_is_taken_everywhere_ignoring_case(
     with Session(engine) as session, pytest.raises(DuplicateTeamName) as caught:
         create_team(session, scene.teacher, scene.a, " comets ")
     assert caught.value.message == "A team named “comets” already exists."
-    assert "Odesa" not in caught.value.message and "Kyiv" not in caught.value.message
+    assert "Odesa" not in str(caught.value.message) and "Kyiv" not in str(caught.value.message)
     assert team_count(engine) == 1
 
 

@@ -3,27 +3,27 @@
 {% from "components/form.html" import error_summary %}
 {% from "components/confirmation.html" import confirmation %}
 
-{% block title %}Withdraw consent — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Withdraw consent") }} — {{ app_name }}{% endblock %}
 
 {% block content %}
-{{ back_link("/profile", "Back to your profile") }}
+{{ back_link("/profile", _("Back to your profile")) }}
 {% if plan is none %}
-{{ page_heading("Withdraw consent") }}
-{{ error_summary({}, form_error="There is no data stored on your consent to withdraw.") }}
+{{ page_heading(_("Withdraw consent")) }}
+{{ error_summary({}, form_error=_("There is no data stored on your consent to withdraw.")) }}
 {% else %}
-{% call confirmation("Withdraw consent", none, "/profile/withdraw", "Withdraw consent", "/profile") %}
-<p>Withdrawing your consent erases this data:</p>
+{% call confirmation(_("Withdraw consent"), none, "/profile/withdraw", _("Withdraw consent"), "/profile") %}
+<p>{{ _("Withdrawing your consent erases this data:") }}</p>
 <ul>
-  <li>Your first name ({{ plan.first_name }}) and last name ({{ plan.last_name }})</li>
-  {% if not plan.email_kept %}<li>Your email address ({{ plan.email }})</li>{% endif %}
+  <li>{{ _("Your first name (%(first)s) and last name (%(last)s)", first=plan.first_name, last=plan.last_name) }}</li>
+  {% if not plan.email_kept %}<li>{{ _("Your email address (%(email)s)", email=plan.email) }}</li>{% endif %}
 </ul>
 {% if plan.roles_to_remove %}
-<p>These roles are removed: {{ plan.roles_to_remove | map(attribute="label") | join(", ") }}.</p>
+<p>{{ _("These roles are removed: %(roles)s.", roles=plan.roles_to_remove | map(attribute="label") | join(", ")) }}</p>
 {% endif %}
-{% if plan.email_kept %}<p>Your administrator role and email stay: they come from the deployment configuration.</p>{% endif %}
-<p>You will be signed out everywhere.</p>
-{% if plan.will_deactivate %}<p>You will no longer be able to sign in.</p>{% endif %}
-<p>The record that you agreed is kept as proof of your consent.</p>
+{% if plan.email_kept %}<p>{{ _("Your administrator role and email stay: they come from the deployment configuration.") }}</p>{% endif %}
+<p>{{ _("You will be signed out everywhere.") }}</p>
+{% if plan.will_deactivate %}<p>{{ _("You will no longer be able to sign in.") }}</p>{% endif %}
+<p>{{ _("The record that you agreed is kept as proof of your consent.") }}</p>
 {% endcall %}
 {% endif %}
 {% endblock %}

@@ -27,7 +27,7 @@
 {%- if errors or form_error %}
 {%- set field_ids = order if order is not none else errors.keys() | list %}
 <div class="error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1">
-  <h2 id="error-summary-title">There is a problem</h2>
+  <h2 id="error-summary-title">{{ _("There is a problem") }}</h2>
   <ul>
     {%- for field_id in field_ids if errors[field_id] %}
     <li><a href="#{{ field_id }}">{{ errors[field_id] }}</a></li>
@@ -93,19 +93,21 @@
 {%- endmacro %}
 
 {#- A date and a time entered as a pair (milestone 12.1 contracts/components.md §2, research R15):
-    "<legend> date" (`<prefix>_date`, `type="date"`) and "<legend> time" (`<prefix>_time`,
-    `type="time"`), each with its own error and its value as typed, through `field`. The hint under
-    the time names the zone the pair is read in, and the hidden `time_zone` carries it with the
-    form, so the server reads the entry in the zone it was shown in. `zone_label` is an IANA name
-    or `UTC`. Side by side from 768 px, stacked below. -#}
-{% macro date_time_fields(prefix, legend, values, errors, zone_label) -%}
+    `date_label` (`<prefix>_date`, `type="date"`) and `time_label` (`<prefix>_time`,
+    `type="time"`), each with its own error and its value as typed, through `field`. The labels
+    are whole messages from the caller, never built from the legend (milestone 12.5
+    contracts/components.md §5). The hint under the time names the zone the pair is read in, and
+    the hidden `time_zone` carries it with the form, so the server reads the entry in the zone it
+    was shown in. `zone_label` is an IANA name (`Europe/Kyiv` when the browser's is unknown). Side
+    by side from 768 px, stacked below. -#}
+{% macro date_time_fields(prefix, legend, values, errors, zone_label, date_label, time_label) -%}
 <fieldset class="date-time-fields">
   <legend>{{ legend }}</legend>
   <div>
-    {{ field(prefix ~ "_date", legend ~ " date", value=values[prefix ~ "_date"], error=errors[prefix ~ "_date"], type="date", attrs={"required": True}) }}
+    {{ field(prefix ~ "_date", date_label, value=values[prefix ~ "_date"], error=errors[prefix ~ "_date"], type="date", attrs={"required": True}) }}
   </div>
   <div>
-    {{ field(prefix ~ "_time", legend ~ " time", value=values[prefix ~ "_time"], error=errors[prefix ~ "_time"], hint="Time zone: " ~ zone_label, type="time", attrs={"required": True}) }}
+    {{ field(prefix ~ "_time", time_label, value=values[prefix ~ "_time"], error=errors[prefix ~ "_time"], hint=_("Time zone: %(zone)s", zone=zone_label), type="time", attrs={"required": True}) }}
   </div>
   <input type="hidden" name="time_zone" value="{{ zone_label }}">
 </fieldset>
@@ -128,7 +130,7 @@
   {{ button(secondary.label, kind="secondary", name=secondary.name, value=secondary.value) }}
   {%- endif %}
   {%- if cancel_href %}
-  <a href="{{ cancel_href }}">Cancel</a>
+  <a href="{{ cancel_href }}">{{ _("Cancel") }}</a>
   {%- endif %}
 </div>
 {%- endmacro %}

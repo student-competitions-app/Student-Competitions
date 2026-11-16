@@ -5,11 +5,11 @@
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-{{ back_link("/admin/subjects", "Back to the subjects") }}
+{{ back_link("/admin/subjects", _("Back to the subjects")) }}
 {{ page_heading(heading) }}
 {{ error_summary(errors, order=["name"]) }}
 <form method="post" action="{{ action }}">
-  {{ field("name", "Name", value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
-  {{ form_actions("Save", cancel_href="/admin/subjects") }}
+  {{ field("name", _("Name"), value=values.name, error=errors.name, attrs={"maxlength": "200", "required": True}) }}
+  {{ form_actions(_("Save"), cancel_href="/admin/subjects") }}
 </form>
 {% endblock %}

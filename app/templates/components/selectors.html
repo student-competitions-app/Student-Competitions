@@ -17,7 +17,7 @@
 {% from "components/button.html" import button %}
 {% from "components/form.html" import select_field %}
 
-{% macro list_detail(list_label, items, selected_id, item_href, heading_id="list-detail-heading") -%}
+{% macro list_detail(list_label, items, selected_id, item_href, heading_id="list-detail-heading", kind="region") -%}
 <div class="selectors selectors-list-detail">
   <section aria-labelledby="{{ heading_id }}">
     <h2 id="{{ heading_id }}">{{ list_label }}</h2>
@@ -28,7 +28,7 @@
       {%- set is_selected = selected_id is not none and item.id == selected_id %}
       <li{% if is_selected %} class="selected"{% endif %}>
         <a href="{{ item_href }}{{ item.id }}"{% if is_selected %} aria-current="true"{% endif %}>{{ item.name }}</a>
-        {%- if not item.is_active %} {{ status_badge(False) }}{% endif %}
+        {%- if not item.is_active %} {{ status_badge(False, kind) }}{% endif %}
         {{ caller("item_actions", item) }}
       </li>
       {%- endfor %}
@@ -49,7 +49,7 @@
     <input type="hidden" name="{{ carry_name }}" value="{{ carry_value }}">
     {%- endfor %}
     {{ select_field(level.id, level.label, level.options, selected=level.selected, name=level.name, attrs={"data-auto-submit": True, "disabled": level.disabled}, placeholder=level.placeholder, extra_options=level.extra_options or (), groups=level.groups or ()) }}
-    <noscript>{{ button("Show", kind="secondary", small=True) }}</noscript>
+    <noscript>{{ button(_("Show"), kind="secondary", small=True) }}</noscript>
   </form>
   {%- endfor %}
 </div>

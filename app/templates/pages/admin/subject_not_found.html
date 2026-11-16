@@ -1,10 +1,10 @@
 {% extends "layouts/admin.html" %}
 {% from "components/frame.html" import back_link, page_heading %}
 
-{% block title %}Subject not found — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Subject not found") }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-{{ back_link("/admin/subjects", "Back to the subjects") }}
-{{ page_heading("Subject not found") }}
-<p>This subject does not exist. It may have been deleted.</p>
+{{ back_link("/admin/subjects", _("Back to the subjects")) }}
+{{ page_heading(_("Subject not found")) }}
+<p>{{ _("This subject does not exist. It may have been deleted.") }}</p>
 {% endblock %}

@@ -6,20 +6,20 @@
 {% from "components/frame.html" import back_link, page_heading %}
 {% from "components/form.html" import error_summary, field, date_time_fields, form_actions %}
 
-{% set heading = "Edit competition “" ~ competition.name ~ "”" if competition else "Add competition" %}
+{% set heading = _("Edit competition “%(name)s”", name=competition.name) if competition else _("Add competition") %}
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back, "Back to the competitions") }}
+{{ back_link(back, _("Back to the competitions")) }}
 {{ page_heading(heading) }}
 {{ error_summary(errors, order=field_order) }}
-<p>Subject: {{ subject.name }}</p>
+<p>{{ _("Subject: %(subject)s", subject=subject.name) }}</p>
 <form method="post" action="{{ '/teacher/competitions/' ~ competition.id ~ '/edit' if competition else '/teacher/competitions' }}">
   <input type="hidden" name="subject" value="{{ subject.id }}">
   <input type="hidden" name="status" value="{{ status_value }}">
   <input type="hidden" name="page" value="{{ page }}">
-  {{ field("name", "Name", value=values.name, error=errors.name, hint="Up to 200 characters.", attrs={"required": True, "maxlength": "200"}) }}
-  {{ date_time_fields("start", "Start", values, errors, zone_label) }}
-  {{ form_actions("Save competition", cancel_href=back) }}
+  {{ field("name", _("Name"), value=values.name, error=errors.name, hint=_("Up to 200 characters."), attrs={"required": True, "maxlength": "200"}) }}
+  {{ date_time_fields("start", _("Start"), values, errors, zone_label, _("Start date"), _("Start time")) }}
+  {{ form_actions(_("Save competition"), cancel_href=back) }}
 </form>
 {% endblock %}

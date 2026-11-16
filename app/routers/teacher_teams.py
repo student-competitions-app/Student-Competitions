@@ -25,6 +25,7 @@ a team exists (FR-022).
 ever reaches an address or a log line (FR-016, research R11). Nothing here logs.
 """
 
+from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 
@@ -35,6 +36,7 @@ from sqlmodel import Session
 from app.core.auth import AccessDenied, allow_roles
 from app.core.config import AuthSettings
 from app.core.db import SessionDep
+from app.core.i18n import Text, _, _p
 from app.core.sealing import SealExpired, SealInvalid, seal, unseal
 from app.models import Role, Team, User
 from app.routers.teacher import render_teacher
@@ -74,17 +76,17 @@ router = APIRouter(prefix="/teacher/teams")
 TAB = "teams"
 TAB_PATH = "/teacher/teams"
 
-NOT_LINKED = "You are not linked to any educational institution"
-SELECT_REGION = "Select a region to continue"
-SELECT_INSTITUTION = "Select an educational institution to continue"
-NO_TEAMS = "No teams yet"
-SELECT_TEAM = "Select a team to see its members"
-NO_MEMBERS = "No members in this team yet"
+NOT_LINKED = _("You are not linked to any educational institution")
+SELECT_REGION = _("Select a region to continue")
+SELECT_INSTITUTION = _("Select an educational institution to continue")
+NO_TEAMS = _("No teams yet")
+SELECT_TEAM = _("Select a team to see its members")
+NO_MEMBERS = _("No members in this team yet")
 """The messages of the tab in each state (FR-029, FR-035)."""
 
-SELECT_CLASS = "Select a class to see its students"
-NO_STUDENTS = "No students in this class yet"
-TEAM_IS_FULL = "This team already has 50 members"
+SELECT_CLASS = _("Select a class to see its students")
+NO_STUDENTS = _("No students in this class yet")
+TEAM_IS_FULL = _("This team already has 50 members")
 """The messages of the Add students page (FR-039, FR-041)."""
 
 NEW_TEAM = "new"
@@ -92,14 +94,15 @@ NEW_TEAM = "new"
 
 TEAM_NOTICE_PURPOSE = "team-member-notice"
 TEAM_NOTICE_TTL = timedelta(minutes=10)
-NOTICES = {
-    "added": ("{name} was added to the team.", "success"),
-    "already": ("{name} is already in this team.", "info"),
+NOTICES: dict[str, tuple[Callable[[str], Text], str]] = {
+    "added": (lambda name: _("%(name)s was added to the team.", name=name), "success"),
+    "already": (lambda name: _("%(name)s is already in this team.", name=name), "info"),
 }
-"""The notice of each outcome of an addition, with its kind (FR-040, FR-042)."""
+"""The notice of each outcome of an addition, with its kind (FR-040, FR-042): a whole message
+for a person's name (milestone 12.5 FR-021)."""
 
 
-def selection_path(region_id: int, institution_id: int, team_id: int | None = None) -> str:
+def selection_path(region_id: int, institution_id: int, team_id: int | None = None) -> Text:
     """The Teams tab with this region, institution and, if given, team selected."""
     path = f"{TAB_PATH}?region={region_id}&institution={institution_id}"
     if team_id is not None:
@@ -197,7 +200,7 @@ def member_notice(
     for member in list_active_members(session, team_id):
         if member.user_id == user:
             text, kind = NOTICES[outcome]
-            return text.format(name=f"{member.first_name} {member.last_name}"), kind
+            return text(f"{member.first_name} {member.last_name}"), kind
     return None
 
 
@@ -335,10 +338,10 @@ def _name_error(name: str) -> dict[str, str]:
 
 
 def _new_team_heading(institution: ReachableInstitution) -> str:
-    return f"New team in “{institution.name}”"
+    return _("New team in “%(institution)s”", institution=institution.name)
 
 
-BACK_TO_TEAMS = "Back to Teams"
+BACK_TO_TEAMS = _("Back to Teams")
 
 
 @router.get("/institutions/{institution_id:int}/new", response_class=HTMLResponse)
@@ -392,8 +395,8 @@ def create_team_action(
     return _redirect(selection_path(institution.region_id, institution.id, created.id))
 
 
-def _back_to(team: Team) -> str:
-    return f"Back to “{team.name}”"
+def _back_to(team: Team) -> Text:
+    return _p("team", "Back to “%(name)s”", name=team.name)
 
 
 @router.get("/{team_id:int}/rename", response_class=HTMLResponse)
@@ -402,7 +405,7 @@ def rename_team_page(request: Request, session: SessionDep, team_id: int) -> HTM
     institution, team = _reach_team(session, _teacher(request), team_id)
     return _team_form(
         request,
-        f"Rename team “{team.name}”",
+        _("Rename team “%(name)s”", name=team.name),
         f"{TAB_PATH}/{team_id}/rename",
         institution,
         team.name,
@@ -419,7 +422,7 @@ def rename_team_action(
     """A change of case alone is a valid rename (US3-5); an unchanged name writes nothing."""
     teacher_id = _teacher(request)
     institution, team = _reach_team(session, teacher_id, team_id)
-    heading, back_text = f"Rename team “{team.name}”", _back_to(team)
+    heading, back_text = _("Rename team “%(name)s”", name=team.name), _back_to(team)
     back = team_path(institution, team_id)
 
     def refused(errors: dict[str, str]) -> HTMLResponse:

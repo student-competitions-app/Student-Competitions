@@ -9,16 +9,16 @@
 {% from "components/form.html" import error_summary %}
 {% from "components/answer_sheet.html" import answer_sheet %}
 
-{% block title %}Answers of “{{ sheet.team_name }}” in “{{ competition.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Answers of “%(team)s” in “%(competition)s”", team=sheet.team_name, competition=competition.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back, "Back to the answers") }}
-{{ page_heading("Answers of “" ~ sheet.team_name ~ "” in “" ~ competition.name ~ "”") }}
-{{ details_list([("Educational institution", sheet.institution_name)]) }}
+{{ back_link(back, _("Back to the answers")) }}
+{{ page_heading(_("Answers of “%(team)s” in “%(competition)s”", team=sheet.team_name, competition=competition.name)) }}
+{{ details_list([(_("Educational institution"), sheet.institution_name)]) }}
 {{ error_summary(errors, order=field_order) }}
 {% if notice %}{{ notice_box(notice, "success") }}{% endif %}
 {% if not items %}
-{{ empty_state("No questions in this competition") }}
+{{ empty_state(_("No questions in this competition")) }}
 {% else %}
 {{ answer_sheet(items, action, hidden) }}
 {% endif %}

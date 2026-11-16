@@ -41,6 +41,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
+from app.core.i18n import _
 from app.models import (
     Competition,
     CompetitionTeam,
@@ -53,7 +54,7 @@ from app.models import (
     TeamMembership,
     User,
 )
-from app.schemas.names import InvalidName, clean_name, name_key
+from app.schemas.names import InvalidName, clean_name, name_key, name_sort_key, person_sort_key
 from app.schemas.teachers import MAX_ID
 from app.services.classes import ClassView
 from app.services.teacher_access import (
@@ -76,7 +77,7 @@ class DuplicateTeamName(ValueError):
     about another institution leaks (FR-002, research R2)."""
 
     def __init__(self, entered_name: str) -> None:
-        self.message = f"A team named “{entered_name}” already exists."
+        self.message = _("A team named “%(name)s” already exists.", name=entered_name)
         super().__init__(self.message)
 
 
@@ -152,7 +153,7 @@ def list_teams(session: Session, institution_id: int) -> list[TeamView]:
     statement = select(Team).where(
         Team.institution_id == institution_id, col(Team.deleted_at).is_(None)
     )
-    rows = sorted(session.exec(statement), key=lambda row: (row.name_key, row.id))
+    rows = sorted(session.exec(statement), key=lambda row: (name_sort_key(row.name), row.id))
     return [TeamView.from_row(row) for row in rows]
 
 
@@ -177,7 +178,7 @@ def list_active_members(session: Session, team_id: int) -> list[MemberRow]:
     )
     rows = [_member_row(user, school_class) for user, school_class in session.exec(statement)]
     return sorted(
-        rows, key=lambda row: (row.last_name.casefold(), row.first_name.casefold(), row.user_id)
+        rows, key=lambda row: (person_sort_key(row.last_name, row.first_name), row.user_id)
     )
 
 
@@ -234,7 +235,7 @@ def list_student_teams(session: Session, user_id: int) -> list[StudentTeam]:
         .join(TeamMembership, col(TeamMembership.team_id) == col(Team.id))
         .where(TeamMembership.user_id == user_id)
     )
-    rows = sorted(session.exec(statement), key=lambda row: (row.name_key, row.id))
+    rows = sorted(session.exec(statement), key=lambda row: (name_sort_key(row.name), row.id))
     return [StudentTeam(name=row.name, is_deleted=row.deleted_at is not None) for row in rows]
 
 

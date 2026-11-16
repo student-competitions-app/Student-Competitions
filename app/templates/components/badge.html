@@ -8,22 +8,32 @@
 <span class="{{ badge_classes[kind] }}">{{ text }}</span>
 {%- endmacro %}
 
-{% macro status_badge(is_active) -%}
-{%- if is_active %}{{ badge("Active", "success") }}{% else %}{{ badge("Deactivated", "muted") }}{% endif -%}
+{#- `kind` names the record (milestone 12.5 contracts/components.md §6a), so the Ukrainian word
+    agrees with its noun: «Активний» for a subject, a region and an educational institution,
+    «Активна» for a class (група), «Деактивовано» for all. The contexts are written out per kind, so
+    extraction finds each. -#}
+{% macro status_badge(is_active, kind) -%}
+{%- if kind == "subject" %}{% set words = (pgettext("subject", "Active"), pgettext("subject", "Deactivated")) %}
+{%- elif kind == "region" %}{% set words = (pgettext("region", "Active"), pgettext("region", "Deactivated")) %}
+{%- elif kind == "institution" %}{% set words = (pgettext("institution", "Active"), pgettext("institution", "Deactivated")) %}
+{%- elif kind == "class" %}{% set words = (pgettext("class", "Active"), pgettext("class", "Deactivated")) %}
+{%- else %}{{ template_error("status_badge: unknown kind " ~ kind) }}
+{%- endif -%}
+{%- if is_active %}{{ badge(words[0], "success") }}{% else %}{{ badge(words[1], "muted") }}{% endif -%}
 {%- endmacro %}
 
 {% macro access_badge(level) -%}
-{%- if level == "write" %}{{ badge("Write", "info") }}{% else %}{{ badge("Read", "neutral") }}{% endif -%}
+{%- if level == "write" %}{{ badge(pgettext("access level", "Write"), "info") }}{% else %}{{ badge(pgettext("access level", "Read"), "neutral") }}{% endif -%}
 {%- endmacro %}
 
 {#- A competition's status (milestone 12.1 contracts/components.md §3): one word and an existing
     kind each. It takes the status enum or its value; anything else is refused. -#}
 {% macro competition_status_badge(status) -%}
 {%- set value = status | string -%}
-{%- if value == "upcoming" %}{{ badge("Upcoming", "info") }}
-{%- elif value == "in_progress" %}{{ badge("In progress", "success") }}
-{%- elif value == "finished" %}{{ badge("Finished", "neutral") }}
-{%- elif value == "cancelled" %}{{ badge("Cancelled", "muted") }}
+{%- if value == "upcoming" %}{{ badge(_("Upcoming"), "info") }}
+{%- elif value == "in_progress" %}{{ badge(_("In progress"), "success") }}
+{%- elif value == "finished" %}{{ badge(_("Finished"), "neutral") }}
+{%- elif value == "cancelled" %}{{ badge(_("Cancelled"), "muted") }}
 {%- else %}{{ template_error("competition_status_badge: unknown status " ~ value) }}
 {%- endif -%}
 {%- endmacro %}

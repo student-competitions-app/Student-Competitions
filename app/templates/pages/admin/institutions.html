@@ -6,58 +6,58 @@
 {% from "components/button.html" import link_button, post_button %}
 {% from "components/feedback.html" import empty_state, notice %}
 
-{% block title %}Educational institutions — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Educational institutions") }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-{{ page_heading("Educational institutions") }}
-{% call(part, item) list_detail("Regions", regions, selected.id if selected else none, "/admin/institutions/regions/", heading_id="regions-heading") %}
+{{ page_heading(_("Educational institutions")) }}
+{% call(part, item) list_detail(_("Regions"), regions, selected.id if selected else none, "/admin/institutions/regions/", heading_id="regions-heading") %}
 {% if part == "list_actions" %}
-<div class="form-actions">{{ link_button("Create region", "/admin/institutions/regions/new") }}</div>
-{% if not regions %}{{ empty_state("No regions yet", "Create the first region with Create region.") }}{% endif %}
+<div class="form-actions">{{ link_button(_("Create region"), "/admin/institutions/regions/new") }}</div>
+{% if not regions %}{{ empty_state(_("No regions yet"), _("Create the first region with Create region.")) }}{% endif %}
 {% elif part == "item_actions" %}
 {% set path = "/admin/institutions/regions/" ~ item.id %}
 <div class="row-actions">
-  {{- link_button("Rename", path ~ "/rename", kind="secondary", outline=True, small=True) -}}
+  {{- link_button(_("Rename"), path ~ "/rename", kind="secondary", outline=True, small=True) -}}
   {%- if item.is_active -%}
-  {{- link_button("Deactivate", path ~ "/deactivate", kind="destructive", outline=True, small=True) -}}
+  {{- link_button(_("Deactivate"), path ~ "/deactivate", kind="destructive", outline=True, small=True) -}}
   {%- else -%}
-  {{- post_button(path ~ "/activate", "Activate", kind="secondary", outline=True, small=True) -}}
+  {{- post_button(path ~ "/activate", _("Activate"), kind="secondary", outline=True, small=True) -}}
   {%- endif -%}
-  {{- link_button("Delete", path ~ "/delete", kind="destructive", outline=True, small=True) -}}
+  {{- link_button(_("Delete"), path ~ "/delete", kind="destructive", outline=True, small=True) -}}
 </div>
 {% elif part == "detail" %}
 {% if selected %}
-<h2 id="regions-heading-detail">Educational institutions in “{{ selected.name }}”{% if not selected.is_active %} {{ status_badge(False) }}{% endif %}</h2>
+<h2 id="regions-heading-detail">{{ _("Educational institutions in “%(region)s”", region=selected.name) }}{% if not selected.is_active %} {{ status_badge(False, "region") }}{% endif %}</h2>
 {% if selected.is_active %}
-<div class="form-actions">{{ link_button("Create educational institution", "/admin/institutions/regions/" ~ selected.id ~ "/institutions/new") }}</div>
+<div class="form-actions">{{ link_button(_("Create educational institution"), "/admin/institutions/regions/" ~ selected.id ~ "/institutions/new") }}</div>
 {% else %}
-{{ notice("This region is deactivated. New educational institutions cannot be added to it.", "info") }}
+{{ notice(_("This region is deactivated. New educational institutions cannot be added to it."), "info") }}
 {% endif %}
 {% if institutions %}
-{% call data_table(["Name", "Status", "Actions"]) %}
+{% call data_table([_("Name"), _("Status"), _("Actions")]) %}
 {% for i in institutions %}
 {% set path = "/admin/institutions/regions/" ~ selected.id ~ "/institutions/" ~ i.id %}
 <tr>
-  {{ cell("Name", i.name) }}
-  {% call cell("Status") %}{{ status_badge(i.is_active) }}{% endcall %}
+  {{ cell(_("Name"), i.name) }}
+  {% call cell(_("Status")) %}{{ status_badge(i.is_active, "institution") }}{% endcall %}
   {% call actions_cell() %}
-  {{- link_button("Rename", path ~ "/rename", kind="secondary", outline=True, small=True) -}}
+  {{- link_button(_("Rename"), path ~ "/rename", kind="secondary", outline=True, small=True) -}}
   {%- if i.is_active -%}
-  {{- link_button("Deactivate", path ~ "/deactivate", kind="destructive", outline=True, small=True) -}}
+  {{- link_button(_("Deactivate"), path ~ "/deactivate", kind="destructive", outline=True, small=True) -}}
   {%- else -%}
-  {{- post_button(path ~ "/activate", "Activate", kind="secondary", outline=True, small=True) -}}
+  {{- post_button(path ~ "/activate", _("Activate"), kind="secondary", outline=True, small=True) -}}
   {%- endif -%}
-  {{- link_button("Delete", path ~ "/delete", kind="destructive", outline=True, small=True) -}}
+  {{- link_button(_("Delete"), path ~ "/delete", kind="destructive", outline=True, small=True) -}}
   {% endcall %}
 </tr>
 {% endfor %}
 {% endcall %}
 {% else %}
-{{ empty_state("No educational institutions yet", "Create the first one with Create educational institution.") }}
+{{ empty_state(_("No educational institutions yet"), _("Create the first one with Create educational institution.")) }}
 {% endif %}
 {% else %}
-<h2 id="regions-heading-detail">Educational institutions</h2>
-{{ empty_state("Select a region", "Choose a region from the list to see its educational institutions.") }}
+<h2 id="regions-heading-detail">{{ _("Educational institutions") }}</h2>
+{{ empty_state(_("Select a region"), _("Choose a region from the list to see its educational institutions.")) }}
 {% endif %}
 {% endif %}
 {% endcall %}

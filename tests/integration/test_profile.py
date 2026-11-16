@@ -102,7 +102,7 @@ def test_a_teacher_sees_everything_stored_on_their_consent(
         "Kyiv Lyceum (Kyiv) — Write",
         "Lviv School (Lviv) — Read Deactivated",
         "Accepted ",
-        " UTC · Teacher · version 1",
+        " (Kyiv time) · Teacher · version 1",
         "Resend",
         "Corrections to teacher data are made by an administrator.",
     ):
@@ -166,7 +166,7 @@ def test_with_nothing_stored_there_is_nothing_to_withdraw(
     """FR-045."""
     response = admin_client.request(method, "/profile/withdraw", follow_redirects=False)
     assert response.status_code == 409
-    assert NOTHING_TO_WITHDRAW in response.text
+    assert str(NOTHING_TO_WITHDRAW) in response.text
 
 
 def test_a_teacher_withdraws(
@@ -276,7 +276,7 @@ def test_a_student_sees_their_enrolment_and_record(
         TARAS,
         "Taras",
         "Shevchenko",
-        " UTC · Student · version 1",
+        " (Kyiv time) · Student · version 1",
         "your class, which also records",
         STUDENT_NOTE,
     ):

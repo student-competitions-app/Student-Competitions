@@ -27,6 +27,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.auth import clear_session_cookie, set_session_cookie
 from app.core.config import APP_NAME, AuthSettings
 from app.core.db import SessionDep
+from app.core.i18n import _
 from app.core.sealing import SealExpired, SealInvalid, unseal
 from app.core.security import (
     SESSION_COOKIE_NAME,
@@ -44,12 +45,12 @@ router = APIRouter()
 
 logger = logging.getLogger("uvicorn.error")
 
-INVALID_EMAIL = "Enter a valid email address."
-INVALID_CODE = "Invalid or expired code. Request a new code if needed."
-UNAVAILABLE = "Sign-in is temporarily unavailable. Please try again in a moment."
-TOO_MANY = "Too many attempts. Please try again later."
+INVALID_EMAIL = _("Enter a valid email address.")
+INVALID_CODE = _("Invalid or expired code. Request a new code if needed.")
+UNAVAILABLE = _("Sign-in is temporarily unavailable. Please try again in a moment.")
+TOO_MANY = _("Too many attempts. Please try again later.")
 
-ACCOUNT_READY = "Your account is ready. Send yourself a sign-in code to continue."
+ACCOUNT_READY = _("Your account is ready. Send yourself a sign-in code to continue.")
 
 LOGIN_PREFILL_PURPOSE = "login-prefill"
 PREFILL_TTL = timedelta(minutes=10)

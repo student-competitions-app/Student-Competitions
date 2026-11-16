@@ -89,3 +89,12 @@ def test_healthz_with_a_cookie_does_no_session_lookup(
     response = client.get("/healthz")
     assert response.status_code == 200
     assert set(response.json()) == {"status", "version", "commit"}
+
+
+def test_healthz_is_never_translated(ukrainian_default: None, client: TestClient) -> None:
+    """Milestone 12.5 FR-024: developer-facing, the same whatever the language."""
+    default = client.get("/healthz").json()
+    client.cookies.set("sc_lang", "en")
+    english = client.get("/healthz").json()
+    client.cookies.set("sc_lang", "uk")
+    assert default == english == client.get("/healthz").json()

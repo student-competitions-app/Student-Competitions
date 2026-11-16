@@ -7,11 +7,14 @@ See specs/005-roles-authorization/contracts/http-routes.md#layout-header-every-p
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app.core.config import APP_NAME
+from app.core import config
 from app.core.security import SESSION_COOKIE_NAME, hash_token
 from app.models import Role, UserSession
 from tests import html
 from tests.conftest import ADMIN_STUDENT_EMAIL, TEACHER_EMAIL, ClientAs
+
+APP_NAME = str(config.APP_NAME)
+"""The English wording: the suite runs in English (milestone 12.5 FR-067)."""
 
 
 def token_of(browser: TestClient) -> str:

@@ -424,9 +424,12 @@ def meta(body: str, name: str) -> str | None:
 
 
 def role_label(body: str) -> str:
-    """The top bar's text without the application name and without its forms (role switch,
-    Log out): what is left is the current role's label and the address."""
+    """The top bar's text without the application name, the language switch and the forms (role
+    switch, Log out): what is left is the current role's label and the address."""
     header = text(body, "header")
+    for switch in parse(body).iter():
+        if "language-switch" in switch.classes():
+            header = header.replace(switch.text(), "")
     for form in forms(body, within="header"):
         header = header.replace(form.text, "")
-    return _collapse(header.replace(APP_NAME, ""))
+    return _collapse(header.replace(str(APP_NAME), ""))

@@ -6,15 +6,15 @@
 {% block title %}{{ heading }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
-{{ back_link("/admin/teachers", "Back to the teachers") }}
+{{ back_link("/admin/teachers", _("Back to the teachers")) }}
 {{ page_heading(heading) }}
 {{ error_summary(errors, order=["first_name", "last_name", "picker"]) }}
-<p>Email: {{ teacher.email }}</p>
+<p>{{ _("Email: %(email)s", email=teacher.email) }}</p>
 <form method="post" action="/admin/teachers/{{ teacher.user_id }}">
   {% include "pages/admin/_person_names.html" %}
   {% include "pages/admin/_institution_picker.html" %}
-  {{ checkbox_field("can_manage_competitions", "Can manage competitions", checked=values.can_manage_competitions) }}
-  {{ form_actions("Save", cancel_href="/admin/teachers") }}
+  {{ checkbox_field("can_manage_competitions", _("Can manage competitions"), checked=values.can_manage_competitions) }}
+  {{ form_actions(_("Save"), cancel_href="/admin/teachers") }}
 </form>
-<div class="form-actions">{{ link_button("Remove teacher", "/admin/teachers/" ~ teacher.user_id ~ "/remove", kind="destructive", outline=True) }}</div>
+<div class="form-actions">{{ link_button(_("Remove teacher"), "/admin/teachers/" ~ teacher.user_id ~ "/remove", kind="destructive", outline=True) }}</div>
 {% endblock %}

@@ -5,10 +5,10 @@
 {% block title %}{{ app_name }} — {{ app_tagline }}{% endblock %}
 
 {% block content %}
-<h1>Welcome to {{ app_name }}</h1>
+<h1>{{ _("Welcome to %(app)s", app=app_name) }}</h1>
 <p class="lead">{{ app_tagline }}</p>
 <section id="areas" aria-labelledby="areas-heading">
-  <h2 id="areas-heading">Your areas</h2>
+  <h2 id="areas-heading">{{ _("Your areas") }}</h2>
   <ul class="card-grid">
     {% for area in areas %}
     <li>{{ card(area.title, href=area.path, description=area.description) }}</li>
@@ -16,12 +16,13 @@
   </ul>
 </section>
 {% if not data_available %}
-{{ notice("Question data is temporarily unavailable. Please try again in a moment.", "info") }}
+{{ notice(_("Question data is temporarily unavailable. Please try again in a moment."), "info") }}
 {% endif %}
 {% endblock %}
 
 {% block footer_extra %}
 {% if data_available %}
-<p data-engine="{{ db_status.engine }}" data-revision="{{ db_status.revision }}" data-boots="{{ db_status.boots }}">Database: {{ db_status.display_name }} · schema revision <code>{{ db_status.revision }}</code> · boot #{{ db_status.boots }}</p>
+{%- set revision %}<code>{{ db_status.revision }}</code>{% endset %}
+<p data-engine="{{ db_status.engine }}" data-revision="{{ db_status.revision }}" data-boots="{{ db_status.boots }}">{{ _("Database: %(engine)s · schema revision %(revision)s · boot #%(boots)d", engine=db_status.display_name, revision=revision, boots=db_status.boots) }}</p>
 {% endif %}
 {% endblock %}

@@ -7,10 +7,10 @@
 {% from "components/confirmation.html" import confirmation %}
 {% from "components/time.html" import local_time with context %}
 
-{% block title %}Finish competition “{{ competition.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Finish competition “%(name)s”", name=competition.name) }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(back, "Back to the competitions") }}
-{% set question %}Finish competition “{{ competition.name }}” of {{ subject.name }}, started {{ local_time(competition.starts_at) }}?{% endset %}
-{{ confirmation(question, "The competition will be marked Finished. Its answers can no longer be entered or changed, and it cannot be cancelled or restarted. Its answers can then be graded.", "/teacher/competitions/" ~ competition.id ~ "/finish", "Finish competition", back, hidden={"subject": subject.id, "status": status_value, "page": page}, back_label="Keep in progress", kind="primary") }}
+{{ back_link(back, _("Back to the competitions")) }}
+{% set question %}{{ _("Finish competition “%(name)s” of %(subject)s, started %(time)s?", name=competition.name, subject=subject.name, time=local_time(competition.starts_at)) }}{% endset %}
+{{ confirmation(question, _("The competition will be marked Finished. Its answers can no longer be entered or changed, and it cannot be cancelled or restarted. Its answers can then be graded."), "/teacher/competitions/" ~ competition.id ~ "/finish", _("Finish competition"), back, hidden={"subject": subject.id, "status": status_value, "page": page}, back_label=_("Keep in progress"), kind="primary") }}
 {% endblock %}

@@ -170,7 +170,9 @@ Every page renders the same frame from `layouts/base.html`:
 1. a **skip link**, "Skip to main content", visible when it has focus, shown above the frame;
 2. the **frame**, `<div class="frame">`, which holds:
    1. the **top bar** ([gallery: frame](/admin/components#frame)): the logo mark and the wordmark
-      linking home, the current role's label, and the **user menu**;
+      linking home, the current role's label, the **language switch**
+      ([gallery: language](/admin/components#language)) and the **user menu**; signed out, the
+      brand and the language switch only;
    2. the **area tabs** of the administrator or teacher area, if the page is in one;
    3. the **loading bar**, hidden until a page load is pending;
 4. `<main>`, at the one content width;
@@ -179,6 +181,9 @@ Every page renders the same frame from `layouts/base.html`:
 The user menu is a native `<details>`, so it opens without JavaScript. It holds, in order, the
 email linking to the profile, the role switch (for a person with several roles), the theme switch
 and **Log out**. When it is taller than the space below the top bar, it scrolls inside itself.
+
+The language switch (milestone 12.5) is on every page, signed in or out, error pages included,
+always just before the user menu, or last when there is none. It is a native `<details>` too.
 
 **The pinned frame** (milestone 10.1): on a screen at least 600 px tall, the frame stays at the top
 while the page scrolls, so the tabs and the user menu are always in reach. The page still scrolls
@@ -193,9 +198,14 @@ scrolls away with the page.
 focus; a form control keeps `--sc-field-clearance`, so its label and error stay in view (WCAG 2.2,
 2.4.11). The clearances are the tallest frames measured, plus room to spare: a new tab, a longer
 tab label or a taller top bar must be measured again at 360 px and 375 px width against them.
-Last measured in milestone 11.1, with the teacher area's four tabs (Students, Teams, Questions,
-Competitions): they wrap onto two rows at 360 × 640 and 375 × 667, and the frame ends at 158.5 px,
-the same as the administrator area's, under the 176 px of `--sc-frame-clearance-tabs`.
+Last measured in milestone 12.5, with the language switch in the top bar, in Ukrainian and in
+English: below 768 px, when a role is shown, the wordmark is hidden visually (the logo link still
+reads as the application's name) and the role label sits beside the logo, so the top bar stays one
+64 px row (research R15). The teacher area's tabs («Учасники · Команди · Питання · Змагання») and
+the administrator area's («Педагоги · Заклади освіти · Предмети») wrap onto two rows at 360 × 640
+and 375 × 667, and the frame ends at 153 px (the administrator's at 375 × 667 in Ukrainian, on one
+row of tabs, at 109 px): under the 176 px of `--sc-frame-clearance-tabs` and a quarter of a 375 ×
+667 screen (166.75 px). Without the fallback the wordmark wrapped onto two lines under the role.
 
 **The scripts**: the base layout loads two scripts on every page, each with `defer`, and pages add
 nothing; without JavaScript, links and forms work as before.
@@ -204,7 +214,8 @@ nothing; without JavaScript, links and forms work as before.
   page is on its way.
 - **`time-zone.js`** (milestone 12.1) writes the browser's time zone, such as `Europe/Kyiv`, to the
   `sc_time_zone` cookie, so the server shows times in it (see **Local time** in section 5). It sends
-  nothing and reloads nothing; without it, times are shown in UTC, labelled "UTC".
+  nothing and reloads nothing; without it, times are shown in Kyiv time, labelled "(Kyiv time)"
+  (milestone 12.5).
 
 **Inside `<main>`**, in order: the back link (on every page below an area's main page), the page
 heading, the error summary or a notice, then the content. A page has one `h1`; sections are `h2`.
@@ -212,7 +223,7 @@ One-form public pages (sign-in, code entry, role choice, data deletion) use the 
 column.
 
 **Breakpoints**: three, written as literals. Below `768px`: tables become cards, the user menu
-folds to its icon, the selectors stack, the area tabs drop to the touch-target height, and h1 and
+folds to its icon, the language switch folds to its flag, the selectors stack, the area tabs drop to the touch-target height, and h1 and
 h2 step down a size. From `1024px`: body text is 18 px. From a height of `600px` (on screen, not in
 print): the frame is pinned.
 
@@ -229,6 +240,18 @@ The full contract, with parameters and emitted markup, is
 - **`top_bar()`**, **`user_menu()`**: rendered by the layout; never called by a page.
 - **`theme_switch(current, return_to, standalone=False)`**: in the user menu, and standalone under
   the sign-in form. No other page shows it.
+- **`language_switch(current, return_to)`** (milestone 12.5): rendered by `top_bar()` on every page;
+  never called by a page. A native `<details>` drawn like a select: the current language's flag and
+  name, a border and a chevron. Its panel is one form posting to `POST /language`, with the page's
+  return address and two buttons, **Українська** then **English**, each with its flag. No
+  JavaScript. The rules:
+  - the flags are the SVG files `/static/img/flag-ua.svg` and `flag-gb.svg` (named by country),
+    with `alt=""`, sized by `--sc-flag-height`; never emoji;
+  - each language is named in its own language and never translated: «Українська» stays Ukrainian
+    and "English" stays English on a Ukrainian page; each name carries its own `lang`;
+  - the current language is marked with `aria-current="true"`;
+  - below 768 px the summary shows the flag alone, the name hidden visually but still read; each
+    option is a 44 px touch target.
 - **`area_tabs(tabs, active, label)`**: rendered by `layouts/admin.html` and `layouts/teacher.html`.
   A new tab is added to `ADMIN_TABS` or `TEACHER_TABS`, never drawn by a page.
 - **`back_link(href, text)`**: first in `<main>` on every page below an area's main page. The
@@ -259,8 +282,8 @@ The full contract, with parameters and emitted markup, is
   not arrived within 200 ms. It starts for nothing else: not for a link opened in a new tab, a link
   to another site, a `#` link or a form the browser refuses. With reduced motion it stands still.
 
-_Gallery_: [frame](/admin/components#frame), [section heading](/admin/components#section-heading),
-[loading feedback](/admin/components#loading).
+_Gallery_: [frame](/admin/components#frame), [language switch](/admin/components#language),
+[section heading](/admin/components#section-heading), [loading feedback](/admin/components#loading).
 
 ### Buttons (`components/button.html`)
 
@@ -412,17 +435,29 @@ _Gallery_: [notices](/admin/components#notices), [empty states](/admin/component
 ### Local time (`components/time.html`)
 
 **`local_time(moment, zone=time_zone)`** (milestone 12.1) shows a stored time in the person's time
-zone: `<time datetime="2027-03-14T08:00Z">14 March 2027, 10:00</time>`. The zone comes from the
-`sc_time_zone` cookie, which `time-zone.js` writes; when no zone is known, the time is the UTC
-value labelled "UTC": "14 March 2027, 08:00 UTC". Import it `with context`. Every stored time is
-UTC and every conversion is on the server; the browser only says which zone it is in.
+zone, in the page's language: `<time datetime="2027-03-14T08:00Z">14 March 2027, 10:00</time>`,
+«14 березня 2027, 10:00». The zone comes from the `sc_time_zone` cookie, which `time-zone.js`
+writes; when no zone is known (milestone 12.5), the time is shown in Kyiv time, labelled: "14 March
+2027, 10:00 (Kyiv time)", «14 березня 2027, 10:00 (за київським часом)». Import it `with context`.
+Every stored time is UTC and every conversion is on the server; the browser only says which zone it
+is in. The `datetime` attribute is always UTC.
+
+**`local_date(moment, zone=time_zone)`** (milestone 12.5) shows the date alone, with no label, in
+the same zone (Kyiv when unknown): `<time datetime="2026-10-15">15 October 2026</time>`, «15 жовтня
+2026». Use it where only the day matters, such as a date of consent.
+
+**Emails** always use Kyiv time, labelled in the email's language.
+
+The day has no leading zero, the month is written out (in Ukrainian in the genitive: «березня»), the
+clock is 24-hour. Month names come from the catalogue, never from the process locale. No page shows
+"UTC" or a `2026-10-22` style date.
 
 **A time inside a heading** (a confirmation's question): capture the heading with
 `{% set question %}Cancel competition “{{ c.name }}”, starting {{ local_time(c.starts_at) }}?{% endset %}`
 and pass `question` on. It is still template content, escaped by autoescape; never build it as a
 string in Python. The page's `<title>` leaves the time out.
 
-_Gallery_: [time](/admin/components#time).
+_Gallery_: [time](/admin/components#time) (both macros).
 
 ### Forms (`components/form.html`)
 
@@ -626,8 +661,8 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
 - **Statuses** use one short term each, everywhere: **Active** or **Deactivated**; **Read** or
   **Write**; **Upcoming**, **In progress**, **Finished** or **Cancelled**.
 - **Times** read "14 March 2027, 10:00" in the person's zone (the day without a leading zero, the
-  month in full, a 24-hour clock), and "14 March 2027, 10:00 UTC" when the zone is not known. A form
-  names its zone under the time field: "Time zone: Europe/Kyiv".
+  month in full, a 24-hour clock), and "14 March 2027, 10:00 (Kyiv time)" when the zone is not
+  known. A form names its zone under the time field: "Time zone: Europe/Kyiv".
 - **Menus**: the button reads "Actions" and is announced "Actions for “<item>”"; an entry that does
   something is a verb (**Edit**, **Cancel competition**); an entry that only opens a page is named
   by that page (**Questions**, **Teams**); a destructive entry is always a verb.
@@ -640,6 +675,70 @@ font or icon library. _Gallery_: [identity](/admin/components#identity).
 - **Placeholders** only say that a field is empty: "Not answered". A placeholder never replaces the
   field's label or hint, and never holds an example, an instruction or a value.
 
+### In Ukrainian (milestone 12.5)
+
+Ukrainian is the default language; every pattern above has its Ukrainian form, written with the
+glossary below and these rules (FR-030–FR-034):
+
+- **Typography**: quotation marks «…», with „…“ inside them; the apostrophe is ʼ (U+02BC), never
+  `'` or `’`.
+- **Names stay as entered**, in the nominative. A name follows a noun in the case the sentence
+  needs, in quotation marks: «Видалити предмет «Фізика»?», «Назад до регіону «Київ»». A person's
+  name follows a colon: «Вилучити зі списку: Олена Коваленко?».
+- **No guessed gender**: nothing agrees with another person's gender. The inviter is named in the
+  present tense: «Олена Коваленко запрошує вас». Statuses are impersonal forms (Заплановано,
+  Триває, Деактивовано) or agree with the record's noun, never with a person.
+- **The reader is «ви»**, always: never «ти».
+- **Counts** use the three Ukrainian forms: «1 команда», «2 команди», «5 команд»; never a form
+  chosen by comparing with 1.
+
+| Pattern | English | Ukrainian |
+|---|---|---|
+| Button | **Create subject** | **Створити предмет** |
+| Confirmation | "Delete “Physics”?" | «Видалити предмет «Фізика»?» |
+| Refusal | "“Physics” is in use and cannot be deleted." | «Предмет «Фізика» використовується, тому його не можна видалити.» |
+| Error | "Enter a valid email address." | «Введіть дійсну адресу електронної пошти.» |
+| Error summary | "There is a problem" | «Виникла проблема» |
+| Empty state | "No subjects yet" | «Предметів ще немає» |
+| Notice | "Invitation sent to olena@example.org" | «Запрошення надіслано на адресу olena@example.org» |
+| Back link | "Back to “Kyiv”" | «Назад до регіону «Київ»» |
+| Time | "14 March 2027, 10:00 (Kyiv time)" | «14 березня 2027, 10:00 (за київським часом)» |
+| Page navigation | "Teams 31–40 of 200" | «Команди 31–40 із 200» |
+| Menu | "Actions for “Spring final”" | «Дії для «Spring final»» |
+
+### Glossary
+
+Approved by the product owner on 2026-11-15. Every Ukrainian text uses these terms.
+
+| English | Ukrainian |
+|---|---|
+| Student Competitions | Студентські змагання |
+| Administrator | Адміністратор |
+| Teacher (role) | Педагог |
+| Student (role) | Студент |
+| educational institution | заклад освіти |
+| region | регіон |
+| subject | предмет |
+| class | група |
+| team | команда |
+| question bank | банк питань |
+| reference answer | еталонна відповідь |
+| competition | змагання |
+| Upcoming / In progress / Finished / Cancelled | Заплановано / Триває / Завершено / Скасовано |
+| Active / Deactivated (per kind of record, `pgettext(kind, …)`) | Активний (предмет, регіон, заклад освіти), Активна (група) / Деактивовано |
+| Read / Write (access) | Перегляд / Редагування |
+| Can manage competitions | Може керувати змаганнями |
+| Students / Teams / Questions / Competitions (tabs) | Учасники / Команди / Питання / Змагання |
+| Teachers / Educational institutions / Subjects (tabs) | Педагоги / Заклади освіти / Предмети |
+| Grades, Score | Оцінки, Бал |
+| Sign in / Log out | Увійти / Вийти |
+| Profile | Профіль |
+| Withdraw consent / Delete my data | Відкликати згоду / Видалити мої дані |
+| Kyiv time | за київським часом |
+
+The tab "Students" is «Учасники» on purpose: it lists every participant a teacher manages and is
+short; the role itself is «Студент».
+
 ## 8. Phone behaviour
 
 Below 768 px:
@@ -648,8 +747,13 @@ Below 768 px:
   of the card's width. A row note sits in the card's actions part, where a button would be; a row
   with no action at all has no actions part. An actions menu takes the whole actions part, and its
   panel opens within the card, each entry 44 px tall.
-- **The user menu folds** to its account icon, read as "Account menu"; the product name and the
-  role stay in the top bar.
+- **The user menu folds** to its account icon, read as "Account menu"; the role stays in the top
+  bar, beside the logo. With a role shown, the wordmark is hidden visually (the logo link still
+  reads as the product name), so the top bar keeps one row (milestone 12.5); signed out, the
+  wordmark shows.
+- **The language switch folds** to its flag; the language's name is hidden visually and still
+  read, and each of its two options is a 44 px row. The theme switch stays in the user menu and
+  under the sign-in form.
 - **The selectors stack**: the list above its detail, the chained lists one under another.
 - **Everything wraps**: long names, tabs and buttons wrap rather than push the page wider. No page
   scrolls sideways at 375 px. The page navigation wraps onto more rows, each entry keeping its
@@ -678,7 +782,43 @@ Light and dark are both complete; **Device**, the default, follows the operating
 - **Check both themes**: open every new page in Light and in Dark (with the switch, or by
   emulating the colour scheme in the browser's developer tools).
 
-## 10. Checks
+## 10. Languages
+
+The application speaks Ukrainian by default and English on request (milestone 12.5). Every page and
+email is written in the browser's chosen language; what people enter is shown as entered, never
+translated.
+
+**Message rules** (binding for every milestone):
+
+1. **The identifier is the English wording**, exactly as shown in English.
+2. **Whole messages only**: never join translated pieces, never insert a translated word into
+   another message to make a sentence. A parameter may be a translated value only when it stands
+   on its own (a status, a role, an access level).
+3. **Named placeholders**: `%(name)s`; counts with `ngettext` / `_n` and `%(num)d`; a literal `%`
+   is `%%`.
+4. **User content is a parameter**, never translated, inserted unchanged. In Ukrainian it follows a
+   noun in the needed case, in «…», or a colon for a person.
+5. **Contexts** (`pgettext`, `_p`) when one English wording needs two Ukrainian ones: an access
+   level **Read** and another "Read", month names, "Delete “%(name)s”?" for each kind of record.
+6. **Developer-only text stays plain English** and is not marked: component contract errors, log
+   lines, `/healthz`.
+7. **No gendered word about another person** in Ukrainian; the reader is «ви».
+8. **The gallery's content is not marked**: `pages/admin/components.html` and its router stay
+   English, while its frame follows the language.
+
+**In a template**: `{{ _("Delete “%(name)s”?", name=subject.name) }}`,
+`{{ ngettext("%(num)d team", "%(num)d teams", total) }}`, `{{ pgettext("class", "Active") }}`.
+**In Python**: `_`, `_n` and `_p` from `app.core.i18n` give a `Text`, translated when the page is
+rendered or the email written; never `str()` it earlier.
+
+**The catalogue workflow** (README "Translations"): `scripts/translations.sh update`, translate the
+new entries of `app/locale/uk/LC_MESSAGES/messages.po` with the glossary (section 7) and clear
+"fuzzy", `scripts/translations.sh compile`, run the tests. English is filled from the identifiers.
+
+**Check every page in both languages**: switch with the language switch, or send `sc_lang=uk` /
+`sc_lang=en`.
+
+## 11. Checks
 
 `tests/unit/test_stylesheet.py` runs in CI and enforces, for every template and `app.css`:
 
@@ -715,6 +855,19 @@ HTTPS; that it checks the zone name before writing it; and that it stays small.
 `tests/integration/test_layout.py` checks that every kind of page loads it once, after
 `loading-feedback.js`.
 
+**Languages** (milestone 12.5):
+
+- `tests/unit/test_catalogues.py`: every marked message is in both catalogues, translated in every
+  plural form, not fuzzy, with the same placeholders as its identifier; nothing obsolete; nothing
+  from the gallery.
+- `tests/unit/test_template_text.py`: no English letters left in a template's text or in its
+  `aria-label`, `title`, `alt` and `placeholder` values, outside a marked message (the gallery
+  aside); no `ua` used as a language code.
+- `tests/unit/test_ukrainian_wording.py`: the Ukrainian catalogue uses ʼ and «…», no gendered past
+  form about another person, no «ти», and the glossary's terms.
+- The sort-key guard in `tests/unit/test_name_order.py`: no list is ordered by `.casefold()` or by
+  the stored duplicate key; names sort in the Ukrainian alphabet.
+
 `tests/integration/test_page_patterns.py` checks the patterns page by page (error summaries,
 confirmations, back links, badges, link buttons), and `tests/html.py` lets tests query pages by
 meaning, so a restyle does not break them.
@@ -723,7 +876,7 @@ meaning, so a restyle does not break them.
 section of `app.css`; (2) add it, with every variant, to the gallery
 (`pages/admin/components.html`); (3) describe it here; (4) then use it on the page.
 
-## 11. Research for later screens
+## 12. Research for later screens
 
 ### Taking a competition (milestone 13)
 

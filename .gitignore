@@ -14,3 +14,7 @@ data/
 
 # Review screenshots of milestone 10 (research D1): a throw-away aid, never committed
 screenshots/
+
+# Compiled message catalogues (milestone 12.5 FR-060): built by `scripts/translations.sh compile`,
+# by the image build and by the test session; only the `.po` sources are committed
+app/locale/*/LC_MESSAGES/*.mo

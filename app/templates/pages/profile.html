@@ -4,61 +4,60 @@
 {% from "components/badge.html" import status_badge %}
 {% from "components/card.html" import card %}
 {% from "components/button.html" import link_button %}
+{% from "components/time.html" import local_time with context %}
 
-{% block title %}Your profile — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Your profile") }} — {{ app_name }}{% endblock %}
 
 {% block content %}
-{{ back_link("/", "Back to the home page") }}
-{{ page_heading("Your profile") }}
+{{ back_link("/", _("Back to the home page")) }}
+{{ page_heading(_("Your profile")) }}
 {% set named = person.first_name is not none %}
 {% call(label) details_list([
-  ("Email", person.email),
-  ("First name", person.first_name if named else none),
-  ("Last name", person.last_name if named else none),
-  ("Roles", roles | map(attribute="label") | join(", ")),
-  ("Educational institutions", true if teacher else none),
-  ("Can manage competitions", ("Yes" if teacher.can_manage_competitions else "No") if teacher else none),
-  ("Educational institution", enrolment.institution_label if enrolment else none),
-  ("Class", true if enrolment else none),
-  ("Year of study", enrolment.year_of_study if enrolment else none),
-  ("Teams", true if teams is not none else none),
+  (_("Email"), person.email),
+  (_("First name"), person.first_name if named else none),
+  (_("Last name"), person.last_name if named else none),
+  (_("Roles"), roles | map(attribute="label") | join(", ")),
+  (_("Educational institutions"), true if teacher else none),
+  (_("Can manage competitions"), (_("Yes") if teacher.can_manage_competitions else _("No")) if teacher else none),
+  (_("Educational institution"), enrolment.institution_label if enrolment else none),
+  (_("Class"), true if enrolment else none),
+  (_("Year of study"), enrolment.year_of_study if enrolment else none),
+  (_("Teams"), true if teams is not none else none),
 ]) %}
-{% if label == "Educational institutions" %}
+{% if label == _("Educational institutions") %}
 <ul>
   {% for link in teacher.links %}
-  <li>{{ link.label }} — {{ link.access_level.label }}{% if not link.is_selectable %} {{ status_badge(False) }}{% endif %}</li>
+  <li>{{ link.label }} — {{ link.access_level.label }}{% if not link.is_selectable %} {{ status_badge(False, "institution") }}{% endif %}</li>
   {% endfor %}
 </ul>
-{% elif label == "Class" %}
-{{ enrolment.class_name }}{% if not enrolment.is_available %} {{ status_badge(False) }}{% endif %}
-{% elif label == "Teams" %}
+{% elif label == _("Class") %}
+{{ enrolment.class_name }}{% if not enrolment.is_available %} {{ status_badge(False, "class") }}{% endif %}
+{% elif label == _("Teams") %}
 {% if teams %}
 <ul>
   {% for team in teams %}
-  <li>{{ team.name }}{% if team.is_deleted %} (deleted){% endif %}</li>
+  <li>{{ team.name }}{% if team.is_deleted %} {{ _("(deleted)") }}{% endif %}</li>
   {% endfor %}
 </ul>
 {% else %}
-You are not in any team.
+{{ _("You are not in any team.") }}
 {% endif %}
 {% endif %}
 {% endcall %}
-{% if enrolment %}<p>Corrections to student data are made by a teacher of your educational institution.</p>{% endif %}
-{% if teacher %}<p>Corrections to teacher data are made by an administrator.</p>{% endif %}
+{% if enrolment %}<p>{{ _("Corrections to student data are made by a teacher of your educational institution.") }}</p>{% endif %}
+{% if teacher %}<p>{{ _("Corrections to teacher data are made by an administrator.") }}</p>{% endif %}
 
 {% if records %}
-<h2>Your consent</h2>
+<h2>{{ _("Your consent") }}</h2>
 {% for record in records %}
 {% call card(none) %}
-<p><strong>Accepted {{ record.accepted_at|utc }}</strong> · {{ record.role.label }} · version {{ record.version }}</p>
-{% for paragraph in record.text.split("\n\n") %}
-<p>{{ paragraph }}</p>
-{% endfor %}
+<p>{{ _("Accepted %(time)s · %(role)s · version %(version)s", time=local_time(record.accepted_at), role=record.role.label, version=record.version) }}</p>
+{% with text=record.text, parts=record_parts[loop.index0] %}{% include "partials/consent_text.html" %}{% endwith %}
 {% endcall %}
 {% endfor %}
 {% endif %}
 
 {% if can_withdraw %}
-<div class="form-actions">{{ link_button("Withdraw consent", "/profile/withdraw", kind="destructive") }}</div>
+<div class="form-actions">{{ link_button(_("Withdraw consent"), "/profile/withdraw", kind="destructive") }}</div>
 {% endif %}
 {% endblock %}

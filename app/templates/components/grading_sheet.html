@@ -25,14 +25,14 @@
 <ol class="answer-sheet">
   {%- for item in items %}
   <li>
-    {% call text_card("Question " ~ item.number) %}
-    {{ text_box("Question", item.text) }}
-    {{ text_box("Reference answer", item.reference_answer) }}
+    {% call text_card(_("Question %(number)d", number=item.number)) %}
+    {{ text_box(_("Question"), item.text) }}
+    {{ text_box(_("Reference answer"), item.reference_answer) }}
     {%- if item.answer is not none %}
-    {{ text_box("Answer to question " ~ item.number, item.answer) }}
-    {{ field(item.field_id, "Grade for question " ~ item.number, value=item.value, error=item.error, hint="A whole number from 0 to 10.", placeholder="Not graded", attrs={"inputmode": "numeric", "autocomplete": "off"}) }}
+    {{ text_box(_("Answer to question %(number)d", number=item.number), item.answer) }}
+    {{ field(item.field_id, _("Grade for question %(number)d", number=item.number), value=item.value, error=item.error, hint=_("A whole number from 0 to 10."), placeholder=_("Not graded"), attrs={"inputmode": "numeric", "autocomplete": "off"}) }}
     {%- else %}
-    <p class="grade-line">Not answered</p>
+    <p class="grade-line">{{ _("Not answered") }}</p>
     {%- endif %}
     {% endcall %}
   </li>
@@ -40,7 +40,7 @@
 </ol>
 {%- endmacro %}
 
-{% macro grading_sheet(items, action, hidden, submit_label="Save grades") -%}
+{% macro grading_sheet(items, action, hidden, submit_label=None) -%}
 {%- if not items %}{{ template_error("grading_sheet: at least one question is required") }}{% endif -%}
 {%- if items | selectattr("answer", "ne", none) | list -%}
 <form method="post" action="{{ action }}">
@@ -48,7 +48,7 @@
   <input type="hidden" name="{{ name }}" value="{{ value }}">
   {%- endfor %}
   {{ _graded_cards(items) }}
-  {{ form_actions(submit_label) }}
+  {{ form_actions(submit_label or _("Save grades")) }}
 </form>
 {%- else -%}
 {{ _graded_cards(items) }}
@@ -60,19 +60,19 @@
 <ol class="answer-sheet">
   {%- for item in items %}
   <li>
-    {% call text_card("Question " ~ item.number) %}
-    {{ text_box("Question", item.text) }}
+    {% call text_card(_("Question %(number)d", number=item.number)) %}
+    {{ text_box(_("Question"), item.text) }}
     {%- if item.answer is not none %}
-    {{ text_box("Answer to question " ~ item.number, item.answer) }}
+    {{ text_box(_("Answer to question %(number)d", number=item.number), item.answer) }}
     {%- if grades %}
     {%- if item.grade is not none %}
-    <p class="grade-line">Grade: {{ item.grade }} of 10</p>
+    <p class="grade-line">{{ _("Grade: %(grade)d of 10", grade=item.grade) }}</p>
     {%- else %}
-    <p class="grade-line">Not graded yet</p>
+    <p class="grade-line">{{ _("Not graded yet") }}</p>
     {%- endif %}
     {%- endif %}
     {%- else %}
-    <p class="grade-line">Not answered</p>
+    <p class="grade-line">{{ _("Not answered") }}</p>
     {%- endif %}
     {% endcall %}
   </li>

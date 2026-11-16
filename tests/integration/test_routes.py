@@ -36,6 +36,7 @@ from starlette.routing import BaseRoute, Mount
 from app.core.auth import PUBLIC_ROUTES, ROLE_CHOICE_ROUTES, allow_roles, declared_roles
 from app.main import app
 from app.models import Role
+from tests import html
 from tests.conftest import ADMIN_EMAIL, STUDENT_EMAIL, TEACHER_EMAIL, ClientAs
 
 READ_ONLY_METHODS = {"GET", "HEAD"}
@@ -108,6 +109,7 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/data-deletion"),
         ("POST", "/data-deletion/confirm/{token}"),
         ("POST", "/theme"),
+        ("POST", "/language"),
         ("POST", "/teacher/students/institutions/{institution_id:int}/classes"),
         ("POST", f"{TEACHER_CLASS}/edit"),
         ("POST", f"{TEACHER_CLASS}/deactivate"),
@@ -158,6 +160,7 @@ def test_the_allowlist_is_exact() -> None:
         ("POST", "/data-deletion/confirm/{token}"),
         ("GET", "/data-erased"),
         ("POST", "/theme"),
+        ("POST", "/language"),
     }
 
 
@@ -381,3 +384,43 @@ def test_the_declaration_is_found_above_or_below_the_route_decorator() -> None:
 
     found = {route.path: declared_roles(route.endpoint) for route in router.routes}  # type: ignore[attr-defined]
     assert found == {"/above": {Role.TEACHER}, "/below": {Role.STUDENT}}
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.5: every page in the chosen language (US3, FR-005, FR-018)
+# ---------------------------------------------------------------------------------------------
+
+
+def _title(body: str) -> str:
+    (element,) = html.parse(body).find_all("title")
+    return element.text()
+
+
+@pytest.mark.parametrize(("path", "allowed"), declared_get_routes())
+@pytest.mark.parametrize(
+    ("language", "app_name"), [("uk", "Студентські змагання"), ("en", "Student Competitions")]
+)
+def test_every_declared_page_speaks_the_chosen_language(
+    client_as: ClientAs, path: str, allowed: frozenset[Role], language: str, app_name: str
+) -> None:
+    """As the first role allowed, whatever the page answers (the page, a redirect followed, a
+    refusal or a 404): `<html lang>` and the application's name in the `<title>` (last, but first
+    on the home page). The gallery is
+    checked for its frame only: its content stays English (FR-027)."""
+    role = min(allowed, key=list(Role).index)
+    browser = client_as(SINGLE_ROLE[role])
+    browser.cookies.set("sc_lang", language)
+    body = browser.get(_concrete(path)).text
+    assert html.html_attrs(body)["lang"] == language, path
+    assert app_name in _title(body), path
+
+
+@pytest.mark.parametrize(("path", "allowed"), declared_get_routes())
+def test_every_declared_page_is_ukrainian_when_no_language_was_chosen(
+    ukrainian_default: None, client_as: ClientAs, path: str, allowed: frozenset[Role]
+) -> None:
+    """FR-001, FR-005: no `sc_lang` cookie, the deployment's default, as in production."""
+    role = min(allowed, key=list(Role).index)
+    body = client_as(SINGLE_ROLE[role]).get(_concrete(path)).text
+    assert html.html_attrs(body)["lang"] == "uk", path
+    assert "Студентські змагання" in _title(body), path

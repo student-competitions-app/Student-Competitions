@@ -29,6 +29,7 @@ from sqlmodel import Session, select
 
 from app.core.config import AuthSettings
 from app.core.db import utc_now
+from app.core.i18n import Text
 from app.core.sealing import SealExpired, SealInvalid, from_microseconds, seal, unseal
 from app.models import ConsentRecord, Role, User
 from app.schemas.people import clean_email, clean_person_name
@@ -50,13 +51,14 @@ logger = logging.getLogger("uvicorn.error")
 class DetailLine:
     """One line describing a role's details to the invited person."""
 
-    text: str
+    text: Text
     """As shown on the acceptance page and the profile, e.g. "Can manage competitions: Yes"."""
-    email_text: str | None = None
-    """The wording in the invitation email, when it differs from `text`."""
+    email_text: Text | None = None
+    """The wording in the invitation email, when it differs from `text`. Both are messages, so
+    the bilingual invitation email renders them in each language (milestone 12.5 R10)."""
 
     @property
-    def for_email(self) -> str:
+    def for_email(self) -> Text:
         return self.email_text or self.text
 
 
@@ -209,7 +211,7 @@ def issue_invitation(
         email,
         display_name(inviter),
         inviter.email,
-        role.label,
+        role,
         [line.for_email for line in lines],
         f"{base_url}/invitations/{token}",
         now + INVITATION_TTL,
@@ -240,8 +242,8 @@ def _read(settings: AuthSettings, token: str, now: datetime) -> Invalid | Expire
         email = clean_email(payload["email"])
         if email != payload["email"]:
             return Invalid()
-        first_name = clean_person_name(payload["first"], "first name")
-        last_name = clean_person_name(payload["last"], "last name")
+        first_name = clean_person_name(payload["first"], "first_name")
+        last_name = clean_person_name(payload["last"], "last_name")
         details = role_def.details_from_payload(payload["details"])
         inviter_id = payload["inviter"]
         if not isinstance(inviter_id, int) or isinstance(inviter_id, bool):

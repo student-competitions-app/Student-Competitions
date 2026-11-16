@@ -12,11 +12,13 @@ grade silently instead of showing this error. So the server is the only check, a
 relies on the browser.
 """
 
+from app.core.i18n import _
+
 GRADE_MAX = 10
 """The highest grade; the lowest is 0. Also the `grade_range` check constraint of
 `app.models.competition.TeamAnswer`."""
 
-GRADE_ERROR = "Enter a whole number from 0 to 10."
+GRADE_ERROR = _("Enter a whole number from 0 to 10.")
 
 
 class InvalidGrade(ValueError):

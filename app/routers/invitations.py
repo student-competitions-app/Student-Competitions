@@ -19,11 +19,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.core.config import APP_NAME, AuthSettings
 from app.core.db import SessionDep
+from app.core.i18n import _
 from app.core.sealing import seal
 from app.core.templates import templates
-from app.models import User
+from app.models import Role, User
 from app.routers.auth import LOGIN_PREFILL_PURPOSE
-from app.services.consent import current_consent_text
+from app.services.consent import consent_parts, current_consent_text
 from app.services.invitations import (
     Acceptable,
     Accepted,
@@ -39,9 +40,11 @@ from app.services.users import display_name
 
 router = APIRouter()
 
-NEUTRAL = "This invitation cannot be accepted. Ask the person who invited you to send a new one."
-EXPIRED = "This invitation has expired; ask for a new one."
-CONSENT_CHANGED = "The consent text has changed since you opened this page. Please read it again."
+NEUTRAL = _("This invitation cannot be accepted. Ask the person who invited you to send a new one.")
+EXPIRED = _("This invitation has expired; ask for a new one.")
+CONSENT_CHANGED = _(
+    "The consent text has changed since you opened this page. Please read it again."
+)
 
 LINK_HEADERS = {"Referrer-Policy": "no-referrer", "Cache-Control": "no-store"}
 """Sent with every response of a page opened from an emailed link (FR-061)."""
@@ -75,20 +78,28 @@ def _status_page(
 
 
 def _neutral(request: Request) -> HTMLResponse:
-    return _status_page(request, "Invitation", NEUTRAL, 400)
+    return _status_page(request, _("Invitation"), NEUTRAL, 400)
 
 
 def _expired(request: Request) -> HTMLResponse:
-    return _status_page(request, "Invitation expired", EXPIRED, 410)
+    return _status_page(request, _("Invitation expired"), EXPIRED, 410)
+
+
+ALREADY_HELD = {
+    Role.ADMIN: _("You are already an administrator."),
+    Role.TEACHER: _("You are already a teacher."),
+    Role.STUDENT: _("You are already a student."),
+}
+"""One whole message per role (milestone 12.5 FR-021), never a label inserted into a sentence."""
 
 
 def _already_held(request: Request, invitation: Invitation) -> HTMLResponse:
     return _status_page(
         request,
-        "Invitation",
-        f"You are already a {invitation.role.label.lower()}.",
+        _("Invitation"),
+        ALREADY_HELD[invitation.role],
         200,
-        {"href": "/login", "text": "Sign in"},
+        {"href": "/login", "text": _("Sign in")},
     )
 
 
@@ -103,6 +114,7 @@ def _acceptance_page(
     (FR-024). Nothing on it is editable, and it shows nothing about the signed-in session."""
     inviter = session.get(User, invitation.inviter_id)
     assert inviter is not None
+    consent_text = current_consent_text(session, invitation.role)
     return with_link_headers(
         templates.TemplateResponse(
             request,
@@ -114,7 +126,8 @@ def _acceptance_page(
                 "inviter_email": inviter.email,
                 "role_label": invitation.role.label,
                 "lines": invitable_role(invitation.role).describe(session, invitation.details),
-                "consent_text": current_consent_text(session, invitation.role),
+                "consent_text": consent_text,
+                "consent_parts": consent_parts(consent_text.text),
                 "notice": notice,
             },
             status_code=status_code,

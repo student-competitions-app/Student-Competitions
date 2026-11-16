@@ -3,13 +3,13 @@
 {% from "components/form.html" import error_summary %}
 {% from "components/button.html" import button %}
 
-{% block title %}Choose a role — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Choose a role") }} — {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="narrow">
-  {{ page_heading("Choose a role") }}
+  {{ page_heading(_("Choose a role")) }}
   {{ error_summary({}, form_error=message) }}
-  <p>You have more than one role. Choose the one to use now. You can switch at any time from the menu at the top of the page.</p>
+  <p>{{ _("You have more than one role. Choose the one to use now. You can switch at any time from the menu at the top of the page.") }}</p>
   <form method="post" action="/role">
     {% if next %}
     <input type="hidden" name="next" value="{{ next }}">

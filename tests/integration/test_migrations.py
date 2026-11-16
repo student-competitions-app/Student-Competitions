@@ -9,8 +9,9 @@ import os
 import subprocess
 import sys
 import time
+import unicodedata
 from collections.abc import Iterator
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -633,6 +634,7 @@ def test_postgresql_keeps_the_question_id_sequence(
 # See specs/011.1-teacher-teams/data-model.md §7 and research R2, R9.
 
 BEFORE_TEAMS = "3e32707ed794"
+TEAMS_REVISION = "09cbcbe472be"
 
 
 def test_the_teams_tables_at_head(
@@ -782,7 +784,8 @@ def test_the_student_text_is_rewritten_in_place_and_back(
 ) -> None:
     """Milestone 11.1 US7-5, FR-015, research R9: the same row, version 1, published
     2026-10-19, with every consent record still pointing at it; the downgrade restores the
-    original wording byte for byte, and the upgrade brings the rewrite back."""
+    original wording byte for byte, and the upgrade brings the rewrite back. Checked at the teams
+    revision itself, since milestone 12.5 rewrites the text again (its own test is below)."""
     module = ScriptDirectory.from_config(alembic_config()).get_revision("09cbcbe472be").module
     rewrite, original = (
         module.STUDENT_CONSENT_TEXT_V1_REWRITE,
@@ -807,7 +810,7 @@ def test_the_student_text_is_rewritten_in_place_and_back(
             .returning(consent_records_t.c.id)
         ).scalar_one()
 
-    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    run_alembic(monkeypatch, empty_database_url, "upgrade", TEAMS_REVISION)
     assert student_text(migration_engine) == (text_id, 1, rewrite, published)
     assert published.date().isoformat() == "2026-10-19"
     with migration_engine.connect() as connection:
@@ -820,7 +823,7 @@ def test_the_student_text_is_rewritten_in_place_and_back(
 
     run_alembic(monkeypatch, empty_database_url, "downgrade", BEFORE_TEAMS)
     assert student_text(migration_engine) == (text_id, 1, original, published)
-    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    run_alembic(monkeypatch, empty_database_url, "upgrade", TEAMS_REVISION)
     assert student_text(migration_engine)[2] == rewrite
 
 
@@ -1290,11 +1293,24 @@ def test_the_downgrade_drops_the_team_answers_table(
 ANSWER_GRADES_REVISION = "04d5b638615c"
 
 
-def test_the_head_is_the_answer_grades_revision() -> None:
+def test_the_answer_grades_revision_follows_team_answers() -> None:
     """Milestone 12.4 follows milestone 12.3's revision."""
-    assert head_revision() == ANSWER_GRADES_REVISION
     script = ScriptDirectory.from_config(alembic_config())
     assert script.get_revision(ANSWER_GRADES_REVISION).down_revision == TEAM_ANSWERS_REVISION
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.5: bilingual consent and name keys (data-model §4–§5, research R11, R12)
+# ---------------------------------------------------------------------------------------------
+
+LOCALISATION_REVISION = "7110bec350d2"
+
+
+def test_the_head_is_the_localisation_revision() -> None:
+    """Milestone 12.5 follows milestone 12.4's revision."""
+    assert head_revision() == LOCALISATION_REVISION
+    script = ScriptDirectory.from_config(alembic_config())
+    assert script.get_revision(LOCALISATION_REVISION).down_revision == ANSWER_GRADES_REVISION
 
 
 def test_the_grade_column_at_head(
@@ -1367,3 +1383,255 @@ def test_the_downgrade_drops_the_grades_and_keeps_the_answers(
     assert checks == {"ck_team_answers_answered"}
     with migration_engine.connect() as connection:
         assert connection.execute(text("SELECT text FROM team_answers")).scalar_one() == "NaCl"
+
+
+def consent_rows(engine: Engine) -> dict[str, tuple[int, int, str, datetime]]:
+    """Each role's consent text: id, version, text and publication time."""
+    with engine.connect() as connection:
+        rows = connection.execute(
+            sa.select(
+                consent_texts_t.c.role,
+                consent_texts_t.c.id,
+                consent_texts_t.c.version,
+                consent_texts_t.c.text,
+                consent_texts_t.c.published_at,
+            )
+        ).all()
+    return {row[0]: (row[1], row[2], row[3], row[4]) for row in rows}
+
+
+def records(engine: Engine) -> list[tuple[int, int]]:
+    with engine.connect() as connection:
+        rows = connection.execute(
+            sa.select(consent_records_t.c.id, consent_records_t.c.consent_text_id).order_by(
+                consent_records_t.c.id
+            )
+        ).all()
+    return [(row[0], row[1]) for row in rows]
+
+
+def test_the_consent_texts_become_bilingual_in_place_and_back(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Milestone 12.5 US5, FR-046, FR-049: version 1 of each role keeps its row and its records;
+    the upgrade writes the bilingual wordings, the downgrade the earlier ones byte for byte."""
+    module = (
+        ScriptDirectory.from_config(alembic_config()).get_revision(LOCALISATION_REVISION).module
+    )
+    run_alembic(monkeypatch, empty_database_url, "upgrade", ANSWER_GRADES_REVISION)
+    before = consent_rows(migration_engine)
+    assert before["teacher"][2] == module._TEACHER_CONSENT_TEXT_V1_ORIGINAL
+    assert before["student"][2] == module._STUDENT_CONSENT_TEXT_V1_REWRITE_1
+    with migration_engine.begin() as connection:
+        teacher = add_m8_user(connection, "olena@example.com", True, "teacher")
+        now = utc_now()
+        connection.execute(
+            consent_records_t.insert().values(
+                user_id=teacher,
+                consent_text_id=before["teacher"][0],
+                accepted_at=now,
+                inviter_id=teacher,
+                invitation_issued_at=now,
+            )
+        )
+    kept = records(migration_engine)
+
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    after = consent_rows(migration_engine)
+    assert after["teacher"][2] == module.TEACHER_CONSENT_TEXT_V1_REWRITE_1
+    assert after["student"][2] == module.STUDENT_CONSENT_TEXT_V1_REWRITE_2
+    for role in ("teacher", "student"):
+        assert (after[role][0], after[role][1], after[role][3]) == (
+            before[role][0],
+            1,
+            before[role][3],
+        )
+    assert records(migration_engine) == kept
+
+    run_alembic(monkeypatch, empty_database_url, "downgrade", ANSWER_GRADES_REVISION)
+    assert consent_rows(migration_engine) == before
+    assert records(migration_engine) == kept
+
+
+# Name keys (data-model §5, FR-054, FR-055): recomputed, and refused when two now clash.
+
+APOSTROPHE_NAME = "Мар’яна"
+"""Typed with U+2019; its key changes from `мар’яна` to `марʼяна`."""
+
+
+def _insert(connection: Connection, table: str, **values: object) -> int:
+    """One row, its times typed so neither engine needs a driver adapter."""
+    now = utc_now()
+    values = {"created_at": now, "updated_at": now, **values}
+    stub = sa.table(
+        table,
+        sa.column("id", sa.Integer()),
+        *(
+            sa.column(name, sa.DateTime(timezone=True) if isinstance(value, datetime) else None)
+            for name, value in values.items()
+        ),
+    )
+    return connection.execute(stub.insert().values(**values).returning(stub.c.id)).scalar_one()
+
+
+def _old_key(name: str) -> str:
+    return unicodedata.normalize("NFC", name).casefold()
+
+
+def _named(connection: Connection, table: str, name: str, **values: object) -> int:
+    return _insert(connection, table, name=name, name_key=_old_key(name), **values)
+
+
+def _seed_scopes(connection: Connection) -> dict[str, int]:
+    """Two regions, an institution in each, a subject: the scopes of the other names."""
+    ids = {
+        "kyiv": _named(connection, "regions", "Київ", is_active=True),
+        "lviv": _named(connection, "regions", "Львів", is_active=True),
+        "subject": _named(connection, "subjects", "Фізика", is_active=True),
+    }
+    ids["school"] = _named(
+        connection, "institutions", "Ліцей", region_id=ids["kyiv"], is_active=True
+    )
+    ids["other_school"] = _named(
+        connection, "institutions", "Ліцей", region_id=ids["lviv"], is_active=True
+    )
+    return ids
+
+
+def _keys(engine: Engine) -> dict[str, list[tuple[int, str, str]]]:
+    with engine.connect() as connection:
+        return {
+            table: [
+                tuple(row)
+                for row in connection.execute(
+                    text(f"SELECT id, name, name_key FROM {table} ORDER BY id")
+                )
+            ]
+            for table in ("subjects", "regions", "institutions", "classes", "teams", "competitions")
+        }
+
+
+def test_the_name_keys_are_recomputed_and_restored(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """US6, FR-054: a name holding ’ gets the key with ʼ; the name itself never changes; the
+    downgrade restores the old key."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", ANSWER_GRADES_REVISION)
+    with migration_engine.begin() as connection:
+        scopes = _seed_scopes(connection)
+        _named(connection, "subjects", APOSTROPHE_NAME, is_active=True)
+        _named(
+            connection,
+            "classes",
+            APOSTROPHE_NAME,
+            institution_id=scopes["school"],
+            year_of_study=2,
+            is_active=True,
+        )
+        _named(connection, "teams", APOSTROPHE_NAME, institution_id=scopes["school"])
+        _named(
+            connection,
+            "competitions",
+            APOSTROPHE_NAME,
+            subject_id=scopes["subject"],
+            starts_at=datetime(2027, 3, 14, 8, 0, tzinfo=UTC),
+        )
+    before = _keys(migration_engine)
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    after = _keys(migration_engine)
+    for table in ("subjects", "classes", "teams", "competitions"):
+        (row,) = [r for r in after[table] if r[1] == APOSTROPHE_NAME]
+        assert row[2] == "марʼяна", table
+    assert [r[:2] for t in after.values() for r in t] == [r[:2] for t in before.values() for r in t]
+    unchanged = [r for r in after["regions"]] + [r for r in after["institutions"]]
+    assert unchanged == before["regions"] + before["institutions"]
+    run_alembic(monkeypatch, empty_database_url, "downgrade", ANSWER_GRADES_REVISION)
+    assert _keys(migration_engine) == before
+
+
+CLASHES = [
+    ("subjects", lambda c, s, n: _named(c, "subjects", n, is_active=True)),
+    ("regions", lambda c, s, n: _named(c, "regions", n, is_active=True)),
+    (
+        "institutions",
+        lambda c, s, n: _named(c, "institutions", n, region_id=s["kyiv"], is_active=True),
+    ),
+    (
+        "classes",
+        lambda c, s, n: _named(
+            c, "classes", n, institution_id=s["school"], year_of_study=1, is_active=True
+        ),
+    ),
+    ("teams", lambda c, s, n: _named(c, "teams", n, institution_id=s["school"])),
+    (
+        "competitions",
+        lambda c, s, n: _named(
+            c,
+            "competitions",
+            n,
+            subject_id=s["subject"],
+            starts_at=datetime(2027, 3, 14, 8, 0, tzinfo=UTC),
+        ),
+    ),
+]
+
+
+@pytest.mark.parametrize(("table", "add"), CLASHES, ids=[table for table, _ in CLASHES])
+def test_names_that_now_clash_stop_the_upgrade_before_any_write(
+    monkeypatch: pytest.MonkeyPatch,
+    empty_database_url: str,
+    migration_engine: Engine,
+    table: str,
+    add: Any,
+) -> None:
+    """US10, FR-055: `'` and `’` had different keys; now they have one, in the same scope."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", ANSWER_GRADES_REVISION)
+    with migration_engine.begin() as connection:
+        scopes = _seed_scopes(connection)
+        first = add(connection, scopes, "Мар'яна")
+        second = add(connection, scopes, APOSTROPHE_NAME)
+    keys = _keys(migration_engine)
+    texts = consent_rows(migration_engine)
+    with pytest.raises(RuntimeError) as refused:
+        run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    message = str(refused.value)
+    assert f"{table} ids {first} and {second}" in message
+    assert "“Мар'яна”" in message and f"“{APOSTROPHE_NAME}”" in message
+    assert "rename one and upgrade again" in message
+    assert _keys(migration_engine) == keys
+    assert consent_rows(migration_engine) == texts
+
+
+def test_the_same_names_in_other_scopes_upgrade_cleanly(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Another region's institution, a deleted team and a cancelled competition do not clash."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", ANSWER_GRADES_REVISION)
+    starts = datetime(2027, 3, 14, 8, 0, tzinfo=UTC)
+    with migration_engine.begin() as connection:
+        scopes = _seed_scopes(connection)
+        for name in ("Мар'яна", APOSTROPHE_NAME):
+            region = scopes["kyiv"] if name == "Мар'яна" else scopes["lviv"]
+            _named(connection, "institutions", name, region_id=region, is_active=True)
+        _named(
+            connection, "teams", "Мар'яна", institution_id=scopes["school"], deleted_at=utc_now()
+        )
+        _named(connection, "teams", APOSTROPHE_NAME, institution_id=scopes["school"])
+        _named(
+            connection,
+            "competitions",
+            "Мар'яна",
+            subject_id=scopes["subject"],
+            starts_at=starts,
+            cancelled_at=utc_now(),
+        )
+        _named(
+            connection,
+            "competitions",
+            APOSTROPHE_NAME,
+            subject_id=scopes["subject"],
+            starts_at=starts,
+        )
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    keys = _keys(migration_engine)
+    assert [r[2] for r in keys["teams"]] == ["марʼяна", "марʼяна"]

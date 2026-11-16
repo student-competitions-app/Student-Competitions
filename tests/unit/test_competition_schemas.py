@@ -89,5 +89,5 @@ def test_a_date_too_far_ahead_to_convert() -> None:
 def test_local_parts_round_trips() -> None:
     moment = datetime(2027, 3, 14, 8, 0, tzinfo=UTC)
     assert local_parts(moment, KYIV) == ("2027-03-14", "10:00")
-    assert local_parts(moment, None) == ("2027-03-14", "08:00")
+    assert local_parts(moment, None) == ("2027-03-14", "10:00")
     assert parse_start(*local_parts(moment, KYIV), KYIV) == moment

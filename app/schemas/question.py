@@ -11,6 +11,8 @@ Both fields are checked on every submission, so the form can show every error at
 
 from typing import Literal
 
+from app.core.i18n import Text, _
+
 QUESTION_FIELD_MAX_LENGTH = 2000
 """Also both column lengths in `app.models.question`, so the rule and the columns cannot drift."""
 
@@ -18,14 +20,14 @@ QuestionField = Literal["text", "reference_answer"]
 
 _MESSAGES: dict[QuestionField, dict[str, str]] = {
     "text": {
-        "empty": "Enter the question text.",
-        "long": "The question text can be at most 2,000 characters.",
-        "null": "The question text cannot contain a null character.",
+        "empty": _("Enter the question text."),
+        "long": _("The question text can be at most 2,000 characters."),
+        "null": _("The question text cannot contain a null character."),
     },
     "reference_answer": {
-        "empty": "Enter the reference answer.",
-        "long": "The reference answer can be at most 2,000 characters.",
-        "null": "The reference answer cannot contain a null character.",
+        "empty": _("Enter the reference answer."),
+        "long": _("The reference answer can be at most 2,000 characters."),
+        "null": _("The reference answer cannot contain a null character."),
     },
 }
 
@@ -33,7 +35,7 @@ _MESSAGES: dict[QuestionField, dict[str, str]] = {
 class InvalidQuestionField(ValueError):
     """The value breaks a rule; `message` is ready to show beside the field."""
 
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: Text) -> None:
         super().__init__(message)
         self.message = message
 

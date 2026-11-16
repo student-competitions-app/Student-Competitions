@@ -107,6 +107,9 @@
   --sc-border-width: 1px;
   --sc-border-strong: 0.125rem;
   --sc-border-accent: 0.25rem;
+  /* The height of a flag in the language switch (milestone 12.5 research R8); its width follows
+     the flag's own proportions. */
+  --sc-flag-height: 1rem;
 
   /* Room kept above a scroll or focus target, so the pinned frame never covers it (milestone
      10.1 FR-015, research R8): each is the tallest frame measured at that breakpoint, plus
@@ -496,6 +499,52 @@ body > main {
   }
 }
 
+/* Below 768 px, with a role shown, the top bar holds the language switch and the user menu too,
+   so the wordmark gives way (milestone 12.5 research R15): hidden visually, still the link's
+   accessible name, with the role label beside the logo on the same row. */
+.brand-with-role .brand-name {
+  position: absolute;
+  width: var(--sc-border-width);
+  height: var(--sc-border-width);
+  margin: calc(-1 * var(--sc-border-width));
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.brand-with-role {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.brand-with-role + .brand-role {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: center;
+  justify-self: start;
+  margin: 0 0 0 calc(2rem + var(--sc-space-1));
+  padding: 0;
+}
+
+@media (min-width: 768px) {
+  .brand-with-role .brand-name {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  .brand-with-role + .brand-role {
+    margin: 0;
+    padding: 0 var(--sc-space-1);
+  }
+}
+
 /* The user menu (FR-019): a native <details>, so it opens without JavaScript. Below 768 px the
    summary is the account icon alone, read as "Account menu". */
 .user-menu {
@@ -815,6 +864,181 @@ body > footer.site-footer {
 }
 
 /* == Components == */
+
+/* The language switch (components/frame.html `language_switch`, milestone 12.5 research R8): a
+   native <details> in the top bar, drawn like a select: the current flag and name, a border and a
+   chevron. Below 768 px it folds to the flag; its name is still read. On a phone it sits between
+   the brand and the user menu; from 768 px it is pushed right, the user menu after it. */
+.language-switch {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  margin: 0;
+}
+
+.language-switch + .user-menu {
+  grid-column: 3;
+}
+
+@media (min-width: 768px) {
+  .language-switch {
+    margin-left: auto;
+  }
+
+  .language-switch + .user-menu {
+    margin-left: 0;
+  }
+}
+
+.language-switch > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sc-space-1);
+  min-width: var(--sc-touch-target);
+  min-height: var(--sc-touch-target);
+  padding-inline: var(--sc-space-1);
+  border: var(--sc-border-width) solid var(--sc-on-top-bar-muted);
+  border-radius: var(--sc-radius-control);
+  color: var(--sc-on-top-bar);
+  font-size: var(--sc-text-small);
+  font-weight: var(--sc-weight-semibold);
+  line-height: var(--sc-line-height);
+}
+
+details.language-switch > summary:not([role]),
+details.language-switch > summary:not([role]):focus,
+details.language-switch[open] > summary:not([role]):not(:focus) {
+  color: var(--sc-on-top-bar);
+}
+
+details.language-switch > summary:not([role]):focus-visible {
+  outline: none;
+  color: var(--sc-on-top-bar);
+  box-shadow: 0 0 0 0.25rem var(--sc-focus-ring);
+}
+
+.language-switch > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.language-switch > summary::after {
+  display: none;
+}
+
+details.language-switch[open] > summary {
+  margin-bottom: 0;
+}
+
+.language-switch .language-switch-name {
+  position: absolute;
+  width: var(--sc-border-width);
+  height: var(--sc-border-width);
+  margin: calc(-1 * var(--sc-border-width));
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 768px) {
+  .language-switch > summary {
+    padding-inline: var(--sc-space-2);
+  }
+
+  .language-switch .language-switch-name {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+  }
+
+  details.language-switch > summary::after {
+    display: block;
+    float: none;
+    width: var(--sc-space-1);
+    height: var(--sc-space-1);
+    margin: 0;
+    background: none;
+    border-right: var(--sc-border-strong) solid currentColor;
+    border-bottom: var(--sc-border-strong) solid currentColor;
+    transform: translateY(-0.125rem) rotate(45deg);
+  }
+
+  details.language-switch[open] > summary::after {
+    transform: translateY(0.125rem) rotate(-135deg);
+  }
+}
+
+.language-switch-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--sc-space-1));
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  margin: 0;
+  padding-block: var(--sc-space-1);
+  background: var(--sc-surface);
+  color: var(--sc-text);
+  border: var(--sc-border-width) solid var(--sc-border);
+  border-radius: var(--sc-radius-card);
+  box-shadow: var(--sc-shadow-menu);
+}
+
+.language-switch-panel button,
+.language-switch-panel button:is(:hover, :active, :focus) {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  width: 100%;
+  min-width: var(--sc-touch-target);
+  min-height: var(--sc-touch-target);
+  margin: 0;
+  padding: 0 var(--sc-space-2);
+  background: transparent;
+  color: var(--sc-text);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: var(--sc-text-body);
+  font-weight: var(--sc-weight-regular);
+  text-align: left;
+}
+
+.language-switch-panel button:hover {
+  background: var(--sc-neutral-tint);
+}
+
+.language-switch-panel button:focus-visible {
+  box-shadow: inset 0 0 0 0.25rem var(--sc-focus-ring);
+}
+
+.language-switch-panel button[aria-current="true"] {
+  background: var(--sc-primary-tint);
+  font-weight: var(--sc-weight-semibold);
+}
+
+/* A bilingual consent text (partials/consent_text.html, milestone 12.5 FR-047): the Ukrainian
+   part, then the English part, each under its own heading. */
+.consent-parts > div + div {
+  margin-top: var(--sc-space-3);
+}
+
+/* The gallery shows the switch open: room under the bar, so its panel covers nothing. */
+.language-switch-sample {
+  padding-bottom: 7.5rem;
+}
+
+.flag {
+  flex: none;
+  width: auto;
+  height: var(--sc-flag-height);
+}
 
 /* Icons (components/icons.html): the logo mark's tile and spark take the top bar's deep blue and
    the accent amber; the line icons draw in the current text colour. */

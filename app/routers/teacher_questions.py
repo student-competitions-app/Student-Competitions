@@ -27,6 +27,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.core.auth import AccessDenied, allow_roles
 from app.core.db import SessionDep
+from app.core.i18n import _
 from app.models import Role, Subject, User
 from app.routers.teacher import render_teacher
 from app.schemas.question import question_field_errors
@@ -52,10 +53,10 @@ router = APIRouter(prefix="/teacher/questions")
 TAB = "questions"
 TAB_PATH = "/teacher/questions"
 
-SUBJECT_NOT_FOUND = ("Subject not found", "This subject does not exist or is deactivated.")
+SUBJECT_NOT_FOUND = (_("Subject not found"), _("This subject does not exist or is deactivated."))
 QUESTION_NOT_FOUND = (
-    "Question not found",
-    "This question does not exist, was deleted, or its subject is deactivated.",
+    _("Question not found"),
+    _("This question does not exist, was deleted, or its subject is deactivated."),
 )
 """The not-found page's heading and text (research R6)."""
 

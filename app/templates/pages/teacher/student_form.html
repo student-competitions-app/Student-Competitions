@@ -7,12 +7,12 @@
 {% block title %}{{ student.first_name }} {{ student.last_name }} — {{ app_name }}{% endblock %}
 
 {% block teacher_content %}
-{{ back_link(cancel, "Back to “" ~ school_class.name ~ "”") }}
+{{ back_link(cancel, pgettext("class", "Back to “%(name)s”", name=school_class.name)) }}
 {{ page_heading(student.first_name ~ " " ~ student.last_name) }}
 {{ error_summary(errors, order=["first_name", "last_name", "class_id"]) }}
 {{ details_list([
-  ("Email", student.email),
-  ("Educational institution", institution.name ~ " (" ~ institution.region_name ~ ")"),
+  (_("Email"), student.email),
+  (_("Educational institution"), institution.name ~ " (" ~ institution.region_name ~ ")"),
 ]) }}
 {% set class_options = namespace(items=[]) %}
 {% for c in classes %}{% set class_options.items = class_options.items + [(c.id, c.label)] %}{% endfor %}
@@ -21,9 +21,9 @@
   <input type="hidden" name="institution" value="{{ carried.institution }}">
   <input type="hidden" name="class" value="{{ carried.class }}">
   {% include "pages/admin/_person_names.html" %}
-  {{ select_field("class_id", "Class", class_options.items, selected=values.class_id, error=errors.class_id) }}
-  {{ form_actions("Save", cancel_href=cancel) }}
+  {{ select_field("class_id", _("Class"), class_options.items, selected=values.class_id, error=errors.class_id) }}
+  {{ form_actions(_("Save"), cancel_href=cancel) }}
 </form>
 {% set carry = "?region=" ~ carried.region ~ "&institution=" ~ carried.institution ~ "&class=" ~ carried.class %}
-<div class="form-actions">{{ link_button("Remove", "/teacher/students/" ~ student.user_id ~ "/remove" ~ carry, kind="destructive", outline=True) }}</div>
+<div class="form-actions">{{ link_button(_("Remove"), "/teacher/students/" ~ student.user_id ~ "/remove" ~ carry, kind="destructive", outline=True) }}</div>
 {% endblock %}

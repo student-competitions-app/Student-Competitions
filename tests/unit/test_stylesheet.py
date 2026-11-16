@@ -305,3 +305,30 @@ def test_the_actions_menu_classes_belong_to_the_menu_component() -> None:
         }, name
     (body,) = [body for selector, body in _rules(APP_CSS) if selector == ".actions-menu-link"]
     assert re.search(r"min-height:\s*var\(--sc-touch-target\)", body)
+
+
+def components_section() -> str:
+    start = APP_CSS.index("/* == Components == */")
+    return APP_CSS[start : APP_CSS.index("/* == End of components == */")]
+
+
+def test_the_language_switch_is_a_component_of_tokens() -> None:
+    """Milestone 12.5 contracts/components.md §1: its classes are in the Components section; the
+    flag's height is one length token, defined once in `:root`, with no dark-theme entry; every
+    option is at least a touch target high and wide."""
+    section = components_section()
+    for name in ("language-switch", "language-switch-name", "language-switch-panel", "flag"):
+        assert name in defined_classes(section), name
+        assert name not in defined_classes(APP_CSS.replace(section, "")), name
+    assert re.findall(r"--sc-flag-height:\s*([^;]+);", APP_CSS) == ["1rem"]
+    assert "--sc-flag-height:" in light_tokens()
+    (flag,) = [body for selector, body in _rules(APP_CSS) if selector == ".flag"]
+    assert "height: var(--sc-flag-height)" in flag
+    buttons = [
+        body
+        for selector, body in _rules(APP_CSS)
+        if selector.startswith(".language-switch-panel button,")
+    ]
+    assert len(buttons) == 1
+    assert "min-height: var(--sc-touch-target)" in buttons[0]
+    assert "min-width: var(--sc-touch-target)" in buttons[0]

@@ -45,6 +45,7 @@ from sqlmodel import Session
 
 from app.core.auth import AccessDenied, allow_roles
 from app.core.db import SessionDep
+from app.core.i18n import Text, _
 from app.core.sealing import SealExpired, SealInvalid, seal, unseal
 from app.models import Region, Role, Subject, Team
 from app.routers.teacher import render_teacher
@@ -101,38 +102,74 @@ router = APIRouter(prefix="/teacher/competitions/{competition_id:int}")
 ListKind = Literal["questions", "teams"]
 """The list an address names; its entries are a `question` or a `team`."""
 
-REGION_NOT_FOUND = ("Region not found", "This region does not exist, or it is deactivated.")
+REGION_NOT_FOUND = (
+    _("Region not found"),
+    _("This region does not exist, or it is deactivated."),
+)
 QUESTION_NOT_FOUND = (
-    "Question not found",
-    "This question does not exist, or it cannot be added to this competition.",
+    _("Question not found"),
+    _("This question does not exist, or it cannot be added to this competition."),
 )
 TEAM_NOT_FOUND = (
-    "Team not found",
-    "This team does not exist, or it cannot be added to this competition.",
+    _("Team not found"),
+    _("This team does not exist, or it cannot be added to this competition."),
 )
 """The not-found page's heading and text (http-routes.md §Order of checks)."""
 
-ENTRY_REFUSALS = {
-    CompetitionStatus.IN_PROGRESS: "“{name}” has already started and its {kind} can no longer be"
-    " changed.",
-    CompetitionStatus.CANCELLED: "“{name}” has been cancelled and its {kind} can no longer be"
-    " changed.",
-    CompetitionStatus.FINISHED: "“{name}” has finished and its {kind} can no longer be changed.",
-}
-"""The reason of the refusal, by the competition's status (http-routes.md §Refusal)."""
+
+def _entry_refusal(kind: ListKind, status: CompetitionStatus, name: str) -> Text:
+    """The reason of the refusal, by the list and the competition's status (http-routes.md
+    §Refusal): one whole message each (milestone 12.5 FR-021)."""
+    if kind == "questions":
+        if status is CompetitionStatus.IN_PROGRESS:
+            return _(
+                "“%(name)s” has already started and its questions can no longer be changed.",
+                name=name,
+            )
+        if status is CompetitionStatus.CANCELLED:
+            return _(
+                "“%(name)s” has been cancelled and its questions can no longer be changed.",
+                name=name,
+            )
+        return _("“%(name)s” has finished and its questions can no longer be changed.", name=name)
+    if status is CompetitionStatus.IN_PROGRESS:
+        return _(
+            "“%(name)s” has already started and its teams can no longer be changed.", name=name
+        )
+    if status is CompetitionStatus.CANCELLED:
+        return _("“%(name)s” has been cancelled and its teams can no longer be changed.", name=name)
+    return _("“%(name)s” has finished and its teams can no longer be changed.", name=name)
+
 
 ENTRY_NOTICE_PURPOSE = "competition-entry-notice"
 ENTRY_NOTICE_TTL = timedelta(minutes=10)
-ENTRY_NOTICES = {
-    "added": ("{entry} was added to “{name}”", "success"),
-    "already": ("{entry} is already in “{name}”", "info"),
-    "removed": ("{entry} was removed from “{name}”", "success"),
-    "absent": ("{entry} is not in “{name}”", "info"),
-}
-"""The notice of each outcome, with its kind (research R9); `entry` is "Question 12" or
-"Team “Comets”", read when the page is shown."""
+ENTRY_NOTICE_KINDS = {"added": "success", "already": "info", "removed": "success", "absent": "info"}
+"""The kind of the notice of each outcome (research R9)."""
 
-BACK_LINKS = {"questions": "Back to the questions", "teams": "Back to the teams"}
+
+def _question_notice(outcome: str, number: int, name: str) -> Text:
+    """The notice of an outcome for "Question 12", read when the page is shown."""
+    if outcome == "added":
+        return _("Question %(number)d was added to “%(name)s”", number=number, name=name)
+    if outcome == "already":
+        return _("Question %(number)d is already in “%(name)s”", number=number, name=name)
+    if outcome == "removed":
+        return _("Question %(number)d was removed from “%(name)s”", number=number, name=name)
+    return _("Question %(number)d is not in “%(name)s”", number=number, name=name)
+
+
+def _team_notice(outcome: str, team: str, name: str) -> Text:
+    """The notice of an outcome for "Team “Comets”", read when the page is shown."""
+    if outcome == "added":
+        return _("Team “%(team)s” was added to “%(name)s”", team=team, name=name)
+    if outcome == "already":
+        return _("Team “%(team)s” is already in “%(name)s”", team=team, name=name)
+    if outcome == "removed":
+        return _("Team “%(team)s” was removed from “%(name)s”", team=team, name=name)
+    return _("Team “%(team)s” is not in “%(name)s”", team=team, name=name)
+
+
+BACK_LINKS = {"questions": _("Back to the questions"), "teams": _("Back to the teams")}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -329,19 +366,18 @@ def read_entry_notice(
     except (SealInvalid, SealExpired):
         return None
     entry_id, outcome = payload.get(_entry(kind)), payload.get("outcome")
-    if payload.get("competition") != competition.id or outcome not in ENTRY_NOTICES:
+    if payload.get("competition") != competition.id or outcome not in ENTRY_NOTICE_KINDS:
         return None
     if type(entry_id) is not int or not 0 < entry_id <= MAX_ID:
         return None
     if kind == "questions":
-        entry = f"Question {entry_id}"
+        text = _question_notice(outcome, entry_id, competition.name)
     else:
         team = session.get(Team, entry_id)
         if team is None:
             return None
-        entry = f"Team “{team.name}”"
-    text, notice_kind = ENTRY_NOTICES[outcome]
-    return text.format(entry=entry, name=competition.name), notice_kind
+        text = _team_notice(outcome, team.name, competition.name)
+    return text, ENTRY_NOTICE_KINDS[outcome]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -365,11 +401,15 @@ def entries_refused(
         "pages/teacher/competition_refused.html",
         TAB,
         {
-            "question": f"Change the {kind} of “{competition.name}”?",
-            "reason": ENTRY_REFUSALS[status].format(name=competition.name, kind=kind),
+            "question": (
+                _("Change the questions of “%(name)s”?", name=competition.name)
+                if kind == "questions"
+                else _("Change the teams of “%(name)s”?", name=competition.name)
+            ),
+            "reason": _entry_refusal(kind, status, competition.name),
             "back": back_href,
             "back_link_text": BACK_LINKS[kind],
-            "back_text": "Back to the competition",
+            "back_text": _("Back to the competition"),
         },
         status_code=409,
     )
@@ -587,9 +627,9 @@ def remove_question_page(
         token = entry_notice_token(request, competition.id, "questions", question_id, "absent")
         return redirect(entries_path("questions", competition.id, context, back_page, None, token))
     consequence = (
-        "The question was deleted from the question bank and cannot be added again."
+        _("The question was deleted from the question bank and cannot be added again.")
         if entry.deleted_from_bank
-        else "The question stays in the question bank and can be added again."
+        else _("The question stays in the question bank and can be added again.")
     )
     return _confirmation(
         request,
@@ -598,7 +638,11 @@ def remove_question_page(
         context,
         back_page,
         question_id,
-        f"Remove question {question_id} from “{competition.name}”?",
+        _(
+            "Remove question %(number)d from “%(name)s”?",
+            number=question_id,
+            name=competition.name,
+        ),
         consequence,
     )
 
@@ -902,9 +946,14 @@ def remove_team_page(
         context,
         back_page,
         team_id,
-        f"Remove team “{row.name}” of {row.institution_name}, {region_name} from"
-        f" “{competition.name}”?",
-        "The team and its members are not changed, and the team can be added again.",
+        _(
+            "Remove team “%(team)s” of %(institution)s, %(region)s from “%(name)s”?",
+            team=row.name,
+            institution=row.institution_name,
+            region=region_name,
+            name=competition.name,
+        ),
+        _("The team and its members are not changed, and the team can be added again."),
     )
 
 

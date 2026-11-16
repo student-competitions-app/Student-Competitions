@@ -18,6 +18,7 @@ from sqlalchemy import CheckConstraint, Column, String
 from sqlmodel import Field, SQLModel
 
 from app.core.db import UTCDateTime, utc_now
+from app.core.i18n import Text, _p
 
 
 class AccessLevel(StrEnum):
@@ -28,9 +29,16 @@ class AccessLevel(StrEnum):
     WRITE = "write"
 
     @property
-    def label(self) -> str:
-        """The name shown to people: `Read`, `Write`."""
-        return self.value.capitalize()
+    def label(self) -> Text:
+        """The name shown to people: `Read`, `Write` (Перегляд, Редагування). The context keeps
+        the access level apart from any other "Read" (milestone 12.5 research R2)."""
+        return _ACCESS_LABELS[self]
+
+
+_ACCESS_LABELS = {
+    AccessLevel.READ: _p("access level", "Read"),
+    AccessLevel.WRITE: _p("access level", "Write"),
+}
 
 
 class TeacherProfile(SQLModel, table=True):

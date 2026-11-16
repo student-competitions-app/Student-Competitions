@@ -27,6 +27,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.auth import allow_roles
 from app.core.db import SessionDep
+from app.core.i18n import Text, _
 from app.models import Institution, Region, Role
 from app.routers.admin import render_admin
 from app.schemas.names import InvalidName
@@ -61,7 +62,7 @@ TAB = "institutions"
 TAB_PATH = "/admin/institutions"
 
 
-def region_path(region_id: int) -> str:
+def region_path(region_id: int) -> Text:
     """The tab with this region selected."""
     return f"/admin/institutions/regions/{region_id}"
 
@@ -87,7 +88,7 @@ def _not_found(request: Request, heading: str, message: str) -> HTMLResponse:
 def _region_not_found(request: Request) -> HTMLResponse:
     """The region was deleted, perhaps in another tab: a friendly page inside the area (FR-043)."""
     return _not_found(
-        request, "Region not found", "This region does not exist. It may have been deleted."
+        request, _("Region not found"), _("This region does not exist. It may have been deleted.")
     )
 
 
@@ -95,8 +96,8 @@ def _institution_not_found(request: Request) -> HTMLResponse:
     """The institution was deleted, or belongs to another region (FR-043)."""
     return _not_found(
         request,
-        "Educational institution not found",
-        "This educational institution does not exist in this region. It may have been deleted.",
+        _("Educational institution not found"),
+        _("This educational institution does not exist in this region. It may have been deleted."),
     )
 
 
@@ -160,7 +161,7 @@ def _region_form(
 @router.get("/regions/new", response_class=HTMLResponse)
 @allow_roles(Role.ADMIN)
 def new_region_page(request: Request) -> HTMLResponse:
-    return _region_form(request, "New region", "/admin/institutions/regions", "", TAB_PATH)
+    return _region_form(request, _("New region"), "/admin/institutions/regions", "", TAB_PATH)
 
 
 @router.post("/regions", response_class=HTMLResponse)
@@ -174,7 +175,7 @@ def create_region_action(
     except (InvalidName, DuplicateRegionName) as refused:
         return _region_form(
             request,
-            "New region",
+            _("New region"),
             "/admin/institutions/regions",
             name,
             TAB_PATH,
@@ -204,7 +205,7 @@ def rename_region_page(request: Request, session: SessionDep, region_id: int) ->
         return _region_not_found(request)
     path = region_path(region_id)
     return _region_form(
-        request, "Rename region", f"{path}/rename", region.name, path, region_name=region.name
+        request, _("Rename region"), f"{path}/rename", region.name, path, region_name=region.name
     )
 
 
@@ -221,7 +222,7 @@ def rename_region_action(
     except (InvalidName, DuplicateRegionName) as refused:
         return _region_form(
             request,
-            "Rename region",
+            _("Rename region"),
             f"{path}/rename",
             name,
             path,
@@ -341,7 +342,7 @@ def _institution_form(
 
 
 def _new_institution_heading(region: Region) -> str:
-    return f"New educational institution in “{region.name}”"
+    return _("New educational institution in “%(region)s”", region=region.name)
 
 
 def _region_inactive(request: Request, region: Region) -> HTMLResponse:
@@ -414,7 +415,7 @@ def rename_institution_page(
         return _institution_not_found(request)
     return _institution_form(
         request,
-        "Rename educational institution",
+        _("Rename educational institution"),
         f"{_institution_path(region_id, institution_id)}/rename",
         institution.name,
         get_region(session, region_id),
@@ -447,7 +448,7 @@ def rename_institution_action(
             return _region_not_found(request)
         return _institution_form(
             request,
-            "Rename educational institution",
+            _("Rename educational institution"),
             f"{_institution_path(region_id, institution_id)}/rename",
             name,
             region,

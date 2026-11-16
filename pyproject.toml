@@ -12,6 +12,7 @@ dependencies = [
     "psycopg[binary]>=3.3.6",
     "python-multipart>=0.0.32",
     "cryptography>=50.0.2",
+    "babel>=2.18.0",
 ]
 
 [dependency-groups]

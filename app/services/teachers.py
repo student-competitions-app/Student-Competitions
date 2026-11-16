@@ -24,10 +24,12 @@ from sqlmodel import Session, col, select
 
 from app.core.config import AuthSettings
 from app.core.db import utc_now
+from app.core.i18n import _
 from app.models import AccessLevel, Role, TeacherInstitution, TeacherProfile, User, UserRole
+from app.schemas.names import person_sort_key
 from app.schemas.teachers import NOT_SELECTABLE, TeacherDetails
 from app.services.consent import latest_consent_at, set_cutoff
-from app.services.institutions import describe_institutions
+from app.services.institutions import NameOrder, describe_institutions
 from app.services.invitations import DetailLine
 from app.services.users import end_all_sessions, get_roles
 
@@ -95,24 +97,36 @@ class _TeacherInvitation:
         """One line per institution, "Name (Region) — Read", sorted by label, by current names;
         then the competitions setting."""
         described = describe_institutions(session, details.institutions)
+        linked = sorted(
+            (
+                institution_id
+                for institution_id in details.institutions
+                if institution_id in described
+            ),
+            key=lambda institution_id: (described[institution_id].order, institution_id),
+        )
         lines = [
-            DetailLine(f"{described[institution_id].label} — {level.label}")
-            for institution_id, level in details.institutions.items()
-            if institution_id in described
+            DetailLine(
+                _(
+                    "%(institution)s — %(level)s",
+                    institution=described[institution_id].label,
+                    level=details.institutions[institution_id].label,
+                )
+            )
+            for institution_id in linked
         ]
-        lines.sort(key=lambda line: line.text.casefold())
         if details.can_manage_competitions:
             lines.append(
                 DetailLine(
-                    "Can manage competitions: Yes",
-                    "You will be able to manage competitions and change the question bank.",
+                    _("Can manage competitions: Yes"),
+                    _("You will be able to manage competitions and change the question bank."),
                 )
             )
         else:
             lines.append(
                 DetailLine(
-                    "Can manage competitions: No",
-                    "You will not be able to manage competitions or change the question bank.",
+                    _("Can manage competitions: No"),
+                    _("You will not be able to manage competitions or change the question bank."),
                 )
             )
         return lines
@@ -186,6 +200,8 @@ class TeacherLink:
     is_selectable: bool
     """`False`: the institution or its region was deactivated after the link was made, so it is
     shown as deactivated and its level cannot change (FR-011)."""
+    order: NameOrder
+    """The institution's place in a list (`SelectableInstitution.order`)."""
 
 
 @dataclass(frozen=True)
@@ -232,11 +248,12 @@ def _view(session: Session, user: User) -> TeacherView:
             label=described[institution_id].label,
             access_level=AccessLevel(row.access_level),
             is_selectable=described[institution_id].is_selectable,
+            order=described[institution_id].order,
         )
         for institution_id, row in stored.items()
         if institution_id in described
     ]
-    links.sort(key=lambda link: (link.label.casefold(), link.institution_id))
+    links.sort(key=lambda link: (link.order, link.institution_id))
     profile = session.get(TeacherProfile, user.id)
     assert profile is not None
     return TeacherView(
@@ -261,8 +278,7 @@ def list_teachers(session: Session) -> list[TeacherView]:
     )
     views = [_view(session, user) for user in session.exec(statement)]
     return sorted(
-        views,
-        key=lambda view: (view.last_name.casefold(), view.first_name.casefold(), view.user_id),
+        views, key=lambda view: (person_sort_key(view.last_name, view.first_name), view.user_id)
     )
 
 

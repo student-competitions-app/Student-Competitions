@@ -4,6 +4,7 @@ See specs/008-teacher-management-consent/spec.md US2 (scenarios 1–5, 9), FR-02
 FR-061, and contracts/http-routes.md §2. Every case runs on both engines.
 """
 
+import re
 from datetime import timedelta
 
 import pytest
@@ -79,11 +80,11 @@ def refused_both_ways(client: TestClient, token: str, status: int, message: str)
     """`GET` and `POST` of the link are refused with `status` and `message`; the `GET` body."""
     page = client.get(f"/invitations/{token}")
     assert page.status_code == status
-    assert message in page.text
+    assert str(message) in page.text
     assert_link_headers(page)
     posted = client.post(f"/invitations/{token}", data={"consent_text_id": str(consent_id())})
     assert posted.status_code == status
-    assert message in posted.text
+    assert str(message) in posted.text
     assert_link_headers(posted)
     assert nothing_stored()
     return page.text
@@ -198,7 +199,7 @@ def test_a_changed_consent_text_is_shown_again_and_nothing_is_stored(
     for stale in (str(old_id), "", "not-a-number"):
         changed = client.post(f"/invitations/{token}", data={"consent_text_id": stale})
         assert changed.status_code == 409
-        assert CONSENT_CHANGED in changed.text
+        assert str(CONSENT_CHANGED) in changed.text
         assert "Version two wording." in changed.text
         assert html.control(changed.text, "consent_text_id")["value"] == str(new_id)
         assert_link_headers(changed)
@@ -232,7 +233,14 @@ def test_the_refusals_do_not_reveal_which_check_failed(
         assert institution is not None
         delete_institution(session, institution.region_id, other)
     institution_body = client.get(f"/invitations/{gone}").text
-    assert tampered_body == inviter_body == institution_body
+    # The language switch returns to the page itself, so each body names its own link there
+    # (milestone 12.5); that aside, the three bodies are the same.
+    assert without_tokens(tampered_body) == without_tokens(inviter_body)
+    assert without_tokens(inviter_body) == without_tokens(institution_body)
+
+
+def without_tokens(body: str) -> str:
+    return re.sub(r"/invitations/[A-Za-z0-9_-]+", "/invitations/{token}", body)
 
 
 def test_the_acceptance_page_and_its_redirects_carry_the_link_headers(

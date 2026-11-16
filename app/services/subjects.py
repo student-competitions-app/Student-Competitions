@@ -22,7 +22,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.core.db import utc_now
+from app.core.i18n import _
 from app.models import Competition, Question, Subject
+from app.schemas.names import name_sort_key
 from app.schemas.subject import clean_subject_name, subject_name_key
 
 logger = logging.getLogger("uvicorn.error")
@@ -41,7 +43,7 @@ class DuplicateSubjectName(ValueError):
 
     def __init__(self, existing_name: str) -> None:
         self.existing_name = existing_name
-        self.message = f"A subject named “{existing_name}” already exists."
+        self.message = _("A subject named “%(name)s” already exists.", name=existing_name)
         super().__init__(self.message)
 
 
@@ -61,14 +63,14 @@ def list_subjects(session: Session) -> list[Subject]:
     collation: this way SQLite and PostgreSQL give the same order (research D3).
     """
     subjects = session.exec(select(Subject)).all()
-    return sorted(subjects, key=lambda subject: (subject.name_key, subject.id))
+    return sorted(subjects, key=lambda subject: (name_sort_key(subject.name), subject.id))
 
 
 def list_active_subjects(session: Session) -> list[Subject]:
     """The active subjects, sorted exactly like `list_subjects`: the question bank's subject
     list (milestone 11)."""
     subjects = session.exec(select(Subject).where(col(Subject.is_active))).all()
-    return sorted(subjects, key=lambda subject: (subject.name_key, subject.id))
+    return sorted(subjects, key=lambda subject: (name_sort_key(subject.name), subject.id))
 
 
 def get_subject(session: Session, subject_id: int) -> Subject:

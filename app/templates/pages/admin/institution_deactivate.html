@@ -2,13 +2,13 @@
 {% from "components/frame.html" import back_link %}
 {% from "components/confirmation.html" import confirmation %}
 
-{% block title %}Deactivate educational institution “{{ institution.name }}” — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Deactivate educational institution “%(name)s”", name=institution.name) }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
 {% set region_path = "/admin/institutions/regions/" ~ region.id %}
-{{ back_link(region_path, "Back to “" ~ region.name ~ "”") }}
-{% call confirmation("Deactivate educational institution “" ~ institution.name ~ "”?", none, region_path ~ "/institutions/" ~ institution.id ~ "/deactivate", "Deactivate", region_path) %}
-<p>Region: {{ region.name }}</p>
-<p>Its students will be signed out and hidden until it is activated again.</p>
+{{ back_link(region_path, pgettext("region", "Back to “%(name)s”", name=region.name)) }}
+{% call confirmation(_("Deactivate educational institution “%(name)s”?", name=institution.name), none, region_path ~ "/institutions/" ~ institution.id ~ "/deactivate", _("Deactivate"), region_path) %}
+<p>{{ _("Region: %(region)s", region=region.name) }}</p>
+<p>{{ _("Its students will be signed out and hidden until it is activated again.") }}</p>
 {% endcall %}
 {% endblock %}

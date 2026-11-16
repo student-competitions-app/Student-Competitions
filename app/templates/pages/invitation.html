@@ -3,20 +3,25 @@
 {% from "components/details.html" import details_list %}
 {% from "components/form.html" import error_summary, form_actions %}
 {% from "components/card.html" import card %}
+{% from "components/time.html" import local_time with context %}
 
-{% block title %}Invitation — {{ app_name }}{% endblock %}
+{% block title %}{{ _("Invitation") }} — {{ app_name }}{% endblock %}
 
 {% block content %}
-{{ page_heading("Invitation to Student Competitions") }}
+{{ page_heading(_("Invitation to %(app)s", app=app_name)) }}
 {{ error_summary({}, form_error=notice) }}
-<p>{{ inviter_name }} ({{ inviter_email }}) invites you to join as a {{ role_label|lower }}.</p>
-<h2>What will be stored if you agree</h2>
+{%- if invitation.role == "teacher" %}
+<p>{{ _("%(inviter)s (%(email)s) invites you to join as a teacher.", inviter=inviter_name, email=inviter_email) }}</p>
+{%- else %}
+<p>{{ _("%(inviter)s (%(email)s) invites you to join as a student.", inviter=inviter_name, email=inviter_email) }}</p>
+{%- endif %}
+<h2>{{ _("What will be stored if you agree") }}</h2>
 {% call(label) details_list([
-  ("Email", invitation.email),
-  ("First name", invitation.first_name),
-  ("Last name", invitation.last_name),
-  ("Role", role_label),
-  ("Details", true),
+  (_("Email"), invitation.email),
+  (_("First name"), invitation.first_name),
+  (_("Last name"), invitation.last_name),
+  (_("Role"), role_label),
+  (_("Details"), true),
 ]) %}
 <ul>
   {% for line in lines %}
@@ -24,17 +29,15 @@
   {% endfor %}
 </ul>
 {% endcall %}
-<p>If you are already a teacher or a student, your current names are kept.</p>
-<p>This invitation expires on {{ invitation.expires_at|utc }}.</p>
-<h2>Consent</h2>
+<p>{{ _("If you are already a teacher or a student, your current names are kept.") }}</p>
+<p>{{ _("This invitation expires on %(time)s.", time=local_time(invitation.expires_at)) }}</p>
+<h2>{{ _("Consent") }}</h2>
 {% call card(none) %}
-{% for paragraph in consent_text.text.split("\n\n") %}
-<p>{{ paragraph }}</p>
-{% endfor %}
+{% with text=consent_text.text, parts=consent_parts %}{% include "partials/consent_text.html" %}{% endwith %}
 {% endcall %}
 <form method="post">
   <input type="hidden" name="consent_text_id" value="{{ consent_text.id }}">
-  {{ form_actions("I agree") }}
+  {{ form_actions(_("I agree")) }}
 </form>
-<p><small>If any detail is wrong, ask the person who invited you for a new invitation, or accept and ask them to correct it.</small></p>
+<p><small>{{ _("If any detail is wrong, ask the person who invited you for a new invitation, or accept and ask them to correct it.") }}</small></p>
 {% endblock %}

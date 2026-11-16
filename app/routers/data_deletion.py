@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from app.core.auth import clear_session_cookie
 from app.core.config import APP_NAME, AuthSettings
 from app.core.db import SessionDep
+from app.core.i18n import _
 from app.core.security import client_address
 from app.core.templates import templates
 from app.models import User
@@ -40,8 +41,8 @@ from app.services.rate_limits import (
 
 router = APIRouter()
 
-LINK_EXPIRED = "This link has expired; request a new one."
-LINK_INVALID = "This link cannot be used. Request a new one."
+LINK_EXPIRED = _("This link has expired; request a new one.")
+LINK_INVALID = _("This link cannot be used. Request a new one.")
 
 
 def _settings(request: Request) -> AuthSettings:
@@ -108,9 +109,9 @@ def requested_page(request: Request) -> HTMLResponse:
 
 def _link_refused(request: Request, outcome: object) -> HTMLResponse:
     if isinstance(outcome, LinkExpired):
-        context = {"heading": "Link expired", "message": LINK_EXPIRED}
+        context = {"heading": _("Link expired"), "message": LINK_EXPIRED}
         return with_link_headers(_page(request, "pages/link_status.html", context, 410))
-    context = {"heading": "Link not valid", "message": LINK_INVALID}
+    context = {"heading": _("Link not valid"), "message": LINK_INVALID}
     return with_link_headers(_page(request, "pages/link_status.html", context, 400))
 
 

@@ -1,6 +1,6 @@
 # Implementation Plan: The New Logo (Milestone 12.7)
 
-**Branch**: `012.7_new_logo` | **Date**: 2026-11-16 | **Spec**: [spec.md](./spec.md)
+**Branch**: `012.7-new-logo` | **Date**: 2026-11-16 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/012.7-new-logo/spec.md`
 
@@ -88,8 +88,9 @@ build context.
 **Project Type**: server-rendered web application (one FastAPI app), plus one development script.
 
 **Performance Goals**:
-- Each page downloads one emblem file in the top bar, sized for its slot and density: 1–7 KB instead
-  of an inline SVG of under 1 KB. The browser caches it.
+- Each page downloads one emblem file in the top bar, sized for its slot and density, instead of an
+  inline SVG. It is a few kilobytes at most (an estimate, not a measured goal), and the browser caches
+  it.
 - The favicons are fetched once per browser.
 - No server-side cost.
 
@@ -117,7 +118,7 @@ build context.
 
 | Principle / gate | Status | How |
 |---|---|---|
-| I. Walking skeleton | ✅ | 12.6 is merged (`cb0e188`), and its deployment should be confirmed green before implementation starts. One feature on its own branch, `012.7_new_logo`. The spec folder uses the milestone number, as earlier 12.x milestones do. The branch's underscore differs from the `NNN-feature-name` convention, which the user chose; the PR is the gate either way. The scope is the milestone's: link previews, root `/favicon.ico` and an SVG emblem are deferred |
+| I. Walking skeleton | ✅ | 12.6 is merged to `main` (`cb0e188`) and deployed, as the product owner confirmed on 2026-11-16. One feature on its own branch, `012.7-new-logo`, which follows the `NNN-feature-name` convention, like the spec folder. The scope is the milestone's: link previews, root `/favicon.ico` and an SVG emblem are deferred |
 | II. Server-rendered simplicity | ✅ | Server-rendered `<img>` and `<picture>`, theme chosen on the server, no JavaScript. No new runtime dependency. Pillow and numpy are a development-only group, so the "justify a new runtime dependency" rule is not triggered, and R8 records them anyway |
 | II. UI guidelines (required from milestone 11) | ✅ | No new pattern. `logo_mark` stays the library's identity component, shown in the gallery's **Identity** in every theme. CSS uses tokens only (`--sc-touch-target`, `--sc-space-1`) and rem sizes. The guidelines are updated in the same PR (R12) |
 | III. Test-backed delivery | ✅ | Every clause of the milestone's _Test:_ line maps to an automated test (R9). No route is added or changed, so there are no new role-access tests. Static files stay public by design, and that is tested for a signed-out visitor. CI is green on both engines, with ruff. What tests cannot see is checked by hand (R11), as in milestone 10.1, until milestone 16 |

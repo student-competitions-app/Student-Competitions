@@ -1,6 +1,6 @@
 # Feature Specification: The New Logo (Milestone 12.7)
 
-**Feature Branch**: `012.7_new_logo`
+**Feature Branch**: `012.7-new-logo`
 
 **Created**: 2026-11-16
 
@@ -233,7 +233,8 @@ addresses; read the UI guidelines and the README.
 - **Very small sizes.** At 16 px the emblem reads as a texture, and at 32 px its letters are hard to read;
   both are accepted, because the mark is recognised by its shape, a silver diamond on deep blue.
 - **A request to `/favicon.ico` at the site root.** It is not served by this milestone and answers as it
-  does today; browsers use the linked icons instead.
+  does today: 404, the **Page not found** page (checked on 2026-11-16). Browsers use the linked icons
+  instead.
 - **An old bookmark or a cached page linking the old favicons.** The old files no longer exist; the browser
   falls back to the new linked icons on the next page load.
 - **An unknown logo size in a template.** Rendering fails with a template error, so the mistake is found

@@ -252,8 +252,10 @@ Check the ink, the size, the sharpness, the bar's height and the brand link's an
   - with a screen reader, the brand link reads the application's name.
 
   Then quickstart §3.3: measure the bottom of `.frame` on `/teacher/students` and `/admin/teachers` at
-  360 × 640 and 375 × 667 in both languages. Record the numbers in the scratchpad for T030. If a check
-  fails, fix `app.css` and repeat T012. (FR-003, SC-002)
+  360 × 640 and 375 × 667 in both languages. Record all eight numbers in the **Measurements** table of
+  `specs/012.7-new-logo/quickstart.md` §3, and tick its one-row confirmation. Commit it, so T031 can
+  read the numbers in any later session. If a check fails, fix `app.css` and repeat T012. (FR-003,
+  SC-002)
 
 **Checkpoint**: US1 is complete. The emblem identifies the application in the top bar at every width.
 
@@ -274,7 +276,7 @@ tab; add to a phone's home screen (quickstart §3.6, §3.7).
 - [ ] T014 [P] [US2] Create `tests/integration/test_logo.py`, with a module docstring citing milestone
   12.7 spec FR-013–FR-017 and contracts/static-assets.md. Add:
   - `ICON_LINKS`: the six `(rel, href)` pairs of contracts/static-assets.md §2.
-  - `test_every_icon_and_the_manifest_answer_to_a_signed_out_visitor`, parametrised over the eight
+  - `test_every_icon_and_the_manifest_answer_to_a_signed_out_visitor`, parametrised over the nine
     URLs (four favicons, the touch icon, the manifest and its three icons, without duplicates). Each
     answers 200 to `client`. The type is `image/png` for PNGs; for `favicon.ico` it is
     `image/x-icon` or `image/vnd.microsoft.icon`, compared on the type before any `;`. The manifest's
@@ -389,7 +391,8 @@ its date in this milestone's own design approval.
   console code. Ask the product owner for the 4 browser-tab images (desktop browser in light and dark
   appearance at 1280 px; a phone's tab view for 375 px), or take them by hand. Save all 16 in
   `specs/012.7-new-logo/screenshots/` as `{view}-{width}-{theme}.png`, with `view` one of `sign-in`,
-  `area`, `identity`, `tab`. (FR-025, depends on T013, T019, T023)
+  `area`, `identity`, `tab`. (FR-025, depends on T013 and T023; the phone check T019 does not block the
+  screenshots)
 - [ ] T025 [US4] Create `specs/012.7-new-logo/design-approval.md` in the form of
   `specs/010-design-system-ui-guidelines/design-approval.md`:
   - **Approver**: the product owner.
@@ -498,7 +501,8 @@ read correctly (quickstart §6).
     - Replace the "Last measured in milestone 12.5…" paragraph with "Last measured in milestone
       12.7…": the 44 px mark keeps the top bar one 64 px row at 360 px and 375 px, signed out and with
       a role shown, in Ukrainian and English. Give the frame's bottom on the teacher and administrator
-      area pages from T013, against the 176 px of `--sc-frame-clearance-tabs` and a quarter of a
+      area pages, taken from the **Measurements** table in `specs/012.7-new-logo/quickstart.md` §3
+      (filled in by T013), against the 176 px of `--sc-frame-clearance-tabs` and a quarter of a
       375 × 667 screen.
   - **§5 Icons and identity**:
     - `logo_mark(size, theme, top_bar)` shows the emblem as an image (`app/static/img/logo/`, made by
@@ -543,8 +547,9 @@ read correctly (quickstart §6).
   - update the 12.x group paragraph if it describes 12.7 as upcoming.
 
   (FR-040)
-- [ ] T036 Run [quickstart.md](./quickstart.md) §1–§6 end to end and tick each item. Leave the branch
-  ready for a pull request.
+- [ ] T036 Run [quickstart.md](./quickstart.md) §1–§6 end to end and tick each item. This includes
+  §3.9: build and run the Docker image and check the manifest's and the ICO's `content-type` from the
+  container (research R6). Leave the branch ready for a pull request.
 
 ---
 
@@ -560,11 +565,14 @@ read correctly (quickstart §6).
   except that both edit `tests/integration/test_layout.py` (T009 and T015), so run those two tasks
   one after the other.
 - **US3 (Phase 5)**: depends on Phase 2 only.
-- **US4 (Phase 6)**: depends on US1–US3, because the screenshots show their result.
+- **US4 (Phase 6)**: depends on US1–US3, because the screenshots show their result. Within those
+  stories, it waits for the automated tests and the checks T013 and T023, but not for the phone check
+  T019.
 - **US5 (Phase 7)**: depends on Phase 2. T027 shares `test_logo.py` with T014 and T030, so it runs
   after T014.
 - **US6 (Phase 8)**: T030 depends on T017 (the old files deleted) and T007 (the old classes deleted).
-  T031 needs T013's measurements and T025's approval file. T032 follows T028 (same file).
+  T031 needs T013's measurements (in quickstart.md's **Measurements** table) and T025's approval
+  file. T032 follows T028 (same file).
 - **Polish (Phase 9)**: after all stories. T035 after T026.
 
 ### Within Each User Story

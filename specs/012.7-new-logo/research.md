@@ -1,6 +1,6 @@
 # Research: The New Logo (Milestone 12.7)
 
-Every decision below was checked against branch `012.7_new_logo` at `0f0839e` (milestone 12.6 merged in
+Every decision below was checked against branch `012.7-new-logo` at `0f0839e` (milestone 12.6 merged in
 `cb0e188`). The Technical Context has no open questions: the stack, storage and test tools are
 unchanged. The only new libraries, Pillow and numpy, belong to a development script and never reach the
 application or its image (R8).
@@ -213,7 +213,13 @@ rem length, which the rules allow).
   `.webmanifest` to `application/manifest+json`, `.ico` to `image/x-icon` and `.png` to `image/png`. A
   system `mime.types` may map `.ico` to `image/vnd.microsoft.icon` instead (Debian and Ubuntu do), which
   is why both are accepted (FR-017). No registration in `main.py` is needed. The test runs on macOS and
-  on the Ubuntu CI runner and guards it.
+  on the Ubuntu CI runner and guards it there.
+
+  The runtime image (`python:3.13-slim-bookworm`) is not covered by the test suite. The accepted risk
+  is that its system table maps `.webmanifest` differently. That is unlikely: Debian's table, where
+  installed, agrees with Python's. A one-off check by hand covers it: build the image and request the
+  manifest from the running container (quickstart §3.9). Adding this check to the CI `image` job would
+  go beyond the milestone, so it is not done.
 - **Public**: `/static` is a mount, not a route, and is served to everyone (`core/auth.py`), so a
   visitor who is not signed in gets every file, and so does the browser's credential-less manifest
   fetch.

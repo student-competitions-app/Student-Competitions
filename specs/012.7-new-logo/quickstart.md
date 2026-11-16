@@ -1,6 +1,6 @@
 # Quickstart: Validating the New Logo (Milestone 12.7)
 
-Run from the repository root on branch `012.7_new_logo`. The sections are in order: automated checks
+Run from the repository root on branch `012.7-new-logo`. The sections are in order: automated checks
 first, then searches for leftovers, the checks by hand, the approval, and the image set.
 
 ## 1. Automated checks
@@ -9,7 +9,7 @@ first, then searches for leftovers, the checks by hand, the approval, and the im
 uv sync --locked
 uv run ruff check . && uv run ruff format --check .
 uv run pytest                                              # SQLite
-TEST_POSTGRES_URL=postgresql+psycopg://… uv run pytest     # both engines (sc-pg container)
+TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest   # both engines (sc-pg container)
 ```
 
 Expected: everything passes, with no test skipped because of this milestone. The tests of
@@ -49,9 +49,9 @@ for screenshots: `uv run --no-project --with playwright`, not a dependency.
    44 × 44, the role label sits beside it without overlap, and nothing wraps.
 3. **The frame.** At 360 × 640 and 375 × 667, in both languages, measure the bottom of `.frame` on
    `/teacher/students` and on `/admin/teachers`. It must be under 176 px
-   (`--sc-frame-clearance-tabs`). Write the four largest numbers into ui-guidelines §4 under "Last
-   measured in milestone 12.7". Milestone 12.5 measured 153 px and 109 px, and the bar's height has not
-   changed.
+   (`--sc-frame-clearance-tabs`). Record every number in **Measurements** below. The largest ones then
+   go into ui-guidelines §4 under "Last measured in milestone 12.7". Milestone 12.5 measured 153 px and
+   109 px, and the bar's height has not changed.
 4. **Device.** Choose **Device** in the theme switch. Open `/admin/components#identity` with JavaScript
    disabled. In the developer tools, switch "Emulate CSS prefers-color-scheme" between light and dark:
    the three marks switch between dark and light ink. The top bar's mark stays light ink.
@@ -67,6 +67,29 @@ for screenshots: `uv run --no-project --with playwright`, not a dependency.
    - On Android, a round or squircle mask leaves the whole emblem visible.
 8. **Accessibility.** With VoiceOver or NVDA, the brand link reads «Студентські змагання» (or "Student
    Competitions" in English) at both widths, and the image is not announced.
+9. **Types in the image.** Build and run the image as in README "Run the packaged application", then
+   check the response headers:
+   - `curl -sI http://localhost:8000/static/img/logo/site.webmanifest` gives `content-type:
+     application/manifest+json`;
+   - `…/favicon.ico` gives `image/x-icon` or `image/vnd.microsoft.icon`.
+
+   This covers the runtime image, which the test suite does not (research R6).
+
+### Measurements
+
+Filled in by task T013, and read by T031 for ui-guidelines §4. The top bar is one 64 px row in all 8
+combinations of check 2: ☐ (tick when confirmed).
+
+| Page | Viewport | Language | Bottom of `.frame` (px) |
+|---|---|---|---|
+| `/teacher/students` | 360 × 640 | uk | |
+| `/teacher/students` | 360 × 640 | en | |
+| `/teacher/students` | 375 × 667 | uk | |
+| `/teacher/students` | 375 × 667 | en | |
+| `/admin/teachers` | 360 × 640 | uk | |
+| `/admin/teachers` | 360 × 640 | en | |
+| `/admin/teachers` | 375 × 667 | uk | |
+| `/admin/teachers` | 375 × 667 | en | |
 
 ## 4. Design approval
 

@@ -70,7 +70,7 @@ modules.
 
 **Purpose**: The script's libraries, locked but never installed by CI or the image.
 
-- [ ] T001 Add the non-default dependency group `logo = ["numpy>=2.1", "pillow>=11.1"]` under
+- [X] T001 Add the non-default dependency group `logo = ["numpy>=2.1", "pillow>=11.1"]` under
   `[dependency-groups]` in `pyproject.toml`, next to `dev`. Do not set `[tool.uv] default-groups`.
   Run `uv lock` to record the group in `uv.lock`, then confirm:
   - `uv lock --check` passes;
@@ -86,7 +86,7 @@ modules.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T002 Rewrite `scripts/make_logo.py` per contracts/logo-script.md and research R7.
+- [X] T002 Rewrite `scripts/make_logo.py` per contracts/logo-script.md and research R7.
   - **Structure**: a module docstring with the command `uv run --group logo scripts/make_logo.py`,
     and a `main()` behind `if __name__ == "__main__"`.
   - **Arguments and paths**: no arguments. `ROOT = Path(__file__).resolve().parents[1]`,
@@ -122,7 +122,7 @@ modules.
     scripts/make_logo.py` pass.
 
   (FR-020–FR-024)
-- [ ] T003 Run `uv run --group logo scripts/make_logo.py` and check its result:
+- [X] T003 Run `uv run --group logo scripts/make_logo.py` and check its result:
   - `app/static/img/logo/` holds exactly 28 files: 19 `logo-*.png`, the 8 icons and
     `site.webmanifest`;
   - `og-image.png`, `logo-{dark,light}-{256,512,1024}.png` and `logo-header-{32,64,96}.png` are

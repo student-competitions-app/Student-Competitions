@@ -78,18 +78,19 @@ for screenshots: `uv run --no-project --with playwright`, not a dependency.
 ### Measurements
 
 Filled in by task T013, and read by T031 for ui-guidelines §4. The top bar is one 64 px row in all 8
-combinations of check 2: ☐ (tick when confirmed).
+combinations of check 2: ☑ (confirmed 2026-11-16, headless Chromium at 2× density: the bar
+64 px, the mark 44 × 44, the role label 8 px beside it).
 
 | Page | Viewport | Language | Bottom of `.frame` (px) |
 |---|---|---|---|
-| `/teacher/students` | 360 × 640 | uk | |
-| `/teacher/students` | 360 × 640 | en | |
-| `/teacher/students` | 375 × 667 | uk | |
-| `/teacher/students` | 375 × 667 | en | |
-| `/admin/teachers` | 360 × 640 | uk | |
-| `/admin/teachers` | 360 × 640 | en | |
-| `/admin/teachers` | 375 × 667 | uk | |
-| `/admin/teachers` | 375 × 667 | en | |
+| `/teacher/students` | 360 × 640 | uk | 153 |
+| `/teacher/students` | 360 × 640 | en | 153 |
+| `/teacher/students` | 375 × 667 | uk | 153 |
+| `/teacher/students` | 375 × 667 | en | 153 |
+| `/admin/teachers` | 360 × 640 | uk | 153 |
+| `/admin/teachers` | 360 × 640 | en | 153 |
+| `/admin/teachers` | 375 × 667 | uk | 109 |
+| `/admin/teachers` | 375 × 667 | en | 153 |
 
 ## 4. Design approval
 

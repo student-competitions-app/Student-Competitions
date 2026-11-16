@@ -244,7 +244,7 @@ Check the ink, the size, the sharpness, the bar's height and the brand link's an
 - [X] T012 [US1] Run `uv run pytest tests/integration/test_layout.py tests/unit/test_frame_stylesheet.py
   tests/unit/test_stylesheet.py`. Everything passes except the favicon assertion of `assert_identity`,
   which T015 changes. (depends on T009–T011)
-- [ ] T013 [US1] Check by hand per quickstart §3.2 and §3.8, with the application running locally and
+- [X] T013 [US1] Check by hand per quickstart §3.2 and §3.8, with the application running locally and
   Playwright run ad hoc (`uv run --no-project --with playwright`):
   - at 360 px and 375 px, signed out and with a teacher's role shown, in Ukrainian and English (8
     combinations), the top bar is 64 px tall, the mark is 44 × 44 and the role label does not overlap

@@ -327,7 +327,7 @@ tools with JavaScript off. Render the component with an unknown size (quickstart
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T020 [P] [US3] In `tests/unit/test_templates.py`, after the existing refusals, add:
+- [X] T020 [P] [US3] In `tests/unit/test_templates.py`, after the existing refusals, add:
   - `test_logo_mark_refuses_an_unknown_size`, parametrised over `"xl"` and `""`, and
     `test_logo_mark_refuses_a_top_bar_size_other_than_md`, parametrised over `sm` and `lg`;
   - `test_logo_mark_needs_a_theme_off_the_top_bar`: no theme, and `"sepia"`.
@@ -343,7 +343,7 @@ tools with JavaScript off. Render the component with an unknown size (quickstart
     the light-ink srcset, and whose `<img>` has the dark-ink one.
 
   Every `<img>` has `alt=""` and `aria-hidden="true"`. (FR-007–FR-011, FR-033)
-- [ ] T021 [P] [US3] In `tests/integration/test_component_gallery.py`, add
+- [X] T021 [P] [US3] In `tests/integration/test_component_gallery.py`, add
   `test_the_identity_marks_follow_the_theme`, parametrised over `light`, `dark` and `device` (the
   `sc_theme` cookie on `admin_client`; for `device`, no cookie). The `#identity` section holds three
   logo marks with classes `logo-mark-lg`, `logo-mark-md` and `logo-mark-sm`, in that order:
@@ -357,11 +357,11 @@ tools with JavaScript off. Render the component with an unknown size (quickstart
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Run `uv run pytest tests/unit/test_templates.py
+- [X] T022 [US3] Run `uv run pytest tests/unit/test_templates.py
   tests/integration/test_component_gallery.py`. If a test fails, fix `components/icons.html` (T004) or
   `pages/admin/components.html` (T006) to match contracts/components.md, never the test.
   (depends on T020, T021)
-- [ ] T023 [US3] Check by hand per quickstart §3.4 and §3.5, with JavaScript disabled:
+- [X] T023 [US3] Check by hand per quickstart §3.4 and §3.5, with JavaScript disabled:
   - with **Device** chosen, `/admin/components#identity` switches between dark and light ink when
     "Emulate CSS prefers-color-scheme" is switched, and the top bar's mark stays light ink;
   - the Network panel shows one `logo-*.png` per mark: `logo-light-44.png` (or 88/132) below 768 px

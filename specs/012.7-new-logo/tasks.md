@@ -196,7 +196,7 @@ Check the ink, the size, the sharpness, the bar's height and the brand link's an
 
 > Write these tests first and check that they fail before T011 and T012.
 
-- [ ] T009 [P] [US1] In `tests/integration/test_layout.py`, rewrite `assert_identity` for the image
+- [X] T009 [P] [US1] In `tests/integration/test_layout.py`, rewrite `assert_identity` for the image
   mark (keep `FAVICONS` for US2 to replace in T015). The brand link (`brand(body)`) holds exactly one
   element with class `logo-mark`. That element:
   - is an `<img>` with class `logo-mark-top-bar`, `alt=""` and `aria-hidden="true"`;
@@ -210,7 +210,7 @@ Check the ink, the size, the sharpness, the bar's height and the brand link's an
   signed in (`admin_client`): with `sc_lang=uk`, the brand link's text is «Студентські змагання» and
   the mark contributes no text; without the cookie it is "Student Competitions". (FR-001, FR-005,
   FR-031)
-- [ ] T010 [P] [US1] In `tests/unit/test_frame_stylesheet.py`, add
+- [X] T010 [P] [US1] In `tests/unit/test_frame_stylesheet.py`, add
   `test_the_top_bar_mark_is_a_touch_target_on_a_phone`:
   - top level, `rule(".logo-mark-top-bar", top_level_rules())` sets `width` and `height` to
     `var(--sc-touch-target)`;
@@ -227,7 +227,7 @@ Check the ink, the size, the sharpness, the bar's height and the brand link's an
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] In `app/static/css/app.css`:
+- [X] T011 [US1] In `app/static/css/app.css`:
   - Change `.logo-mark-top-bar` to `width: var(--sc-touch-target); height: var(--sc-touch-target);`.
   - In the existing `@media (min-width: 768px)` block nearest the icons section, or a new one right
     after the rule, set `.logo-mark-top-bar { width: 2rem; height: 2rem; }`.
@@ -241,7 +241,7 @@ Check the ink, the size, the sharpness, the bar's height and the brand link's an
 
   Search `app.css` for any other `2rem` that assumes the mark's width; research R5 found none.
   (FR-002–FR-004, depends on T010)
-- [ ] T012 [US1] Run `uv run pytest tests/integration/test_layout.py tests/unit/test_frame_stylesheet.py
+- [X] T012 [US1] Run `uv run pytest tests/integration/test_layout.py tests/unit/test_frame_stylesheet.py
   tests/unit/test_stylesheet.py`. Everything passes except the favicon assertion of `assert_identity`,
   which T015 changes. (depends on T009–T011)
 - [ ] T013 [US1] Check by hand per quickstart §3.2 and §3.8, with the application running locally and

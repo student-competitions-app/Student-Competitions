@@ -1041,8 +1041,8 @@ details.language-switch[open] > summary {
   height: var(--sc-flag-height);
 }
 
-/* Icons (components/icons.html): the logo mark's tile and spark take the top bar's deep blue and
-   the accent amber; the line icons draw in the current text colour. */
+/* Icons (components/icons.html): the logo mark is the emblem image (milestone 12.7), light ink on
+   the top bar and following the theme elsewhere; the line icons draw in the current text colour. */
 .logo-mark {
   display: block;
   flex: none;
@@ -1063,12 +1063,9 @@ details.language-switch[open] > summary {
   height: 4rem;
 }
 
-.logo-mark-tile {
-  fill: var(--sc-top-bar);
-}
-
-.logo-mark-spark {
-  fill: var(--sc-accent);
+.logo-mark-top-bar {
+  width: 2rem;
+  height: 2rem;
 }
 
 .icon {

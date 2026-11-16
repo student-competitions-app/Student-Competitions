@@ -17,7 +17,7 @@
 <header class="top-bar">
   <div class="container">
     {%- set brand_class = "brand brand-with-role" if user and role else "brand" %}
-    <a href="/" class="{{ brand_class }}">{{ logo_mark() }}<span class="brand-name">{{ app_name }}</span></a>
+    <a href="/" class="{{ brand_class }}">{{ logo_mark("md", top_bar=True) }}<span class="brand-name">{{ app_name }}</span></a>
     {%- if user and role %}
     <span class="brand-role">{{ role.label }}</span>
     {%- endif %}

@@ -131,7 +131,7 @@ modules.
 
   Open `logo-light-44.png`, `logo-dark-64.png` and `favicon-32.png` to check them by eye. Commit the
   folder as the script left it. (FR-018–FR-020, depends on T001, T002)
-- [ ] T004 Rewrite `logo_mark` in `app/templates/components/icons.html` as
+- [X] T004 Rewrite `logo_mark` in `app/templates/components/icons.html` as
   `logo_mark(size="md", theme=none, top_bar=False)`, exactly per contracts/components.md.
   - **Errors** (`template_error`, before any markup):
     - an unknown size: "logo_mark: size must be sm, md or lg" (unchanged);
@@ -156,15 +156,15 @@ modules.
     longer mentions inline SVG or `favicon.svg`.
 
   (FR-005, FR-007–FR-011)
-- [ ] T005 [P] In `app/templates/components/frame.html`, `top_bar` calls
+- [X] T005 [P] In `app/templates/components/frame.html`, `top_bar` calls
   `logo_mark("md", top_bar=True)` inside the brand link. Nothing else changes: the wordmark span, the
   `brand-with-role` class and the role label stay. Update the header comment's mention of "the logo"
   only if it describes the SVG. (FR-001, FR-006, depends on T004)
-- [ ] T006 [P] In `app/templates/pages/admin/components.html`, the **Identity** row becomes
+- [X] T006 [P] In `app/templates/pages/admin/components.html`, the **Identity** row becomes
   `{{ logo_mark("lg", theme) }}{{ logo_mark("md", theme) }}{{ logo_mark("sm", theme) }}`, passing the
   context's `theme` explicitly. The swatches, including `--sc-accent` and `--sc-on-accent`, are
   unchanged. (FR-012, FR-030, depends on T004)
-- [ ] T007 In `app/static/css/app.css`, icons section:
+- [X] T007 In `app/static/css/app.css`, icons section:
   - Delete `.logo-mark-tile` and `.logo-mark-spark`.
   - Add `.logo-mark-top-bar { width: 2rem; height: 2rem; }`. This is the size the top bar's mark has
     from 768 px, and US1 (T011) adds the phone size.
@@ -174,7 +174,7 @@ modules.
 
   Run `uv run pytest tests/unit/test_stylesheet.py tests/unit/test_frame_stylesheet.py` and check it
   passes. (FR-029, depends on T004)
-- [ ] T008 Run `uv run pytest tests/integration/test_layout.py tests/integration/test_component_gallery.py`.
+- [X] T008 Run `uv run pytest tests/integration/test_layout.py tests/integration/test_component_gallery.py`.
   Only the identity tests that look for the inline `<svg class="logo-mark">` and the old favicons may
   fail; US1 and US2 rewrite them. Every other test passes. (depends on T005–T007)
 

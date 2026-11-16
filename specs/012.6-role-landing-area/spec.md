@@ -117,8 +117,9 @@ mention of its name in both languages.
    **Then** it has no link to `/staff` and no mention of the Staff area: neither "Staff area" nor
    «Розділ працівників».
 3. **Given** a sign-in whose return address is `/staff` (an old bookmark), **When** the code is accepted,
-   **Then** the person gets the **Page not found** page, and its back link leads to their area (User
-   Story 5).
+   **Then** the person gets the **Page not found** page. An unknown address never reads the session, so
+   its back link is "Back to the home page" (User Story 5, FR-016). It leads to `/`, and from there to
+   the person's area.
 
 ---
 
@@ -170,11 +171,12 @@ and a person with several roles who has not chosen one, and read the back link.
 2. **Given** the current role is **Teacher**, **When** the profile page or the error page is shown,
    **Then** the back link reads "Back to the teacher area" («Назад до розділу педагога») and leads to
    `/teacher`.
-3. **Given** the current role is **Student**, or the person has several roles and has not chosen one,
-   **When** the profile page or the error page is shown, **Then** the back link reads "Back to the home
-   page" and leads to `/`, as today.
-4. **Given** a signed-out visitor, or a person whose current role cannot be read, **When** the error page
-   is shown, **Then** the back link reads "Back to the home page" and leads to `/`, as today.
+3. **Given** the current role is **Student**, **When** the profile page or the error page is shown,
+   **Then** the back link reads "Back to the home page" and leads to `/`, as today.
+4. **Given** a signed-out visitor, a person with several roles who has not chosen one, or a person whose
+   current role is not read (as on any unknown address), **When** the error page is shown, **Then** the
+   back link reads "Back to the home page" and leads to `/`, as today. The profile page needs a chosen
+   role, so it is never shown without one.
 5. **Given** the "data erased" page, which is shown to a signed-out person, **When** it is shown, **Then**
    its link does not change.
 6. **Given** a teacher who opens an administrator page, **When** they get **403 Access denied**, **Then**
@@ -242,6 +244,12 @@ Staff area and for the staff home page, and run the catalogue checks and the ful
   the "data unavailable" notice when the database cannot be read, and the database line in the footer.
 - **A 403 or 404 for a person with several roles and no chosen role.** The error page's back link stays
   "Back to the home page", which leads to the role choice.
+- **An unknown address for a signed-in administrator or teacher.** An address the application does not
+  have never reads the session, so its page looks the same for everyone. Its back link is "Back to the
+  home page", and following it lands an administrator or a teacher in their area through `/`. **Access denied** reads the
+  session, so its back link names the person's area. A refused cross-site request is turned away before
+  the session is read, so its back link is "Back to the home page". The areas' own "not found"
+  pages (an unknown subject, region or competition) keep their own back links and do not change.
 
 ## Requirements *(mandatory)*
 
@@ -293,7 +301,7 @@ Staff area and for the staff home page, and run the catalogue checks and the ful
   teacher area" («Назад до розділу педагога») and lead to `/teacher`.
 - **FR-016**: In every other case the back link MUST stay "Back to the home page", leading to `/`. That
   covers a student, a person with several roles and no current role, a signed-out visitor, and a person
-  whose current role cannot be read.
+  whose current role is not read: an unknown address, or a session that cannot be read.
 - **FR-017**: The link on the "data erased" page MUST NOT change.
 - **FR-018**: The new labels MUST follow the UI guidelines' "Back to {parent}" pattern and the Ukrainian
   glossary's area names («Розділ адміністратора», «Розділ педагога»), in the existing back-link
@@ -327,6 +335,8 @@ Staff area and for the staff home page, and run the catalogue checks and the ful
   teacher, the home page for a student, and sign-in for a signed-out visitor. For `/staff` it means 404
   for every role and for a signed-out visitor.
 - **FR-026**: The whole test suite MUST pass on both database engines, and the style checks MUST pass.
+  The pipeline's smoke checks of the built image, which sign in as an administrator and read the
+  database line, MUST follow the new landing and keep passing.
 - **FR-027**: The README MUST describe the new behaviour: where administrators and teachers land, the
   home page as the student's page, the database line, and the areas paragraph without the Staff area.
 - **FR-028**: The UI guidelines MUST describe the new behaviour: the top bar (the brand link leads to `/`,

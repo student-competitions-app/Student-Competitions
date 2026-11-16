@@ -19,10 +19,3 @@
 {{ notice(_("Question data is temporarily unavailable. Please try again in a moment."), "info") }}
 {% endif %}
 {% endblock %}
-
-{% block footer_extra %}
-{% if data_available %}
-{%- set revision %}<code>{{ db_status.revision }}</code>{% endset %}
-<p data-engine="{{ db_status.engine }}" data-revision="{{ db_status.revision }}" data-boots="{{ db_status.boots }}">{{ _("Database: %(engine)s · schema revision %(revision)s · boot #%(boots)d", engine=db_status.display_name, revision=revision, boots=db_status.boots) }}</p>
-{% endif %}
-{% endblock %}

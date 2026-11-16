@@ -9,7 +9,7 @@
 {% block title %}{{ _("Your profile") }} — {{ app_name }}{% endblock %}
 
 {% block content %}
-{{ back_link("/", _("Back to the home page")) }}
+{{ back_link(back.path, back.label) }}
 {{ page_heading(_("Your profile")) }}
 {% set named = person.first_name is not none %}
 {% call(label) details_list([

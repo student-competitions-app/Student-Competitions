@@ -5,8 +5,8 @@ on `app.routers.admin`: the tabs are declared once, in `TEACHER_TABS`, and every
 renders them through `render_teacher` and `layouts/teacher.html`, which marks the current tab.
 Tabs are ordinary links: no script (FR-047).
 
-`GET /teacher` keeps milestone 5's address (the home page links to it through
-`areas.TEACHER_AREA`) and sends the browser on to the first tab. The Students tab lives in
+`GET /teacher` keeps milestone 5's address, where `/` sends a teacher since milestone 12.6
+(`areas.TEACHER_AREA`), and sends the browser on to the first tab. The Students tab lives in
 `app.routers.teacher_students`, the Teams tab in `app.routers.teacher_teams` (milestone 11.1), the
 Questions tab in `app.routers.teacher_questions` (milestone 11) and the Competitions tab in
 `app.routers.teacher_competitions` (milestone 12.1).

@@ -107,7 +107,7 @@ def test_the_full_flow_from_a_requested_page(
 
 @pytest.mark.parametrize(
     ("path", "location"),
-    [("/", "/role?next=%2F"), ("/staff?x=1", "/role?next=%2Fstaff%3Fx%3D1")],
+    [("/", "/role?next=%2F"), ("/teacher/teams?x=1", "/role?next=%2Fteacher%2Fteams%3Fx%3D1")],
 )
 def test_every_page_waits_for_the_choice(client_as: ClientAs, path: str, location: str) -> None:
     """US3-3, FR-014."""
@@ -210,7 +210,8 @@ def test_a_single_role_sign_in_never_visits_the_role_choice(
     client: TestClient, outbox: list[EmailMessage]
 ) -> None:
     """SC-003."""
-    request_code(client, email=TEACHER_EMAIL, next_path="/staff")
-    response = submit_code(client, code_from(outbox[-1]), email=TEACHER_EMAIL, next_path="/staff")
-    assert response.headers["location"] == "/staff"
-    assert client.get("/staff", follow_redirects=False).status_code == 200
+    next_path = "/teacher/teams"
+    request_code(client, email=TEACHER_EMAIL, next_path=next_path)
+    response = submit_code(client, code_from(outbox[-1]), email=TEACHER_EMAIL, next_path=next_path)
+    assert response.headers["location"] == next_path
+    assert client.get(next_path, follow_redirects=False).status_code == 200

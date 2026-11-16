@@ -321,7 +321,7 @@ def test_editing_keeps_the_teacher_signed_in(
     sign_in_directly(browser, OLENA)
     form = edit_form(places, first_name="Olha")
     assert admin_client.post(f"/admin/teachers/{user_id}", data=form).status_code == 200
-    assert browser.get("/", follow_redirects=False).status_code == 200
+    assert browser.get("/profile", follow_redirects=False).status_code == 200
 
 
 def test_a_reload_after_saving_repeats_nothing(
@@ -373,7 +373,9 @@ def test_removing_a_teacher_with_no_other_role(
         assert (olena.email, olena.first_name) == (OLENA, "Olena")
         assert session.exec(select(UserSession).where(UserSession.user_id == user_id)).all() == []
         assert len(session.exec(select(ConsentRecord)).all()) == 1
-    assert browser.get("/", follow_redirects=False).status_code == 303
+    signed_out = browser.get("/", follow_redirects=False)
+    assert signed_out.status_code == 303
+    assert signed_out.headers["location"].startswith("/login")
 
 
 def test_removing_an_administrator_who_teaches(
@@ -387,7 +389,9 @@ def test_removing_an_administrator_who_teaches(
         person = session.get(User, user_id)
         assert person is not None and person.is_active
         assert get_roles(session, user_id) == (Role.ADMIN, Role.STUDENT)
-    assert other_browser.get("/", follow_redirects=False).status_code == 303
+    signed_out = other_browser.get("/", follow_redirects=False)
+    assert signed_out.status_code == 303
+    assert signed_out.headers["location"].startswith("/login")
 
 
 @pytest.mark.parametrize("who", ["unknown", "cast-teacher", "administrator", "removed"])

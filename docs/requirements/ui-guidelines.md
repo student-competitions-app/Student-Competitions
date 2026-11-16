@@ -170,13 +170,15 @@ Every page renders the same frame from `layouts/base.html`:
 1. a **skip link**, "Skip to main content", visible when it has focus, shown above the frame;
 2. the **frame**, `<div class="frame">`, which holds:
    1. the **top bar** ([gallery: frame](/admin/components#frame)): the logo mark and the wordmark
-      linking home, the current role's label, the **language switch**
+      linking to `/`, which opens the current role's area (the student's home page for a
+      student; milestone 12.6), the current role's label, the **language switch**
       ([gallery: language](/admin/components#language)) and the **user menu**; signed out, the
       brand and the language switch only;
    2. the **area tabs** of the administrator or teacher area, if the page is in one;
    3. the **loading bar**, hidden until a page load is pending;
 4. `<main>`, at the one content width;
-5. the **footer**: the version and build, and on the home page the database line.
+5. the **footer**: the version and build, and on the administrator area's pages and the student's
+   home page the database line.
 
 The user menu is a native `<details>`, so it opens without JavaScript. It holds, in order, the
 email linking to the profile, the role switch (for a person with several roles), the theme switch
@@ -256,7 +258,9 @@ The full contract, with parameters and emitted markup, is
   A new tab is added to `ADMIN_TABS` or `TEACHER_TABS`, never drawn by a page.
 - **`back_link(href, text)`**: first in `<main>` on every page below an area's main page. The
   target is a fixed address that keeps the page's selection, never the browser's history. The text
-  is "Back to {parent}": "Back to the subjects", "Back to “Kyiv”".
+  is "Back to {parent}": "Back to the subjects", "Back to “Kyiv”". The profile page and the error
+  page lead back to the current role's area, "Back to the administrator area" or "Back to the
+  teacher area", and to the home page for a student or when the role is not known (milestone 12.6).
 - **`page_heading(title, action=None)`**: the page's `h1`, with at most one primary link button
   beside it, for example `page_heading("Subjects", ("Create subject", "/admin/subjects/new"))`.
 - **`section_heading(title, heading_id, action=None, deactivated=False)`**: the `h2` of a section
@@ -306,7 +310,7 @@ _Gallery_: [loading feedback](/admin/components#loading).
 ### Card (`components/card.html`)
 
 **`card(title, href=None, description=None)`** groups related content on a surface. With `href`
-the whole card is the link, as on the home page. Use it for entries the person chooses between, or
+the whole card is the link, as on the student's home page. Use it for entries the person chooses between, or
 to frame one block (a consent record). Do not use it for a list of records: that is a data table.
 _Gallery_: [cards](/admin/components#cards).
 

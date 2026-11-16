@@ -281,12 +281,12 @@ def _(w: World) -> Response:
 
 @case("frame-with-role-switch")
 def _(w: World) -> Response:
-    return w.client_as(ADMIN_STUDENT_EMAIL, Role.ADMIN).get("/")
+    return w.client_as(ADMIN_STUDENT_EMAIL, Role.ADMIN).get("/admin/teachers")
 
 
 @case("frame-single-role")
 def _(w: World) -> Response:
-    return w.admin.get("/")
+    return w.admin.get("/admin/teachers")
 
 
 @case("profile-teacher")

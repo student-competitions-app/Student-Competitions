@@ -95,9 +95,9 @@ def test_a_tab_can_be_reloaded_and_bookmarked(admin_client: TestClient, path: st
     assert admin_client.get(path).text == admin_client.get(path).text
 
 
-@pytest.mark.parametrize("path", ["/", "/staff", "/role"])
+@pytest.mark.parametrize("path", ["/profile"])
 def test_no_tab_row_outside_the_area(admin_client: TestClient, path: str) -> None:
-    """FR-006."""
+    """FR-006. Since milestone 12.6 `/` and `/role` land an administrator inside the area."""
     response = admin_client.get(path)
     assert response.status_code == 200
     assert not has_tab_row(response.text)
@@ -107,11 +107,6 @@ def test_an_unknown_admin_page_is_the_normal_not_found(admin_client: TestClient)
     response = admin_client.get("/admin/unknown")
     assert response.status_code == 404
     assert not has_tab_row(response.text)
-
-
-def test_the_home_page_still_links_to_admin(admin_client: TestClient) -> None:
-    """FR-008."""
-    assert ("/admin", "Administrator area") in html.link_pairs(admin_client.get("/").text, "main")
 
 
 def test_every_subject_page_marks_the_subjects_tab(

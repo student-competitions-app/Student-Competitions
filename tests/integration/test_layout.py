@@ -18,6 +18,7 @@ from tests import html
 from tests.conftest import (
     ADMIN_EMAIL,
     ADMIN_STUDENT_EMAIL,
+    STUDENT_EMAIL,
     TEACHER_EMAIL,
     TEACHER_STUDENT_EMAIL,
     ClientAs,
@@ -42,7 +43,7 @@ def menu_parts(body: str) -> list[tuple[str, str]]:
 
 
 def test_the_user_menu_is_a_details_element_with_a_summary(admin_client: TestClient) -> None:
-    menus = user_menus(admin_client.get("/").text)
+    menus = user_menus(admin_client.get("/admin/teachers").text)
     assert len(menus) == 1
     summaries = menus[0].find_all("summary")
     assert len(summaries) == 1
@@ -51,7 +52,7 @@ def test_the_user_menu_is_a_details_element_with_a_summary(admin_client: TestCli
 
 
 def test_a_single_role_menu_holds_the_profile_link_and_log_out(admin_client: TestClient) -> None:
-    body = admin_client.get("/").text
+    body = admin_client.get("/admin/teachers").text
     assert menu_parts(body) == [("link", "/profile"), ("form", "/theme"), ("form", "/logout")]
     assert ("/profile", ADMIN_EMAIL) in html.link_pairs(body, "details")
     logout = [f for f in html.forms(body, "details") if f.action == "/logout"]
@@ -60,7 +61,7 @@ def test_a_single_role_menu_holds_the_profile_link_and_log_out(admin_client: Tes
 
 def test_several_roles_add_the_role_switch_between_them(client_as: ClientAs) -> None:
     """US2-3: one button per other role, posted to the existing `POST /role`."""
-    body = client_as(ADMIN_STUDENT_EMAIL, Role.ADMIN).get("/").text
+    body = client_as(ADMIN_STUDENT_EMAIL, Role.ADMIN).get("/admin/teachers").text
     assert menu_parts(body) == [
         ("link", "/profile"),
         ("form", "/role"),
@@ -143,16 +144,19 @@ def test_the_identity_on_the_refusal_pages(client_as: ClientAs, admin_client: Te
     assert_identity(refused.text)
 
 
-def test_the_database_line_is_in_the_footer_of_the_home_page_only(
+def test_the_database_line_is_in_the_footer_of_administrator_pages_only(
     admin_client: TestClient,
 ) -> None:
+    """Milestone 12.6 FR-010: the line moved from the home page to the administrator area. The
+    student's home page keeps it too (`test_database_line.py`)."""
+
     def database_lines(body: str) -> list[html.Element]:
         return [e for e in html.parse(body).iter() if "data-engine" in e.attrs]
 
-    (line,) = database_lines(admin_client.get("/").text)
-    assert line.parent is not None and line.parent.tag == "footer"
-    for path in ("/admin/subjects", "/profile"):
-        assert database_lines(admin_client.get(path).text) == [], path
+    for path in ("/admin/teachers", "/admin/subjects"):
+        (line,) = database_lines(admin_client.get(path).text)
+        assert line.parent is not None and line.parent.tag == "footer", path
+    assert database_lines(admin_client.get("/profile").text) == []
 
 
 SCRIPT_SRC = "/static/js/loading-feedback.js"
@@ -161,7 +165,7 @@ PAGE_KINDS = [
     (None, "/login"),
     (None, "/no-such-page"),
     (None, "/data-deletion"),
-    (ADMIN_EMAIL, "/"),
+    (STUDENT_EMAIL, "/"),
     (ADMIN_EMAIL, "/admin/subjects"),
     (ADMIN_EMAIL, "/profile"),
     (TEACHER_EMAIL, "/teacher/students"),

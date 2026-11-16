@@ -53,7 +53,8 @@ jobs:
       # The release is private by default: the home page sends an anonymous visitor to the login
       # page, which serves its form. Reads public responses only, so no credential enters GitHub.
       # The data check ("boot count rose, schema at head") moved to the `image` job, which signs
-      # in for real on every pull request, because the page carrying it now requires signing in
+      # in for real on every pull request, because the page carrying it, the administrator area's
+      # first tab since milestone 12.6, requires signing in
       # (specs/004-email-otp-auth/contracts/pipeline.md#deployyml--deploy).
       - name: Verify access control
         run: ./scripts/verify_private.sh "${{ vars.PUBLIC_BASE_URL }}"

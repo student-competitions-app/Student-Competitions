@@ -6,13 +6,17 @@ stayed put proves the data survived (FR-025, FR-027, FR-028). See
 specs/003-database-questions/data-model.md#4-databasestatus--the-status-line-view.
 """
 
+import logging
 from dataclasses import dataclass
 
 from sqlalchemy import update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from app.core.migrations import current_revision
 from app.models import BootCounter
+
+logger = logging.getLogger(__name__)
 
 DISPLAY_NAMES = {"sqlite": "SQLite", "postgresql": "PostgreSQL"}
 
@@ -55,3 +59,18 @@ def read_database_status(session: Session) -> DatabaseStatus:
         revision=current_revision(session.connection()),
         boots=counter.boots if counter is not None else 0,
     )
+
+
+def read_database_status_or_none(session: Session) -> DatabaseStatus | None:
+    """Read the status line, or log and return `None` when the database cannot be read.
+
+    The line never fails the page that shows it: the home page and every administrator page
+    render without it instead (specs/012.6-role-landing-area FR-013). The error is logged by type
+    and message only, never with the database URL (milestone 3 FR-026). Any other exception is a
+    bug and still propagates.
+    """
+    try:
+        return read_database_status(session)
+    except SQLAlchemyError as exc:
+        logger.error("Database status unavailable: %s: %s", type(exc).__name__, exc)
+        return None

@@ -23,10 +23,14 @@ import app.services.institutions as app_institutions
 import app.services.subjects as app_subjects
 import tests.integration.test_form_contract as contract
 from app.main import app
-from app.models import AccessLevel
+from app.models import AccessLevel, Role
 from app.services.regions import create_region
 from tests import html
 from tests.conftest import (
+    ADMIN_EMAIL,
+    ADMIN_STUDENT_EMAIL,
+    STUDENT_EMAIL,
+    TEACHER_EMAIL,
     TEACHER_STUDENT_EMAIL,
     ClientAs,
     invite,
@@ -128,8 +132,26 @@ def test_an_invalid_role_is_a_form_error(client_as: ClientAs) -> None:
     assert_form_errors(response.text, {}, form_error="Choose one of your roles.")
 
 
-def test_the_profile_starts_with_a_back_link_home(admin_client: TestClient) -> None:
-    assert_back_link(admin_client.get("/profile").text, "/", "Back to the home page")
+@pytest.mark.parametrize(
+    ("email", "role", "language", "href", "text"),
+    [
+        (ADMIN_EMAIL, Role.ADMIN, "en", "/admin", "Back to the administrator area"),
+        (TEACHER_EMAIL, Role.TEACHER, "en", "/teacher", "Back to the teacher area"),
+        (STUDENT_EMAIL, Role.STUDENT, "en", "/", "Back to the home page"),
+        # Several roles, working as a student: it stands in for the milestone's "no role chosen"
+        # case, which cannot reach the profile (spec US5 scenario 4).
+        (ADMIN_STUDENT_EMAIL, Role.STUDENT, "en", "/", "Back to the home page"),
+        (ADMIN_EMAIL, Role.ADMIN, "uk", "/admin", "Назад до розділу адміністратора"),
+        (TEACHER_EMAIL, Role.TEACHER, "uk", "/teacher", "Назад до розділу педагога"),
+    ],
+)
+def test_the_profile_starts_with_a_back_link_to_the_person_s_area(
+    client_as: ClientAs, email: str, role: Role, language: str, href: str, text: str
+) -> None:
+    """Milestone 12.6 US5 scenarios 1–3, FR-014 to FR-016, FR-021, SC-007."""
+    browser = client_as(email, role)
+    browser.cookies.set("sc_lang", language)
+    assert_back_link(browser.get("/profile").text, href, text)
 
 
 def test_the_withdrawal_is_a_confirmation(client: TestClient, client_as: ClientAs) -> None:

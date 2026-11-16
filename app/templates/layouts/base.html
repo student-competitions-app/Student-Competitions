@@ -32,7 +32,10 @@
       <p>
         {{ _("%(app)s v%(version)s · build %(commit)s", app=app_name, version=app_version, commit=commit) }}
       </p>
-      {% block footer_extra %}{% endblock %}
+      {% if db_status %}
+      {%- set revision %}<code>{{ db_status.revision }}</code>{% endset %}
+      <p data-engine="{{ db_status.engine }}" data-revision="{{ db_status.revision }}" data-boots="{{ db_status.boots }}">{{ _("Database: %(engine)s · schema revision %(revision)s · boot #%(boots)d", engine=db_status.display_name, revision=revision, boots=db_status.boots) }}</p>
+      {% endif %}
     </footer>
   </body>
 </html>

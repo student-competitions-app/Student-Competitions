@@ -59,7 +59,8 @@ def _safe_next(value: str | None) -> str | None:
 @router.get("/role", response_class=HTMLResponse)
 def role_choice(request: Request, next_path: str | None = Query(None, alias="next")) -> Response:
     """The role choice: one button per role held, in the fixed order. A person with one role has
-    nothing to choose and goes to the home page (FR-016)."""
+    nothing to choose and goes to `/`, which opens their area or the student's home page (FR-016;
+    specs/012.6-role-landing-area FR-006)."""
     held: tuple[Role, ...] = request.state.roles
     if len(held) == 1:
         return RedirectResponse("/", status_code=303)
@@ -73,7 +74,8 @@ def choose_role(
     role: str = Form(""),
     next_path: str | None = Form(None, alias="next"),
 ) -> Response:
-    """Make `role` this browser's current role and go to `next`, or `/` without one.
+    """Make `role` this browser's current role and go to `next`, or `/` without one, which opens
+    the new role's area or the student's home page (specs/012.6-role-landing-area FR-006).
 
     A missing, unknown or not-held role changes nothing and shows the role choice again with a
     400 (US3-5, US4-6). The landing page is never adjusted to the new role: if it may not open

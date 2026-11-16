@@ -181,7 +181,9 @@ def test_a_teacher_withdraws(
     cleared = response.headers["set-cookie"]
     assert cleared.startswith(f"{SESSION_COOKIE_NAME}=")
     assert "Max-Age=0" in cleared
-    assert other.get("/", follow_redirects=False).status_code == 303
+    signed_out = other.get("/", follow_redirects=False)
+    assert signed_out.status_code == 303
+    assert signed_out.headers["location"].startswith("/login")
     erased = person(user_id)
     assert (erased.first_name, erased.last_name) == (None, None)
     assert erased.email == f"erased-{user_id}"
@@ -221,7 +223,9 @@ def test_an_administrator_who_teaches_withdraws(
         # invitable role too, so withdrawal removes it with the teacher role (milestone 9 FR-044).
         assert get_roles(session, user_id) == (Role.ADMIN,)
     assert "No teachers yet" in admin_client.get("/admin/teachers").text
-    assert browser.get("/", follow_redirects=False).status_code == 303
+    signed_out = browser.get("/", follow_redirects=False)
+    assert signed_out.status_code == 303
+    assert signed_out.headers["location"].startswith("/login")
 
 
 def test_a_removed_teacher_who_is_still_an_administrator_can_withdraw(
@@ -324,7 +328,9 @@ def test_a_student_withdraws(places: dict[str, int], client: TestClient) -> None
     confirmation = browser.get("/profile/withdraw").text
     assert "These roles are removed: Student." in confirmation
     assert browser.post("/profile/withdraw", follow_redirects=False).status_code == 303
-    assert other.get("/", follow_redirects=False).status_code == 303
+    signed_out = other.get("/", follow_redirects=False)
+    assert signed_out.status_code == 303
+    assert signed_out.headers["location"].startswith("/login")
     erased = person(student_id)
     assert (erased.first_name, erased.last_name, erased.email, erased.is_active) == (
         None,

@@ -40,7 +40,7 @@ from tests.conftest import (
     invite_and_accept,
     make_institution,
 )
-from tests.integration.test_login_flow import sign_in
+from tests.integration.test_login_flow import code_from, request_code, sign_in, submit_code
 
 ADMIN, TEACHER, STUDENT = Role.ADMIN, Role.TEACHER, Role.STUDENT
 
@@ -49,31 +49,36 @@ ACCESS_TABLE: dict[str, set[Role]] = {
     "/admin/teachers": {ADMIN},
     "/teacher": {TEACHER},
     "/student": {STUDENT},
-    "/staff": {ADMIN, TEACHER},
 }
 
 TITLES = {
     "/admin/teachers": "Teachers",
     "/teacher": "Teacher area",
     "/student": "Student area",
-    "/staff": "Staff area",
 }
 
 PLACEHOLDER = "The features of this area will arrive in a later milestone."
 """The milestone 5 areas' sentence. The administrator area's tabs have their own (milestone 6)."""
 
-PLACEHOLDER_AREAS = {"/student", "/staff"}
+PLACEHOLDER_AREAS = {"/student"}
 
 REDIRECTS = {"/teacher": "/teacher/students"}
 """Areas whose own address opens their first tab: since milestone 9 the teacher area (FR-047)."""
 
+LANDING = {ADMIN: "/admin", TEACHER: "/teacher"}
+"""Where `/` sends a staff role since milestone 12.6 (FR-001); a student gets the home page."""
+
 SINGLE_ROLE = {ADMIN: ADMIN_EMAIL, TEACHER: TEACHER_EMAIL, STUDENT: STUDENT_EMAIL}
 
-HOME_LINKS = {
-    ADMIN: [("/admin", "Administrator area"), ("/staff", "Staff area")],
-    TEACHER: [("/teacher", "Teacher area"), ("/staff", "Staff area")],
-    STUDENT: [("/student", "Student area")],
+BACK = {
+    ADMIN: ("/admin", "Back to the administrator area"),
+    TEACHER: ("/teacher", "Back to the teacher area"),
+    STUDENT: ("/", "Back to the home page"),
 }
+"""The error page's back link per current role (milestone 12.6 FR-014 to FR-016)."""
+
+HOME_LINKS = {STUDENT: [("/student", "Student area")]}
+"""Since milestone 12.6 only a student sees the home page and its area cards."""
 
 CASES = [(role, path) for role in SINGLE_ROLE for path in ACCESS_TABLE]
 
@@ -87,7 +92,10 @@ def test_the_access_table(client_as: ClientAs, role: Role, path: str) -> None:
     """SC-001, US1-2, US1-3: 3 roles × 5 pages."""
     signed_in = client_as(SINGLE_ROLE[role])
     response = signed_in.get(path, follow_redirects=False)
-    if role in ACCESS_TABLE[path] and path in REDIRECTS:
+    if path == "/" and role in LANDING:
+        assert response.status_code == 303
+        assert response.headers["location"] == LANDING[role]
+    elif role in ACCESS_TABLE[path] and path in REDIRECTS:
         assert response.status_code == 303
         assert response.headers["location"] == REDIRECTS[path]
         tab = signed_in.get(REDIRECTS[path])
@@ -107,8 +115,9 @@ def test_the_access_table(client_as: ClientAs, role: Role, path: str) -> None:
 
 @pytest.mark.parametrize("role", list(SINGLE_ROLE))
 def test_the_access_denied_page(client_as: ClientAs, role: Role) -> None:
-    """FR-025: it names the current role, links home, keeps the header, and reveals nothing of
-    the page it refused."""
+    """FR-025: it names the current role, links back, keeps the header, and reveals nothing of
+    the page it refused. Since milestone 12.6 the link leads to the role's own area (FR-014 to
+    FR-016)."""
     denied = next(path for path in TITLES if role not in ACCESS_TABLE[path])
     response = client_as(SINGLE_ROLE[role]).get(denied)
     body = response.text
@@ -116,16 +125,27 @@ def test_the_access_denied_page(client_as: ClientAs, role: Role) -> None:
     assert html.h1(body) == "Access denied"
     assert re.search(r"<title>Access denied — ", body)
     assert f"Your current role, {role.label}, cannot open this page." in body
-    assert ("/", "Back to the home page") in html.link_pairs(body, "main")
+    assert BACK[role] in html.link_pairs(body, "main")
     assert SINGLE_ROLE[role] in html.text(body, "header")
     assert ("post", "/logout") in html.form_targets(body, "header")
     assert TITLES[denied] not in body
     assert PLACEHOLDER not in body
 
 
-@pytest.mark.parametrize("role", list(SINGLE_ROLE))
+def test_an_unknown_address_links_home(admin_client: TestClient) -> None:
+    """Milestone 12.6 FR-016, research R3: an unknown address and a refused cross-site request
+    are answered before the session is read, so even an administrator gets the home link."""
+    unknown = admin_client.get("/no-such-page")
+    assert unknown.status_code == 404
+    assert ("/", "Back to the home page") in html.link_pairs(unknown.text, "main")
+    refused = admin_client.post("/logout", headers={"Origin": "https://evil.example"})
+    assert refused.status_code == 403
+    assert ("/", "Back to the home page") in html.link_pairs(refused.text, "main")
+
+
+@pytest.mark.parametrize("role", list(HOME_LINKS))
 def test_the_home_page_lists_exactly_the_allowed_areas(client_as: ClientAs, role: Role) -> None:
-    """FR-027, US1-4."""
+    """FR-027, US1-4. Only a student still sees the home page (milestone 12.6 FR-003)."""
     body = client_as(SINGLE_ROLE[role]).get("/").text
     sections = [s for s in html.parse(body).find_all("section") if s.attrs.get("id") == "areas"]
     assert len(sections) == 1, "the home page has no areas section"
@@ -140,6 +160,44 @@ def test_anonymous_visitors_are_sent_to_sign_in(client: TestClient, path: str) -
     response = client.get(path, follow_redirects=False)
     assert response.status_code == 303
     assert response.headers["location"] == f"/login?next={quote(path, safe='')}"
+
+
+@pytest.mark.parametrize("who", ["anonymous", ADMIN_EMAIL, TEACHER_EMAIL, STUDENT_EMAIL])
+def test_the_staff_area_is_an_unknown_address(
+    client: TestClient, client_as: ClientAs, outbox: list[EmailMessage], who: str
+) -> None:
+    """Milestone 12.6 user story 3 (FR-008, FR-009): the empty Staff area is gone. The only test
+    that names it (FR-023), so every check of its absence lives here.
+
+    Its address answers like any unknown one, for every role and signed out. A signed-in person
+    finds no link to it and not its name, in either language, on the page they land on and on
+    their profile. An old bookmark used as a sign-in's return address ends on "Page not found".
+    """
+    browser = client if who == "anonymous" else client_as(who)
+    response = browser.get("/staff", follow_redirects=False)
+    unknown = browser.get("/no-such-page", follow_redirects=False)
+    assert (response.status_code, unknown.status_code) == (404, 404)
+    assert response.text.replace("/staff", "/no-such-page") == unknown.text
+
+    if who == "anonymous":
+        request_code(client, email=TEACHER_EMAIL, next_path="/staff")
+        code = code_from(outbox[-1])
+        signed_in = submit_code(client, code, email=TEACHER_EMAIL, next_path="/staff")
+        assert signed_in.headers["location"] == "/staff"
+        bookmark = client.get("/staff")
+        assert bookmark.status_code == 404
+        assert html.h1(bookmark.text) == "Page not found"
+        assert ("/", "Back to the home page") in html.link_pairs(bookmark.text, "main")
+        return
+
+    for language in ("en", "uk"):
+        browser.cookies.set("sc_lang", language)
+        for path in ("/", "/profile"):
+            body = browser.get(path).text
+            assert html.html_attrs(body)["lang"] == language
+            assert "/staff" not in [link.href for link in html.links(body)], (language, path)
+            assert "Staff area" not in body, (language, path)
+            assert "Розділ працівників" not in body, (language, path)
 
 
 def test_admin_redirects_to_the_teachers_tab(client_as: ClientAs) -> None:

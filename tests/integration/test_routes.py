@@ -404,8 +404,7 @@ def test_every_declared_page_speaks_the_chosen_language(
     client_as: ClientAs, path: str, allowed: frozenset[Role], language: str, app_name: str
 ) -> None:
     """As the first role allowed, whatever the page answers (the page, a redirect followed, a
-    refusal or a 404): `<html lang>` and the application's name in the `<title>` (last, but first
-    on the home page). The gallery is
+    refusal or a 404): `<html lang>` and the application's name in the `<title>`. The gallery is
     checked for its frame only: its content stays English (FR-027)."""
     role = min(allowed, key=list(Role).index)
     browser = client_as(SINGLE_ROLE[role])

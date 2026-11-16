@@ -535,7 +535,7 @@ read correctly (quickstart §6).
 
 **Purpose**: The whole suite, style, the milestones document and the final quickstart pass.
 
-- [ ] T034 Run `uv run ruff check .` and `uv run ruff format --check .` (the script included), then
+- [X] T034 Run `uv run ruff check .` and `uv run ruff format --check .` (the script included), then
   `uv run pytest` and `TEST_POSTGRES_URL=… uv run pytest` (the `sc-pg` container). Everything passes,
   with no test skipped because of this milestone. (FR-037, SC-010)
 - [ ] T035 In `docs/requirements/milestones.md`, once the approval (T026) is recorded and the PR is

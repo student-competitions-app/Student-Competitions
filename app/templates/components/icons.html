@@ -10,11 +10,11 @@
     The line icons are inline SVG: no request, and they draw in the current text colour. -#}
 
 {%- macro _logo_path(ink, px) -%}
-/static/img/logo/logo-{{ ink }}-{{ px }}.png
+{{ "/static/img/logo/logo-%s-%d.png" % (ink, px) }}
 {%- endmacro %}
 
 {%- macro _logo_densities(ink, px) -%}
-{{ _logo_path(ink, px) }} 1x, {{ _logo_path(ink, 2 * px) }} 2x, {{ _logo_path(ink, 3 * px) }} 3x
+{{ _logo_path(ink, px) ~ " 1x, " ~ _logo_path(ink, 2 * px) ~ " 2x, " ~ _logo_path(ink, 3 * px) ~ " 3x" }}
 {%- endmacro %}
 
 {% macro logo_mark(size="md", theme=none, top_bar=False) -%}

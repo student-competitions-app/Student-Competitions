@@ -90,11 +90,31 @@ def test_signed_out_there_is_no_user_menu(client: TestClient) -> None:
 # User story 6: the identity on every kind of page (FR-008, FR-018, FR-021, FR-036)
 # ---------------------------------------------------------------------------------------------
 
-FAVICONS = [
-    "/static/img/favicon.svg",
-    "/static/img/favicon-32.png",
-    "/static/img/apple-touch-icon.png",
+ICON_LINKS = [
+    {"rel": "icon", "href": "/static/img/logo/favicon.ico", "sizes": "16x16 32x32 48x48"},
+    {
+        "rel": "icon",
+        "href": "/static/img/logo/favicon-16.png",
+        "sizes": "16x16",
+        "type": "image/png",
+    },
+    {
+        "rel": "icon",
+        "href": "/static/img/logo/favicon-32.png",
+        "sizes": "32x32",
+        "type": "image/png",
+    },
+    {
+        "rel": "icon",
+        "href": "/static/img/logo/favicon-48.png",
+        "sizes": "48x48",
+        "type": "image/png",
+    },
+    {"rel": "apple-touch-icon", "href": "/static/img/logo/apple-touch-icon.png"},
+    {"rel": "manifest", "href": "/static/img/logo/site.webmanifest"},
 ]
+"""Milestone 12.7 FR-015, contracts/static-assets.md §2: the favicons, the touch icon and the
+manifest, on every page."""
 
 
 def brand(body: str) -> html.Element:
@@ -133,8 +153,9 @@ def assert_identity(body: str) -> None:
     assert_top_bar_mark(home)
     page = html.parse(body)
     assert not [svg for svg in page.find_all("svg") if "logo-mark" in svg.classes()]
-    icons = [link.attrs.get("href") for link in page.find_all("link")]
-    assert all(icon in icons for icon in FAVICONS)
+    links = [link.attrs for link in page.find_all("link")]
+    for expected in ICON_LINKS:
+        assert any(expected.items() <= attrs.items() for attrs in links), expected
     assert f"v{APP_VERSION}" in html.text(body, "footer")
 
 

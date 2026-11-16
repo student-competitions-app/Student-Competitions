@@ -273,7 +273,7 @@ tab; add to a phone's home screen (quickstart §3.6, §3.7).
 
 > Write these tests first and check that they fail before T016.
 
-- [ ] T014 [P] [US2] Create `tests/integration/test_logo.py`, with a module docstring citing milestone
+- [X] T014 [P] [US2] Create `tests/integration/test_logo.py`, with a module docstring citing milestone
   12.7 spec FR-013–FR-017 and contracts/static-assets.md. Add:
   - `ICON_LINKS`: the six `(rel, href)` pairs of contracts/static-assets.md §2.
   - `test_every_icon_and_the_manifest_answer_to_a_signed_out_visitor`, parametrised over the nine
@@ -285,7 +285,7 @@ tab; add to a phone's home screen (quickstart §3.6, §3.7).
     "Студентські змагання", `start_url` == "/", `display` == "browser", and `theme_color` ==
     `background_color` == "#16337a". Its `icons` are exactly the three of §3, the maskable one with
     `purpose` "maskable", and each `src` answers 200 as `image/png`.
-- [ ] T015 [P] [US2] In `tests/integration/test_layout.py`, replace `FAVICONS` with the six links of
+- [X] T015 [P] [US2] In `tests/integration/test_layout.py`, replace `FAVICONS` with the six links of
   contracts/static-assets.md §2. `assert_identity` checks that the page's `<link>` elements include
   each of them, with their `rel`, `href`, `sizes` and `type` where given. The identity tests already
   run on the sign-in page, signed-in pages, not-found and refusal pages, so every kind of page is
@@ -293,14 +293,14 @@ tab; add to a phone's home screen (quickstart §3.6, §3.7).
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] In `app/templates/layouts/base.html`, replace the three old icon links
+- [X] T016 [US2] In `app/templates/layouts/base.html`, replace the three old icon links
   (`/static/img/favicon.svg`, `/static/img/favicon-32.png`, `/static/img/apple-touch-icon.png`) with
   the six links of contracts/static-assets.md §2, in the same place after the font preload.
   (FR-015, depends on T003)
-- [ ] T017 [US2] Delete `app/static/img/favicon.svg`, `app/static/img/favicon-32.png` and
+- [X] T017 [US2] Delete `app/static/img/favicon.svg`, `app/static/img/favicon-32.png` and
   `app/static/img/apple-touch-icon.png` (`git rm`). `app/static/img/` keeps `flag-gb.svg`,
   `flag-ua.svg` and `logo/`. (FR-028, depends on T016)
-- [ ] T018 [US2] Run `uv run pytest tests/integration/test_logo.py tests/integration/test_layout.py`;
+- [X] T018 [US2] Run `uv run pytest tests/integration/test_logo.py tests/integration/test_layout.py`;
   everything passes. If a type differs on this machine (for example `.webmanifest`), stop and revisit
   research R6 rather than loosen the test. (depends on T014–T017)
 - [ ] T019 [US2] Check by hand per quickstart §3.6 and §3.7:

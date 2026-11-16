@@ -1,0 +1,25 @@
+{
+  "name": "Студентські змагання",
+  "start_url": "/",
+  "display": "browser",
+  "theme_color": "#16337a",
+  "background_color": "#16337a",
+  "icons": [
+    {
+      "src": "/static/img/logo/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/img/logo/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/img/logo/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -439,7 +439,8 @@ body > main {
 }
 
 /* The top bar (FR-018): the mark and the name link to `/`; the current role sits under the name on
-   a phone and beside it from 768 px; the user menu is last. */
+   a phone and beside it from 768 px; the user menu is last. The mark is 44 px (the touch target)
+   below 768 px and 2rem from it, and the role label's offset follows it (milestone 12.7). */
 .top-bar {
   background: var(--sc-top-bar);
   color: var(--sc-on-top-bar);
@@ -482,7 +483,7 @@ body > main {
   grid-column: 1;
   grid-row: 2;
   margin-top: calc(-1 * var(--sc-space-1));
-  padding-left: calc(2rem + var(--sc-space-1));
+  padding-left: calc(var(--sc-touch-target) + var(--sc-space-1));
   color: var(--sc-on-top-bar-muted);
   font-size: var(--sc-text-small);
   font-weight: var(--sc-weight-semibold);
@@ -524,7 +525,7 @@ body > main {
   grid-column: 1;
   align-self: center;
   justify-self: start;
-  margin: 0 0 0 calc(2rem + var(--sc-space-1));
+  margin: 0 0 0 calc(var(--sc-touch-target) + var(--sc-space-1));
   padding: 0;
 }
 
@@ -1041,8 +1042,8 @@ details.language-switch[open] > summary {
   height: var(--sc-flag-height);
 }
 
-/* Icons (components/icons.html): the logo mark's tile and spark take the top bar's deep blue and
-   the accent amber; the line icons draw in the current text colour. */
+/* Icons (components/icons.html): the logo mark is the emblem image (milestone 12.7), light ink on
+   the top bar and following the theme elsewhere; the line icons draw in the current text colour. */
 .logo-mark {
   display: block;
   flex: none;
@@ -1063,12 +1064,16 @@ details.language-switch[open] > summary {
   height: 4rem;
 }
 
-.logo-mark-tile {
-  fill: var(--sc-top-bar);
+.logo-mark-top-bar {
+  width: var(--sc-touch-target);
+  height: var(--sc-touch-target);
 }
 
-.logo-mark-spark {
-  fill: var(--sc-accent);
+@media (min-width: 768px) {
+  .logo-mark-top-bar {
+    width: 2rem;
+    height: 2rem;
+  }
 }
 
 .icon {

@@ -216,6 +216,43 @@ def gallery_section(body: str, section_id: str) -> html.Element:
     return found
 
 
+def logo_urls(element: html.Element) -> list[str]:
+    """Every image URL in `element`: each `src`, and each `srcset` candidate without its
+    descriptor."""
+    urls = []
+    for e in element.iter():
+        if "src" in e.attrs:
+            urls.append(e.attrs["src"])
+        urls += [c.split()[0] for c in e.attrs.get("srcset", "").split(",") if c.strip()]
+    return urls
+
+
+@pytest.mark.parametrize("theme", ["light", "dark", "device"])
+def test_the_identity_marks_follow_the_theme(admin_client: TestClient, theme: str) -> None:
+    """Milestone 12.7 FR-011, FR-012: the three marks of Identity take the dark ink in Light, the
+    light ink in Dark, and for Device a `<picture>` that switches to the light ink on a dark
+    scheme, with no script."""
+    if theme != "device":
+        admin_client.cookies.set("sc_theme", theme)
+    section = gallery_section(admin_client.get(GALLERY).text, "identity")
+    marks = [e for e in section.iter() if "logo-mark" in e.classes()]
+    assert [m.classes()[1] for m in marks] == ["logo-mark-lg", "logo-mark-md", "logo-mark-sm"]
+    pictures = section.find_all("picture")
+    if theme == "device":
+        assert len(pictures) == 3
+        for picture, mark in zip(pictures, marks, strict=True):
+            (source,) = picture.find_all("source")
+            assert source.attrs["media"] == "(prefers-color-scheme: dark)"
+            assert all("/logo-light-" in url for url in logo_urls(source))
+            assert mark.parent is picture
+            assert all("/logo-dark-" in url for url in logo_urls(mark))
+    else:
+        assert pictures == []
+        ink = "dark" if theme == "light" else "light"
+        urls = logo_urls(section)
+        assert urls and all(url.startswith(f"/static/img/logo/logo-{ink}-") for url in urls)
+
+
 def test_the_section_heading_variants(admin_client: TestClient) -> None:
     """Milestone 11.1 contracts/components.md §1: four headings, each an `h2` in a page heading,
     one with the badge, one with no action and no row, and one with a 200-character title."""

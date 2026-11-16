@@ -10,6 +10,7 @@ import pytest
 from jinja2 import TemplateRuntimeError
 
 from app.core.templates import templates
+from tests import html
 
 
 def render(source: str, **context: object) -> str:
@@ -184,6 +185,84 @@ def test_competition_status_badge_takes_the_enum() -> None:
 def test_competition_status_badge_refuses_an_unknown_status() -> None:
     with pytest.raises(TemplateRuntimeError, match="unknown status unknown"):
         render(BADGE + '{{ competition_status_badge("unknown") }}')
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.7: the logo mark (contracts/components.md, FR-007–FR-011, FR-033)
+# ---------------------------------------------------------------------------------------------
+
+LOGO = '{% from "components/icons.html" import logo_mark %}'
+LOGO_PATH = "/static/img/logo/logo-{}-{}.png"
+
+
+@pytest.mark.parametrize("size", ["xl", ""])
+def test_logo_mark_refuses_an_unknown_size(size: str) -> None:
+    with pytest.raises(TemplateRuntimeError, match="logo_mark: size must be sm, md or lg"):
+        render(LOGO + "{{ logo_mark(size, 'light') }}", size=size)
+
+
+@pytest.mark.parametrize("size", ["sm", "lg"])
+def test_logo_mark_refuses_a_top_bar_size_other_than_md(size: str) -> None:
+    with pytest.raises(TemplateRuntimeError, match="logo_mark: the top bar's mark is md"):
+        render(LOGO + "{{ logo_mark(size, top_bar=True) }}", size=size)
+
+
+@pytest.mark.parametrize("call", ['logo_mark("md")', 'logo_mark("md", "sepia")'])
+def test_logo_mark_needs_a_theme_off_the_top_bar(call: str) -> None:
+    with pytest.raises(
+        TemplateRuntimeError, match="logo_mark: theme must be light, dark or device"
+    ):
+        render(LOGO + "{{ " + call + " }}")
+
+
+def densities(ink: str, px: int) -> str:
+    return ", ".join(f"{LOGO_PATH.format(ink, n * px)} {n}x" for n in (1, 2, 3))
+
+
+def assert_mark_image(element: html.Element, size: str, ink: str, px: int) -> None:
+    assert element.tag == "img"
+    assert element.classes() == ["logo-mark", f"logo-mark-{size}"]
+    assert element.attrs["src"] == LOGO_PATH.format(ink, px)
+    assert element.attrs["srcset"] == densities(ink, px)
+    assert element.attrs["width"] == element.attrs["height"] == str(px)
+    assert "alt" in element.attrs and element.attrs["alt"] == ""
+    assert element.attrs["aria-hidden"] == "true"
+
+
+@pytest.mark.parametrize(("size", "px"), [("sm", 24), ("md", 32), ("lg", 64)])
+def test_logo_mark_in_each_theme(size: str, px: int) -> None:
+    """Light gives the dark ink, Dark the light ink, and Device a `<picture>` whose dark-scheme
+    source holds the light ink, around the dark-ink image: one file per mark, no script."""
+    for theme, ink in (("light", "dark"), ("dark", "light")):
+        page = html.parse(render(LOGO + "{{ logo_mark(size, theme) }}", size=size, theme=theme))
+        (mark,) = [e for e in page.iter() if e is not page]
+        assert_mark_image(mark, size, ink, px)
+
+    page = html.parse(render(LOGO + "{{ logo_mark(size, 'device') }}", size=size))
+    (picture,) = [e for e in page.children if isinstance(e, html.Element)]
+    assert picture.tag == "picture"
+    source, image = [e for e in picture.children if isinstance(e, html.Element)]
+    assert source.tag == "source"
+    assert source.attrs == {
+        "media": "(prefers-color-scheme: dark)",
+        "srcset": densities("light", px),
+    }
+    assert_mark_image(image, size, "dark", px)
+
+
+def test_logo_mark_on_the_top_bar() -> None:
+    """Light ink in every theme, with width candidates for its 44 px and 2rem slots."""
+    page = html.parse(render(LOGO + '{{ logo_mark("md", top_bar=True) }}'))
+    (mark,) = [e for e in page.iter() if e is not page]
+    assert mark.tag == "img"
+    assert mark.classes() == ["logo-mark", "logo-mark-top-bar"]
+    assert mark.attrs["src"] == LOGO_PATH.format("light", 32)
+    assert mark.attrs["srcset"] == ", ".join(
+        f"{LOGO_PATH.format('light', px)} {px}w" for px in (32, 44, 64, 88, 96, 132)
+    )
+    assert mark.attrs["sizes"] == "(min-width: 768px) 2rem, 2.75rem"
+    assert mark.attrs["width"] == mark.attrs["height"] == "32"
+    assert mark.attrs["alt"] == "" and mark.attrs["aria-hidden"] == "true"
 
 
 def test_local_time_in_the_requests_zone() -> None:

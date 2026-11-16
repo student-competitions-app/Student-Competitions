@@ -146,3 +146,37 @@ def test_the_wordmark_gives_way_on_a_phone_when_a_role_is_shown() -> None:
         if selector == ".brand-with-role .brand-name"
     ]
     assert len(wide) == 1 and "position: static" in wide[0]
+
+
+def _declarations(body: str) -> dict[str, str]:
+    return {
+        name.strip(): _collapse(value)
+        for name, value in (d.split(":", 1) for d in body.split(";") if ":" in d)
+    }
+
+
+def test_the_top_bar_mark_is_a_touch_target_on_a_phone() -> None:
+    """Milestone 12.7 FR-002 and FR-004: the top bar's mark is the touch-target size (44 px) below
+    768 px and 2rem from 768 px, written once each, with no per-breakpoint custom property."""
+    phone = _declarations(rule(".logo-mark-top-bar", top_level_rules()))
+    assert phone["width"] == phone["height"] == "var(--sc-touch-target)"
+    wide = [
+        _declarations(body)
+        for block in media_blocks("(min-width: 768px)")
+        for selector, body in rules(block)
+        if selector == ".logo-mark-top-bar"
+    ]
+    assert len(wide) == 1
+    assert wide[0]["width"] == wide[0]["height"] == "2rem"
+
+
+def test_the_role_label_follows_the_mark_width() -> None:
+    """Milestone 12.7 FR-002 and FR-004: below 768 px the role label sits beside the mark, offset by
+    the mark's width (the touch target) and the brand's gap, not by the old 2rem."""
+    css_rules = top_level_rules()
+    offset = "calc(var(--sc-touch-target) + var(--sc-space-1))"
+    beside = rule(".brand-with-role + .brand-role", css_rules)
+    below = rule(".brand-role", css_rules)
+    assert _declarations(beside)["margin"] == f"0 0 0 {offset}"
+    assert _declarations(below)["padding-left"] == offset
+    assert "2rem" not in beside and "2rem" not in below

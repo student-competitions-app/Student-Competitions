@@ -8,6 +8,9 @@ gallery and this document, and only then used on a page. It is never hand-built 
 They were introduced in milestone 10 ([spec](../../specs/010-design-system-ui-guidelines/spec.md)).
 The approved look is the mockup in
 [`specs/010-design-system-ui-guidelines/mockup/`](../../specs/010-design-system-ui-guidelines/mockup/index.html).
+Its logo mark, an amber spark on a deep-blue tile, was replaced in milestone 12.7 by the engraved
+emblem; its review and approval are recorded in
+[`specs/012.7-new-logo/design-approval.md`](../../specs/012.7-new-logo/design-approval.md).
 The component gallery at `/admin/components` (outside production only, for administrators) shows
 every component in every variant; the section names below link to its parts.
 
@@ -123,7 +126,7 @@ the mapping sets from a token). The only literal `px` values outside the token b
 | `--sc-primary` | Primary buttons, links, current tab | `#1f56d6` | `#6c9cff` |
 | `--sc-on-primary` | Text on primary | `#ffffff` | `#0d1424` |
 | `--sc-primary-tint` | Selection, Write badge, pressed choice | `#e7eefc` | `#1d2c4f` |
-| `--sc-accent` | Logo mark, highlights | `#f2a516` | `#f5b83d` |
+| `--sc-accent` | Highlights | `#f2a516` | `#f5b83d` |
 | `--sc-success` / `--sc-success-tint` | Success, Active badge | `#17803d` / `#e5f5ea` | `#5fcf86` / `#13291c` |
 | `--sc-danger` / `--sc-danger-tint` | Destructive actions, errors | `#c0392b` / `#fdf0ee` | `#ff8a7a` / `#341b19` |
 | `--sc-primary-hover`, `--sc-danger-hover` | Hover and active | `#1a47b3`, `#a02f23` | `#8fb3ff`, `#ffa597` |
@@ -173,7 +176,8 @@ Every page renders the same frame from `layouts/base.html`:
       linking to `/`, which opens the current role's area (the student's home page for a
       student; milestone 12.6), the current role's label, the **language switch**
       ([gallery: language](/admin/components#language)) and the **user menu**; signed out, the
-      brand and the language switch only;
+      brand and the language switch only. The logo mark is the emblem in light ink, 2rem from
+      768 px and the touch-target size (44 px) below (milestone 12.7);
    2. the **area tabs** of the administrator or teacher area, if the page is in one;
    3. the **loading bar**, hidden until a page load is pending;
 4. `<main>`, at the one content width;
@@ -200,14 +204,15 @@ scrolls away with the page.
 focus; a form control keeps `--sc-field-clearance`, so its label and error stay in view (WCAG 2.2,
 2.4.11). The clearances are the tallest frames measured, plus room to spare: a new tab, a longer
 tab label or a taller top bar must be measured again at 360 px and 375 px width against them.
-Last measured in milestone 12.5, with the language switch in the top bar, in Ukrainian and in
-English: below 768 px, when a role is shown, the wordmark is hidden visually (the logo link still
-reads as the application's name) and the role label sits beside the logo, so the top bar stays one
-64 px row (research R15). The teacher area's tabs («Учасники · Команди · Питання · Змагання») and
-the administrator area's («Педагоги · Заклади освіти · Предмети») wrap onto two rows at 360 × 640
-and 375 × 667, and the frame ends at 153 px (the administrator's at 375 × 667 in Ukrainian, on one
-row of tabs, at 109 px): under the 176 px of `--sc-frame-clearance-tabs` and a quarter of a 375 ×
-667 screen (166.75 px). Without the fallback the wordmark wrapped onto two lines under the role.
+Last measured in milestone 12.7, with the 44 px logo mark: at 360 px and 375 px, signed out and
+with a role shown, in Ukrainian and in English, the top bar stays one 64 px row. Below 768 px, when
+a role is shown, the wordmark is hidden visually (the logo link still reads as the application's
+name) and the role label sits beside the mark (milestone 12.5 research R15). The teacher area's
+tabs («Учасники · Команди · Питання · Змагання») and the administrator area's («Педагоги · Заклади
+освіти · Предмети») wrap onto two rows at 360 × 640 and 375 × 667, and the frame ends at 153 px
+(the administrator's at 375 × 667 in Ukrainian, on one row of tabs, at 109 px): under the 176 px of
+`--sc-frame-clearance-tabs` and a quarter of a 375 × 667 screen (166.75 px). Without the fallback
+the wordmark wrapped onto two lines under the role.
 
 **The scripts**: the base layout loads two scripts on every page, each with `defer`, and pages add
 nothing; without JavaScript, links and forms work as before.
@@ -625,9 +630,15 @@ list, labelled "Pages, top" and "Pages, bottom", so the two landmarks can be tol
 
 ### Icons and identity (`components/icons.html`, `components/palette.html`)
 
-**`logo_mark(size)`** and **`icon(name)`** (`account`, `arrow-left`) are inline SVG, hidden from
-assistive technology. **`swatch(token)`** draws a palette chip for the gallery. There is no icon
-font or icon library. _Gallery_: [identity](/admin/components#identity).
+**`logo_mark(size, theme, top_bar)`** shows the emblem as an image, from
+`app/static/img/logo/`, which `scripts/make_logo.py` writes; it is no longer inline SVG. On the top
+bar (`top_bar=True`, size `md`) it is always light ink, 2rem from 768 px and 44 px below. Elsewhere
+it follows the `theme` it is given, with no script: dark ink in **Light**, light ink in **Dark**,
+and for **Device** a `<picture>` whose `prefers-color-scheme: dark` source holds the light ink. Each
+of its sizes (`sm` 1.5rem, `md` 2rem, `lg` 4rem) is sharp at 1×–3× density, and each mark loads one
+file. **`icon(name)`** (`account`, `arrow-left`) stays inline SVG and draws in the current text
+colour. Both are hidden from assistive technology. **`swatch(token)`** draws a palette chip for the
+gallery. There is no icon font or icon library. _Gallery_: [identity](/admin/components#identity).
 
 ## 6. Buttons
 

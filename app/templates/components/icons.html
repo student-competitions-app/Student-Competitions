@@ -1,11 +1,36 @@
 {#- Icons (specs/010-design-system-ui-guidelines contracts/components.md §11, research D13).
-    Inline SVG: no request, and it follows the theme through classes. app/static/img/favicon.svg
-    is the same mark drawn with fixed colours. -#}
 
-{% macro logo_mark(size="md") -%}
+    The logo mark is the emblem image (milestone 12.7 contracts/components.md, research R2–R4),
+    made by scripts/make_logo.py in app/static/img/logo/. On the top bar it is always light ink, one
+    <img> whose width candidates follow its size: 44 px below 768 px and 2rem from it. Elsewhere it
+    follows the theme with no script: dark ink in Light, light ink in Dark, and for Device a
+    <picture> whose `prefers-color-scheme: dark` source holds the light ink. Each mark loads one
+    file, sized for its density, and is decorative: the brand link reads as the application's name.
+
+    The line icons are inline SVG: no request, and they draw in the current text colour. -#}
+
+{%- macro _logo_path(ink, px) -%}
+{{ "/static/img/logo/logo-%s-%d.png" % (ink, px) }}
+{%- endmacro %}
+
+{%- macro _logo_densities(ink, px) -%}
+{{ _logo_path(ink, px) ~ " 1x, " ~ _logo_path(ink, 2 * px) ~ " 2x, " ~ _logo_path(ink, 3 * px) ~ " 3x" }}
+{%- endmacro %}
+
+{% macro logo_mark(size="md", theme=none, top_bar=False) -%}
 {%- if size not in ("sm", "md", "lg") %}{{ template_error("logo_mark: size must be sm, md or lg") }}{% endif -%}
+{%- if top_bar and size != "md" %}{{ template_error("logo_mark: the top bar's mark is md") }}{% endif -%}
+{%- if not top_bar and theme not in ("light", "dark", "device") %}{{ template_error("logo_mark: theme must be light, dark or device") }}{% endif -%}
+{%- if top_bar -%}
+<img class="logo-mark logo-mark-top-bar" src="{{ _logo_path("light", 32) }}" srcset="{% for px in (32, 44, 64, 88, 96, 132) %}{{ _logo_path("light", px) }} {{ px }}w{{ ", " if not loop.last }}{% endfor %}" sizes="(min-width: 768px) 2rem, 2.75rem" width="32" height="32" alt="" aria-hidden="true">
+{%- else -%}
 {%- set logo_class = {"sm": "logo-mark logo-mark-sm", "md": "logo-mark logo-mark-md", "lg": "logo-mark logo-mark-lg"}[size] -%}
-<svg class="{{ logo_class }}" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="logo-mark-tile" width="32" height="32" rx="7"/><path class="logo-mark-spark" d="M15 5.5C15.7 12.2 17.3 14.3 26 15.5C17.3 16.7 15.7 18.8 15 25.5C14.3 18.8 12.7 16.7 4 15.5C12.7 14.3 14.3 12.2 15 5.5Z"/><path class="logo-mark-spark" d="M24.5 4C24.8 6.6 25.4 7.2 28 7.5C25.4 7.8 24.8 8.4 24.5 11C24.2 8.4 23.6 7.8 21 7.5C23.6 7.2 24.2 6.6 24.5 4Z"/></svg>
+{%- set px = {"sm": 24, "md": 32, "lg": 64}[size] -%}
+{%- set ink = "light" if theme == "dark" else "dark" -%}
+{%- if theme == "device" %}<picture><source media="(prefers-color-scheme: dark)" srcset="{{ _logo_densities("light", px) }}">{% endif -%}
+<img class="{{ logo_class }}" src="{{ _logo_path(ink, px) }}" srcset="{{ _logo_densities(ink, px) }}" width="{{ px }}" height="{{ px }}" alt="" aria-hidden="true">
+{%- if theme == "device" %}</picture>{% endif -%}
+{%- endif -%}
 {%- endmacro %}
 
 {% macro icon(name) -%}

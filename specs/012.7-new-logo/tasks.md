@@ -490,7 +490,7 @@ read correctly (quickstart §6).
 
 ### Implementation for User Story 6
 
-- [ ] T031 [US6] In `docs/requirements/ui-guidelines.md`:
+- [X] T031 [US6] In `docs/requirements/ui-guidelines.md`:
   - **Introduction**: after the sentence naming milestone 10's mockup as the approved look, add that
     the logo mark was replaced in milestone 12.7, linking
     [`specs/012.7-new-logo/design-approval.md`](../../specs/012.7-new-logo/design-approval.md).
@@ -522,7 +522,7 @@ read correctly (quickstart §6).
     the emblem's source image, read by scripts/make_logo.py`.
 
   Search `README.md` for "favicon" and "spark" and correct anything stale. (FR-039, depends on T028)
-- [ ] T033 [US6] Run the leftover searches of quickstart §2 and `uv run pytest
+- [X] T033 [US6] Run the leftover searches of quickstart §2 and `uv run pytest
   tests/integration/test_logo.py`. Then confirm with `git diff main -- specs/010-design-system-ui-guidelines
   specs/010.1-loading-feedback-pinned-frame specs/012.5-ukrainian-localisation` that no delivered
   milestone's spec changed. (FR-040, depends on T030–T032)

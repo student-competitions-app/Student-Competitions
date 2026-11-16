@@ -3,13 +3,21 @@ contracts/static-assets.md).
 
 Every icon, the Apple touch icon and the manifest are static files under `/static/img/logo/`,
 written by `scripts/make_logo.py` and served to everyone, signed in or not, with their types. The
-manifest opens the application in the browser. Every test runs once per database engine.
+manifest opens the application in the browser. The folder holds exactly what the pages use
+(FR-018, FR-019), and nothing in the code or the tests still refers to the old mark (FR-028,
+FR-029). Every test runs once per database engine.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+
+from tests import html
+
+ROOT = Path(__file__).resolve().parents[2]
+APP = ROOT / "app"
 
 LOGO = "/static/img/logo/"
 
@@ -74,3 +82,74 @@ def test_the_manifest_opens_the_application_in_the_browser(client: TestClient) -
         response = client.get(icon["src"])
         assert response.status_code == 200
         assert media_type(response.headers["content-type"]) == "image/png"
+
+
+def logo_urls(body: str) -> set[str]:
+    """Every `/static/img/logo/` URL in a page's `src`, `srcset` and `href` attributes."""
+    urls = set()
+    for element in html.parse(body).iter():
+        candidates = [element.attrs.get("src", ""), element.attrs.get("href", "")]
+        candidates += [
+            c.split()[0] for c in element.attrs.get("srcset", "").split(",") if c.strip()
+        ]
+        urls |= {url for url in candidates if url.startswith(LOGO)}
+    return urls
+
+
+def test_the_logo_folder_holds_only_what_is_used(
+    client: TestClient, admin_client: TestClient
+) -> None:
+    """FR-018, FR-019, SC-006: the sign-in page, the gallery in Light and in Dark and the manifest
+    refer to exactly the files of the folder: none is missing, none is unused."""
+    used = logo_urls(client.get("/login").text)
+    for theme in ("light", "dark"):
+        admin_client.cookies.set("sc_theme", theme)
+        used |= logo_urls(admin_client.get("/admin/components").text)
+    manifest = json.loads(client.get(f"{LOGO}site.webmanifest").content.decode("utf-8"))
+    used |= {icon["src"] for icon in manifest["icons"]} | {f"{LOGO}site.webmanifest"}
+
+    used_names = {url.removeprefix(LOGO) for url in used}
+    folder = {path.name for path in (APP / "static/img/logo").iterdir()}
+    assert used_names == folder, (
+        f"unused in the folder: {sorted(folder - used_names)}; "
+        f"missing from the folder: {sorted(used_names - folder)}"
+    )
+
+
+# Built from parts, so this file does not match itself.
+OLD_MARK = [
+    "/static/img/" + "favicon.svg",
+    "/static/img/" + "favicon-32.png",
+    "/static/img/" + "apple-touch-icon.png",
+    "logo-mark-" + "tile",
+    "logo-mark-" + "spark",
+]
+
+
+def text_files(*folders: Path) -> list[Path]:
+    found = []
+    for folder in folders:
+        for path in folder.rglob("*"):
+            if not path.is_file() or "__pycache__" in path.parts or path.suffix == ".mo":
+                continue
+            try:
+                path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            found.append(path)
+    return found
+
+
+def test_nothing_refers_to_the_old_mark(client: TestClient) -> None:
+    """FR-028, FR-029, FR-036, SC-008: no code or test serves, draws or links the spark, its tile
+    or the old favicons, and the old favicon is gone."""
+    files = text_files(APP, ROOT / "tests")
+    assert files
+    offending = sorted(
+        f"{path.relative_to(ROOT)}: {old}"
+        for path in files
+        for old in OLD_MARK
+        if old in path.read_text(encoding="utf-8")
+    )
+    assert offending == []
+    assert client.get("/static/img/" + "favicon.svg").status_code == 404

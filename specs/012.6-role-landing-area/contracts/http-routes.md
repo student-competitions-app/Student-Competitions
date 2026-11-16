@@ -14,7 +14,8 @@ Only the routes whose answer changes are listed. Every other route answers as be
 | current role **Teacher** | 200, home page (cards `/teacher`, `/staff`; database line) | **303 → `/teacher`** (then 303 → `/teacher/students`) |
 | current role **Student** | 200, home page (card `/student`; database line) | unchanged |
 
-The redirect is answered before the database status is read. `HEAD /` behaves like `GET /`.
+The redirect is answered before the database status is read. `HEAD /` is not served (405), as
+today: the route is `GET` only, and this milestone does not change that.
 
 ## `GET /staff`
 

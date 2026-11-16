@@ -304,8 +304,8 @@ Staff area and for the staff home page, and run the catalogue checks and the ful
   whose current role is not read: an unknown address, or a session that cannot be read.
 - **FR-017**: The link on the "data erased" page MUST NOT change.
 - **FR-018**: The new labels MUST follow the UI guidelines' "Back to {parent}" pattern and the Ukrainian
-  glossary's area names («Розділ адміністратора», «Розділ педагога»), in the existing back-link
-  components.
+  glossary's area names («Розділ адміністратора», «Розділ педагога»), in each page's existing back
+  link: the `back_link` component on the profile page, and the plain link on the error page.
 
 **Cleanup**
 

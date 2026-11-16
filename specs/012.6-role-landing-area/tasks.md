@@ -111,6 +111,10 @@ people changes in one way only: administrator pages gain the database line.
   - It calls the module-level `read_database_status(session)`, so tests can patch that one name.
   - On `SQLAlchemyError` it logs `logger.error("Database status unavailable: %s: %s",
     type(exc).__name__, exc)` and returns `None`. Use `logger = logging.getLogger(__name__)`.
+  - The log text changes on purpose: `home` logs "Question data unavailable: …" today, a leftover
+    from before milestone 11. What stays as today (spec FR-013) is the shape: the type name and the
+    message, never the database address. No test reads the old text. Mention the rename in the PR
+    description.
   - It catches nothing else.
   - Its docstring cites milestone 3 FR-026.
 - [ ] T005 Use the helper in `home`, `app/routers/pages.py`:
@@ -140,6 +144,9 @@ people changes in one way only: administrator pages gain the database line.
   `monkeypatch.setattr(pages, "read_database_status", failing)` with
   `monkeypatch.setattr(database_status, "read_database_status", failing)`, where
   `from app.services import database_status`. Remove the `pages` imports if they become unused.
+
+  Depends on T005: until `home` calls `read_database_status_or_none`, it holds its own imported
+  `read_database_status`, and patching the service module does not reach it.
 - [ ] T009 Catalogue: run `scripts/translations.sh update`, then set the Ukrainian `msgstr` in
   `app/locale/uk/LC_MESSAGES/messages.po`:
   - "Back to the administrator area" → «Назад до розділу адміністратора»;
@@ -175,8 +182,10 @@ on their area's first tab with no home page in between, and the brand link bring
     - `client_as(TEACHER_EMAIL).get("/")` is 303 → `/teacher`, ending on `/teacher/students`;
     - `client_as(STUDENT_EMAIL).get("/")` is 200 with exactly one area card, `/student`, and one
       database line;
-    - `client.get("/")` (signed out) is 303 → `/login?next=%2F`;
-    - `HEAD /` for the administrator answers like `GET` (303 → `/admin`).
+    - `client.get("/")` (signed out) is 303 → `/login?next=%2F`.
+
+    Do not test `HEAD /`: `home` is a plain `@router.get`, which FastAPI answers with 405 for `HEAD`,
+    today and after this milestone (spec Out of Scope: no routing change beyond where `/` leads).
   - **sign-in without `next`**: through `request_code` / `submit_code` / `code_from` from
     `tests/integration/test_login_flow.py`, the administrator and the teacher each get 303 → `/`, and
     following it ends on their first tab.
@@ -209,7 +218,9 @@ on their area's first tab with no home page in between, and the brand link bring
   - Every test that reads the home page's content through `admin_client.get("/")` uses
     `client_as(STUDENT_EMAIL)` instead. That covers the header, title, viewport, headline, footer,
     status line, unavailable notice, no-write-affordance and greeting tests.
-  - `test_home_returns_ok` and the error-page tests that use `/about` keep their client.
+  - `test_home_returns_ok` uses `client_as(STUDENT_EMAIL)` too. With `admin_client` it would follow
+    the new redirect to `/admin/teachers` and pass for the wrong reason.
+  - The error-page tests that use `/about` keep their client.
   - `test_one_card_per_allowed_area_with_its_description` keeps only the student cases:
     `STUDENT_EMAIL`, and `ADMIN_STUDENT_EMAIL` and `TEACHER_STUDENT_EMAIL` with `Role.STUDENT`.
   - `test_unavailable_data_keeps_the_cards_and_drops_the_database_line` expects `["/student"]`.
@@ -250,6 +261,14 @@ on their area's first tab with no home page in between, and the brand link bring
   Run, and adjust only if they fail: `test_login_flow.py` (≈ 120, 454), `test_role_switch.py`
   (≈ 61, 83, 124), `test_language.py` (≈ 234), `test_boot_counter.py` and `test_routes.py`. They
   follow redirects, so they should still pass.
+
+  The switches on area pages (spec edge case "The language and theme switches") need no new test.
+  These existing tests already prove that a switch used on an area page returns to that page, and
+  must keep passing unchanged:
+  - `test_language.py`: `test_the_page_and_its_query_are_kept` (`/admin/subjects?…`) and
+    `test_the_switch_on_every_role_s_pages_comes_before_the_user_menu` (`/admin/teachers`,
+    `/teacher/students`);
+  - `test_theme.py`: `test_a_signed_in_person_returns_to_their_page` (`/admin/subjects`).
 - [ ] T019 [US1] Update the pipeline per contracts/pipeline.md:
   - In `.github/workflows/checks.yml`, job `image`, rename the step to "Sign in, smoke test the
     landing, restart, and again".
@@ -313,20 +332,26 @@ signed-out visitor, and no page links to it, in either language (spec US3).
 
 - [ ] T023 [P] [US3] In `tests/integration/test_access_control.py`:
   - Remove `/staff` from `ACCESS_TABLE`, `TITLES` and `PLACEHOLDER_AREAS`.
-  - Add `test_the_staff_area_is_an_unknown_address`, parametrised with `"anonymous"`, `ADMIN_EMAIL`,
-    `TEACHER_EMAIL` and `STUDENT_EMAIL`, following the gallery test in
+  - Add **one** test, `test_the_staff_area_is_an_unknown_address`. It is the only test under `tests/`
+    that mentions `/staff`, "Staff area" or «Розділ працівників» (spec FR-023, US6 scenario 3, the
+    milestone's _Test:_ line), so every `/staff` check lives in it. Parametrise it with
+    `"anonymous"`, `ADMIN_EMAIL`, `TEACHER_EMAIL` and `STUDENT_EMAIL`, and follow the gallery test in
     `tests/integration/test_component_gallery.py`:
-    - `browser.get("/staff", follow_redirects=False)` and `browser.get("/no-such-page", …)` are both
-      404;
-    - `response.text.replace("/staff", "/no-such-page") == unknown.text`.
-  - Add `test_no_page_links_to_the_staff_area`. For each single-role client, the first page they land
-    on (`/` followed), plus `/profile`, holds no link to `/staff` (`html.links`). With
-    `sc_lang=uk` and in English, neither «Розділ працівників» nor "Staff area" appears.
+    - **404** (spec FR-008): `browser.get("/staff", follow_redirects=False)` and
+      `browser.get("/no-such-page", …)` are both 404, and
+      `response.text.replace("/staff", "/no-such-page") == unknown.text`;
+    - **no link, no name** (spec FR-009): for the signed-in visitors, the page they land on (`/`
+      followed) and `/profile` hold no link to `/staff` (`html.links`), and neither "Staff area" nor,
+      with the cookie `sc_lang=uk`, «Розділ працівників» appears;
+    - **old bookmark** (spec US3 scenario 3): for `"anonymous"`, sign in as `TEACHER_EMAIL` through
+      `request_code` / `submit_code(…, next_path="/staff")` / `code_from`. The answer is 303 →
+      `/staff`, and following it ends on 404 **Page not found** with the link
+      `("/", "Back to the home page")`.
 - [ ] T024 [P] [US3] Update `tests/integration/test_role_choice.py`:
   - in the parametrisation at ≈ line 110, replace `("/staff?x=1", "/role?next=%2Fstaff%3Fx%3D1")` with
     `("/teacher/teams?x=1", "/role?next=%2Fteacher%2Fteams%3Fx%3D1")`;
   - at ≈ lines 213–216, use `next_path="/teacher/teams"`, expect `location == "/teacher/teams"`, and
-    expect 200 there.
+    expect 200 there. The `/staff` return address is tested in T023 instead.
 
 ### Implementation for User Story 3
 
@@ -390,8 +415,16 @@ page, then make the read fail (spec US4).
   - `(STUDENT_EMAIL, STUDENT, "/", "Back to the home page")`;
   - `(ADMIN_STUDENT_EMAIL, STUDENT, "/", "Back to the home page")`.
 
-  Each calls `assert_back_link(client_as(email, role).get("/profile").text, href, text)`. Add one case
-  with cookie `sc_lang=uk` for the administrator expecting «Назад до розділу адміністратора».
+  The milestone's _Test:_ line also asks for "Back to the home page" on the profile page for a
+  person with several roles who has not chosen one. That case cannot happen: `/profile` sends them
+  to the role choice first (spec US5 scenario 4). The last row stands in for it: a person with
+  several roles whose current role is not a staff role. Say so in the PR description. The _Test:_
+  line disappears when T043 compacts the milestone.
+
+  Each calls `assert_back_link(client_as(email, role).get("/profile").text, href, text)`. Add two
+  cases with the cookie `sc_lang=uk` (spec FR-021, SC-007):
+  - the administrator, expecting «Назад до розділу адміністратора»;
+  - the teacher, expecting «Назад до розділу педагога».
 - [ ] T030 [P] [US5] In `tests/integration/test_access_control.py`, `test_the_access_denied_page`
   expects `BACK = {ADMIN: ("/admin", "Back to the administrator area"), TEACHER: ("/teacher", "Back
   to the teacher area"), STUDENT: ("/", "Back to the home page")}[role]` in
@@ -473,7 +506,7 @@ check passes, and the whole suite passes.
   - check `app/static/css/app.css` for rules used only by staff home cards (`card-grid` stays: the
     student's home page uses it).
 - [ ] T039 [US6] Run the leftover searches in quickstart §2. The only `/staff` or "Staff area" hits
-  allowed are the T023 tests and milestone 12.6's text in `docs/requirements/milestones.md`. Every
+  allowed are the single T023 test and milestone 12.6's text in `docs/requirements/milestones.md`. Every
   "home page" hit is about the student's page, the back or "Go to" links, or the signed-out redirect.
 
 **Checkpoint**: Clean.
@@ -489,7 +522,10 @@ check passes, and the whole suite passes.
   landing, the teacher's landing, the student's home page and `/staff` in both languages (memory: Playwright via `uv run --with playwright`, a database
   copy, port 8765).
 - [ ] T042 Push the branch, open the PR (body ends with the attribution line), and check that the
-  `image` job of `checks.yml` passes with `check_landing` (quickstart §4).
+  `image` job of `checks.yml` passes with `check_landing` (quickstart §4). The PR description notes:
+  - the log text rename "Question data unavailable" → "Database status unavailable" (T004);
+  - the _Test:_ line's "several roles, no role chosen" profile case, which cannot happen, and the
+    case that stands in for it (T029).
 - [ ] T043 After acceptance, compact milestone 12.6 into the Delivered section of
   `docs/requirements/milestones.md`: a short product summary with a link to
   `specs/012.6-role-landing-area/spec.md` and no _Test:_ line, as the file's top note says.
@@ -502,7 +538,7 @@ check passes, and the whole suite passes.
 
 - **Setup (Phase 1)**: no dependencies.
 - **Foundational (Phase 2)**: after Setup. **Blocks all stories.** Within it, T004 comes before T005
-  and T007; T002 comes before T003; T009 comes after T002.
+  and T007; T005 comes before T008; T002 comes before T003; T009 comes after T002.
 - **US1 (Phase 3)**: after Phase 2. It is the MVP.
 - **US2 (Phase 4)**: after US1, because the landing must exist.
 - **US3 (Phase 5)**: after Phase 2. It can run beside US1 or US2, but T023 edits
@@ -523,7 +559,7 @@ check passes, and the whole suite passes.
 
 ### Parallel Opportunities
 
-- Phase 2: T003 and T004 together, and T008 beside T005–T007.
+- Phase 2: T003 and T004 together, and T008 (after T005) beside T006–T007.
 - US1: T011 first, then T015, T016, T017 and T018 in parallel (different files). T019 is independent of
   them.
 - US4: T027 and T028 in parallel.

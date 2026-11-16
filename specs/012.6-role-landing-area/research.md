@@ -86,7 +86,8 @@ its `href` and text from `back`. `data_erased.html` does not change (FR-017).
 **Decision**: Add `read_database_status_or_none(session) -> DatabaseStatus | None` to
 `app/services/database_status.py`. It calls `read_database_status`. On `SQLAlchemyError` it logs
 `"Database status unavailable: %s: %s"` (the type name and the message, as milestone 3 FR-026 does
-today) and returns `None`. Both readers use it:
+today) and returns `None`. The text replaces today's "Question data unavailable", which predates
+milestone 11 and no longer describes what failed. No test reads it. Both readers use it:
 
 - `home` (student only) with its request session. `data_available` becomes `status is not None`, so
   the notice and the line behave exactly as today (FR-003).

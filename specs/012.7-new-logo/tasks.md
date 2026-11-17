@@ -681,13 +681,13 @@ unchanged (spec Clarifications, round 2; research R13, R14). Test first (T045), 
 
   Update the module docstring, and keep `ruff check` and `ruff format --check` clean. per FR-041, FR-042, US5/AC6, research R13 (missing)
 - [X] T047 Run `uv run --group logo scripts/make_logo.py`. The folder keeps the same 28 names, every image changes, and a second run leaves `git status --porcelain app/static/img/logo` empty. T045 now passes, and `test_the_logo_folder_holds_only_what_is_used` still passes. Commit the folder as the script left it. per FR-020, SC-006, US5/AC2 (missing)
-- [ ] T048 Check by hand (quickstart §3.1):
+- [X] T048 Check by hand (quickstart §3.1):
   - an overlay of the new master's letter area on the source: no fleur-de-lis, dot, rod or side flourish is solid;
   - the light ink at 44/88/132 px on the bar's blue, and the dark ink at 24/48/64 px on the page background;
   - the favicons at 16/32/48 px.
 
   If a piece of ornament turned solid, adjust its polygon in the script and repeat T047. per FR-027, US1/AC8, US3/AC6, edge case "Where the letters and the ornament meet" (missing)
-- [ ] T049 In `docs/requirements/ui-guidelines.md`, under **Icons and identity**, say that the emblem's letters ЯНМ are solid ink while its ornament is engraved, in both inks and in the icons. In `README.md`'s "Logo images", say that the script holds the letter area for the current source image, and that a new source means drawing it again. per FR-038, FR-039, research R12 (missing)
+- [X] T049 In `docs/requirements/ui-guidelines.md`, under **Icons and identity**, say that the emblem's letters ЯНМ are solid ink while its ornament is engraved, in both inks and in the icons. In `README.md`'s "Logo images", say that the script holds the letter area for the current source image, and that a new source means drawing it again. per FR-038, FR-039, research R12 (missing)
 - [ ] T050 Retake the 12 headless screenshots of T024 and T041 (same names, views, widths, themes, Ukrainian, 2× density), and commit them. In `design-approval.md`:
   - fill round 2's "Changes made": the letters are solid from the script's letter area, the ornament is unchanged, and every image and icon is regenerated;
   - add a round 3 row with that commit and the status "Awaiting review";

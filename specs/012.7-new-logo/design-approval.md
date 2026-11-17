@@ -30,12 +30,19 @@ down to the wordmark line. Headless Chromium at 2× density, in Ukrainian, signe
 Headless browsers draw no tab, so the four tab images are taken by hand: a desktop browser in its
 light and dark appearance at 1280 px, and a phone's tab overview for 375 px.
 
+**Proposals reviewed in round 2**: [round-2-letters-options](./screenshots/round-2-letters-options.png)
+shows three versions of the emblem in the real top bar (1280 px and 375 px, Light and Dark, 2×) and
+large on both backgrounds: **A** as merged, **B** with the letters fully opaque, **C** with the
+letters opaque but engraved. The product owner chose **B**. It is a proposal made outside the script,
+kept as the record of the choice; the round's review screenshots are taken again once the script
+makes **B** (research R13).
+
 ## Review log
 
 | Date | Round | Commit | Changes requested | Changes made | Status |
 |---|---|---|---|---|---|
 | 2026-11-16 | 1 | `b15286f` | Top bar, seen on the deployed branch at desktop width: the emblem is barely visible at 2rem (32 px). Make it as tall as the language switch beside it, at every width. | The top bar's mark is the touch-target size (44 px), the language switch's height, at every width; it was 2rem from 768 px. It loads the 44, 88 or 132 px light ink. The bar is still one 64 px row at 360, 375, 768 and 1280 px, signed out and with a role, in both languages. Only the four 1280 px top bar screenshots change. | Changes requested |
-| 2026-11-17 | 2 | `28a2a99` | | | Awaiting review |
+| 2026-11-17 | 2 | `28a2a99` | The size is right ("much better" on the deployed site). The emblem still lets the background through everywhere: make the letters ЯНМ fully opaque and keep the ornament as it is, option B of [round-2-letters-options](./screenshots/round-2-letters-options.png). | | Changes requested |
 
 ## Questions for round 2
 

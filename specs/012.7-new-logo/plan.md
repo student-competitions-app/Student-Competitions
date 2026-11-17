@@ -19,6 +19,10 @@ an image, not inline SVG. Nothing else in the UI changes.
   - `site.webmanifest`.
 - Its libraries are the `logo` dependency group, locked in `uv.lock`. Neither CI nor the image
   installs the group.
+- **Solid letters** (R13, added 2026-11-17 after the design review's round 2): the script holds the
+  letter area of ЯНМ as data in the source's pixels and lifts the coverage inside it, so the letters
+  are fully opaque in every image, icons included; the ornament is unchanged. No template, CSS or file
+  name changes; every image in the folder is regenerated.
 
 **The mark** (R2–R5; [contracts/components.md](./contracts/components.md)):
 
@@ -56,6 +60,8 @@ an image, not inline SVG. Nothing else in the UI changes.
 - The macro's markup and errors are tested in `tests/unit/test_templates.py`.
 - New gallery-ink tests in `test_component_gallery.py`.
 - New stylesheet tests in `test_frame_stylesheet.py`.
+- A solid-letters test in `test_logo.py` reads two committed PNGs with the standard library alone
+  and checks sample points: letters fully opaque, ornament not (R14).
 
 **Approval and checks by hand** (R10, R11; [quickstart.md](./quickstart.md)):
 

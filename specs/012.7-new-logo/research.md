@@ -262,6 +262,8 @@ nearest size. The ICO covers browsers and tools that ask for an ICO.
    - It smooths with an edge-preserving filter (window 7, colour σ 18, space σ 5), then applies a final
      unsharp mask (0.8, σ 2.0).
    - It applies levels (25–232, γ 0.9) and pads the result to a square master.
+   - It makes the letters ЯНМ solid inside the letter area (R13, added after the design review's
+     round 2), before any image is resized from the master.
 3. **Replaces the OpenCV operations with:**
    - **Resizing**: Pillow `Image.resize` on `F` images, which supports Lanczos. This was checked with
      Pillow 11.1 and numpy 2.1.
@@ -330,6 +332,7 @@ does not apply.
 
 **Decision**:
 
+- **`tests/integration/test_logo.py`, the solid letters** (added after round 2): R14.
 - **`tests/integration/test_layout.py`, the identity tests** (rewritten, same four pages: sign-in,
   signed-in pages, 404, refusals):
   - `assert_identity` finds exactly one `img.logo-mark` in the brand link, with `alt=""` and
@@ -403,6 +406,10 @@ stays a by-hand check (R7).
   screenshots, the gate ("no merge before an approving round"), and a review log with date, round,
   commit, changes requested, changes made and status. Changes asked for are made in a new commit and
   give a new round with new screenshots.
+- **A proposal sheet.** When a requested change has more than one reasonable answer, the options may
+  be shown on one sheet before the script makes them, as in round 2:
+  `screenshots/round-2-letters-options.png`, with the real top bar served with each option's images.
+  The sheet records the choice; the next round's 12 screenshots show the script's output.
 - Milestone 10's `design-approval.md` is not edited.
 
 **Rationale**: FR-025 and FR-026, and milestone 10 user story 1 scenario 3. Unlike milestone 10, there
@@ -450,7 +457,7 @@ The bar's height cannot change (R5), so the frame should measure as in milestone
     is replaced by milestone 12.7's numbers.
   - The **Icons and identity** section says that `logo_mark(size, theme, top_bar)` shows the emblem
     image, light ink on the top bar, and that elsewhere it follows the theme (picture for **Device**,
-    no script).
+    no script); and that the emblem's letters are solid while its ornament is engraved (R13).
   - §3 changes the palette role of `--sc-accent`. §8's "beside the logo" wording stays true.
 - **`README.md`**:
   - The tree's `static/` line names `img/` (flags) and `img/logo/` (the emblem images, icons and web
@@ -458,10 +465,87 @@ The bar's height cannot change (R5), so the frame should measure as in milestone
   - The `scripts/` list gains `make_logo.py` (the logo images from `docs/brand/logo-source.png`).
   - A `docs/brand/` entry is added (the emblem's source image).
   - A short "Logo images" paragraph gives `uv run --group logo scripts/make_logo.py` and says that its
-    output is committed and never edited by hand.
+    output is committed and never edited by hand, and that the letter area in the script belongs to the
+    current source image: a new source means drawing it again (R13).
 - **`docs/requirements/milestones.md`**: 12.7 moves to Delivered, compacted, when it ships. The
   Delivered milestone 10 summary is checked for the spark: it has none today.
 - **No catalogue change**: no user-facing message changes. The application's name is already in both
   catalogues, and the manifest's name is a static file.
 
 **Rationale**: FR-028–FR-030 and FR-038–FR-040, and the constitution's documentation gate.
+
+## R13. Solid letters (design review, round 2)
+
+Added on 2026-11-17, after the product owner chose option **B** of
+[round-2-letters-options](./screenshots/round-2-letters-options.png) (spec Clarifications, round 2;
+FR-041, FR-042).
+
+**Decision**: The script makes the letters ЯНМ solid with a **letter area** held as data and a
+**lift** of the coverage inside it. The values below are the ones the reviewed sheet was made with.
+
+- **Letter area, in the source's pixels** (`docs/brand/logo-source.png`, 311 × 311):
+  - **Band**: the rectangle `(58, 116)–(248, 192)` (x0, y0, x1, y1), the row of letters.
+  - **Ink**: inside the band, the source's ink (`L < 215` on the white-flattened source), closed with a
+    3 × 3 maximum then minimum filter so the light inline inside each stroke is not a gap.
+  - **Less the ornament inside the band**, as polygons (filled with 0):
+    - left side flourish `(48,141) (79,141) (79,165) (48,165)`;
+    - right side flourish `(239,141) (265,141) (265,165) (239,165)`;
+    - fleur and dots between Я and Н `(121,121) (131,121) (131,189) (121,189)`;
+    - dots inside Н above the bar `(149,122) (158,122) (158,146) (149,146)`;
+    - dots inside Н below the bar `(149,159) (158,159) (158,190) (149,190)`;
+    - fleur and dots between Н and М `(173,121) (187,121) (187,189) (173,189)`;
+    - fleur between М's peaks `(203,110) (221,110) (214,149) (209,149)`.
+
+  The boxes sit 2 px inside the panels between the stems, so the stems keep their dark outline. They
+  were checked on 11× gridded overlays of the source. The horizontal rod through the panels is
+  ornament; Н's own crossbar, between its stems, is letter.
+- **Into the master**: the area goes through the same crop as the coverage (the ink plus 3 px), is
+  scaled ×8 with bilinear resampling, blurred with the script's Gaussian (σ 3 master px) to a soft
+  0–1 mask `L`, and placed in the square master as the coverage is.
+- **The lift**: with coverage `c` (0 paper, 1 full ink), the master becomes
+  `L · min(c / 0.45, 1) + (1 − L) · c`. Inside the letters, any ink at or above 45 % coverage is full
+  ink, so the engraved shading stops letting the background through, while their outline and inline
+  (no ink) keep their shape. Outside, nothing changes.
+- **Everything follows**: the emblem images in both inks and the icons are all made from this master,
+  so every file changes and the folder keeps the same 28 names. The small-size sharpening (48 px and
+  below) still applies after.
+
+**Rationale**: The source has one layer: the letters and the ornament share its strokes, its width
+of stroke and its shading, so they cannot be told apart by measurement. A stroke-width filter (a
+morphological opening at 5, 7 and 9 px) kept the loops and the fleurs-de-lis as well as the letters
+and ate the letters' serifs. A fixed area, drawn once for this source, is exact and reviewable. The
+lift, rather than filling the area with ink, keeps each letter's drawn outline: a flat fill of the
+area made rough-edged white blocks (tried first, rejected on sight).
+
+**Alternatives considered**:
+- *Option A, as merged.* Rejected in round 2: the background shows through the letters.
+- *Option C, letters opaque but engraved* (a silver-grey backing under the engraving). At 44 px it
+  looks almost as merged. Rejected in round 2.
+- *A separate letters layer in the source.* Better, but it needs the emblem redrawn; out of scope.
+
+## R14. Testing the solid letters without an image library
+
+**Decision**: `tests/integration/test_logo.py` gains a test that reads committed PNGs with the
+standard library: `zlib` to inflate the `IDAT` chunks and the five PNG row filters undone by hand
+(about 30 lines, 8-bit RGBA, non-interlaced, which is what Pillow writes). It reads
+`logo-light-132.png` and `logo-dark-192.png`, sizes above 48 px, so the small-size sharpening does not
+blur the line between letter and ornament. Sample points are given as fractions of the image's side, so
+one list serves every size:
+
+- **Letters**: one point in the middle of each letter's widest stroke (Я's stem, Н's two stems, М's
+  right stem): alpha must be 255.
+- **Ornament**: one point in the middle of a loop above the letters, one in a fleur-de-lis between
+  them and one in a side flourish: alpha must be below 255 (the engraving's shading).
+
+The exact points are picked when the script is changed, on its output, at least 2 px from any edge at
+the checked size, and each is shown on an overlay before it is kept, so that it lies clearly inside a
+letter or the ornament. The reader refuses any other PNG type with a clear
+error, so a change in how Pillow writes the files fails loudly.
+
+**Rationale**: FR-043. CI installs neither Pillow nor numpy (R8), and the application must gain no
+runtime dependency; a reader of the one PNG type the script writes is small and has no dependency.
+
+**Alternatives considered**:
+- *Add Pillow to `dev`.* CI would install an image library for one test; R8 rejects it.
+- *Test only the script's constants.* That checks the data, not the committed images. Rejected.
+

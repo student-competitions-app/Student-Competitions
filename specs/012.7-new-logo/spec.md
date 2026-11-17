@@ -20,7 +20,8 @@ Milestone 12.7 of the walking skeleton for the Student Competitions application.
 
 Since milestone 10 the application's mark has been an amber spark on a deep-blue tile, drawn as inline
 SVG in the top bar and the component gallery, with three old favicon files beside it. The product now has
-its own emblem: an engraved monogram in a diamond of flourishes, in one colour with engraved shading. A
+its own emblem: an engraved monogram in a diamond of flourishes, in one colour with engraved shading; its
+letters ЯНМ are solid ink, and the flourishes keep their engraving. A
 first set of images was prepared from the source image by a script, but it does not hold every size the
 application needs, it holds files nothing uses, and the script depends on a library (OpenCV) the project
 does not want. Seven things become true when this milestone is done:
@@ -36,7 +37,8 @@ does not want. Seven things become true when this milestone is done:
    browser, like a bookmark.
 4. **The images come from one script, and only the used ones are kept.** The script uses Pillow and numpy
    only, lives in its own dependency group that neither CI nor the image installs, and writes exactly the
-   files the application links or shows.
+   files the application links or shows. It makes the letters ЯНМ solid from a letter area it holds as
+   data, and leaves the ornament as engraved.
 5. **The product owner approves the new look.** The change to milestone 10's approved look is reviewed on
    screenshots and recorded in this milestone's own design approval.
 6. **What tests cannot see is checked by hand**, from this milestone's quickstart.
@@ -53,6 +55,22 @@ does not want. Seven things become true when this milestone is done:
   only below 768 px. FR-002, FR-034, User Story 1, the edge cases, SC-002 and the assumptions follow.
   The component's `sm`, `md` and `lg` sizes do not change, and no emblem image is added or removed: the
   44, 88 and 132 px light-ink images already exist.
+
+### Session 2026-11-17 (design review round 2)
+
+- Q: In round 2 the product owner found the size right, but the whole emblem lets the background show
+  through its engraving. What should change? → A: The letters ЯНМ become fully opaque, in both inks;
+  the ornament stays as it is, engraved and partly transparent. This is option **B** of the reviewed
+  sheet [round-2-letters-options](./screenshots/round-2-letters-options.png). The letters keep their own
+  outline and inline (where the source has no ink); only the engraved shading inside them becomes full
+  ink. FR-041–FR-043, User Stories 1, 3 and 5, the edge cases, the entities, SC-011 and the assumptions
+  follow.
+- Q: The favicons, the Apple touch icon and the manifest's icons are made from the same emblem. Do they
+  get the solid letters too? → A: Yes. Every image the script writes shows the same mark, and the solid
+  letters help most at the icons' small sizes.
+- Q: CI does not install Pillow, so how is the solid-letters rule tested? → A: A test reads the committed
+  PNGs with the standard library alone (`zlib`, no image library) and checks points inside the letters
+  are fully opaque and points in the ornament are not, in both inks.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -92,6 +110,9 @@ for the brand link.
    the start and nothing in the bar shifts when the image arrives.
 7. **Given** any page, **When** the brand link is followed, **Then** it leads where it led before
    (milestone 12.6); the wordmark and the role label are unchanged.
+8. **Given** any page in **Light** or **Dark**, **When** the top bar is shown, **Then** the letters ЯНМ of
+   the emblem are solid light ink, with none of the bar's colour showing through them, and the ornament
+   around them keeps its engraved shading (Clarifications, round 2).
 
 ---
 
@@ -154,6 +175,9 @@ unknown size.
    it is rendered, **Then** rendering fails with a template error, as today.
 5. **Given** any of the three sizes at 1×, 2× or 3× density, **When** it is shown, **Then** it is sharp,
    its width and height are set, and the browser loads only the file it needs.
+6. **Given** the gallery in **Light** or **Dark**, **When** the **Identity** section is shown, **Then** in
+   each mark the letters ЯНМ are solid ink and the ornament is engraved, in dark ink and in light ink
+   alike.
 
 ---
 
@@ -205,6 +229,9 @@ libraries are not installed; run the script with its group; compare its output w
 5. **Given** the source image, **When** the script runs, **Then** it crops the white margin, upscales in
    steps with sharpening, makes the paper transparent, and writes the emblem in dark ink (for light
    backgrounds) and light ink (for dark ones) wherever the mark can appear in both.
+6. **Given** the source image, **When** the script runs, **Then** inside the letter area it holds as data
+   the letters ЯНМ become fully opaque, and outside it the ornament is rendered as before, in every image
+   it writes, the icons included.
 
 ---
 
@@ -255,6 +282,14 @@ addresses; read the UI guidelines and the README.
   falls back to the new linked icons on the next page load.
 - **An unknown logo size in a template.** Rendering fails with a template error, so the mistake is found
   in development and in the tests.
+- **Where the letters and the ornament meet.** The source has no separate letters layer: the letter area
+  is drawn by hand in the source's pixels, around the letters and clear of the fleurs-de-lis, the dots
+  and curls, the horizontal rod and the side flourishes. Where a flourish crosses a letter (the loops
+  through Н), the crossing inside the letters' band counts as letter. A few hairline curls touching a
+  letter may come out solid; that is accepted if the review does not object.
+- **A new source image.** The letter area belongs to `docs/brand/logo-source.png` as it is. If the source
+  changes, the area must be drawn again; the opacity test fails if its sample points no longer fall on
+  the letters and the ornament.
 
 ## Requirements *(mandatory)*
 
@@ -324,6 +359,12 @@ addresses; read the UI guidelines and the README.
   install the group, and the application MUST gain no runtime dependency.
 - **FR-024**: The script MUST run with `uv run --group logo scripts/make_logo.py` and MUST pass the style
   checks.
+- **FR-041**: In every image the script writes, in both inks and in the icons, the letters ЯНМ MUST be
+  fully opaque wherever the source has ink in them, keeping their own outline and inline. The ornament
+  MUST stay as it is: engraved, its shading partly transparent.
+- **FR-042**: The script MUST find the letters by a letter area it holds as data, in the source image's
+  pixels (the letters' band, less the ornament inside it), not by guessing from the image. The area MUST
+  be documented with the picture it was checked against.
 
 **Approval and manual checks**
 
@@ -369,17 +410,21 @@ addresses; read the UI guidelines and the README.
 - **FR-037**: Existing tests of the old mark (the identity test in the layout tests among them) MUST be
   rewritten for the new behaviour, never skipped or left behind. The whole suite MUST pass on both database
   engines, and the style checks MUST pass, the script included.
+- **FR-043**: A test MUST read committed emblem images in light ink and in dark ink with the standard
+  library alone (CI has no image library) and check that sample points inside the letters are fully
+  opaque and sample points in the ornament are not.
 
 **Documentation**
 
 - **FR-038**: The UI guidelines MUST describe the new mark: the introduction adds that the logo mark was
   replaced in milestone 12.7 and links this milestone's design approval; section 4 gives the top bar mark's
   two sizes and the new frame measurement ("Last measured in milestone 12.7"), replacing milestone 12.5's;
-  the **Icons and identity** section says the mark is an image, no longer inline SVG, and how it follows
-  the theme; and `--sc-accent`'s palette role becomes "Highlights".
+  the **Icons and identity** section says the mark is an image, no longer inline SVG, with solid letters
+  and an engraved ornament, and how it follows the theme; and `--sc-accent`'s palette role becomes
+  "Highlights".
 - **FR-039**: The README's project tree MUST name `img/logo/` under `static/`, `scripts/make_logo.py` and
   `docs/brand/` with what they are for, and the README MUST say how to run the script (`uv run --group
-  logo …`) and that its output is committed.
+  logo …`), that its output is committed, and that its letter area belongs to the current source image.
 - **FR-040**: In the milestones document, milestone 12.7 MUST move to Delivered once it ships, compacted
   like the others. The specifications of delivered milestones, milestone 10's design approval included,
   MUST NOT be edited.
@@ -388,7 +433,10 @@ addresses; read the UI guidelines and the README.
 
 - **Emblem**: the application's mark, an engraved monogram in a diamond of flourishes, in one colour with
   engraved shading. Its source is `docs/brand/logo-source.png` (311 × 311 px, the emblem about 212 px of
-  it). It exists in two inks: dark, for light backgrounds, and light, for dark ones.
+  it). It exists in two inks: dark, for light backgrounds, and light, for dark ones. Its letters ЯНМ are
+  solid ink; the ornament around them keeps its engraved shading.
+- **Letter area**: the part of the source image that is the letters ЯНМ, held by the script as data in
+  the source's pixels: the letters' band, less boxes around the ornament inside it.
 - **Emblem image**: one rendering of the emblem in one ink at one pixel size, on a transparent background.
   The displayed sizes are `sm` (24 px), `md` (32 px), `lg` (64 px) and the top bar's size (44 px),
   each needed at 1×, 2× and 3× density. `sm`, `md` and `lg` exist in both inks; the 44 px size, shown only
@@ -426,6 +474,8 @@ addresses; read the UI guidelines and the README.
   screenshots (4 views × 2 widths × 2 themes).
 - **SC-010**: The full test suite passes on both database engines with 0 tests skipped because of this
   milestone, and the style checks pass.
+- **SC-011**: In 100% of the checked emblem images, in both inks, every sample point inside the letters
+  is fully opaque and every sample point in the ornament is not.
 
 ## Assumptions
 
@@ -441,6 +491,9 @@ addresses; read the UI guidelines and the README.
 - **The 32 px mark stays hard to read where it remains.** In the browser tab and the gallery's `md` mark
   the emblem is recognised by its shape; making it legible at 32 px is not a goal. The top bar's mark is
   44 px at every width, where it is legible (Clarifications, 2026-11-17).
+- **The reviewed sheet is a proposal, not the output.** Option **B** was made outside the script, from
+  the same pipeline with a hand-drawn letter area and a lift of 0.45 (research R13). The script's output
+  is reviewed again in the next round's screenshots.
 - **No data changes.** No table, column, route or migration is added or changed; the icons are static
   files.
 - **The hand checks stay manual** until end-to-end tests arrive in milestone 16.

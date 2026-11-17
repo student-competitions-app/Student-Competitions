@@ -43,7 +43,9 @@ for screenshots: `uv run --no-project --with playwright`, not a dependency.
 
 1. **Sharp emblem.** Look at the top bar at 1280 px and 375 px, on a 1× and a 2× or 3× screen (or with
    the device pixel ratio emulated), and at the gallery's **Identity**. The emblem has crisp strokes and
-   no halo, in **Light** and in **Dark**.
+   no halo, in **Light** and in **Dark**. The letters ЯНМ are solid, with nothing of the background
+   showing through them, and the ornament around them is engraved as before; no fleur-de-lis, dot or
+   flourish has turned solid (research R13).
 2. **One row.** At 360 px, 375 px, 768 px and 1280 px width: signed out, and signed in with a role
    shown (teacher area), in Ukrainian and in English. That is 16 combinations. Each time the top bar is 64 px tall, the mark is
    44 × 44, the role label sits beside it without overlap, and nothing wraps.
@@ -118,7 +120,8 @@ uv lock --check                                # the lock file is up to date
 
 Run this on the machine that produced the committed set (see research R7 on float differences between
 machines). When the source or the script changes, run it, review the images, and commit the folder as
-it is.
+it is. A new source image also needs the letter area drawn again (research R13); the solid-letters
+test (R14) fails if it no longer fits.
 
 ## 6. Documentation
 

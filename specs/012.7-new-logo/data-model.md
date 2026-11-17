@@ -6,7 +6,8 @@ here so that the tests, the script and the documentation share one definition.
 
 ## 1. Emblem image
 
-A square, transparent PNG of the emblem in one ink, filling the square edge to edge. Its path is
+A square, transparent PNG of the emblem in one ink, filling the square edge to edge. Its letters ЯНМ
+are fully opaque; its ornament is engraved, with partly transparent shading (research R13). Its path is
 `/static/img/logo/logo-{ink}-{px}.png`.
 
 | Field | Values | Rule |

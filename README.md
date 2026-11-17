@@ -213,7 +213,7 @@ The emblem's source is [`docs/brand/logo-source.png`](docs/brand/logo-source.png
 uv run --group logo scripts/make_logo.py
 ```
 
-It writes the emblem in light and dark ink at every displayed size and density, the favicons, the touch and manifest icons and `site.webmanifest`, then removes any other file in that folder. Its output is committed and never edited by hand: to change an image, change the script or the source, run it and commit the folder as it left it. Its libraries, Pillow and numpy, are the `logo` dependency group, which neither CI nor the image installs.
+It writes the emblem in light and dark ink at every displayed size and density, the favicons, the touch and manifest icons and `site.webmanifest`, then removes any other file in that folder. The letters ЯНМ are solid and the ornament engraved: the source has one layer for both, so the script holds the letter area as data in the source's pixels (`LETTER_BAND` and `NOT_LETTERS`). That area belongs to the current source image; a new source means drawing it again, and `test_the_letters_are_solid_and_the_ornament_engraved` shows whether it still fits. Its output is committed and never edited by hand: to change an image, change the script or the source, run it and commit the folder as it left it. Its libraries, Pillow and numpy, are the `logo` dependency group, which neither CI nor the image installs.
 
 ### Adding a migration
 

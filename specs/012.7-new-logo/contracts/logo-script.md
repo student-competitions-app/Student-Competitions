@@ -20,11 +20,17 @@ uv run --group logo scripts/make_logo.py
 2. Upscales ×2 three times (Lanczos, then an unsharp mask after each step). Applies edge-preserving
    smoothing and a final unsharp mask. Applies levels, so the paper becomes transparent (coverage →
    alpha). Pads the result to a square master.
+   Then makes the letters ЯНМ solid: inside the letter area (research R13), held in the script as data
+   in the source's pixels, the coverage is lifted, `min(c / 0.45, 1)`; outside it, the ornament is
+   unchanged.
 3. Writes the 19 emblem images (light ink `#f4f5f8`, dark ink `#1c1c22`), sharpening the alpha of
    sizes of 48 px and below.
 4. Writes the 8 icons on `#16337a` and `site.webmanifest`
    ([static-assets.md](./static-assets.md) §3).
 5. Deletes every other file in `app/static/img/logo/`.
+
+The letter area belongs to the current `docs/brand/logo-source.png`. If the source changes, the area
+is drawn again, and the opacity test (research R14) shows whether it still fits.
 
 The images are always this script's output. A committed image is never edited by hand. To change one,
 change the script or the source, run the script and commit its output.

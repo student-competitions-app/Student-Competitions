@@ -4,11 +4,14 @@ contracts/static-assets.md).
 Every icon, the Apple touch icon and the manifest are static files under `/static/img/logo/`,
 written by `scripts/make_logo.py` and served to everyone, signed in or not, with their types. The
 manifest opens the application in the browser. The folder holds exactly what the pages use
-(FR-018, FR-019), and nothing in the code or the tests still refers to the old mark (FR-028,
-FR-029). Every test runs once per database engine.
+(FR-018, FR-019), the emblem's letters are solid while its ornament is engraved (FR-041, FR-043),
+and nothing in the code or the tests still refers to the old mark (FR-028, FR-029). Every test that
+takes a client runs once per database engine.
 """
 
 import json
+import struct
+import zlib
 from pathlib import Path
 
 import pytest
@@ -153,3 +156,89 @@ def test_nothing_refers_to_the_old_mark(client: TestClient) -> None:
     )
     assert offending == []
     assert client.get("/static/img/" + "favicon.svg").status_code == 404
+
+
+def png_alpha(path: Path) -> list[bytes]:
+    """The alpha channel of a PNG, one row per item, read with the standard library alone: CI
+    installs no image library (research R14). Only the type `make_logo.py` writes is accepted,
+    8-bit RGBA, not interlaced, so a change in how the images are written fails loudly."""
+    data = path.read_bytes()
+    assert data[:8] == b"\x89PNG\r\n\x1a\n", f"{path.name} is not a PNG"
+    pos, header, compressed = 8, None, b""
+    while pos < len(data):
+        length, kind = struct.unpack(">I4s", data[pos : pos + 8])
+        body = data[pos + 8 : pos + 8 + length]
+        if kind == b"IHDR":
+            header = struct.unpack(">IIBBBBB", body)
+        elif kind == b"IDAT":
+            compressed += body
+        pos += 12 + length
+    width, height, depth, colour, _, _, interlace = header
+    assert (depth, colour, interlace) == (8, 6, 0), f"{path.name}: not 8-bit RGBA, not interlaced"
+    raw, stride, bpp = zlib.decompress(compressed), width * 4, 4
+    rows, previous = [], bytearray(stride)
+    for y in range(height):
+        start = y * (stride + 1)
+        kind, line = raw[start], bytearray(raw[start + 1 : start + 1 + stride])
+        for i in range(stride):
+            left = line[i - bpp] if i >= bpp else 0
+            up = previous[i]
+            corner = previous[i - bpp] if i >= bpp else 0
+            if kind == 1:
+                line[i] = (line[i] + left) & 0xFF
+            elif kind == 2:
+                line[i] = (line[i] + up) & 0xFF
+            elif kind == 3:
+                line[i] = (line[i] + (left + up) // 2) & 0xFF
+            elif kind == 4:
+                p = left + up - corner
+                pa, pb, pc = abs(p - left), abs(p - up), abs(p - corner)
+                line[i] = (
+                    line[i] + (left if pa <= pb and pa <= pc else up if pb <= pc else corner)
+                ) & 0xFF
+            else:
+                assert kind == 0, f"{path.name}: unknown row filter {kind}"
+        rows.append(bytes(line[3::4]))
+        previous = line
+    return rows
+
+
+# Sample points as fractions of the emblem image's side, picked on the reviewed option B and checked
+# on an overlay (research R14): the middle of each letter's widest stroke, and ornament ink around.
+LETTER_POINTS = {
+    "Я's stem": (0.303, 0.546),
+    "Н's left stem": (0.436, 0.569),
+    "Н's right stem": (0.555, 0.569),
+    "М's right stem": (0.853, 0.560),
+}
+ORNAMENT_POINTS = {
+    "the loop above the letters": (0.303, 0.261),
+    "the loop below the letters": (0.367, 0.679),
+    "the fleur-de-lis between Я and Н": (0.367, 0.541),
+    "the left flourish": (0.078, 0.495),
+}
+OPAQUE = 250
+"""Opaque to the eye (98 %): the downscale leaves 1–2 % dips along the finest engraved lines."""
+ENGRAVED = 240
+"""The ornament's ink stays partly transparent, clearly below the letters."""
+
+
+@pytest.mark.parametrize("name", ["logo-light-132.png", "logo-dark-192.png"])
+def test_the_letters_are_solid_and_the_ornament_engraved(name: str) -> None:
+    """FR-041, FR-043, SC-011: in both inks, every point inside the letters ЯНМ is opaque, with its
+    neighbours, and every point in the ornament is inked but partly transparent."""
+    alpha = png_alpha(APP / "static/img/logo" / name)
+    side = len(alpha)
+
+    def around(point: tuple[float, float]) -> list[int]:
+        x, y = int(point[0] * side), int(point[1] * side)
+        return [alpha[y + dy][x + dx] for dy in (-1, 0, 1) for dx in (-1, 0, 1)]
+
+    see_through = {k: min(around(p)) for k, p in LETTER_POINTS.items() if min(around(p)) < OPAQUE}
+    assert see_through == {}, f"{name}: letters let the background through: {see_through}"
+    solid = {k: max(around(p)) for k, p in ORNAMENT_POINTS.items() if max(around(p)) > ENGRAVED}
+    assert solid == {}, f"{name}: ornament turned solid: {solid}"
+    blank = {k: alpha[int(p[1] * side)][int(p[0] * side)] for k, p in ORNAMENT_POINTS.items()}
+    assert all(value > 0 for value in blank.values()), (
+        f"{name}: a point misses the ornament: {blank}"
+    )

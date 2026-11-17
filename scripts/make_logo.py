@@ -6,9 +6,14 @@ It takes no arguments. It reads `docs/brand/logo-source.png` and writes exactly 
 application uses to `app/static/img/logo/` (milestone 12.7 data-model.md §1, §3 and §4):
 
 - the emblem in light ink (`#f4f5f8`) and dark ink (`#1c1c22`), `logo-{ink}-{px}.png`, at every
-  displayed size at 1x, 2x and 3x;
+  displayed size at 1x, 2x and 3x, with the letters ЯНМ solid and the ornament engraved;
 - the favicons, the Apple touch icon and the manifest icons, the emblem on `#16337a`;
 - `site.webmanifest`.
+
+The letters are solid because the source has one layer for letters and ornament alike: the script
+holds the letter area as data, in the source's pixels (`LETTER_BAND` less `NOT_LETTERS`), and lifts
+the ink inside it to full (milestone 12.7 research R13). The area belongs to this source image: a
+new source means drawing it again.
 
 Then it deletes every other file in that folder, so the folder holds only what is used. The images
 are always this script's output and are never edited by hand: to change one, change this script or
@@ -23,7 +28,7 @@ import math
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "docs/brand/logo-source.png"
@@ -40,6 +45,23 @@ SIZES = {
 }
 # Sizes at and below this get their alpha sharpened, so thin engraved strokes do not wash out.
 SMALL = 48
+
+# The letters ЯНМ in the source's pixels (311 x 311), checked on gridded overlays of the source
+# (research R13): the row of letters, less the ornament inside it. The boxes between the stems sit
+# 2 px inside the panels, so the stems keep their dark outline.
+LETTER_BAND = (58, 116, 248, 192)  # x0, y0, x1, y1
+NOT_LETTERS = (
+    ((48, 141), (79, 141), (79, 165), (48, 165)),  # the left side flourish
+    ((239, 141), (265, 141), (265, 165), (239, 165)),  # the right side flourish
+    ((121, 121), (131, 121), (131, 189), (121, 189)),  # the fleur and dots between Я and Н
+    ((149, 122), (158, 122), (158, 146), (149, 146)),  # the dots inside Н, above its bar
+    ((149, 159), (158, 159), (158, 190), (149, 190)),  # the dots inside Н, below its bar
+    ((173, 121), (187, 121), (187, 189), (173, 189)),  # the fleur and dots between Н and М
+    ((203, 110), (221, 110), (214, 149), (209, 149)),  # the fleur between М's peaks
+)
+# Inside the letters, ink at this coverage or more becomes full ink: the shading stops letting the
+# background through, while each letter's outline and inline (no ink) keep their shape.
+LETTER_LIFT = 0.45
 
 MANIFEST = {
     "name": "Студентські змагання",
@@ -103,8 +125,22 @@ def up2(a: np.ndarray) -> np.ndarray:
     return unsharp(np.asarray(big, dtype=np.float32), 0.6, 1.2)
 
 
+def letter_area(lum: np.ndarray) -> np.ndarray:
+    """The letters ЯНМ of the source as a boolean mask in its pixels: the ink inside the band,
+    closed so the light inline of each stroke is no gap, less the ornament's polygons."""
+    ink = Image.fromarray(((lum < 215) * 255).astype(np.uint8), "L")
+    ink = ink.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.MinFilter(3))
+    keep = Image.new("L", ink.size, 0)
+    draw = ImageDraw.Draw(keep)
+    draw.rectangle(LETTER_BAND, fill=255)
+    for polygon in NOT_LETTERS:
+        draw.polygon(polygon, fill=0)
+    return (np.asarray(ink) > 0) & (np.asarray(keep) > 0)
+
+
 def coverage_master() -> np.ndarray:
-    """The emblem's ink coverage (0 paper, 1 full ink) on a large square, centred."""
+    """The emblem's ink coverage (0 paper, 1 full ink) on a large square, centred, with the
+    letters' ink lifted to full."""
     src = Image.open(SRC).convert("RGBA")
     # The source has stray transparent pixels with black RGB: flatten it onto white first.
     flat = Image.alpha_composite(Image.new("RGBA", src.size, (255, 255, 255, 255)), src)
@@ -114,6 +150,7 @@ def coverage_master() -> np.ndarray:
     x0, x1 = max(int(xs.min()) - 3, 0), min(int(xs.max()) + 4, lum.shape[1])
     y0, y1 = max(int(ys.min()) - 3, 0), min(int(ys.max()) + 4, lum.shape[0])
     hi = lum[y0:y1, x0:x1]
+    letters = letter_area(lum)[y0:y1, x0:x1].astype(np.float32) * 255
     print(f"crop {(x0, y0, x1, y1)} -> {hi.shape[1]}x{hi.shape[0]}")
 
     for _ in range(3):
@@ -126,6 +163,12 @@ def coverage_master() -> np.ndarray:
     n = np.clip((hi - 25.0) / (232.0 - 25.0), 0, 1) ** (1 / 0.9)
     coverage = 1.0 - n
     coverage[coverage < 0.02] = 0
+
+    # The letter area at the master's scale, softened by about half a source pixel.
+    h, w = letters.shape
+    big = Image.fromarray(letters, "F").resize((w * 8, h * 8), Image.BILINEAR)
+    soft = np.clip(gaussian_blur(np.asarray(big, dtype=np.float32), 3.0) / 255.0, 0, 1)
+    coverage = soft * np.clip(coverage / LETTER_LIFT, 0, 1) + (1 - soft) * coverage
 
     h, w = coverage.shape
     side = max(h, w)

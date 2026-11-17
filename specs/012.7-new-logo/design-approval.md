@@ -34,7 +34,14 @@ light and dark appearance at 1280 px, and a phone's tab overview for 375 px.
 
 | Date | Round | Commit | Changes requested | Changes made | Status |
 |---|---|---|---|---|---|
-| 2026-11-16 | 1 | `b15286f` | Top bar, seen on the deployed branch at desktop width: the emblem is barely visible at 2rem (32 px). Make it as tall as the language switch beside it, at every width. | | Changes requested |
+| 2026-11-16 | 1 | `b15286f` | Top bar, seen on the deployed branch at desktop width: the emblem is barely visible at 2rem (32 px). Make it as tall as the language switch beside it, at every width. | The top bar's mark is the touch-target size (44 px), the language switch's height, at every width; it was 2rem from 768 px. It loads the 44, 88 or 132 px light ink. The bar is still one 64 px row at 360, 375, 768 and 1280 px, signed out and with a role, in both languages. Only the four 1280 px top bar screenshots change. | Changes requested |
+| 2026-11-17 | 2 | `28a2a99` | | | Awaiting review |
+
+## Questions for round 2
+
+Round 1 answered question 2 below. Questions 1, 3, 4 and 5 are still open; the answer to each is
+needed before approval. In round 2, also check the four 1280 px top bar screenshots: the emblem beside
+the wordmark, at the language switch's height.
 
 ## Questions for round 1
 

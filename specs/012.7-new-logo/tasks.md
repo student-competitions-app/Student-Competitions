@@ -649,7 +649,7 @@ the new review round.
   - the header comment says the top bar's mark is 44 px at every width.
 
   In `app/templates/components/frame.html`, call `logo_mark(top_bar=True)`. T038 now passes, and `test_the_logo_folder_holds_only_what_is_used` still passes. per FR-009, research R2, R4 (contradicts)
-- [ ] T041 Retake the 12 headless screenshots of T024 (same names, views, widths, themes, Ukrainian, 2× density) over the files in `specs/012.7-new-logo/screenshots/`, and commit them. In `design-approval.md`:
+- [X] T041 Retake the 12 headless screenshots of T024 (same names, views, widths, themes, Ukrainian, 2× density) over the files in `specs/012.7-new-logo/screenshots/`, and commit them. In `design-approval.md`:
   - fill round 1's "Changes made": the top bar's mark is 44 px, the language switch's height, at every width;
   - add a round 2 row with that commit and the status "Awaiting review";
   - ask the questions still open (1, 3, 4, 5) again under "Questions for round 2".

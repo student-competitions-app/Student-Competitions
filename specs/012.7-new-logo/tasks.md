@@ -688,7 +688,7 @@ unchanged (spec Clarifications, round 2; research R13, R14). Test first (T045), 
 
   If a piece of ornament turned solid, adjust its polygon in the script and repeat T047. per FR-027, US1/AC8, US3/AC6, edge case "Where the letters and the ornament meet" (missing)
 - [X] T049 In `docs/requirements/ui-guidelines.md`, under **Icons and identity**, say that the emblem's letters ЯНМ are solid ink while its ornament is engraved, in both inks and in the icons. In `README.md`'s "Logo images", say that the script holds the letter area for the current source image, and that a new source means drawing it again. per FR-038, FR-039, research R12 (missing)
-- [ ] T050 Retake the 12 headless screenshots of T024 and T041 (same names, views, widths, themes, Ukrainian, 2× density), and commit them. In `design-approval.md`:
+- [X] T050 Retake the 12 headless screenshots of T024 and T041 (same names, views, widths, themes, Ukrainian, 2× density), and commit them. In `design-approval.md`:
   - fill round 2's "Changes made": the letters are solid from the script's letter area, the ornament is unchanged, and every image and icon is regenerated;
   - add a round 3 row with that commit and the status "Awaiting review";
   - add "Questions for round 3": the questions still open (1, 3, 4, 5), and whether any hairline curl that came out solid is acceptable.

@@ -42,7 +42,18 @@ makes **B** (research R13).
 | Date | Round | Commit | Changes requested | Changes made | Status |
 |---|---|---|---|---|---|
 | 2026-11-16 | 1 | `b15286f` | Top bar, seen on the deployed branch at desktop width: the emblem is barely visible at 2rem (32 px). Make it as tall as the language switch beside it, at every width. | The top bar's mark is the touch-target size (44 px), the language switch's height, at every width; it was 2rem from 768 px. It loads the 44, 88 or 132 px light ink. The bar is still one 64 px row at 360, 375, 768 and 1280 px, signed out and with a role, in both languages. Only the four 1280 px top bar screenshots change. | Changes requested |
-| 2026-11-17 | 2 | `28a2a99` | The size is right ("much better" on the deployed site). The emblem still lets the background through everywhere: make the letters ЯНМ fully opaque and keep the ornament as it is, option B of [round-2-letters-options](./screenshots/round-2-letters-options.png). | | Changes requested |
+| 2026-11-17 | 2 | `28a2a99` | The size is right ("much better" on the deployed site). The emblem still lets the background through everywhere: make the letters ЯНМ fully opaque and keep the ornament as it is, option B of [round-2-letters-options](./screenshots/round-2-letters-options.png). | `scripts/make_logo.py` holds the letter area as data in the source's pixels (research R13) and lifts the ink inside it to full; the ornament is unchanged. Every image and icon is regenerated; the output is pixel-identical to option B. A test reads two committed PNGs and checks points in the letters (opaque) and in the ornament (engraved). All 12 screenshots change. | Changes requested |
+| 2026-11-17 | 3 | `1e73c51` | | | Awaiting review |
+
+## Questions for round 3
+
+1. **The solid letters**: in every screenshot the letters ЯНМ are solid and the ornament engraved.
+   Is this option B as you chose it?
+2. **Where letters and ornament meet**: the loops crossing Н count as letter inside the letters' row,
+   and a few hairline curls touching М may read as solid at large sizes. Acceptable?
+3. **Small sizes**: at 48 px and below (the gallery's `sm`, the favicons) all of the emblem is lifted
+   so it does not wash out, so there the ornament looks nearly as solid as the letters. Keep it?
+4. Questions 1, 3, 4 and 5 of round 1 are still open.
 
 ## Questions for round 2
 

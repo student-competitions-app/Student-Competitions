@@ -79,7 +79,9 @@ for screenshots: `uv run --no-project --with playwright`, not a dependency.
 Filled in by task T013, and read by T031 for ui-guidelines §4. The top bar is one 64 px row in all 8
 combinations of check 2 at 360 px and 375 px: ☑ (confirmed 2026-11-16, headless Chromium at 2×
 density: the bar 64 px, the mark 44 × 44, the role label 8 px beside it). The 8 combinations at 768 px
-and 1280 px, added with the 44 px mark at every width (2026-11-17): ☐.
+and 1280 px, added with the 44 px mark at every width: ☑ (confirmed 2026-11-17, the same way: the bar
+64 px, the mark 44 × 44 like the language switch, every item on one row, no horizontal overflow; the
+frame of both areas ends at 113 px, under the 128 px of `--sc-frame-clearance-tabs` from 768 px).
 
 | Page | Viewport | Language | Bottom of `.frame` (px) |
 |---|---|---|---|

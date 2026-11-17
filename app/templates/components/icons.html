@@ -1,8 +1,8 @@
 {#- Icons (specs/010-design-system-ui-guidelines contracts/components.md §11, research D13).
 
     The logo mark is the emblem image (milestone 12.7 contracts/components.md, research R2–R4),
-    made by scripts/make_logo.py in app/static/img/logo/. On the top bar it is always light ink, one
-    <img> whose width candidates follow its size: 44 px below 768 px and 2rem from it. Elsewhere it
+    made by scripts/make_logo.py in app/static/img/logo/. On the top bar it is always light ink, 44 px
+    (the touch target, the language switch's height) at every width, and takes no size. Elsewhere it
     follows the theme with no script: dark ink in Light, light ink in Dark, and for Device a
     <picture> whose `prefers-color-scheme: dark` source holds the light ink. Each mark loads one
     file, sized for its density, and is decorative: the brand link reads as the application's name.
@@ -19,10 +19,10 @@
 
 {% macro logo_mark(size="md", theme=none, top_bar=False) -%}
 {%- if size not in ("sm", "md", "lg") %}{{ template_error("logo_mark: size must be sm, md or lg") }}{% endif -%}
-{%- if top_bar and size != "md" %}{{ template_error("logo_mark: the top bar's mark is md") }}{% endif -%}
+{%- if top_bar and size != "md" %}{{ template_error("logo_mark: the top bar's mark takes no size") }}{% endif -%}
 {%- if not top_bar and theme not in ("light", "dark", "device") %}{{ template_error("logo_mark: theme must be light, dark or device") }}{% endif -%}
 {%- if top_bar -%}
-<img class="logo-mark logo-mark-top-bar" src="{{ _logo_path("light", 32) }}" srcset="{% for px in (32, 44, 64, 88, 96, 132) %}{{ _logo_path("light", px) }} {{ px }}w{{ ", " if not loop.last }}{% endfor %}" sizes="(min-width: 768px) 2rem, 2.75rem" width="32" height="32" alt="" aria-hidden="true">
+<img class="logo-mark logo-mark-top-bar" src="{{ _logo_path("light", 44) }}" srcset="{{ _logo_densities("light", 44) }}" width="44" height="44" alt="" aria-hidden="true">
 {%- else -%}
 {%- set logo_class = {"sm": "logo-mark logo-mark-sm", "md": "logo-mark logo-mark-md", "lg": "logo-mark logo-mark-lg"}[size] -%}
 {%- set px = {"sm": 24, "md": 32, "lg": 64}[size] -%}

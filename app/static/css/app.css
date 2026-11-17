@@ -439,8 +439,9 @@ body > main {
 }
 
 /* The top bar (FR-018): the mark and the name link to `/`; the current role sits under the name on
-   a phone and beside it from 768 px; the user menu is last. The mark is 44 px (the touch target)
-   below 768 px and 2rem from it, and the role label's offset follows it (milestone 12.7). */
+   a phone and beside it from 768 px; the user menu is last. The mark is 44 px (the touch target),
+   the language switch's height, at every width, and the role label's offset follows it
+   (milestone 12.7). */
 .top-bar {
   background: var(--sc-top-bar);
   color: var(--sc-on-top-bar);
@@ -1067,13 +1068,6 @@ details.language-switch[open] > summary {
 .logo-mark-top-bar {
   width: var(--sc-touch-target);
   height: var(--sc-touch-target);
-}
-
-@media (min-width: 768px) {
-  .logo-mark-top-bar {
-    width: 2rem;
-    height: 2rem;
-  }
 }
 
 .icon {

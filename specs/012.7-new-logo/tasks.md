@@ -635,15 +635,15 @@ Task: "T021 [US3] Identity inks per theme in tests/integration/test_component_ga
 width (spec Clarifications). Tests first (T037, T038), then the code (T039, T040), then the checks and
 the new review round.
 
-- [ ] T037 In `tests/unit/test_frame_stylesheet.py`, rewrite `test_the_top_bar_mark_is_a_touch_target_on_a_phone` as `test_the_top_bar_mark_is_a_touch_target_at_every_width`: the top-level `.logo-mark-top-bar` is `var(--sc-touch-target)` wide and high, and no `@media` block sets its `width` or `height`. Fix the old-2rem wording in the docstring of `test_the_role_label_follows_the_mark_width`; its assertions stay. Run it and see it fail. per FR-034 (contradicts)
-- [ ] T038 In `tests/unit/test_templates.py` and `tests/integration/test_layout.py`, expect the 44 px top bar mark of contracts/components.md:
+- [X] T037 In `tests/unit/test_frame_stylesheet.py`, rewrite `test_the_top_bar_mark_is_a_touch_target_on_a_phone` as `test_the_top_bar_mark_is_a_touch_target_at_every_width`: the top-level `.logo-mark-top-bar` is `var(--sc-touch-target)` wide and high, and no `@media` block sets its `width` or `height`. Fix the old-2rem wording in the docstring of `test_the_role_label_follows_the_mark_width`; its assertions stay. Run it and see it fail. per FR-034 (contradicts)
+- [X] T038 In `tests/unit/test_templates.py` and `tests/integration/test_layout.py`, expect the 44 px top bar mark of contracts/components.md:
   - `test_logo_mark_on_the_top_bar` renders `logo_mark(top_bar=True)` and expects `src` `logo-light-44.png`, `srcset` `densities("light", 44)`, `width`/`height` 44 and no `sizes` attribute;
   - the refusal test is renamed `test_logo_mark_refuses_a_size_on_the_top_bar` and matches `logo_mark: the top bar's mark takes no size`;
   - `assert_top_bar_mark` expects `width`/`height` 44, no `sizes`, and exactly the three light-ink URLs 44, 88 and 132.
 
   Run them and see them fail. per FR-002, FR-009, FR-031 (contradicts)
-- [ ] T039 In `app/static/css/app.css`, delete the `@media (min-width: 768px)` rule that sets `.logo-mark-top-bar` to 2rem. Rewrite the top bar comment (lines 441–443): the mark is 44 px, the touch target, at every width, and the role label's offset follows it. T037 now passes. per FR-002, US1/AC1, research R5 (contradicts)
-- [ ] T040 In `app/templates/components/icons.html`:
+- [X] T039 In `app/static/css/app.css`, delete the `@media (min-width: 768px)` rule that sets `.logo-mark-top-bar` to 2rem. Rewrite the top bar comment (lines 441–443): the mark is 44 px, the touch target, at every width, and the role label's offset follows it. T037 now passes. per FR-002, US1/AC1, research R5 (contradicts)
+- [X] T040 In `app/templates/components/icons.html`:
   - the top bar branch renders `<img class="logo-mark logo-mark-top-bar" src="…/logo-light-44.png" srcset="{{ _logo_densities("light", 44) }}" width="44" height="44" alt="" aria-hidden="true">`;
   - the guard's message becomes `logo_mark: the top bar's mark takes no size`;
   - the header comment says the top bar's mark is 44 px at every width.
@@ -655,10 +655,10 @@ the new review round.
   - ask the questions still open (1, 3, 4, 5) again under "Questions for round 2".
 
   Then the product owner reviews (T026). per FR-025, FR-026, US4/AC2, SC-009 (missing)
-- [ ] T042 Check by hand, with headless Playwright as in T013, that the top bar is one 64 px row, the mark 44 × 44, at 768 px and 1280 px, signed out and with a role shown, in Ukrainian and English (8 combinations). At 768 px, also check that the role label and the language switch do not wrap. Then:
+- [X] T042 Check by hand, with headless Playwright as in T013, that the top bar is one 64 px row, the mark 44 × 44, at 768 px and 1280 px, signed out and with a role shown, in Ukrainian and English (8 combinations). At 768 px, also check that the role label and the language switch do not wrap. Then:
   - tick the 768/1280 line under quickstart **Measurements**;
   - extend the "Last measured in milestone 12.7" paragraph of ui-guidelines §4 to 360, 375, 768 and 1280 px.
 
   If a combination wraps, stop and raise it in round 2 rather than changing the size. per FR-003, FR-027, SC-002, research R11 (missing)
-- [ ] T043 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest` and `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest`. Everything passes, with no test skipped because of this milestone. per FR-037, SC-010 (partial)
+- [X] T043 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest` and `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest`. Everything passes, with no test skipped because of this milestone. per FR-037, SC-010 (partial)
 - [ ] T044 When T035 runs, write the Delivered summary's top bar as "the emblem in the top bar, 44 px at every width", not "44 px on phones". per FR-040, spec Clarifications 2026-11-17 (partial)

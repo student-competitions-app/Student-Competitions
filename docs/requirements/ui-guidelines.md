@@ -204,15 +204,16 @@ scrolls away with the page.
 focus; a form control keeps `--sc-field-clearance`, so its label and error stay in view (WCAG 2.2,
 2.4.11). The clearances are the tallest frames measured, plus room to spare: a new tab, a longer
 tab label or a taller top bar must be measured again at 360 px and 375 px width against them.
-Last measured in milestone 12.7, with the 44 px logo mark: at 360 px and 375 px, signed out and
-with a role shown, in Ukrainian and in English, the top bar stays one 64 px row. Below 768 px, when
+Last measured in milestone 12.7, with the 44 px logo mark: at 360 px, 375 px, 768 px and 1280 px,
+signed out and with a role shown, in Ukrainian and in English, the top bar stays one 64 px row. Below 768 px, when
 a role is shown, the wordmark is hidden visually (the logo link still reads as the application's
 name) and the role label sits beside the mark (milestone 12.5 research R15). The teacher area's
 tabs («Учасники · Команди · Питання · Змагання») and the administrator area's («Педагоги · Заклади
 освіти · Предмети») wrap onto two rows at 360 × 640 and 375 × 667, and the frame ends at 153 px
 (the administrator's at 375 × 667 in Ukrainian, on one row of tabs, at 109 px): under the 176 px of
 `--sc-frame-clearance-tabs` and a quarter of a 375 × 667 screen (166.75 px). Without the fallback
-the wordmark wrapped onto two lines under the role.
+the wordmark wrapped onto two lines under the role. At 768 × 1024 and 1280 × 800 the tabs fit on one
+row and both areas' frames end at 113 px, under the 128 px it has from 768 px.
 
 **The scripts**: the base layout loads two scripts on every page, each with `defer`, and pages add
 nothing; without JavaScript, links and forms work as before.

@@ -411,8 +411,9 @@ addresses; read the UI guidelines and the README.
   rewritten for the new behaviour, never skipped or left behind. The whole suite MUST pass on both database
   engines, and the style checks MUST pass, the script included.
 - **FR-043**: A test MUST read committed emblem images in light ink and in dark ink with the standard
-  library alone (CI has no image library) and check that sample points inside the letters are fully
-  opaque and sample points in the ornament are not.
+  library alone (CI has no image library) and check that sample points inside the letters are opaque
+  (alpha 250 or more, 98 %: the downscale leaves 1–2 % dips along the finest engraved lines) and
+  sample points in the ornament are inked but partly transparent (alpha above 0 and 240 or less).
 
 **Documentation**
 
@@ -475,7 +476,7 @@ addresses; read the UI guidelines and the README.
 - **SC-010**: The full test suite passes on both database engines with 0 tests skipped because of this
   milestone, and the style checks pass.
 - **SC-011**: In 100% of the checked emblem images, in both inks, every sample point inside the letters
-  is fully opaque and every sample point in the ornament is not.
+  is opaque (alpha ≥ 250) and every sample point in the ornament is partly transparent (alpha ≤ 240).
 
 ## Assumptions
 

@@ -533,9 +533,12 @@ blur the line between letter and ornament. Sample points are given as fractions 
 one list serves every size:
 
 - **Letters**: one point in the middle of each letter's widest stroke (Я's stem, Н's two stems, М's
-  right stem): alpha must be 255.
-- **Ornament**: one point in the middle of a loop above the letters, one in a fleur-de-lis between
-  them and one in a side flourish: alpha must be below 255 (the engraving's shading).
+  right stem): alpha must be 250 or more at the point and its 8 neighbours. Not 255: the Lanczos
+  downscale leaves 1–2 % dips (252–254) along the finest engraved lines inside the strokes, invisible
+  but present at most points (measured on option B, 2026-11-17).
+- **Ornament**: points in the loops above and below the letters, in a fleur-de-lis between them and in
+  a side flourish: alpha must be 240 or less at the point and its neighbours (the engraving's shading),
+  and above 0 at the point, so that it lies on the ornament's ink and not on paper.
 
 The exact points are picked when the script is changed, on its output, at least 2 px from any edge at
 the checked size, and each is shown on an overlay before it is kept, so that it lies clearly inside a

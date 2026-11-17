@@ -669,18 +669,18 @@ the new review round.
 unchanged (spec Clarifications, round 2; research R13, R14). Test first (T045), then the script
 (T046) and its output (T047), then the documents, the checks and round 3.
 
-- [ ] T045 In `tests/integration/test_logo.py`, add a PNG reader using only the standard library: `zlib` for the `IDAT` chunks, and the five row filters undone. It accepts only 8-bit RGBA, non-interlaced, and raises a clear error for anything else. Then add `test_the_letters_are_solid_and_the_ornament_engraved`:
+- [X] T045 In `tests/integration/test_logo.py`, add a PNG reader using only the standard library: `zlib` for the `IDAT` chunks, and the five row filters undone. It accepts only 8-bit RGBA, non-interlaced, and raises a clear error for anything else. Then add `test_the_letters_are_solid_and_the_ornament_engraved`:
   - read `logo-light-132.png` and `logo-dark-192.png`;
   - sample points are fractions of the side: one in each letter's widest stroke (Я's stem, Н's two stems, М's right stem) must have alpha 255; one in a loop, one in a fleur-de-lis and one in a side flourish must have alpha below 255.
 
   Pick the points on the option B images of the reviewed sheet, each at least 2 px from an edge and checked on an overlay. Run it and see it fail on the committed option A images. per FR-043, SC-011, research R14 (missing)
-- [ ] T046 In `scripts/make_logo.py`, add research R13:
+- [X] T046 In `scripts/make_logo.py`, add research R13:
   - the band and the 7 ornament polygons as module constants, in the source's pixels;
   - a `letters_mask` (ink `L < 215`, a 3 × 3 close, the band less the polygons), taken through the coverage's crop, scaled ×8 bilinear, blurred σ 3 and placed in the square master;
   - the lift `L · min(c / 0.45, 1) + (1 − L) · c` applied to the master before any resize.
 
   Update the module docstring, and keep `ruff check` and `ruff format --check` clean. per FR-041, FR-042, US5/AC6, research R13 (missing)
-- [ ] T047 Run `uv run --group logo scripts/make_logo.py`. The folder keeps the same 28 names, every image changes, and a second run leaves `git status --porcelain app/static/img/logo` empty. T045 now passes, and `test_the_logo_folder_holds_only_what_is_used` still passes. Commit the folder as the script left it. per FR-020, SC-006, US5/AC2 (missing)
+- [X] T047 Run `uv run --group logo scripts/make_logo.py`. The folder keeps the same 28 names, every image changes, and a second run leaves `git status --porcelain app/static/img/logo` empty. T045 now passes, and `test_the_logo_folder_holds_only_what_is_used` still passes. Commit the folder as the script left it. per FR-020, SC-006, US5/AC2 (missing)
 - [ ] T048 Check by hand (quickstart §3.1):
   - an overlay of the new master's letter area on the source: no fleur-de-lis, dot, rod or side flourish is solid;
   - the light ink at 44/88/132 px on the bar's blue, and the dark ink at 24/48/64 px on the page background;

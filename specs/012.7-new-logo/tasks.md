@@ -694,4 +694,4 @@ unchanged (spec Clarifications, round 2; research R13, R14). Test first (T045), 
   - add "Questions for round 3": the questions still open (1, 3, 4, 5), and whether any hairline curl that came out solid is acceptable.
 
   Then the product owner reviews (T026). per FR-025, FR-026, US4/AC2, SC-009 (missing)
-- [ ] T051 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest` and `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest`. Everything passes, with no test skipped because of this milestone. per FR-037, SC-010 (partial)
+- [X] T051 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest` and `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest`. Everything passes, with no test skipped because of this milestone. per FR-037, SC-010 (partial)

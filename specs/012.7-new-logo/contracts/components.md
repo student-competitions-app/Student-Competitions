@@ -11,7 +11,7 @@ The gallery's **Identity** section and the guidelines' **Icons and identity** se
 | Condition | Message |
 |---|---|
 | `size` not in `sm`, `md`, `lg` | `logo_mark: size must be sm, md or lg` (unchanged) |
-| `top_bar` and `size != "md"` | `logo_mark: the top bar's mark is md` |
+| `top_bar` and `size != "md"` (the default) | `logo_mark: the top bar's mark takes no size` |
 | not `top_bar` and `theme` not in `light`, `dark`, `device` | `logo_mark: theme must be light, dark or device` |
 
 These messages are developer errors, not user-facing text, and are not translated, as today.
@@ -19,13 +19,12 @@ These messages are developer errors, not user-facing text, and are not translate
 **Markup.** `B` stands for `/static/img/logo/`. Every `<img>` carries `alt=""`, `aria-hidden="true"`,
 `width` and `height`.
 
-Top bar (`logo_mark("md", top_bar=True)`):
+Top bar (`logo_mark(top_bar=True)`), 44 px at every width (revised 2026-11-17, design review round 1):
 
 ```html
-<img class="logo-mark logo-mark-top-bar" src="B/logo-light-32.png"
-     srcset="B/logo-light-32.png 32w, B/logo-light-44.png 44w, B/logo-light-64.png 64w,
-             B/logo-light-88.png 88w, B/logo-light-96.png 96w, B/logo-light-132.png 132w"
-     sizes="(min-width: 768px) 2rem, 2.75rem" width="32" height="32" alt="" aria-hidden="true">
+<img class="logo-mark logo-mark-top-bar" src="B/logo-light-44.png"
+     srcset="B/logo-light-44.png 1x, B/logo-light-88.png 2x, B/logo-light-132.png 3x"
+     width="44" height="44" alt="" aria-hidden="true">
 ```
 
 Page background, `size` → 1× pixels `p` (sm 24, md 32, lg 64):
@@ -54,7 +53,7 @@ Page background, `size` → 1× pixels `p` (sm 24, md 32, lg 64):
 
 ## `components/frame.html`: `top_bar`
 
-- `<a href="/" class="brand…">{{ logo_mark("md", top_bar=True) }}<span class="brand-name">{{ app_name }}</span></a>`.
+- `<a href="/" class="brand…">{{ logo_mark(top_bar=True) }}<span class="brand-name">{{ app_name }}</span></a>`.
 - No other change. The link's accessible name is still `brand-name`'s text, in the page's language,
   hidden only visually when a role is shown below 768 px.
 
@@ -77,7 +76,7 @@ The **Frame** section's top bars show the top bar's mark, through `top_bar`, wit
 |---|---|---|
 | `.logo-mark` | `display: block; flex: none` | unchanged |
 | `.logo-mark-sm` / `-md` / `-lg` | 1.5rem / 2rem / 4rem | unchanged |
-| `.logo-mark-top-bar` | (none) | `width` and `height: var(--sc-touch-target)`; inside `@media (min-width: 768px)`: `2rem` |
+| `.logo-mark-top-bar` | (none) | `width` and `height: var(--sc-touch-target)`, at every width; no `@media` block changes them |
 | `.logo-mark-tile`, `.logo-mark-spark` | tile and spark fills | **deleted** |
 | `.brand-role` (top level) | `padding-left: calc(2rem + var(--sc-space-1))` | `calc(var(--sc-touch-target) + var(--sc-space-1))` |
 | `.brand-with-role + .brand-role` (top level) | `margin: 0 0 0 calc(2rem + var(--sc-space-1))` | `margin: 0 0 0 calc(var(--sc-touch-target) + var(--sc-space-1))` |

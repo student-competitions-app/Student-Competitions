@@ -155,24 +155,25 @@ def _declarations(body: str) -> dict[str, str]:
     }
 
 
-def test_the_top_bar_mark_is_a_touch_target_on_a_phone() -> None:
-    """Milestone 12.7 FR-002 and FR-004: the top bar's mark is the touch-target size (44 px) below
-    768 px and 2rem from 768 px, written once each, with no per-breakpoint custom property."""
-    phone = _declarations(rule(".logo-mark-top-bar", top_level_rules()))
-    assert phone["width"] == phone["height"] == "var(--sc-touch-target)"
-    wide = [
-        _declarations(body)
-        for block in media_blocks("(min-width: 768px)")
-        for selector, body in rules(block)
-        if selector == ".logo-mark-top-bar"
+def test_the_top_bar_mark_is_a_touch_target_at_every_width() -> None:
+    """Milestone 12.7 FR-002 and FR-034: the top bar's mark is the touch-target size (44 px), the
+    language switch's height, at every width: written once, and no media query resizes it."""
+    mark = _declarations(rule(".logo-mark-top-bar", top_level_rules()))
+    assert mark["width"] == mark["height"] == "var(--sc-touch-target)"
+    resized = [
+        (head, selector)
+        for head, body in _blocks(_css())
+        if head.startswith("@media")
+        for selector, declarations in rules(body)
+        if ".logo-mark-top-bar" in selector
+        and {"width", "height"} & set(_declarations(declarations))
     ]
-    assert len(wide) == 1
-    assert wide[0]["width"] == wide[0]["height"] == "2rem"
+    assert resized == []
 
 
 def test_the_role_label_follows_the_mark_width() -> None:
     """Milestone 12.7 FR-002 and FR-004: below 768 px the role label sits beside the mark, offset by
-    the mark's width (the touch target) and the brand's gap, not by the old 2rem."""
+    the mark's width (the touch target) and the brand's gap, with no 2rem left over."""
     css_rules = top_level_rules()
     offset = "calc(var(--sc-touch-target) + var(--sc-space-1))"
     beside = rule(".brand-with-role + .brand-role", css_rules)

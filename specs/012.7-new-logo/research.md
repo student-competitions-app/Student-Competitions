@@ -23,14 +23,16 @@ What the code holds today:
 ## R1. The emblem images: which sizes, which inks, which names
 
 **Decision**: The mark is shown at four CSS sizes: `sm` 1.5rem (24 px), `md` 2rem (32 px), `lg` 4rem
-(64 px), and the top bar's phone size 2.75rem (44 px). Each is needed at 1×, 2× and 3× density.
+(64 px), and the top bar's size 2.75rem (44 px), at every width (revised 2026-11-17 after the design
+review's round 1; until then the top bar's mark was `md` from 768 px). Each is needed at 1×, 2× and 3×
+density.
 
 | Shown as | 1× | 2× | 3× | Inks |
 |---|---|---|---|---|
 | `sm` | 24 | 48 | 72 | dark, light |
-| `md` (top bar from 768 px, and on a page) | 32 | 64 | 96 | dark, light |
+| `md` (on a page) | 32 | 64 | 96 | dark, light |
 | `lg` | 64 | 128 | 192 | dark, light |
-| top bar below 768 px | 44 | 88 | 132 | light |
+| top bar, every width | 44 | 88 | 132 | light |
 
 The pixel sizes are deduplicated per ink (64 serves `md` 2× and `lg` 1×), giving:
 
@@ -40,6 +42,9 @@ The pixel sizes are deduplicated per ink (64 serves `md` 2× and `lg` 1×), givi
 Each is a square, transparent PNG with the emblem filling it edge to edge, as the first set's
 `logo-header-*` and `logo-*-256` were. One naming scheme, `logo-{ink}-{px}.png`, replaces
 `logo-header-*`: the top bar's mark is simply the light ink.
+
+The revision changes no file: light ink at 32, 64 and 96 px still serves `md` in **Dark**, and 44, 88
+and 132 px already existed for the phone.
 
 The light ink is only used on dark backgrounds (the top bar, and the page in **Dark**). The dark ink is
 only used on light backgrounds (the page in **Light**). The top bar's 44 px sizes exist only in light
@@ -57,6 +62,9 @@ not change `rem` units.
 - *Keep the `logo-header-*` names for the top bar.* That gives two names for the same light-ink
   images. Rejected.
 - *Add 4× images.* No common screen needs them; 3× is the milestone's limit. Rejected.
+- *The top bar's mark at `md` (2rem) from 768 px.* The first decision. The product owner's review,
+  round 1, found the engraving barely visible at 32 px beside the 44 px language switch. Rejected
+  2026-11-17.
 
 ## R2. How the browser picks the file it needs
 
@@ -65,21 +73,21 @@ not change `rem` units.
 - **A mark on a page background** (`sm`, `md`, `lg`): `<img>` with **density descriptors**, for
   example `src="logo-dark-24.png" srcset="logo-dark-24.png 1x, logo-dark-48.png 2x,
   logo-dark-72.png 3x"`. Its `width` and `height` attributes are the 1× size.
-- **The top bar's mark**: one `<img>` with **width descriptors** over the light-ink files
-  `32w, 44w, 64w, 88w, 96w, 132w` and `sizes="(min-width: 768px) 2rem, 2.75rem"`. It has `src`
-  `logo-light-32.png` and `width`/`height` 32. CSS sets its rendered size at each breakpoint (R5).
-  The attributes give the aspect ratio and reserve the space before the image loads.
+- **The top bar's mark**: one `<img>` with **density descriptors** over the light-ink files
+  `logo-light-44.png 1x, logo-light-88.png 2x, logo-light-132.png 3x`, `src` `logo-light-44.png` and
+  `width`/`height` 44. CSS sets the same size, `var(--sc-touch-target)` (R5). The attributes give the
+  aspect ratio and reserve the space before the image loads. (Revised 2026-11-17: the mark was 2rem
+  from 768 px, so it had width descriptors `32w … 132w` and `sizes="(min-width: 768px) 2rem,
+  2.75rem"`.)
 
 The browser downloads only the one candidate that matches the slot's size times the screen's density.
 
-**Rationale**: Spec FR-009 and FR-010. Density descriptors are the simplest fit for a fixed-size image.
-The top bar's mark changes size at 768 px, so its candidates must be chosen by rendered width. `sizes`
-with the same `768px` breakpoint as the stylesheet keeps the two in step. `rem` is a valid `sizes`
-length.
+**Rationale**: Spec FR-009 and FR-010. Density descriptors are the simplest fit for a fixed-size image,
+and since the revision every mark, the top bar's included, has one size at every width.
 
 **Alternatives considered**:
-- *`<picture>` with a `<source media="(min-width: 768px)">` per size.* It works, but needs more markup
-  for the same result. Rejected.
+- *Keep the width descriptors with `sizes="2.75rem"`.* It works, but says in two attributes what one
+  density list says. Rejected.
 - *CSS `image-set()` backgrounds.* The mark would no longer be an image element with set dimensions
   (FR-008, FR-010). Rejected.
 
@@ -114,9 +122,10 @@ because only the chosen candidate is fetched (FR-009).
 **Decision**: `logo_mark(size="md", theme=none, top_bar=False)` in `components/icons.html`:
 
 - `size` must be `sm`, `md` or `lg`. Any other value is a `template_error`, as today (FR-007).
-- `top_bar=True` draws the top bar's mark (R2): light ink, responsive, class
-  `logo-mark logo-mark-top-bar`. It accepts only `size="md"`, the size it has from 768 px; any other
-  size is a `template_error`. `theme` is not read.
+- `top_bar=True` draws the top bar's mark (R2): light ink, 44 px, class
+  `logo-mark logo-mark-top-bar`. It takes no size: `size` stays at its default, and `sm` or `lg` is a
+  `template_error`. `theme` is not read. (Revised 2026-11-17: it took `size="md"`, the size it had from
+  768 px.)
 - Otherwise `theme` must be `light`, `dark` or `device` (R3); a missing or unknown theme is a
   `template_error`. The class is `logo-mark logo-mark-{size}`.
 - Every variant renders `alt=""` and `aria-hidden="true"` on the `<img>`. That makes it decorative
@@ -126,12 +135,12 @@ because only the chosen candidate is fetched (FR-009).
 
 Callers:
 
-- `frame.html` `top_bar`: `logo_mark("md", top_bar=True)`.
+- `frame.html` `top_bar`: `logo_mark(top_bar=True)`.
 - The gallery: `logo_mark("lg", theme)`, `logo_mark("md", theme)` and `logo_mark("sm", theme)`. It
   passes the context's `theme` explicitly, because `icons.html` is imported without context.
 
 **Rationale**: The milestone keeps three sizes and the error for any other size, so the top bar's phone
-size cannot become a fourth size. A flag that only the top bar sets keeps the two uses apart. Making
+size cannot become a fourth size of the component. A flag that only the top bar sets keeps the two uses apart. Making
 `theme` required off the top bar means that a future page cannot silently get the wrong ink.
 
 **Alternatives considered**:
@@ -149,8 +158,8 @@ size cannot become a fourth size. A flag that only the top bar sets keeps the tw
 
 - `.logo-mark` stays `display: block; flex: none`. `.logo-mark-sm`, `-md` and `-lg` keep 1.5rem, 2rem
   and 4rem (width and height).
-- New `.logo-mark-top-bar` is `width/height: var(--sc-touch-target)`. Inside
-  `@media (min-width: 768px)` it is `width/height: 2rem`.
+- New `.logo-mark-top-bar` is `width/height: var(--sc-touch-target)`, at every width; no media query
+  changes it (revised 2026-11-17: it was `2rem` from 768 px).
 - Below 768 px, the role label's offset beside the mark follows the same width:
   - `.brand-with-role + .brand-role` gets `margin: 0 0 0 calc(var(--sc-touch-target) + var(--sc-space-1))`.
   - The base `.brand-role` gets `padding-left: calc(var(--sc-touch-target) + var(--sc-space-1))`.
@@ -161,19 +170,21 @@ size cannot become a fourth size. A flag that only the top bar sets keeps the tw
   `.logo-mark-md`.
 - The top bar's container keeps `min-height: 4rem` and `padding-block: var(--sc-space-1)`. A 44 px mark
   in the 44 px `.brand` (`min-height: var(--sc-touch-target)`) plus 2 × 8 px padding is 60 px, so the
-  bar stays one 64 px row (FR-003).
+  bar stays one 64 px row (FR-003). From 768 px the mark is 12 px wider than before, beside the wordmark,
+  the role label, the language switch and the user menu: that the row does not wrap at 768 px is
+  checked by hand (R11).
 - The icons comment is rewritten: the logo mark is an image in light ink on the top bar, and follows the
   theme elsewhere.
 
 **Rationale**: FR-002 and FR-004. `test_stylesheet.py` forbids `--sc-*` properties outside the token
 block and pixel literals outside it. A per-breakpoint custom property on `.top-bar` would break the
-first rule, so the two sizes are written directly: the token below 768 px, and `2rem` from 768 px (a
-rem length, which the rules allow).
+first rule; the mark has one size, so the token is used directly.
 
 **Alternatives considered**:
 - *A new token `--sc-brand-mark`, redefined in a media query.* Tokens are defined once, in the token
   block. Rejected.
-- *Size the mark with `width/height` attributes alone.* Those cannot change at a breakpoint. Rejected.
+- *Size the mark with `width/height` attributes alone.* Every other mark is sized by its class, and the
+  stylesheet test reads the class. Rejected.
 
 ## R6. Icons, links and the manifest
 
@@ -351,8 +362,8 @@ does not apply.
 
   The section's existing text check keeps `--sc-accent`.
 - **`tests/unit/test_frame_stylesheet.py`** (new tests, using its block helpers):
-  - Below 768 px (top level), `.logo-mark-top-bar` is sized by `var(--sc-touch-target)`.
-  - Inside `@media (min-width: 768px)` it is `2rem`.
+  - At the top level, `.logo-mark-top-bar` is sized by `var(--sc-touch-target)`.
+  - No `@media` block changes its `width` or `height` (revised 2026-11-17: it was `2rem` from 768 px).
   - The top-level `.brand-with-role + .brand-role` margin and `.brand-role` padding-left use
     `calc(var(--sc-touch-target) + var(--sc-space-1))`.
   - No `2rem` offset remains in either.
@@ -410,8 +421,8 @@ Committing the images makes the approval checkable later.
 milestone 10.1:
 
 - the emblem is sharp in the bar and the gallery (the screenshots);
-- the bar is one 64 px row at 360 px and 375 px, with a role and signed out, in Ukrainian and English
-  (8 combinations, measured with Playwright's bounding box);
+- the bar is one 64 px row at 360 px, 375 px, 768 px and 1280 px, with a role and signed out, in
+  Ukrainian and English (16 combinations, measured with Playwright's bounding box);
 - the frame's bottom on an area page, measured again at 360 × 640 and 375 × 667 for the teacher and
   the administrator in both languages. It must stay under 176 px (`--sc-frame-clearance-tabs`), and the
   numbers go into ui-guidelines §4 ("Last measured in milestone 12.7");
@@ -435,7 +446,7 @@ The bar's height cannot change (R5), so the frame should measure as in milestone
 - **`docs/requirements/ui-guidelines.md`**:
   - The introduction adds a sentence that the logo mark was replaced in milestone 12.7, with a link to
     `specs/012.7-new-logo/design-approval.md`.
-  - §4 adds a top bar item: the mark is 2rem from 768 px and 44 px below. The "Last measured" paragraph
+  - §4 adds a top bar item: the mark is 44 px (the touch target) at every width. The "Last measured" paragraph
     is replaced by milestone 12.7's numbers.
   - The **Icons and identity** section says that `logo_mark(size, theme, top_bar)` shows the emblem
     image, light ink on the top bar, and that elsewhere it follows the theme (picture for **Device**,

@@ -202,8 +202,8 @@ def test_logo_mark_refuses_an_unknown_size(size: str) -> None:
 
 
 @pytest.mark.parametrize("size", ["sm", "lg"])
-def test_logo_mark_refuses_a_top_bar_size_other_than_md(size: str) -> None:
-    with pytest.raises(TemplateRuntimeError, match="logo_mark: the top bar's mark is md"):
+def test_logo_mark_refuses_a_size_on_the_top_bar(size: str) -> None:
+    with pytest.raises(TemplateRuntimeError, match="logo_mark: the top bar's mark takes no size"):
         render(LOGO + "{{ logo_mark(size, top_bar=True) }}", size=size)
 
 
@@ -251,17 +251,15 @@ def test_logo_mark_in_each_theme(size: str, px: int) -> None:
 
 
 def test_logo_mark_on_the_top_bar() -> None:
-    """Light ink in every theme, with width candidates for its 44 px and 2rem slots."""
-    page = html.parse(render(LOGO + '{{ logo_mark("md", top_bar=True) }}'))
+    """Light ink in every theme, 44 px (the touch target) at every width, at 1x, 2x and 3x."""
+    page = html.parse(render(LOGO + "{{ logo_mark(top_bar=True) }}"))
     (mark,) = [e for e in page.iter() if e is not page]
     assert mark.tag == "img"
     assert mark.classes() == ["logo-mark", "logo-mark-top-bar"]
-    assert mark.attrs["src"] == LOGO_PATH.format("light", 32)
-    assert mark.attrs["srcset"] == ", ".join(
-        f"{LOGO_PATH.format('light', px)} {px}w" for px in (32, 44, 64, 88, 96, 132)
-    )
-    assert mark.attrs["sizes"] == "(min-width: 768px) 2rem, 2.75rem"
-    assert mark.attrs["width"] == mark.attrs["height"] == "32"
+    assert mark.attrs["src"] == LOGO_PATH.format("light", 44)
+    assert mark.attrs["srcset"] == densities("light", 44)
+    assert "sizes" not in mark.attrs
+    assert mark.attrs["width"] == mark.attrs["height"] == "44"
     assert mark.attrs["alt"] == "" and mark.attrs["aria-hidden"] == "true"
 
 

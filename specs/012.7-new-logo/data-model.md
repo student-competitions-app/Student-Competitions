@@ -21,14 +21,14 @@ That makes 19 files. Every file is used by at least one `srcset`; none is used b
 | Input | Values | Rule |
 |---|---|---|
 | `size` | `sm` (1.5rem), `md` (2rem), `lg` (4rem) | Anything else is a template error |
-| `top_bar` | `false` (default), `true` | `true` only with `size="md"`, otherwise a template error |
+| `top_bar` | `false` (default), `true` | `true` takes no size: `size` stays at its default, and `sm` or `lg` is a template error |
 | `theme` | `light`, `dark`, `device` | Required when `top_bar` is false; ignored when it is true; missing or unknown is a template error |
 
 The rendered ink and density candidates follow from the inputs:
 
 | Case | Element | Ink | Candidates |
 |---|---|---|---|
-| `top_bar=true` | `<img>` | light | `32w 44w 64w 88w 96w 132w`, `sizes="(min-width: 768px) 2rem, 2.75rem"` |
+| `top_bar=true` | `<img>` | light | `{1×,2×,3×}` of 44 px, at every width |
 | `theme=light` | `<img>` | dark | `{1×,2×,3×}` of the size |
 | `theme=dark` | `<img>` | light | `{1×,2×,3×}` of the size |
 | `theme=device` | `<picture>`: `<source media="(prefers-color-scheme: dark)">` + `<img>` | source light, img dark | `{1×,2×,3×}` of the size, each |

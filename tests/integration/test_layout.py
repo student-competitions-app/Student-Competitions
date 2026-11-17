@@ -132,7 +132,7 @@ def srcset_urls(srcset: str) -> list[str]:
 
 def assert_top_bar_mark(home: html.Element) -> None:
     """Milestone 12.7 FR-001, FR-005, contracts/components.md: the brand link holds one logo mark,
-    the emblem image in light ink, decorative, sized for the slot it has at each width."""
+    the emblem image in light ink, decorative, 44 px at every width, at 1x, 2x and 3x."""
     marks = [element for element in home.iter() if "logo-mark" in element.classes()]
     assert len(marks) == 1, "the brand link has no single logo mark"
     (mark,) = marks
@@ -140,11 +140,12 @@ def assert_top_bar_mark(home: html.Element) -> None:
     assert "logo-mark-top-bar" in mark.classes()
     assert mark.attrs.get("alt") == "" and "alt" in mark.attrs
     assert mark.attrs.get("aria-hidden") == "true"
-    assert (mark.attrs.get("width"), mark.attrs.get("height")) == ("32", "32")
-    assert mark.attrs.get("sizes") == "(min-width: 768px) 2rem, 2.75rem"
-    urls = [mark.attrs.get("src", ""), *srcset_urls(mark.attrs.get("srcset", ""))]
-    assert len(urls) > 1
-    assert all(url.startswith("/static/img/logo/logo-light-") for url in urls), urls
+    assert (mark.attrs.get("width"), mark.attrs.get("height")) == ("44", "44")
+    assert "sizes" not in mark.attrs
+    assert mark.attrs.get("src") == "/static/img/logo/logo-light-44.png"
+    assert srcset_urls(mark.attrs.get("srcset", "")) == [
+        f"/static/img/logo/logo-light-{px}.png" for px in (44, 88, 132)
+    ]
 
 
 def assert_identity(body: str) -> None:

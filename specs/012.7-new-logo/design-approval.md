@@ -34,7 +34,7 @@ light and dark appearance at 1280 px, and a phone's tab overview for 375 px.
 
 | Date | Round | Commit | Changes requested | Changes made | Status |
 |---|---|---|---|---|---|
-| 2026-11-16 | 1 | `b15286f` | | | Awaiting review |
+| 2026-11-16 | 1 | `b15286f` | Top bar, seen on the deployed branch at desktop width: the emblem is barely visible at 2rem (32 px). Make it as tall as the language switch beside it, at every width. | | Changes requested |
 
 ## Questions for round 1
 
@@ -46,6 +46,8 @@ The implementation takes these choices. Each is a parameter of `scripts/make_log
    tile have more padding?
 2. **The 44 px mark on phones**: below 768 px the top bar's mark is the touch-target size, larger
    than the 2rem (32 px) it has from 768 px, with the role label beside it. Is the size right?
+   *Answered in round 1: the mark is the touch-target size (44 px), the language switch's height, at
+   every width (spec Clarifications, session 2026-11-17).*
 3. **The dark ink on the light gallery background**: in **Light**, the marks off the top bar are
    near-black (`#1c1c22`) on the page background. Does the engraving read well there?
 4. **The maskable icon's padding**: on Android, the home-screen icon keeps the emblem within the

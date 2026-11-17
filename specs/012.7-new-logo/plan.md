@@ -24,9 +24,10 @@ an image, not inline SVG. Nothing else in the UI changes.
 
 - The signature becomes `logo_mark(size="md", theme=none, top_bar=False)`. It keeps `sm`, `md` and
   `lg` and the size error.
-- **Top bar**: light ink in one `<img>`, with width-described candidates (32–132 px) and
-  `sizes="(min-width: 768px) 2rem, 2.75rem"`. CSS sizes it by `--sc-touch-target` below 768 px and at
-  2rem from 768 px, and the role label's offset follows. The bar stays one 64 px row.
+- **Top bar**: light ink in one `<img>`, 44 px at every width, with density candidates (44, 88 and
+  132 px). CSS sizes it by `--sc-touch-target`, the language switch's height, and the role label's
+  offset follows. The bar stays one 64 px row. (Revised 2026-11-17 after the design review's round 1:
+  the mark was 2rem from 768 px, with width-described candidates.)
 - **Page background** (the gallery): it follows the `theme` the server already renders. **Light**
   gives dark ink, **Dark** gives light ink, and **Device** gives a `<picture>` whose
   `prefers-color-scheme: dark` source holds the light ink. There is no script, and each mark loads one
@@ -167,7 +168,7 @@ specs/012.7-new-logo/
 app/
 ├── templates/
 │   ├── components/icons.html        # logo_mark(size, theme, top_bar): emblem <img>/<picture>; header comment
-│   ├── components/frame.html        # top_bar: logo_mark("md", top_bar=True)
+│   ├── components/frame.html        # top_bar: logo_mark(top_bar=True)
 │   ├── layouts/base.html            # six icon/manifest links replace the three old ones
 │   └── pages/admin/components.html  # Identity: logo_mark(size, theme)
 └── static/

@@ -26,8 +26,8 @@ application needs, it holds files nothing uses, and the script depends on a libr
 does not want. Seven things become true when this milestone is done:
 
 1. **The emblem is the mark in the top bar.** The brand link shows the emblem in light ink straight on the
-   dark bar, in both themes: 2rem from 768 px, and 44 px (the touch-target size) below 768 px, where it is
-   often the only identity in the bar. The bar stays one 64 px row.
+   dark bar, in both themes, at the touch-target size (44 px), as tall as the language switch, at every
+   width; below 768 px it is often the only identity in the bar. The bar stays one 64 px row.
 2. **The logo mark component shows the emblem.** It keeps its three sizes and its error for any other
    size. Every size is sharp on ordinary and high-density screens, and off the top bar it follows the
    theme without JavaScript.
@@ -43,14 +43,26 @@ does not want. Seven things become true when this milestone is done:
 7. **Nothing of the old mark is left.** No code serves, draws, links or tests the spark, its tile or the
    old favicons, and the documentation describes the new mark.
 
+## Clarifications
+
+### Session 2026-11-17
+
+- Q: The product owner's review, round 1 (design-approval.md), found the top bar's emblem barely visible
+  at 2rem (32 px) on a desktop. What size should it be? → A: The touch-target size
+  (`--sc-touch-target`, 2.75rem, 44 px), as tall as the language switch beside it, at every width, not
+  only below 768 px. FR-002, FR-034, User Story 1, the edge cases, SC-002 and the assumptions follow.
+  The component's `sm`, `md` and `lg` sizes do not change, and no emblem image is added or removed: the
+  44, 88 and 132 px light-ink images already exist.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A visitor recognises the application by its emblem in the top bar (Priority: P1)
 
 Olena, a teacher, opens the application on her laptop. In the top bar, before the product name, she sees
-the silver diamond of the new emblem on the deep-blue bar. Later she opens it on her phone, where the
-wordmark is hidden beside her role: the emblem is larger there, the size of a button, and she can read its
-letters. In both places it is the link to her area, as it was before.
+the silver diamond of the new emblem on the deep-blue bar, the size of a button, as tall as the language
+switch, and she can read its letters. Later she opens it on her phone, where the wordmark is hidden beside
+her role and the emblem, at the same size, is the only identity in the bar. In both places it is the link
+to her area, as it was before.
 
 **Why this priority**: The top bar is on every page; the mark there is the application's identity. This is
 what the milestone is for.
@@ -62,14 +74,16 @@ for the brand link.
 **Acceptance Scenarios**:
 
 1. **Given** any page at 768 px or wider, in **Light** or **Dark**, **When** it is shown, **Then** the
-   brand link holds the emblem in light ink, 2rem square, straight on the bar with no tile around it,
-   followed by the wordmark.
+   brand link holds the emblem in light ink, the touch-target size (44 px) square, as tall as the
+   language switch, straight on the bar with no tile around it, followed by the wordmark. The top bar is
+   still one 64 px row.
 2. **Given** any page narrower than 768 px, signed in with a role shown or signed out, **When** it is
-   shown, **Then** the emblem is the touch-target size (44 px) and the top bar is still one 64 px row.
+   shown, **Then** the emblem is the same touch-target size (44 px) and the top bar is still one 64 px
+   row.
 3. **Given** a signed-in teacher at 360 px or 375 px, in Ukrainian or English, **When** the area page is
-   shown, **Then** the role label sits beside the larger mark at an offset that follows the mark's new
+   shown, **Then** the role label sits beside the 44 px mark at an offset that follows the mark's new
    width, without overlapping it or wrapping the bar onto a second row.
-4. **Given** a screen with 1×, 2× or 3× pixel density, **When** the top bar is shown at either size,
+4. **Given** a screen with 1×, 2× or 3× pixel density, **When** the top bar is shown at any width,
    **Then** the emblem is sharp, and the browser downloads only the one image file it needs.
 5. **Given** a screen reader user on any page, **When** they reach the brand link, **Then** it is announced
    by the application's name in the page's language, the emblem itself is not announced, and this holds
@@ -231,7 +245,9 @@ addresses; read the UI guidelines and the README.
 - **High-density screens.** A 3× phone showing the 44 px mark needs a 132 px image; every displayed size
   has an image at 1×, 2× and 3×, so nothing is upscaled by the browser.
 - **Very small sizes.** At 16 px the emblem reads as a texture, and at 32 px its letters are hard to read;
-  both are accepted, because the mark is recognised by its shape, a silver diamond on deep blue.
+  both are accepted in the browser tab and in the gallery's `sm` and `md` marks, because there the mark is
+  recognised by its shape, a silver diamond on deep blue. The top bar's mark is never smaller than 44 px,
+  where the letters are readable (Clarifications, 2026-11-17).
 - **A request to `/favicon.ico` at the site root.** It is not served by this milestone and answers as it
   does today: 404, the **Page not found** page (checked on 2026-11-16). Browsers use the linked icons
   instead.
@@ -248,12 +264,12 @@ addresses; read the UI guidelines and the README.
 
 - **FR-001**: The brand link in the top bar MUST show the emblem in light ink straight on the bar, with no
   tile, in both themes.
-- **FR-002**: From 768 px the top bar's mark MUST be 2rem square. Below 768 px it MUST be the touch-target
-  size (`--sc-touch-target`, 2.75rem, 44 px), signed in or out.
-- **FR-003**: The top bar MUST stay one 64 px row at every width, including at 360 px and 375 px with a
-  role shown and signed out, in Ukrainian and in English.
+- **FR-002**: At every width, signed in or out, the top bar's mark MUST be the touch-target size
+  (`--sc-touch-target`, 2.75rem, 44 px) square, the height of the language switch beside it.
+- **FR-003**: The top bar MUST stay one 64 px row at every width, including at 360 px, 375 px, 768 px and
+  1280 px with a role shown and signed out, in Ukrainian and in English.
 - **FR-004**: Every offset that assumes the old 2rem mark width, such as the role label's left margin
-  beside the mark, MUST follow the mark's width at each breakpoint.
+  beside the mark, MUST follow the mark's 44 px width wherever it applies.
 - **FR-005**: The mark MUST stay decorative: hidden from assistive technology. The brand link's accessible
   name MUST remain the application's name in the page's language, also below 768 px where the wordmark is
   hidden visually.
@@ -265,7 +281,7 @@ addresses; read the UI guidelines and the README.
 - **FR-007**: The logo mark component MUST keep its three sizes, `sm` (1.5rem), `md` (2rem) and `lg`
   (4rem), and MUST keep failing with a template error for any other size.
 - **FR-008**: The component MUST show the emblem image instead of inline SVG.
-- **FR-009**: Each size, and the top bar's 44 px phone size, MUST be sharp at 1×, 2× and 3× pixel
+- **FR-009**: Each size, and the top bar's 44 px size, MUST be sharp at 1×, 2× and 3× pixel
   density, and the browser MUST load only the one file it needs for the screen.
 - **FR-010**: The image MUST have its width and height set, so nothing shifts while it loads.
 - **FR-011**: In the top bar the mark MUST always be in light ink. Anywhere else (today only the gallery) it
@@ -291,7 +307,7 @@ addresses; read the UI guidelines and the README.
 **The image set and the script**
 
 - **FR-018**: The image folder (`app/static/img/logo/`) MUST hold only the files the application links or
-  shows: the emblem images for the component's sizes and the top bar's phone size at 1×, 2× and 3×, in
+  shows: the emblem images for the component's sizes and the top bar's size at 1×, 2× and 3×, in
   both inks wherever the mark can appear in both; the favicons; the Apple touch icon; the manifest's icons;
   and the manifest.
 - **FR-019**: The prepared link-preview image (`og-image.png`) and the 512 px and 1024 px transparent
@@ -318,8 +334,8 @@ addresses; read the UI guidelines and the README.
   with its date in a design approval file in this milestone's spec folder. Milestone 10's design approval
   MUST NOT be edited.
 - **FR-027**: This milestone's quickstart MUST list the checks a test cannot make, as in milestone 10.1:
-  the emblem is sharp in the bar and the gallery; the bar is one 64 px row at 360 px and 375 px with a
-  role shown and signed out, in Ukrainian and English; the frame still ends under
+  the emblem is sharp in the bar and the gallery; the bar is one 64 px row at 360 px, 375 px, 768 px and
+  1280 px with a role shown and signed out, in Ukrainian and English; the frame still ends under
   `--sc-frame-clearance-tabs` on an area page; in **Device** the gallery's mark follows the device's colour
   scheme when it is switched in the developer tools; the browser tab and a phone's home screen show the
   new icons.
@@ -344,8 +360,8 @@ addresses; read the UI guidelines and the README.
   that the manifest has `start_url` `/` and `display` `browser`, and that its icons exist and answer 200.
 - **FR-033**: A test MUST check that the logo mark with an unknown size is a template error.
 - **FR-034**: A stylesheet test, in the manner of the existing frame stylesheet test, MUST check that the
-  top bar's mark is sized by `--sc-touch-target` below 768 px and at 2rem from 768 px, and that the role
-  label's offset beside the mark follows the same width.
+  top bar's mark is sized by `--sc-touch-target` at every width, with no other size from 768 px, and that
+  the role label's offset beside the mark follows the same width.
 - **FR-035**: Tests MUST check that the gallery's **Identity** section shows the mark at its three sizes,
   in dark ink in **Light** and in light ink in **Dark**.
 - **FR-036**: A test MUST check that nothing under `app/` or `tests/` refers to the old favicon paths or to
@@ -374,7 +390,7 @@ addresses; read the UI guidelines and the README.
   engraved shading. Its source is `docs/brand/logo-source.png` (311 × 311 px, the emblem about 212 px of
   it). It exists in two inks: dark, for light backgrounds, and light, for dark ones.
 - **Emblem image**: one rendering of the emblem in one ink at one pixel size, on a transparent background.
-  The displayed sizes are `sm` (24 px), `md` (32 px), `lg` (64 px) and the top bar's phone size (44 px),
+  The displayed sizes are `sm` (24 px), `md` (32 px), `lg` (64 px) and the top bar's size (44 px),
   each needed at 1×, 2× and 3× density. `sm`, `md` and `lg` exist in both inks; the 44 px size, shown only
   in the top bar, in light ink.
 - **Icon**: the emblem in light ink on deep blue (`#16337a`) for browsers and devices: favicons on a
@@ -393,8 +409,8 @@ addresses; read the UI guidelines and the README.
 
 - **SC-001**: The new emblem appears in 100% of top bars, in both themes and at every width, and the old
   spark appears on 0 pages, in 0 browser tabs and on 0 home-screen icons.
-- **SC-002**: The top bar is one 64 px row in all 8 hand-checked combinations (360 px and 375 px, role
-  shown and signed out, Ukrainian and English).
+- **SC-002**: The top bar is one 64 px row in all 16 hand-checked combinations (360 px, 375 px, 768 px
+  and 1280 px, role shown and signed out, Ukrainian and English).
 - **SC-003**: The emblem is sharp at all 4 displayed sizes on 1×, 2× and 3× screens, with no image
   enlarged by the browser, and each page downloads exactly one emblem file per mark shown.
 - **SC-004**: All 9 files (the 5 icons each page links, the manifest and the manifest's 3 icons) answer
@@ -422,8 +438,9 @@ addresses; read the UI guidelines and the README.
   name equal to the name is left to the plan.
 - **The manifest's name stays Ukrainian in both languages.** Every page opens in Ukrainian, and a manifest
   is read once, when the icon is added.
-- **The 32 px mark on a desktop stays hard to read.** The mark is recognised by its shape; making it
-  legible at 32 px is not a goal.
+- **The 32 px mark stays hard to read where it remains.** In the browser tab and the gallery's `md` mark
+  the emblem is recognised by its shape; making it legible at 32 px is not a goal. The top bar's mark is
+  44 px at every width, where it is legible (Clarifications, 2026-11-17).
 - **No data changes.** No table, column, route or migration is added or changed; the icons are static
   files.
 - **The hand checks stay manual** until end-to-end tests arrive in milestone 16.

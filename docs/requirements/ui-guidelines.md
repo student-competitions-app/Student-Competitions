@@ -176,8 +176,8 @@ Every page renders the same frame from `layouts/base.html`:
       linking to `/`, which opens the current role's area (the student's home page for a
       student; milestone 12.6), the current role's label, the **language switch**
       ([gallery: language](/admin/components#language)) and the **user menu**; signed out, the
-      brand and the language switch only. The logo mark is the emblem in light ink, 2rem from
-      768 px and the touch-target size (44 px) below (milestone 12.7);
+      brand and the language switch only. The logo mark is the emblem in light ink, the
+      touch-target size (44 px) at every width, as tall as the language switch (milestone 12.7);
    2. the **area tabs** of the administrator or teacher area, if the page is in one;
    3. the **loading bar**, hidden until a page load is pending;
 4. `<main>`, at the one content width;
@@ -632,7 +632,7 @@ list, labelled "Pages, top" and "Pages, bottom", so the two landmarks can be tol
 
 **`logo_mark(size, theme, top_bar)`** shows the emblem as an image, from
 `app/static/img/logo/`, which `scripts/make_logo.py` writes; it is no longer inline SVG. On the top
-bar (`top_bar=True`, size `md`) it is always light ink, 2rem from 768 px and 44 px below. Elsewhere
+bar (`top_bar=True`, no size) it is always light ink, 44 px (the touch target) at every width. Elsewhere
 it follows the `theme` it is given, with no script: dark ink in **Light**, light ink in **Dark**,
 and for **Device** a `<picture>` whose `prefers-color-scheme: dark` source holds the light ink. Each
 of its sizes (`sm` 1.5rem, `md` 2rem, `lg` 4rem) is sharp at 1×–3× density, and each mark loads one

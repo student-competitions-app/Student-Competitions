@@ -44,8 +44,8 @@ for screenshots: `uv run --no-project --with playwright`, not a dependency.
 1. **Sharp emblem.** Look at the top bar at 1280 px and 375 px, on a 1× and a 2× or 3× screen (or with
    the device pixel ratio emulated), and at the gallery's **Identity**. The emblem has crisp strokes and
    no halo, in **Light** and in **Dark**.
-2. **One row.** At 360 px and 375 px width: signed out, and signed in with a role shown (teacher area),
-   in Ukrainian and in English. That is 8 combinations. Each time the top bar is 64 px tall, the mark is
+2. **One row.** At 360 px, 375 px, 768 px and 1280 px width: signed out, and signed in with a role
+   shown (teacher area), in Ukrainian and in English. That is 16 combinations. Each time the top bar is 64 px tall, the mark is
    44 × 44, the role label sits beside it without overlap, and nothing wraps.
 3. **The frame.** At 360 × 640 and 375 × 667, in both languages, measure the bottom of `.frame` on
    `/teacher/students` and on `/admin/teachers`. It must be under 176 px
@@ -56,8 +56,7 @@ for screenshots: `uv run --no-project --with playwright`, not a dependency.
    disabled. In the developer tools, switch "Emulate CSS prefers-color-scheme" between light and dark:
    the three marks switch between dark and light ink. The top bar's mark stays light ink.
 5. **One file per mark.** In the Network panel of the gallery page, each mark loads exactly one
-   `logo-*.png`. The top bar loads `logo-light-44.png` (or 88/132) below 768 px and `logo-light-32.png`
-   (or 64/96) from 768 px.
+   `logo-*.png`. The top bar loads `logo-light-44.png` (or 88/132) at every width.
 6. **Browser tab.** The tab shows the emblem on a rounded deep-blue tile, in the browser's light and dark
    appearance.
 7. **Home screen.** On a phone (iOS Safari: Share → Add to Home Screen; Android Chrome: Add to Home
@@ -78,8 +77,9 @@ for screenshots: `uv run --no-project --with playwright`, not a dependency.
 ### Measurements
 
 Filled in by task T013, and read by T031 for ui-guidelines §4. The top bar is one 64 px row in all 8
-combinations of check 2: ☑ (confirmed 2026-11-16, headless Chromium at 2× density: the bar
-64 px, the mark 44 × 44, the role label 8 px beside it).
+combinations of check 2 at 360 px and 375 px: ☑ (confirmed 2026-11-16, headless Chromium at 2×
+density: the bar 64 px, the mark 44 × 44, the role label 8 px beside it). The 8 combinations at 768 px
+and 1280 px, added with the 44 px mark at every width (2026-11-17): ☐.
 
 | Page | Viewport | Language | Bottom of `.frame` (px) |
 |---|---|---|---|

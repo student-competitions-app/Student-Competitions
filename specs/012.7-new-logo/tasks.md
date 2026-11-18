@@ -729,5 +729,5 @@ the documents and round 4.
   - complete "Questions for round 4".
 
   Then the product owner reviews (T026). per FR-025, FR-026, US4/AC2, SC-009 (missing)
-- [ ] T058 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest` and `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest`. Everything passes, with no test skipped because of this milestone. per FR-037, SC-010 (partial)
+- [X] T058 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest` and `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest`. Everything passes, with no test skipped because of this milestone. per FR-037, SC-010 (partial)
 - [ ] T059 When T035 runs, also write in the Delivered summary that the browser and device icons show the letters ЯНМ alone, and the pages the whole emblem. per FR-040, spec Clarifications round 3 (partial)

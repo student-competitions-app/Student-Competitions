@@ -5,8 +5,9 @@ Every icon, the Apple touch icon and the manifest are static files under `/stati
 written by `scripts/make_logo.py` and served to everyone, signed in or not, with their types. The
 manifest opens the application in the browser. The folder holds exactly what the pages use
 (FR-018, FR-019), the emblem's letters are solid while its ornament is engraved (FR-041, FR-043),
-the icons show the letters ЯНМ alone, without the ornament (FR-044, FR-046), and nothing in the code or the tests still refers to the old mark (FR-028, FR-029). Every test that
-takes a client runs once per database engine.
+the icons show the letters ЯНМ alone, without the ornament (FR-044, FR-046), and nothing in the
+code or the tests still refers to the old mark (FR-028, FR-029). Every test that takes a client runs
+once per database engine.
 """
 
 import json
@@ -296,8 +297,10 @@ def test_the_icons_show_the_letters_alone(name: str) -> None:
         x, y = int(fx * side), int(fy * side)
         for dx in (-1, 0, 1):
             for dy in (-1, 0, 1):
-                r, g, b, a = pixel(x + dx, y + dy)
-                if a != 255 or max(abs(c - i) for c, i in zip((r, g, b), LIGHT_INK)) > NEAR:
+                *rgb, a = pixel(x + dx, y + dy)
+                off = max(abs(c - i) for c, i in zip(rgb, LIGHT_INK, strict=True))
+                if a != 255 or off > NEAR:
+                    r, g, b = rgb
                     not_ink[letter] = (r, g, b, a)
     assert not_ink == {}, f"{name}: the letters are not the light ink: {not_ink}"
 

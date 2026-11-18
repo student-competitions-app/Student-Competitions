@@ -383,7 +383,7 @@ its date in this milestone's own design approval.
 **Independent Test**: `specs/012.7-new-logo/design-approval.md` lists the 16 screenshots and has a dated
 **Approved** round before merge.
 
-- [ ] T024 [US4] Take the 12 headless screenshots of research R10 with a Playwright script in the
+- [X] T024 [US4] Take the 12 headless screenshots of research R10 with a Playwright script in the
   scratchpad:
   - the top bar (viewport clip of the frame) on `/login` and on `/teacher/students`;
   - the `#identity` section of `/admin/components`;
@@ -395,6 +395,10 @@ its date in this milestone's own design approval.
   `specs/012.7-new-logo/screenshots/` as `{view}-{width}-{theme}.png`, with `view` one of `sign-in`,
   `area`, `identity`, `tab`. (FR-025, depends on T013 and T023; the phone check T019 does not block the
   screenshots)
+
+  Done (2026-11-18): the 12 headless screenshots and `tab-1280-dark.png` from the product owner. The
+  other three tab images were not taken: the product owner's check of the real tab and home screen
+  (T019) stands in for them (spec Clarifications, round 4).
 - [X] T025 [US4] Create `specs/012.7-new-logo/design-approval.md` in the form of
   `specs/010-design-system-ui-guidelines/design-approval.md`:
   - **Approver**: the product owner.
@@ -540,7 +544,7 @@ read correctly (quickstart §6).
 - [X] T034 Run `uv run ruff check .` and `uv run ruff format --check .` (the script included), then
   `uv run pytest` and `TEST_POSTGRES_URL=… uv run pytest` (the `sc-pg` container). Everything passes,
   with no test skipped because of this milestone. (FR-037, SC-010)
-- [ ] T035 In `docs/requirements/milestones.md`, once the approval (T026) is recorded and the PR is
+- [X] T035 In `docs/requirements/milestones.md`, once the approval (T026) is recorded and the PR is
   ready:
   - move 12.7 from Upcoming to Delivered, compacted like 12.5 and 12.6. Its `_Spec:_` link is
     `specs/012.7-new-logo/spec.md`, and its summary is a few sentences: the emblem in the top bar
@@ -549,7 +553,7 @@ read correctly (quickstart §6).
   - update the 12.x group paragraph if it describes 12.7 as upcoming.
 
   (FR-040)
-- [ ] T036 Run [quickstart.md](./quickstart.md) §1–§6 end to end and tick each item. This includes
+- [X] T036 Run [quickstart.md](./quickstart.md) §1–§6 end to end and tick each item. This includes
   §3.9: build and run the Docker image and check the manifest's and the ICO's `content-type` from the
   container (research R6). Leave the branch ready for a pull request.
 
@@ -663,7 +667,7 @@ the new review round.
 
   If a combination wraps, stop and raise it in round 2 rather than changing the size. per FR-003, FR-027, SC-002, research R11 (missing)
 - [X] T043 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest` and `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest`. Everything passes, with no test skipped because of this milestone. per FR-037, SC-010 (partial)
-- [ ] T044 When T035 runs, write the Delivered summary's top bar as "the emblem in the top bar, 44 px at every width", not "44 px on phones". per FR-040, spec Clarifications 2026-11-17 (partial)
+- [X] T044 When T035 runs, write the Delivered summary's top bar as "the emblem in the top bar, 44 px at every width", not "44 px on phones". per FR-040, spec Clarifications 2026-11-17 (partial)
 
 ## Phase 11: Convergence
 
@@ -732,4 +736,4 @@ the documents and round 4.
 
   Then the product owner reviews (T026). per FR-025, FR-026, US4/AC2, SC-009 (missing)
 - [X] T058 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest` and `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest`. Everything passes, with no test skipped because of this milestone. per FR-037, SC-010 (partial)
-- [ ] T059 When T035 runs, also write in the Delivered summary that the browser and device icons show the letters ЯНМ alone, and the pages the whole emblem. per FR-040, spec Clarifications round 3 (partial)
+- [X] T059 When T035 runs, also write in the Delivered summary that the browser and device icons show the letters ЯНМ alone, and the pages the whole emblem. per FR-040, spec Clarifications round 3 (partial)

@@ -50,12 +50,14 @@ proposal made outside the script, kept as the record of the choice (research R15
 |---|---|---|---|---|---|
 | 2026-11-16 | 1 | `b15286f` | Top bar, seen on the deployed branch at desktop width: the emblem is barely visible at 2rem (32 px). Make it as tall as the language switch beside it, at every width. | The top bar's mark is the touch-target size (44 px), the language switch's height, at every width; it was 2rem from 768 px. It loads the 44, 88 or 132 px light ink. The bar is still one 64 px row at 360, 375, 768 and 1280 px, signed out and with a role, in both languages. Only the four 1280 px top bar screenshots change. | Changes requested |
 | 2026-11-17 | 2 | `28a2a99` | The size is right ("much better" on the deployed site). The emblem still lets the background through everywhere: make the letters ЯНМ fully opaque and keep the ornament as it is, option B of [round-2-letters-options](./screenshots/round-2-letters-options.png). | `scripts/make_logo.py` holds the letter area as data in the source's pixels (research R13) and lifts the ink inside it to full; the ornament is unchanged. Every image and icon is regenerated; the output is pixel-identical to option B. A test reads two committed PNGs and checks points in the letters (opaque) and in the ornament (engraved). All 12 screenshots change. | Changes requested |
-| 2026-11-18 | 3 | `1e73c51` | The solid letters are right: the top bar looks fine on a laptop and on a phone, in Light and Dark. But on small images, the browser tab and the phone's home screen, the emblem looks like a hexagon with blurred edges. Show the ornament at large sizes and the three letters ЯНМ alone at small ones: option B of [round-3-small-icons-options](./screenshots/round-3-small-icons-options.png). | | Changes requested |
+| 2026-11-18 | 3 | `1e73c51` | The solid letters are right: the top bar looks fine on a laptop and on a phone, in Light and Dark. But on small images, the browser tab and the phone's home screen, the emblem looks like a hexagon with blurred edges. Show the ornament at large sizes and the three letters ЯНМ alone at small ones: option B of [round-3-small-icons-options](./screenshots/round-3-small-icons-options.png). | `scripts/make_logo.py` cuts the letters ЯНМ out of the source by a rule it holds with its data (research R15: the letters are the heaviest ink of their row) and draws all 8 icons from them, without the ornament; the favicons' padding is 4 % a side. Only the 8 icons are regenerated, pixel-identical to option B; the emblem images, so the 12 screenshots, do not change. A test reads the two 512 px icons and checks the letters (light ink) and the rows above and below them (deep blue only). | Changes requested |
+| 2026-11-18 | 4 | `d165b33` | | | Awaiting review |
 
 ## Questions for round 4
 
-To be filled in when round 4 opens: the icons made by the script, and the round's open questions.
-Already known:
+Review [round-4-icons](./screenshots/round-4-icons.png), drawn from the committed icons, and the real
+browser tab and home screen on the deployed branch. A phone that already has the old home-screen icon
+may keep it until it is removed and added again.
 
 1. **The gallery's `sm` mark** (24 px, its 2× file 48 px) has the same blurred-hexagon look as the old
    favicons. Keep the whole emblem there, as now, or show the letters alone too?

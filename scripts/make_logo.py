@@ -7,13 +7,18 @@ application uses to `app/static/img/logo/` (milestone 12.7 data-model.md §1, §
 
 - the emblem in light ink (`#f4f5f8`) and dark ink (`#1c1c22`), `logo-{ink}-{px}.png`, at every
   displayed size at 1x, 2x and 3x, with the letters ЯНМ solid and the ornament engraved;
-- the favicons, the Apple touch icon and the manifest icons, the emblem on `#16337a`;
+- the favicons, the Apple touch icon and the manifest icons: the letters ЯНМ alone, without the
+  ornament, on `#16337a`, because at a tab's or a home screen's size the whole emblem blurs;
 - `site.webmanifest`.
 
 The letters are solid because the source has one layer for letters and ornament alike: the script
 holds the letter area as data, in the source's pixels (`LETTER_BAND` less `NOT_LETTERS`), and lifts
 the ink inside it to full (milestone 12.7 research R13). The area belongs to this source image: a
 new source means drawing it again.
+
+The icons' letters are cut out of the source by a rule held with the data (`CUT_*`, research R15):
+the letters are the heaviest ink of their row, the ornament there is lighter or thinner. Its numbers
+belong to this source too.
 
 Then it deletes every other file in that folder, so the folder holds only what is used. The images
 are always this script's output and are never edited by hand: to change one, change this script or
@@ -62,6 +67,19 @@ NOT_LETTERS = (
 # Inside the letters, ink at this coverage or more becomes full ink: the shading stops letting the
 # background through, while each letter's outline and inline (no ink) keep their shape.
 LETTER_LIFT = 0.45
+
+# The letters alone, for the icons (research R15), in the source's pixels: the row of letters as
+# rows and columns (end exclusive), less where the right flourish's stem meets М.
+CUT_BAND = (118, 192, 58, 249)  # y0, y1, x0, x1
+CUT_NOT_LETTERS = ((141, 164, 240, 249),)  # y0, y1, x0, x1
+# The letters' heavy ink: the fleurs-de-lis, dots, curls and rod are lighter than this.
+CUT_HEAVY = 120
+# Pieces of this many pixels or fewer are ornament that passed the threshold.
+CUT_SMALLEST_PIECE = 120
+# Grown back this many pixels, inside the source's ink, to the letters' own edge.
+CUT_GROW = 2
+# Holes smaller than this, inside the letters, are their engraved inline.
+CUT_LARGEST_HOLE = 40
 
 MANIFEST = {
     "name": "Студентські змагання",
@@ -138,9 +156,74 @@ def letter_area(lum: np.ndarray) -> np.ndarray:
     return (np.asarray(ink) > 0) & (np.asarray(keep) > 0)
 
 
-def coverage_master() -> np.ndarray:
-    """The emblem's ink coverage (0 paper, 1 full ink) on a large square, centred, with the
-    letters' ink lifted to full."""
+def filtered(mask: np.ndarray, *filters: ImageFilter.Filter) -> np.ndarray:
+    img = Image.fromarray((mask * 255).astype(np.uint8), "L")
+    for f in filters:
+        img = img.filter(f)
+    return np.asarray(img) > 0
+
+
+def pieces(mask: np.ndarray) -> tuple[np.ndarray, dict[int, int]]:
+    """The 4-connected pieces of a mask: a label per pixel (0 outside) and each label's size."""
+    labels = np.zeros(mask.shape, np.int32)
+    sizes: dict[int, int] = {}
+    h, w = mask.shape
+    for y, x in zip(*np.nonzero(mask), strict=True):
+        if labels[y, x]:
+            continue
+        label = len(sizes) + 1
+        labels[y, x], stack, size = label, [(y, x)], 0
+        while stack:
+            a, b = stack.pop()
+            size += 1
+            for c, d in ((a + 1, b), (a - 1, b), (a, b + 1), (a, b - 1)):
+                if 0 <= c < h and 0 <= d < w and mask[c, d] and not labels[c, d]:
+                    labels[c, d] = label
+                    stack.append((c, d))
+        sizes[label] = size
+    return labels, sizes
+
+
+def letters_alone(lum: np.ndarray) -> np.ndarray:
+    """The letters ЯНМ without any of the ornament, as a boolean mask in the source's pixels."""
+    band = np.zeros(lum.shape, bool)
+    y0, y1, x0, x1 = CUT_BAND
+    band[y0:y1, x0:x1] = True
+    for y0, y1, x0, x1 in CUT_NOT_LETTERS:
+        band[y0:y1, x0:x1] = False
+    # The heavy ink, its inline closed, then opened so the rod and the hairlines go.
+    heavy = filtered(lum < CUT_HEAVY, ImageFilter.MaxFilter(3), ImageFilter.MinFilter(3))
+    heavy = filtered(heavy, ImageFilter.MinFilter(3), ImageFilter.MaxFilter(3)) & band
+    labels, sizes = pieces(heavy)
+    letters = np.isin(labels, [k for k, n in sizes.items() if n > CUT_SMALLEST_PIECE])
+    for _ in range(CUT_GROW):
+        letters = filtered(letters, ImageFilter.MaxFilter(3)) & (lum < 215) & band
+    labels, sizes = pieces(~letters)
+    return letters | np.isin(labels, [k for k, n in sizes.items() if n < CUT_LARGEST_HOLE])
+
+
+def soft_mask(mask: np.ndarray) -> np.ndarray:
+    """A mask in the source's pixels at the master's scale (×8), softened by about half a source
+    pixel, from 0 to 1."""
+    h, w = mask.shape
+    big = Image.fromarray(mask.astype(np.float32) * 255, "F").resize((w * 8, h * 8), Image.BILINEAR)
+    return np.clip(gaussian_blur(np.asarray(big, dtype=np.float32), 3.0) / 255.0, 0, 1)
+
+
+def squared(coverage: np.ndarray) -> np.ndarray:
+    """The coverage centred on a square of its larger side."""
+    h, w = coverage.shape
+    side = max(h, w)
+    square = np.zeros((side, side), np.float32)
+    top, left = (side - h) // 2, (side - w) // 2
+    square[top : top + h, left : left + w] = coverage
+    return square
+
+
+def coverage_masters() -> tuple[np.ndarray, np.ndarray]:
+    """The ink coverage (0 paper, 1 full ink) on large squares: the emblem, centred, with the
+    letters' ink lifted to full; and the letters alone, the same lifted letters cropped to their
+    ink, for the icons."""
     src = Image.open(SRC).convert("RGBA")
     # The source has stray transparent pixels with black RGB: flatten it onto white first.
     flat = Image.alpha_composite(Image.new("RGBA", src.size, (255, 255, 255, 255)), src)
@@ -150,7 +233,8 @@ def coverage_master() -> np.ndarray:
     x0, x1 = max(int(xs.min()) - 3, 0), min(int(xs.max()) + 4, lum.shape[1])
     y0, y1 = max(int(ys.min()) - 3, 0), min(int(ys.max()) + 4, lum.shape[0])
     hi = lum[y0:y1, x0:x1]
-    letters = letter_area(lum)[y0:y1, x0:x1].astype(np.float32) * 255
+    letters = letter_area(lum)[y0:y1, x0:x1]
+    alone = letters_alone(lum)[y0:y1, x0:x1]
     print(f"crop {(x0, y0, x1, y1)} -> {hi.shape[1]}x{hi.shape[0]}")
 
     for _ in range(3):
@@ -164,19 +248,14 @@ def coverage_master() -> np.ndarray:
     coverage = 1.0 - n
     coverage[coverage < 0.02] = 0
 
-    # The letter area at the master's scale, softened by about half a source pixel.
-    h, w = letters.shape
-    big = Image.fromarray(letters, "F").resize((w * 8, h * 8), Image.BILINEAR)
-    soft = np.clip(gaussian_blur(np.asarray(big, dtype=np.float32), 3.0) / 255.0, 0, 1)
-    coverage = soft * np.clip(coverage / LETTER_LIFT, 0, 1) + (1 - soft) * coverage
-
-    h, w = coverage.shape
-    side = max(h, w)
-    square = np.zeros((side, side), np.float32)
-    top, left = (side - h) // 2, (side - w) // 2
-    square[top : top + h, left : left + w] = coverage
-    print(f"master {side}x{side}")
-    return square
+    lifted = np.clip(coverage / LETTER_LIFT, 0, 1)
+    soft = soft_mask(letters)
+    emblem = squared(soft * lifted + (1 - soft) * coverage)
+    only = soft_mask(alone) * lifted
+    ys, xs = np.nonzero(only > 0.02)
+    only = squared(only[ys.min() : ys.max() + 1, xs.min() : xs.max() + 1])
+    print(f"master {emblem.shape[0]} px, letters alone {only.shape[0]} px")
+    return emblem, only
 
 
 def ink_image(coverage: np.ndarray, ink: tuple[int, int, int]) -> Image.Image:
@@ -202,7 +281,7 @@ def small_sharpen(img: Image.Image, amount: float) -> Image.Image:
 
 
 def tile(mark: Image.Image, size: int, pad: float, radius: float, sharpen: float = 0.0):
-    """The emblem on an opaque navy square, with rounded corners when `radius` is set."""
+    """A mark on an opaque navy square, with rounded corners when `radius` is set."""
     if radius:
         mask = Image.new("L", (size * 4, size * 4), 0)
         ImageDraw.Draw(mask).rounded_rectangle(
@@ -226,7 +305,7 @@ def tile(mark: Image.Image, size: int, pad: float, radius: float, sharpen: float
 
 
 def main() -> None:
-    coverage = coverage_master()
+    coverage, letters = coverage_masters()
     masters = {ink: ink_image(coverage, rgb) for ink, rgb in INKS.items()}
     OUT.mkdir(parents=True, exist_ok=True)
     written: list[str] = []
@@ -243,10 +322,11 @@ def main() -> None:
                 img = small_sharpen(img, 0.8)
             save(img, f"logo-{ink}-{size}.png")
 
-    # Favicons: a rounded navy tile with minimal padding, so the emblem is as large as possible.
-    light = masters["light"]
+    # The icons show the letters alone. Favicons: a rounded navy tile with little padding, so the
+    # letters are as large as a tab allows.
+    light = ink_image(letters, INKS["light"])
     favicons = {
-        s: tile(light, s, 0.02, 0.22, sharpen=1.0 if s <= 32 else 0.4) for s in (16, 32, 48)
+        s: tile(light, s, 0.04, 0.22, sharpen=1.0 if s <= 32 else 0.4) for s in (16, 32, 48)
     }
     for size, img in favicons.items():
         save(img, f"favicon-{size}.png")
@@ -258,7 +338,7 @@ def main() -> None:
     written.append("favicon.ico")
 
     # Platform icons: full-bleed squares, because the system applies its own mask. The maskable
-    # icon keeps the emblem inside the central 80 % safe-zone circle.
+    # icon keeps the letters inside the central 80 % safe-zone circle.
     save(tile(light, 180, 0.08, 0).convert("RGB"), "apple-touch-icon.png")
     save(tile(light, 192, 0.06, 0), "icon-192.png")
     save(tile(light, 512, 0.06, 0), "icon-512.png")

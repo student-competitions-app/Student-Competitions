@@ -633,8 +633,11 @@ list, labelled "Pages, top" and "Pages, bottom", so the two landmarks can be tol
 
 **`logo_mark(size, theme, top_bar)`** shows the emblem as an image, from
 `app/static/img/logo/`, which `scripts/make_logo.py` writes; it is no longer inline SVG. The
-emblem's letters ЯНМ are solid ink and its ornament is engraved, partly transparent, in both inks
-and in the icons. On the top bar (`top_bar=True`, no size) it is always light ink, 44 px (the touch
+emblem's letters ЯНМ are solid ink and its ornament is engraved, partly transparent, in both inks.
+The browser and device icons (the favicons, the Apple touch icon and the manifest's icons) show the
+letters ЯНМ alone, without the ornament, in light ink on deep blue: at a tab's or a home screen's
+size the whole emblem blurs into a shape. The marks in the pages always show the whole emblem. On the
+top bar (`top_bar=True`, no size) the mark is always light ink, 44 px (the touch
 target) at every width. Elsewhere it follows the `theme` it is given, with no script: dark ink in **Light**, light ink in **Dark**,
 and for **Device** a `<picture>` whose `prefers-color-scheme: dark` source holds the light ink. Each
 of its sizes (`sm` 1.5rem, `md` 2rem, `lg` 4rem) is sharp at 1×–3× density, and each mark loads one

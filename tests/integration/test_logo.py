@@ -5,8 +5,9 @@ Every icon, the Apple touch icon and the manifest are static files under `/stati
 written by `scripts/make_logo.py` and served to everyone, signed in or not, with their types. The
 manifest opens the application in the browser. The folder holds exactly what the pages use
 (FR-018, FR-019), the emblem's letters are solid while its ornament is engraved (FR-041, FR-043),
-and nothing in the code or the tests still refers to the old mark (FR-028, FR-029). Every test that
-takes a client runs once per database engine.
+the icons show the letters ЯНМ alone, without the ornament (FR-044, FR-046), and nothing in the
+code or the tests still refers to the old mark (FR-028, FR-029). Every test that takes a client runs
+once per database engine.
 """
 
 import json
@@ -158,10 +159,10 @@ def test_nothing_refers_to_the_old_mark(client: TestClient) -> None:
     assert client.get("/static/img/" + "favicon.svg").status_code == 404
 
 
-def png_alpha(path: Path) -> list[bytes]:
-    """The alpha channel of a PNG, one row per item, read with the standard library alone: CI
-    installs no image library (research R14). Only the type `make_logo.py` writes is accepted,
-    8-bit RGBA, not interlaced, so a change in how the images are written fails loudly."""
+def png_pixels(path: Path) -> list[bytes]:
+    """The pixels of a PNG, one row of RGBA bytes per item, read with the standard library alone:
+    CI installs no image library (research R14, R16). Only the type `make_logo.py` writes is
+    accepted, 8-bit RGBA, not interlaced, so a change in how the images are written fails loudly."""
     data = path.read_bytes()
     assert data[:8] == b"\x89PNG\r\n\x1a\n", f"{path.name} is not a PNG"
     pos, header, compressed = 8, None, b""
@@ -198,9 +199,14 @@ def png_alpha(path: Path) -> list[bytes]:
                 ) & 0xFF
             else:
                 assert kind == 0, f"{path.name}: unknown row filter {kind}"
-        rows.append(bytes(line[3::4]))
+        rows.append(bytes(line))
         previous = line
     return rows
+
+
+def png_alpha(path: Path) -> list[bytes]:
+    """The alpha channel of a PNG, one row per item."""
+    return [row[3::4] for row in png_pixels(path)]
 
 
 # Sample points as fractions of the emblem image's side, picked on the reviewed option B and checked
@@ -242,3 +248,63 @@ def test_the_letters_are_solid_and_the_ornament_engraved(name: str) -> None:
     assert all(value > 0 for value in blank.values()), (
         f"{name}: a point misses the ornament: {blank}"
     )
+
+
+NAVY = (0x16, 0x33, 0x7A)
+LIGHT_INK = (0xF4, 0xF5, 0xF8)
+NEAR = 8
+"""How far from the light ink a point inside the letters may be, per channel (resampling)."""
+ICONS = {
+    # The letters' widest strokes as fractions of the icon's side, and the letters' top and bottom
+    # rows: picked on the reviewed option B and checked on an overlay (research R16). The two icons
+    # differ in padding (6 % and 15 % a side).
+    "icon-512.png": {
+        "points": {
+            "Я's stem": (0.295, 0.44),
+            "Н's left stem": (0.441, 0.44),
+            "Н's right stem": (0.545, 0.44),
+            "М's right stem": (0.855, 0.44),
+        },
+        "letters": (0.31, 0.69),
+    },
+    "icon-maskable-512.png": {
+        "points": {
+            "Я's stem": (0.338, 0.453),
+            "Н's left stem": (0.454, 0.453),
+            "Н's right stem": (0.537, 0.453),
+            "М's right stem": (0.783, 0.453),
+        },
+        "letters": (0.35, 0.65),
+    },
+}
+MARGIN = 4
+"""Rows next to the letters left out of the no-ornament check, for the resampling's spread."""
+
+
+@pytest.mark.parametrize("name", sorted(ICONS))
+def test_the_icons_show_the_letters_alone(name: str) -> None:
+    """FR-044, FR-046, SC-012: the icons show the letters ЯНМ in light ink, and nothing of the
+    ornament: the rows above and below the letters, where the emblem's loops and fleurs-de-lis are,
+    hold only the deep blue."""
+    rows = png_pixels(APP / "static/img/logo" / name)
+    side = len(rows)
+
+    def pixel(x: int, y: int) -> tuple[int, ...]:
+        return tuple(rows[y][4 * x : 4 * x + 4])
+
+    not_ink = {}
+    for letter, (fx, fy) in ICONS[name]["points"].items():
+        x, y = int(fx * side), int(fy * side)
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                *rgb, a = pixel(x + dx, y + dy)
+                off = max(abs(c - i) for c, i in zip(rgb, LIGHT_INK, strict=True))
+                if a != 255 or off > NEAR:
+                    r, g, b = rgb
+                    not_ink[letter] = (r, g, b, a)
+    assert not_ink == {}, f"{name}: the letters are not the light ink: {not_ink}"
+
+    top, bottom = ICONS[name]["letters"]
+    outside = [*range(int(top * side) - MARGIN), *range(int(bottom * side) + MARGIN + 1, side)]
+    inked = [y for y in outside if rows[y] != bytes(NAVY + (255,)) * side]
+    assert inked == [], f"{name}: ornament above or below the letters, in rows {inked[:5]}…"

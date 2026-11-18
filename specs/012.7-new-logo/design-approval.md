@@ -37,22 +37,51 @@ letters opaque but engraved. The product owner chose **B**. It is a proposal mad
 kept as the record of the choice; the round's review screenshots are taken again once the script
 makes **B** (research R13).
 
+**Proposals reviewed in round 3**: [round-3-small-icons-options](./screenshots/round-3-small-icons-options.png)
+shows the icons in a drawn browser tab (light and dark, on a 2× and a 1× screen), on a drawn phone home
+screen (iOS and Android) and pixel for pixel: **A** the whole emblem, as in round 3, and **B** the letters
+ЯНМ alone, cut out of the same source ([round-3-letters-cut](./screenshots/round-3-letters-cut.png)).
+The product owner chose **B** for the icons; the emblem stays at the sizes the pages show. It is a
+proposal made outside the script, kept as the record of the choice (research R15).
+
 ## Review log
 
 | Date | Round | Commit | Changes requested | Changes made | Status |
 |---|---|---|---|---|---|
 | 2026-11-16 | 1 | `b15286f` | Top bar, seen on the deployed branch at desktop width: the emblem is barely visible at 2rem (32 px). Make it as tall as the language switch beside it, at every width. | The top bar's mark is the touch-target size (44 px), the language switch's height, at every width; it was 2rem from 768 px. It loads the 44, 88 or 132 px light ink. The bar is still one 64 px row at 360, 375, 768 and 1280 px, signed out and with a role, in both languages. Only the four 1280 px top bar screenshots change. | Changes requested |
 | 2026-11-17 | 2 | `28a2a99` | The size is right ("much better" on the deployed site). The emblem still lets the background through everywhere: make the letters ЯНМ fully opaque and keep the ornament as it is, option B of [round-2-letters-options](./screenshots/round-2-letters-options.png). | `scripts/make_logo.py` holds the letter area as data in the source's pixels (research R13) and lifts the ink inside it to full; the ornament is unchanged. Every image and icon is regenerated; the output is pixel-identical to option B. A test reads two committed PNGs and checks points in the letters (opaque) and in the ornament (engraved). All 12 screenshots change. | Changes requested |
-| 2026-11-17 | 3 | `1e73c51` | | | Awaiting review |
+| 2026-11-18 | 3 | `1e73c51` | The solid letters are right: the top bar looks fine on a laptop and on a phone, in Light and Dark. But on small images, the browser tab and the phone's home screen, the emblem looks like a hexagon with blurred edges. Show the ornament at large sizes and the three letters ЯНМ alone at small ones: option B of [round-3-small-icons-options](./screenshots/round-3-small-icons-options.png). | `scripts/make_logo.py` cuts the letters ЯНМ out of the source by a rule it holds with its data (research R15: the letters are the heaviest ink of their row) and draws all 8 icons from them, without the ornament; the favicons' padding is 4 % a side. Only the 8 icons are regenerated, pixel-identical to option B; the emblem images, so the 12 screenshots, do not change. A test reads the two 512 px icons and checks the letters (light ink) and the rows above and below them (deep blue only). | Changes requested |
+| 2026-11-18 | 4 | `d165b33` | | | Awaiting review |
+
+## Questions for round 4
+
+Review [round-4-icons](./screenshots/round-4-icons.png), drawn from the committed icons, and the real
+browser tab and home screen on the deployed branch. A phone that already has the old home-screen icon
+may keep it until it is removed and added again.
+
+1. **The gallery's `sm` mark** (24 px, its 2× file 48 px) has the same blurred-hexagon look as the old
+   favicons. Keep the whole emblem there, as now, or show the letters alone too?
+2. **The letters alone in the tab and on the home screen**: legible at 32 px, told apart at 16 px,
+   and filling the tile well enough (4 % padding a side on the favicons)?
+3. Round 3's question 2 and round 1's questions 3, 4 and 5 are still open. Round 1's question 4 (the
+   maskable icon's padding) is now about the letters inside the circle.
 
 ## Questions for round 3
 
 1. **The solid letters**: in every screenshot the letters ЯНМ are solid and the ornament engraved.
    Is this option B as you chose it?
+   *Answered on 2026-11-17, on the deployed branch: the logo looks fine on a laptop browser in Light
+   and Dark, and on a phone in Light and Dark. This covers the top bar at both widths; the gallery's
+   Identity, the browser tab and the home screen are not covered yet.*
 2. **Where letters and ornament meet**: the loops crossing Н count as letter inside the letters' row,
    and a few hairline curls touching М may read as solid at large sizes. Acceptable?
 3. **Small sizes**: at 48 px and below (the gallery's `sm`, the favicons) all of the emblem is lifted
    so it does not wash out, so there the ornament looks nearly as solid as the letters. Keep it?
+   *Answered on 2026-11-17, on the deployed branch: the browser tab icon looks good. On a second look
+   (2026-11-18) the browser tab and the home screen showed a hexagon with blurred edges, which gave
+   round 3's change: the icons show the letters alone. That also replaces round 1 question 1 (the
+   favicon's legibility on its tile), which round 4 reviews again with the letters. Whether the
+   gallery's `sm` mark looks too heavy beside `md` (round 1 question 5) is still open.*
 4. Questions 1, 3, 4 and 5 of round 1 are still open.
 
 ## Questions for round 2

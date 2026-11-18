@@ -32,13 +32,14 @@ does not want. Seven things become true when this milestone is done:
 2. **The logo mark component shows the emblem.** It keeps its three sizes and its error for any other
    size. Every size is sharp on ordinary and high-density screens, and off the top bar it follows the
    theme without JavaScript.
-3. **The browser tab and the phone's home screen show the emblem.** Favicons, an Apple touch icon and a
-   web manifest are linked from every page. An icon added to a home screen opens the application in the
+3. **The browser tab and the phone's home screen show the emblem's letters.** At those sizes the whole
+   emblem blurs into a shape, so the icons show the letters ЯНМ alone, without the ornament. Favicons, an
+   Apple touch icon and a web manifest are linked from every page. An icon added to a home screen opens the application in the
    browser, like a bookmark.
 4. **The images come from one script, and only the used ones are kept.** The script uses Pillow and numpy
    only, lives in its own dependency group that neither CI nor the image installs, and writes exactly the
    files the application links or shows. It makes the letters ЯНМ solid from a letter area it holds as
-   data, and leaves the ornament as engraved.
+   data, and leaves the ornament as engraved; for the icons, it cuts the letters out alone.
 5. **The product owner approves the new look.** The change to milestone 10's approved look is reviewed on
    screenshots and recorded in this milestone's own design approval.
 6. **What tests cannot see is checked by hand**, from this milestone's quickstart.
@@ -71,6 +72,30 @@ does not want. Seven things become true when this milestone is done:
 - Q: CI does not install Pillow, so how is the solid-letters rule tested? → A: A test reads the committed
   PNGs with the standard library alone (`zlib`, no image library) and checks points inside the letters
   are fully opaque and points in the ornament are not, in both inks.
+
+### Session 2026-11-18 (design review round 3)
+
+- Q: In round 3 the product owner found the top bar fine on a laptop and on a phone, in **Light** and
+  **Dark**, and the browser tab icon good at first sight; but at the browser tab's and the home screen's
+  sizes the whole emblem reads as a hexagon with blurred edges, not as letters. What should change? →
+  A: The icons show the letters ЯНМ alone, without the ornament: the ornament at large sizes, the three
+  letters at small ones. This is option **B** of the reviewed sheet
+  [round-3-small-icons-options](./screenshots/round-3-small-icons-options.png). FR-013, FR-014,
+  FR-044–FR-046, User Stories 2 and 5, the edge cases, the entities, SC-012 and the assumptions follow.
+- Q: Which images get the letters alone? → A: The 8 icons: the three PNG favicons and `favicon.ico`,
+  the Apple touch icon and the manifest's 192 px, 512 px and maskable 512 px icons, since a home screen
+  and a launcher show them at about the same size. The emblem images keep the ornament: the top bar's
+  44 px mark, approved in round 3, and the gallery's `sm`, `md` and `lg` (whether `sm` should change is
+  asked in round 4).
+- Q: The source has the letters and the ornament in one layer, and the letter area of round 2 holds the
+  panels between the stems as letter. How are the letters cut out alone? → A: By a rule the script holds
+  with its data (research R15): the heavy ink of the letters' row, which the lighter or thinner
+  fleurs-de-lis, dots, curls and rod do not reach, small pieces dropped, grown back to the letters' own
+  edge, and the right flourish's stem cut where it meets М. Inside the cut, the letters are the same solid
+  letters as in the emblem.
+- Q: How is it tested? → A: As the solid letters are: a test reads committed icons with the standard
+  library and checks that points inside the letters are the light ink and that the rows above and below
+  the letters, where the emblem's loops would be, hold only the deep blue.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -116,11 +141,12 @@ for the brand link.
 
 ---
 
-### User Story 2 - The browser tab and the phone's home screen show the emblem (Priority: P1)
+### User Story 2 - The browser tab and the phone's home screen show the emblem's letters (Priority: P1)
 
-Olena keeps the application open in a tab next to others; the tab shows the emblem on a small deep-blue
-tile. On her phone she adds the application to the home screen; the icon is the emblem on a deep-blue
-square, and tapping it opens the application in her browser, with its address bar and Back button.
+Olena keeps the application open in a tab next to others; the tab shows the letters ЯНМ on a small
+deep-blue tile. On her phone she adds the application to the home screen; the icon is the same three
+letters on a deep-blue square, and tapping it opens the application in her browser, with its address bar
+and Back button. At these sizes the ornament would blur the letters into a shape, so it is left out.
 
 **Why this priority**: The tab and the home-screen icon are where people find the application among
 others; the old spark still showing there would undo the change of identity.
@@ -140,13 +166,15 @@ phone's home screen and open it from there.
 3. **Given** the manifest, **When** it is read, **Then** it names the application «Студентські змагання»,
    has `start_url` `/`, `display` `browser`, the deep blue `#16337a` as its theme and background colour,
    and lists a 192 px icon, a 512 px icon and a 512 px maskable icon, each of which answers 200.
-4. **Given** the browser tab, **When** a page is open, **Then** it shows the emblem in light ink on a
-   rounded deep-blue tile.
+4. **Given** the browser tab, **When** a page is open, **Then** it shows the letters ЯНМ in light ink on
+   a rounded deep-blue tile, without the ornament, and the three letters are told apart at 32 px.
 5. **Given** a phone, **When** the application is added to the home screen and opened from there, **Then**
-   the icon is the emblem on a full-bleed deep-blue square rounded by the device, and the application
-   opens in the browser, not as a standalone app.
+   the icon is the letters ЯНМ on a full-bleed deep-blue square rounded by the device, and the
+   application opens in the browser, not as a standalone app.
 6. **Given** a launcher that crops icons to a circle or another shape, **When** it uses the maskable icon,
-   **Then** the whole emblem stays visible, inside the safe zone.
+   **Then** all three letters stay visible, inside the safe zone.
+7. **Given** any icon, **When** it is looked at, **Then** no fleur-de-lis, dot, loop, rod or flourish of
+   the ornament is in it, and its letters are the emblem's own, solid as in the emblem.
 
 ---
 
@@ -230,8 +258,10 @@ libraries are not installed; run the script with its group; compare its output w
    steps with sharpening, makes the paper transparent, and writes the emblem in dark ink (for light
    backgrounds) and light ink (for dark ones) wherever the mark can appear in both.
 6. **Given** the source image, **When** the script runs, **Then** inside the letter area it holds as data
-   the letters ЯНМ become fully opaque, and outside it the ornament is rendered as before, in every image
-   it writes, the icons included.
+   the letters ЯНМ become fully opaque, and outside it the ornament is rendered as before, in every
+   emblem image it writes.
+7. **Given** the source image, **When** the script writes the icons, **Then** it cuts the letters ЯНМ
+   out alone by the rule it holds with its data, and the icons show them without the ornament.
 
 ---
 
@@ -271,10 +301,16 @@ addresses; read the UI guidelines and the README.
   page alone; no script decides which ink to show.
 - **High-density screens.** A 3× phone showing the 44 px mark needs a 132 px image; every displayed size
   has an image at 1×, 2× and 3×, so nothing is upscaled by the browser.
-- **Very small sizes.** At 16 px the emblem reads as a texture, and at 32 px its letters are hard to read;
-  both are accepted in the browser tab and in the gallery's `sm` and `md` marks, because there the mark is
-  recognised by its shape, a silver diamond on deep blue. The top bar's mark is never smaller than 44 px,
-  where the letters are readable (Clarifications, 2026-11-17).
+- **Very small sizes.** The icons show the letters alone (Clarifications, round 3). At 32 px they are
+  readable; at 16 px they are about 6 px tall, because the three letters are a wide shape in a square,
+  and they are told apart but not read; that is enough for a tab. In the gallery's `sm` and `md` marks the
+  whole emblem stays, recognised by its shape (asked in round 4). The top bar's mark is never smaller
+  than 44 px, where the letters are readable (Clarifications, 2026-11-17).
+- **Cutting the letters out alone.** The letters and the ornament touch: the loops cross Н, curls sit at
+  the letters' feet, the side flourishes meet Я and М. The cut keeps what is heavy ink in the letters'
+  row and drops what is light or thin; a loop's short crossing above or below Н, where it is as heavy
+  as the letter, may stay as a stub on Н's top or foot, and the right flourish's stem is cut where it
+  meets М. Both are accepted if the review does not object.
 - **A request to `/favicon.ico` at the site root.** It is not served by this milestone and answers as it
   does today: 404, the **Page not found** page (checked on 2026-11-16). Browsers use the linked icons
   instead.
@@ -326,11 +362,15 @@ addresses; read the UI guidelines and the README.
 
 **Browser and device icons**
 
-- **FR-013**: The favicons MUST show the emblem in light ink on a rounded deep-blue tile (`#16337a`, the
-  light theme's top bar colour): an ICO holding 16, 32 and 48 px, and PNGs of the same three sizes.
+- **FR-013**: The favicons MUST show the letters ЯНМ alone (FR-044) in light ink on a rounded deep-blue
+  tile (`#16337a`, the light theme's top bar colour): an ICO holding 16, 32 and 48 px, and PNGs of the
+  same three sizes.
 - **FR-014**: The Apple touch icon (180 px) and the manifest's icons (192 px, 512 px, and a 512 px
-  maskable icon with the emblem inside the safe zone) MUST be full-bleed deep-blue squares with the
-  emblem in light ink.
+  maskable icon with the letters inside the safe zone) MUST be full-bleed deep-blue squares with the
+  letters ЯНМ alone (FR-044) in light ink.
+- **FR-044**: Every icon (FR-013, FR-014) MUST show the letters ЯНМ without any of the ornament, as solid
+  as in the emblem (FR-041), centred and as wide as the icon's padding allows. The emblem images
+  (FR-018) MUST keep the whole emblem.
 - **FR-015**: Every page MUST link the favicons, the Apple touch icon and the manifest from the base
   layout.
 - **FR-016**: The manifest MUST be served as `application/manifest+json`, name the application
@@ -365,6 +405,10 @@ addresses; read the UI guidelines and the README.
 - **FR-042**: The script MUST find the letters by a letter area it holds as data, in the source image's
   pixels (the letters' band, less the ornament inside it), not by guessing from the image. The area MUST
   be documented with the picture it was checked against.
+- **FR-045**: For the icons, the script MUST cut the letters out alone by a rule it holds with its data,
+  in the source image's pixels (research R15): the letters' heavy ink, small pieces dropped, grown back to
+  the letters' own edge, less the parts of the ornament it names. Like the letter area, the rule MUST be
+  documented with the picture it was checked against, and it belongs to the current source image.
 
 **Approval and manual checks**
 
@@ -414,6 +458,9 @@ addresses; read the UI guidelines and the README.
   library alone (CI has no image library) and check that sample points inside the letters are opaque
   (alpha 250 or more, 98 %: the downscale leaves 1–2 % dips along the finest engraved lines) and
   sample points in the ornament are inked but partly transparent (alpha above 0 and 240 or less).
+- **FR-046**: A test MUST read committed icons with the standard library alone and check that sample
+  points inside the letters are the light ink, and that the rows above and below the letters, where the
+  emblem's loops and fleurs-de-lis would be, hold only the deep blue `#16337a`.
 
 **Documentation**
 
@@ -421,11 +468,12 @@ addresses; read the UI guidelines and the README.
   replaced in milestone 12.7 and links this milestone's design approval; section 4 gives the top bar mark's
   two sizes and the new frame measurement ("Last measured in milestone 12.7"), replacing milestone 12.5's;
   the **Icons and identity** section says the mark is an image, no longer inline SVG, with solid letters
-  and an engraved ornament, and how it follows the theme; and `--sc-accent`'s palette role becomes
+  and an engraved ornament, how it follows the theme, and that the icons show the letters alone; and `--sc-accent`'s palette role becomes
   "Highlights".
 - **FR-039**: The README's project tree MUST name `img/logo/` under `static/`, `scripts/make_logo.py` and
   `docs/brand/` with what they are for, and the README MUST say how to run the script (`uv run --group
-  logo …`), that its output is committed, and that its letter area belongs to the current source image.
+  logo …`), that its output is committed, and that its letter area and its cut of the letters for the
+  icons belong to the current source image.
 - **FR-040**: In the milestones document, milestone 12.7 MUST move to Delivered once it ships, compacted
   like the others. The specifications of delivered milestones, milestone 10's design approval included,
   MUST NOT be edited.
@@ -442,7 +490,9 @@ addresses; read the UI guidelines and the README.
   The displayed sizes are `sm` (24 px), `md` (32 px), `lg` (64 px) and the top bar's size (44 px),
   each needed at 1×, 2× and 3× density. `sm`, `md` and `lg` exist in both inks; the 44 px size, shown only
   in the top bar, in light ink.
-- **Icon**: the emblem in light ink on deep blue (`#16337a`) for browsers and devices: favicons on a
+- **Letters alone**: the letters ЯНМ cut out of the source without the ornament, by a rule the script
+  holds with its data; solid as in the emblem. Used by the icons only.
+- **Icon**: the letters alone in light ink on deep blue (`#16337a`) for browsers and devices: favicons on a
   rounded tile (16, 32 and 48 px, as an ICO and as PNGs); the Apple touch icon (180 px) and the manifest's
   icons (192 px, 512 px, 512 px maskable) as full-bleed squares.
 - **Web manifest**: the application's description for devices: name «Студентські змагання», theme and
@@ -477,6 +527,9 @@ addresses; read the UI guidelines and the README.
   milestone, and the style checks pass.
 - **SC-011**: In 100% of the checked emblem images, in both inks, every sample point inside the letters
   is opaque (alpha ≥ 250) and every sample point in the ornament is partly transparent (alpha ≤ 240).
+- **SC-012**: In 100% of the checked icons, every sample point inside the letters is the light ink and
+  0 pixels of ink lie in the rows above and below the letters; the product owner reads ЯНМ in the browser
+  tab at 32 px and on a phone's home screen.
 
 ## Assumptions
 
@@ -489,12 +542,17 @@ addresses; read the UI guidelines and the README.
   name equal to the name is left to the plan.
 - **The manifest's name stays Ukrainian in both languages.** Every page opens in Ukrainian, and a manifest
   is read once, when the icon is added.
-- **The 32 px mark stays hard to read where it remains.** In the browser tab and the gallery's `md` mark
-  the emblem is recognised by its shape; making it legible at 32 px is not a goal. The top bar's mark is
-  44 px at every width, where it is legible (Clarifications, 2026-11-17).
+- **The 32 px emblem stays hard to read where it remains.** In the gallery's `md` and `sm` marks the
+  emblem is recognised by its shape; making it legible there is not a goal unless round 4 asks for it.
+  The browser tab shows the letters alone (Clarifications, round 3), and the top bar's mark is 44 px at
+  every width, where it is legible (Clarifications, 2026-11-17).
+- **The icons' padding stays.** The letters take the place the emblem took: 4 % a side on the favicons'
+  tile (2 % for the emblem, whose diamond had empty corners), 8 % on the Apple touch icon, 6 % on the
+  192 px and 512 px icons and 15 % on the maskable icon (research R15).
 - **The reviewed sheet is a proposal, not the output.** Option **B** was made outside the script, from
   the same pipeline with a hand-drawn letter area and a lift of 0.45 (research R13). The script's output
-  is reviewed again in the next round's screenshots.
+  is reviewed again in the next round's screenshots. Likewise, the round 3 sheet of small icons was made
+  outside the script, with the cut of research R15, and the script's icons are reviewed in round 4.
 - **No data changes.** No table, column, route or migration is added or changed; the icons are static
   files.
 - **The hand checks stay manual** until end-to-end tests arrive in milestone 16.

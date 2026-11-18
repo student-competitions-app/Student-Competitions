@@ -200,6 +200,9 @@ first rule; the mark has one size, so the token is used directly.
   - The maskable icon keeps the emblem within the central 80 % safe-zone circle (padding 15 % a side).
 
   These are the first script's parameters, which the approval round judges.
+
+  *Changed after round 3 (R15):* every icon shows the letters ЯНМ alone, without the ornament, and the
+  favicons' padding is 4 % a side; the other paddings stay.
 - **Links** in `layouts/base.html`, replacing the three old ones:
 
   ```html
@@ -409,7 +412,10 @@ stays a by-hand check (R7).
 - **A proposal sheet.** When a requested change has more than one reasonable answer, the options may
   be shown on one sheet before the script makes them, as in round 2:
   `screenshots/round-2-letters-options.png`, with the real top bar served with each option's images.
-  The sheet records the choice; the next round's 12 screenshots show the script's output.
+  The sheet records the choice; the next round's 12 screenshots show the script's output. Round 3's
+  sheet, `screenshots/round-3-small-icons-options.png`, shows the icons in a drawn browser tab (light
+  and dark, at 2× and 1×), on a drawn phone home screen (iOS and Android) and pixel for pixel; it is made
+  from the icon files themselves, since a headless browser draws no tab.
 - Milestone 10's `design-approval.md` is not edited.
 
 **Rationale**: FR-025 and FR-026, and milestone 10 user story 1 scenario 3. Unlike milestone 10, there
@@ -552,3 +558,80 @@ runtime dependency; a reader of the one PNG type the script writes is small and 
 - *Add Pillow to `dev`.* CI would install an image library for one test; R8 rejects it.
 - *Test only the script's constants.* That checks the data, not the committed images. Rejected.
 
+## R15. The letters alone, for the icons (design review, round 3)
+
+Added on 2026-11-18, after the product owner chose option **B** of
+[round-3-small-icons-options](./screenshots/round-3-small-icons-options.png) (spec Clarifications,
+round 3; FR-044, FR-045).
+
+**Decision**: The script makes a second master, the **letters alone**, and draws every icon from it.
+The emblem images keep the emblem's master (R13). The values below are the ones the reviewed sheet was
+made with.
+
+- **The cut, in the source's pixels** (`docs/brand/logo-source.png`, 311 × 311, flattened onto white,
+  `L` its luminance):
+  1. **Band**: rows 118–191 and columns 58–248, the row of letters; less rows 141–163 of columns
+     240–248, where the right flourish's stem meets М.
+  2. **Heavy ink**: `L < 120` inside the band, closed with a 3 × 3 maximum then minimum filter (the
+     engraved inline), then opened with a 3 × 3 minimum then maximum filter (the horizontal rod and
+     the hairlines, 1–2 px thick).
+  3. **Small pieces dropped**: 4-connected pieces of 120 px or fewer go (dots, curls, the tips of the
+     fleurs-de-lis that pass the threshold). The letters are one piece of several thousand pixels.
+  4. **Grown back**: two steps of a 3 × 3 maximum filter, each kept inside `L < 215` and the band,
+     so the letters reach their own drawn edge again (the threshold of step 2 lies inside it) and
+     nothing further.
+  5. **Holes filled**: holes of fewer than 40 px left inside the letters (the engraved inline) are
+     filled; Я's bowl and the panels between the stems are larger and stay open.
+- **Into the master**: as the letter area (R13): the same crop, ×8 bilinear, the Gaussian of σ 3
+  master px, giving a soft mask `K`. The letters-alone coverage is `K · min(c / 0.45, 1)`: the same
+  solid letters as in the emblem, and nothing outside them. It is cropped to its ink (coverage above
+  0.02) and centred in a square.
+- **The icons**: drawn from this master by the same `tile` as before, the light ink on `#16337a`, with
+  the same sharpening at 32 px and below. The favicons' padding becomes 4 % a side (it was 2 %, which
+  suited the emblem's diamond with its empty corners; the letters fill the tile's width). The Apple touch
+  icon keeps 8 %, the 192 px and 512 px icons 6 %, and the maskable icon 15 %, so all three letters
+  stay inside its safe zone.
+- **Checked on**: [round-3-letters-cut](./screenshots/round-3-letters-cut.png), the source at 5× with
+  the final cut in red. It was chosen on the same overlays for thresholds 120, 150 and 180, without and
+  with the opening: at 150 the fleurs-de-lis between the stems join the letters, at 180 the dots and
+  curls do too, and without the opening the horizontal rod stays across the panels.
+
+**Rationale**: At 16–48 px, and at a home screen's 60 pt, the ornament's fine engraving blurs into a
+shape around the letters, and the letters, a third of the emblem's height, are too small to read. The
+letters alone fill the width of the icon and stay legible down to 32 px. The cut is a rule, not a hand
+drawing, because the letters are the heaviest ink in their row: the R13 letter area could not be used,
+since it counts the panels between the stems and the loops crossing Н as letter, which cut out alone
+shows as stripes beside Н (tried first, rejected on sight). The rule's numbers belong to this source,
+like the letter area.
+
+**Alternatives considered**:
+- *Option A, the whole emblem, as today.* Rejected in round 3: a blurred hexagon in the tab and on the
+  home screen.
+- *Option C, the letters as flat silhouettes* (the cut itself, without the engraved inline). The edges
+  came out ragged from the source's pixels, and at 16 and 32 px it looked the same as B. Dropped
+  before the review.
+- *The letters typeset in a font.* Crisp, but no longer the emblem's own letters. Not proposed.
+- *The letters alone for the gallery's `sm` mark too.* Asked in round 4; until then the emblem images
+  keep the whole emblem (FR-044).
+
+## R16. Testing the icons without an image library
+
+**Decision**: `tests/integration/test_logo.py` gains a test on `icon-512.png` and
+`icon-maskable-512.png`, read with the standard-library reader of R14 (extended to return the four
+channels, not only the alpha; both files are 8-bit RGBA):
+
+- **Letters**: one point in the middle of each letter's widest stroke, as fractions of the side, picked
+  on the script's output and shown on an overlay before they are kept: the point and its 8 neighbours
+  are the light ink `#f4f5f8`, each channel within 8 of it.
+- **No ornament**: every pixel of the rows above the letters' top and below their bottom, less a
+  margin of 4 px for the resampling, is exactly `#16337a`, opaque. In the emblem these rows hold the
+  loops and the fleurs-de-lis, so one stray piece of ornament fails the test.
+
+**Rationale**: FR-046, for the same reasons as R14. The 512 px icons are the largest, so the points and
+the margin are the least sensitive to resampling; the maskable one also checks the larger padding. The
+favicons are made by the same code from the same master.
+
+**Alternatives considered**:
+- *Compare the icons with the emblem images.* Says nothing about the ornament being gone. Rejected.
+- *Check the favicons as well.* At 16–48 px a test point is one or two pixels; the 512 px icons cover
+  the same master. Not done.

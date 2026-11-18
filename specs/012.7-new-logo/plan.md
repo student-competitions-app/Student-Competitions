@@ -23,6 +23,11 @@ an image, not inline SVG. Nothing else in the UI changes.
   letter area of ЯНМ as data in the source's pixels and lifts the coverage inside it, so the letters
   are fully opaque in every image, icons included; the ornament is unchanged. No template, CSS or file
   name changes; every image in the folder is regenerated.
+- **The letters alone on the icons** (R15, added 2026-11-18 after the design review's round 3): the
+  script cuts the letters ЯНМ out of the source by a rule it holds with its data (heavy ink, small
+  pieces dropped, grown back to the letters' edge) into a second master, and draws all 8 icons from it,
+  without the ornament. The favicons' padding becomes 4 %. The emblem images keep the whole emblem. No
+  template, CSS, link or file name changes; only the 8 icons are regenerated.
 
 **The mark** (R2–R5; [contracts/components.md](./contracts/components.md)):
 
@@ -62,6 +67,8 @@ an image, not inline SVG. Nothing else in the UI changes.
 - New stylesheet tests in `test_frame_stylesheet.py`.
 - A solid-letters test in `test_logo.py` reads two committed PNGs with the standard library alone
   and checks sample points: letters fully opaque, ornament not (R14).
+- An icons test in `test_logo.py` reads the two 512 px icons the same way: points in the letters are
+  the light ink, and the rows above and below the letters are only the deep blue (R16).
 
 **Approval and checks by hand** (R10, R11; [quickstart.md](./quickstart.md)):
 
@@ -154,7 +161,7 @@ within the rules:
 ```text
 specs/012.7-new-logo/
 ├── plan.md              # This file
-├── research.md          # Phase 0: R1–R12
+├── research.md          # Phase 0: R1–R12; R13–R14 (round 2), R15–R16 (round 3)
 ├── data-model.md        # Phase 1: no stored data; emblem images, logo_mark inputs, icons, manifest, folder
 ├── quickstart.md        # Phase 1: automated, leftovers, by hand, approval, regeneration, documentation
 ├── contracts/

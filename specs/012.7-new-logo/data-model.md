@@ -39,7 +39,9 @@ for the top bar). See [contracts/components.md](./contracts/components.md).
 
 ## 3. Icon
 
-The emblem in light ink on `#16337a`.
+The letters ЯНМ alone, without the ornament, in light ink on `#16337a` (research R15). They are as solid
+as in the emblem image. Padding a side: 4 % on the favicons' tile, 8 % on the Apple touch icon, 6 % on
+the 192 px and 512 px icons, 15 % on the maskable icon.
 
 | File | Size | Shape | Type |
 |---|---|---|---|
@@ -47,7 +49,7 @@ The emblem in light ink on `#16337a`.
 | `favicon-16.png`, `favicon-32.png`, `favicon-48.png` | 16, 32, 48 | rounded tile | `image/png` |
 | `apple-touch-icon.png` | 180 | full-bleed square, opaque | `image/png` |
 | `icon-192.png`, `icon-512.png` | 192, 512 | full-bleed square | `image/png` |
-| `icon-maskable-512.png` | 512 | full-bleed square, emblem within the 80 % safe zone | `image/png` |
+| `icon-maskable-512.png` | 512 | full-bleed square, letters within the 80 % safe zone | `image/png` |
 
 That makes 8 files.
 

@@ -25,12 +25,17 @@ uv run --group logo scripts/make_logo.py
    unchanged.
 3. Writes the 19 emblem images (light ink `#f4f5f8`, dark ink `#1c1c22`), sharpening the alpha of
    sizes of 48 px and below.
-4. Writes the 8 icons on `#16337a` and `site.webmanifest`
-   ([static-assets.md](./static-assets.md) §3).
-5. Deletes every other file in `app/static/img/logo/`.
+4. Makes the letters-alone master: cuts the letters ЯНМ out of the source by the rule it holds with
+   its data (research R15: heavy ink in the letters' band, closed and opened, small pieces dropped,
+   grown back to the letters' edge, small holes filled), lifts them as in step 2 and centres them in a
+   square. Nothing of the ornament is in it.
+5. Writes the 8 icons from the letters-alone master, in light ink on `#16337a` (favicons on a rounded
+   tile with 4 % padding), and `site.webmanifest` ([static-assets.md](./static-assets.md) §3).
+6. Deletes every other file in `app/static/img/logo/`.
 
-The letter area belongs to the current `docs/brand/logo-source.png`. If the source changes, the area
-is drawn again, and the opacity test (research R14) shows whether it still fits.
+The letter area and the cut's numbers belong to the current `docs/brand/logo-source.png`. If the source
+changes, both are drawn or tuned again, and the opacity test (research R14) and the icons test (R16)
+show whether they still fit.
 
 The images are always this script's output. A committed image is never edited by hand. To change one,
 change the script or the source, run the script and commit its output.

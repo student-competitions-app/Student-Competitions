@@ -59,13 +59,14 @@ for screenshots: `uv run --no-project --with playwright`, not a dependency.
    the three marks switch between dark and light ink. The top bar's mark stays light ink.
 5. **One file per mark.** In the Network panel of the gallery page, each mark loads exactly one
    `logo-*.png`. The top bar loads `logo-light-44.png` (or 88/132) at every width.
-6. **Browser tab.** The tab shows the emblem on a rounded deep-blue tile, in the browser's light and dark
-   appearance.
+6. **Browser tab.** The tab shows the letters ЯНМ alone, without the ornament, on a rounded deep-blue
+   tile, in the browser's light and dark appearance, and the three letters are told apart (research R15).
 7. **Home screen.** On a phone (iOS Safari: Share → Add to Home Screen; Android Chrome: Add to Home
    screen):
-   - The icon is the emblem on a deep-blue square.
+   - The icon is the letters ЯНМ alone on a deep-blue square. A phone that already has the old icon may
+     keep it until it is removed and added again.
    - Opening it shows the application in the browser, with the address bar, and Back and reload work.
-   - On Android, a round or squircle mask leaves the whole emblem visible.
+   - On Android, a round or squircle mask leaves all three letters visible.
 8. **Accessibility.** With VoiceOver or NVDA, the brand link reads «Студентські змагання» (or "Student
    Competitions" in English) at both widths, and the image is not announced.
 9. **Types in the image.** Build and run the image as in README "Run the packaged application", then
@@ -120,8 +121,9 @@ uv lock --check                                # the lock file is up to date
 
 Run this on the machine that produced the committed set (see research R7 on float differences between
 machines). When the source or the script changes, run it, review the images, and commit the folder as
-it is. A new source image also needs the letter area drawn again (research R13); the solid-letters
-test (R14) fails if it no longer fits.
+it is. A new source image also needs the letter area drawn again (research R13) and the cut of the
+letters for the icons tuned again (R15); the solid-letters test (R14) and the icons test (R16) fail if
+they no longer fit.
 
 ## 6. Documentation
 

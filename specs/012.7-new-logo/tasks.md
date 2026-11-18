@@ -409,7 +409,7 @@ its date in this milestone's own design approval.
     - the maskable icon's padding.
 
   Commit the screenshots and this file. (FR-026, depends on T024)
-- [ ] T026 [US4] Ask the product owner to review round 1, and record the answer with its date.
+- [X] T026 [US4] Ask the product owner to review round 1, and record the answer with its date.
   - **Changes requested**: make them in the script (then T003 again) or in T004/T007/T011, take new
     screenshots (T024) and add round 2. Repeat until approved.
   - **Approved**: set the status to Approved, with the date.

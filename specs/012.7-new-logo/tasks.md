@@ -703,20 +703,20 @@ the letters ЯНМ alone in the browser tab and on the home screen (spec Clarifi
 research R15, R16). Test first (T052), then the script (T053) and its output (T054), then the checks,
 the documents and round 4.
 
-- [ ] T052 In `tests/integration/test_logo.py`, extend the standard-library reader to return the four channels of each pixel (keeping `png_alpha` for the existing test, or building it on the new reader), still accepting only 8-bit RGBA, non-interlaced. Then add `test_the_icons_show_the_letters_alone`, for `icon-512.png` and `icon-maskable-512.png`:
+- [X] T052 In `tests/integration/test_logo.py`, extend the standard-library reader to return the four channels of each pixel (keeping `png_alpha` for the existing test, or building it on the new reader), still accepting only 8-bit RGBA, non-interlaced. Then add `test_the_icons_show_the_letters_alone`, for `icon-512.png` and `icon-maskable-512.png`:
   - one point in each letter's widest stroke (Я's stem, Н's two stems, М's right stem), as fractions of the side: the point and its 8 neighbours are the light ink `#f4f5f8`, each channel within 8;
   - every pixel of the rows above the letters' top and below their bottom, less a 4 px margin, is exactly `#16337a`, opaque.
 
   Pick the points and the rows on the option B icons of the round 3 sheet (made with research R15), and check them on an overlay. Update the module docstring. Run it and see it fail on the committed whole-emblem icons. per FR-046, SC-012, research R16 (missing)
-- [ ] T053 In `scripts/make_logo.py`, add research R15:
+- [X] T053 In `scripts/make_logo.py`, add research R15:
   - the cut's numbers as module constants, in the source's pixels: the band (rows 118–191, columns 58–248), the right flourish's stem left out (rows 141–163, columns 240–248), the heavy-ink threshold 120, the smallest piece kept (more than 120 px), the two grow-back steps inside `L < 215`, and the largest hole filled (under 40 px);
   - a `letters_alone` function: threshold, 3 × 3 close, 3 × 3 open, 4-connected pieces with small ones dropped (numpy and the standard library only, no new library), grown back, small holes filled;
   - a letters-alone master: the cut through the coverage's crop, ×8 bilinear, σ 3, `K · min(c / 0.45, 1)`, cropped to its ink and centred in a square;
   - every icon drawn from it, with the favicons' padding 4 % (the Apple touch icon 8 %, the 192 and 512 px icons 6 %, the maskable icon 15 %, unchanged).
 
   The emblem images keep the emblem's master. Update the module docstring, and keep `ruff check` and `ruff format --check` clean. per FR-044, FR-045, US5/AC7, research R15 (missing)
-- [ ] T054 Run `uv run --group logo scripts/make_logo.py`. The folder keeps the same 28 names; only the 8 icons change (`git diff --stat` lists exactly them, the 19 emblem images and `site.webmanifest` are unchanged), and a second run leaves `git status --porcelain app/static/img/logo` empty. T052 now passes, and the solid-letters test and `test_the_logo_folder_holds_only_what_is_used` still pass. per FR-013, FR-014, FR-020, SC-006, US2/AC4–AC7 (missing)
-- [ ] T055 Check by hand:
+- [X] T054 Run `uv run --group logo scripts/make_logo.py`. The folder keeps the same 28 names; only the 8 icons change (`git diff --stat` lists exactly them, the 19 emblem images and `site.webmanifest` are unchanged), and a second run leaves `git status --porcelain app/static/img/logo` empty. T052 now passes, and the solid-letters test and `test_the_logo_folder_holds_only_what_is_used` still pass. per FR-013, FR-014, FR-020, SC-006, US2/AC4–AC7 (missing)
+- [X] T055 Check by hand:
   - the script's cut drawn over the source, against [round-3-letters-cut](./screenshots/round-3-letters-cut.png): the same letters, no fleur-de-lis, dot, curl, rod or flourish;
   - the script's icons against the round 3 sheet's option B: the same at 16, 32, 48, 180 and 512 px;
   - the maskable icon in a circle: all three letters inside.

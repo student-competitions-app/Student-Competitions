@@ -60,6 +60,10 @@ and the small sizes keep their lift. Any of these can still change in a later mi
 parameter of `scripts/make_logo.py` or a rule in `app.css`. The four browser-tab images (by hand) are
 not in [screenshots/](./screenshots/) yet.
 
+On the same day the product owner checked by hand, on the deployed branch, the browser tab in a desktop
+browser and the home-screen icon on their phone (the letters ЯНМ alone): both look fine (quickstart
+§3.6 and §3.7, task T019).
+
 ## Questions for round 4
 
 Review [round-4-icons](./screenshots/round-4-icons.png), drawn from the committed icons, and the real

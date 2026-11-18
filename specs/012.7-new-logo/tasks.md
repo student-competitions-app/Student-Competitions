@@ -303,7 +303,9 @@ tab; add to a phone's home screen (quickstart §3.6, §3.7).
 - [X] T018 [US2] Run `uv run pytest tests/integration/test_logo.py tests/integration/test_layout.py`;
   everything passes. If a type differs on this machine (for example `.webmanifest`), stop and revisit
   research R6 rather than loosen the test. (depends on T014–T017)
-- [ ] T019 [US2] Check by hand per quickstart §3.6 and §3.7:
+- [X] T019 [US2] Check by hand per quickstart §3.6 and §3.7 (done by the product owner on
+  2026-11-18, on the deployed branch: the tab in a desktop browser and the home screen on their phone,
+  with the letters ЯНМ alone):
   - the browser tab shows the emblem on a rounded deep-blue tile, in the browser's light and dark
     appearance;
   - on a phone, Add to Home Screen gives the emblem on a deep-blue square, and opening it shows the

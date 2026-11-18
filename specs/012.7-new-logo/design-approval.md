@@ -25,10 +25,12 @@ down to the wordmark line. Headless Chromium at 2× density, in Ukrainian, signe
 | Sign-in page, top bar (`/login`) | [sign-in-375-light](./screenshots/sign-in-375-light.png) | [sign-in-375-dark](./screenshots/sign-in-375-dark.png) | [sign-in-1280-light](./screenshots/sign-in-1280-light.png) | [sign-in-1280-dark](./screenshots/sign-in-1280-dark.png) |
 | Area page, top bar with the role (`/teacher/students`) | [area-375-light](./screenshots/area-375-light.png) | [area-375-dark](./screenshots/area-375-dark.png) | [area-1280-light](./screenshots/area-1280-light.png) | [area-1280-dark](./screenshots/area-1280-dark.png) |
 | Gallery, Identity (`/admin/components#identity`) | [identity-375-light](./screenshots/identity-375-light.png) | [identity-375-dark](./screenshots/identity-375-dark.png) | [identity-1280-light](./screenshots/identity-1280-light.png) | [identity-1280-dark](./screenshots/identity-1280-dark.png) |
-| Browser tab (by hand) | `tab-375-light.png` (to add) | `tab-375-dark.png` (to add) | `tab-1280-light.png` (to add) | `tab-1280-dark.png` (to add) |
+| Browser tab (by hand) | `tab-375-light.png` (to add) | `tab-375-dark.png` (to add) | `tab-1280-light.png` (to add) | [tab-1280-dark](./screenshots/tab-1280-dark.png) |
 
 Headless browsers draw no tab, so the four tab images are taken by hand: a desktop browser in its
-light and dark appearance at 1280 px, and a phone's tab overview for 375 px.
+light and dark appearance at 1280 px, and a phone's tab overview for 375 px. Each is cropped to the
+application's tabs. `tab-1280-dark` is Chrome on macOS in its dark appearance, taken by the product
+owner on 2026-11-18 on the deployed branch; the page's own theme does not change the tab.
 
 **Proposals reviewed in round 2**: [round-2-letters-options](./screenshots/round-2-letters-options.png)
 shows three versions of the emblem in the real top bar (1280 px and 375 px, Light and Dark, 2×) and

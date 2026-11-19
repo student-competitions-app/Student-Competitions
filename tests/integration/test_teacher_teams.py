@@ -62,6 +62,7 @@ from tests.conftest import (
     make_team,
     seed_roles_directly,
 )
+from tests.integration.test_invitation_refusals import tampered
 
 OLENA = "olena@example.org"
 MYKOLA = "mykola@example.org"
@@ -513,7 +514,7 @@ def test_a_notice_shows_only_for_a_fresh_token_of_this_team_and_member(
     payload = {"team": team, "user": scene.taras, "outcome": "added"}
     value = {
         "stale": seal(secret, TEAM_NOTICE_PURPOSE, payload, now=utc_now() - timedelta(minutes=11)),
-        "tampered": seal_member_notice(app.state.settings, team, scene.taras, "added")[:-3] + "AAA",
+        "tampered": tampered(seal_member_notice(app.state.settings, team, scene.taras, "added")),
         "other-team": seal_member_notice(app.state.settings, other, scene.taras, "added"),
         "not-a-member": seal_member_notice(app.state.settings, team, scene.lesia, "added"),
         "outcome": seal_member_notice(app.state.settings, team, scene.taras, "removed"),

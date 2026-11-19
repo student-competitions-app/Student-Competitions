@@ -104,8 +104,9 @@ frame of both areas ends at 113 px, under the 128 px of `--sc-frame-clearance-ta
    - `/admin/components#identity`;
    - each at 375 px and 1280 px, in **Light** and **Dark**.
 
-   Take the 4 browser-tab images by hand. Save all 16 in `specs/012.7-new-logo/screenshots/` as
-   `{view}-{width}-{theme}.png`.
+   Save them in `specs/012.7-new-logo/screenshots/` as `{view}-{width}-{theme}.png`. The product
+   owner checks the real browser tab and home screen (§3.6, §3.7); a tab screenshot taken then is
+   cropped to the application's tabs and saved as `tab-{width}-{theme}.png`.
 2. Commit them, and open a review round in `design-approval.md` with the commit.
 3. The product owner approves, or asks for changes. For changes, make them, take new screenshots, and
    open the next round.

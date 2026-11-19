@@ -402,8 +402,10 @@ stays a by-hand check (R7).
   That is 12 PNGs.
 - **The browser tab.** Headless browsers draw no tab, so the tab screenshots are taken by hand in a
   desktop browser in its light and dark appearance at 1280 px. At 375 px, a phone's (or phone
-  simulator's) tab overview stands in. That is 4 more images.
-- **Storage.** All 16 images are committed in `specs/012.7-new-logo/screenshots/`, named
+  simulator's) tab overview stands in. That is 4 more images. *Changed in round 4 (2026-11-18): the
+  product owner checked the real tab and home screen and took one of them, `tab-1280-dark`; that check
+  stands in for the other three (spec Clarifications, round 4).*
+- **Storage.** All the images are committed in `specs/012.7-new-logo/screenshots/`, named
   `{view}-{width}-{theme}.png`.
 - **The record.** `specs/012.7-new-logo/design-approval.md` follows milestone 10's form: approver,
   screenshots, the gate ("no merge before an approving round"), and a review log with date, round,

@@ -72,7 +72,8 @@ an image, not inline SVG. Nothing else in the UI changes.
 
 **Approval and checks by hand** (R10, R11; [quickstart.md](./quickstart.md)):
 
-- 16 screenshots are committed in `screenshots/`, and the product owner's approval goes in this
+- 12 headless screenshots and a browser-tab screenshot are committed in `screenshots/`, the product
+  owner checks the real tab and home screen, and the product owner's approval goes in this
   folder's `design-approval.md` before merge.
 - The frame is measured again, for "Last measured in milestone 12.7".
 

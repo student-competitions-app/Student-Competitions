@@ -77,4 +77,5 @@ R9).
 
 `specs/012.7-new-logo/design-approval.md` is a review log. Each row has a date, a round, a commit, the
 changes requested, the changes made, and a status (`Changes requested` or `Approved`). It also holds the
-16 screenshots in `screenshots/` (research R10). The milestone merges only after an `Approved` row.
+screenshots in `screenshots/` (research R10: 12 headless and a browser tab) and the product owner's
+hand check of the tab and home screen. The milestone merges only after an `Approved` row.

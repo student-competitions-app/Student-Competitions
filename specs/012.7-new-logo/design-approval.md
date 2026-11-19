@@ -25,10 +25,15 @@ down to the wordmark line. Headless Chromium at 2× density, in Ukrainian, signe
 | Sign-in page, top bar (`/login`) | [sign-in-375-light](./screenshots/sign-in-375-light.png) | [sign-in-375-dark](./screenshots/sign-in-375-dark.png) | [sign-in-1280-light](./screenshots/sign-in-1280-light.png) | [sign-in-1280-dark](./screenshots/sign-in-1280-dark.png) |
 | Area page, top bar with the role (`/teacher/students`) | [area-375-light](./screenshots/area-375-light.png) | [area-375-dark](./screenshots/area-375-dark.png) | [area-1280-light](./screenshots/area-1280-light.png) | [area-1280-dark](./screenshots/area-1280-dark.png) |
 | Gallery, Identity (`/admin/components#identity`) | [identity-375-light](./screenshots/identity-375-light.png) | [identity-375-dark](./screenshots/identity-375-dark.png) | [identity-1280-light](./screenshots/identity-1280-light.png) | [identity-1280-dark](./screenshots/identity-1280-dark.png) |
-| Browser tab (by hand) | `tab-375-light.png` (to add) | `tab-375-dark.png` (to add) | `tab-1280-light.png` (to add) | `tab-1280-dark.png` (to add) |
+| Browser tab (by hand) | checked by hand | checked by hand | checked by hand | [tab-1280-dark](./screenshots/tab-1280-dark.png) |
 
 Headless browsers draw no tab, so the four tab images are taken by hand: a desktop browser in its
-light and dark appearance at 1280 px, and a phone's tab overview for 375 px.
+light and dark appearance at 1280 px, and a phone's tab overview for 375 px. Each is cropped to the
+application's tabs. `tab-1280-dark` is Chrome on macOS in its dark appearance, taken by the product
+owner on 2026-11-18 on the deployed branch; the page's own theme does not change the tab. The other
+three were not taken: the product owner's check of the real tab and home screen on the same day stands
+in for them, and [round-4-icons](./screenshots/round-4-icons.png) records the icons in a drawn tab and
+home screen, in light and dark (spec Clarifications, round 4).
 
 **Proposals reviewed in round 2**: [round-2-letters-options](./screenshots/round-2-letters-options.png)
 shows three versions of the emblem in the real top bar (1280 px and 375 px, Light and Dark, 2×) and
@@ -51,7 +56,17 @@ proposal made outside the script, kept as the record of the choice (research R15
 | 2026-11-16 | 1 | `b15286f` | Top bar, seen on the deployed branch at desktop width: the emblem is barely visible at 2rem (32 px). Make it as tall as the language switch beside it, at every width. | The top bar's mark is the touch-target size (44 px), the language switch's height, at every width; it was 2rem from 768 px. It loads the 44, 88 or 132 px light ink. The bar is still one 64 px row at 360, 375, 768 and 1280 px, signed out and with a role, in both languages. Only the four 1280 px top bar screenshots change. | Changes requested |
 | 2026-11-17 | 2 | `28a2a99` | The size is right ("much better" on the deployed site). The emblem still lets the background through everywhere: make the letters ЯНМ fully opaque and keep the ornament as it is, option B of [round-2-letters-options](./screenshots/round-2-letters-options.png). | `scripts/make_logo.py` holds the letter area as data in the source's pixels (research R13) and lifts the ink inside it to full; the ornament is unchanged. Every image and icon is regenerated; the output is pixel-identical to option B. A test reads two committed PNGs and checks points in the letters (opaque) and in the ornament (engraved). All 12 screenshots change. | Changes requested |
 | 2026-11-18 | 3 | `1e73c51` | The solid letters are right: the top bar looks fine on a laptop and on a phone, in Light and Dark. But on small images, the browser tab and the phone's home screen, the emblem looks like a hexagon with blurred edges. Show the ornament at large sizes and the three letters ЯНМ alone at small ones: option B of [round-3-small-icons-options](./screenshots/round-3-small-icons-options.png). | `scripts/make_logo.py` cuts the letters ЯНМ out of the source by a rule it holds with its data (research R15: the letters are the heaviest ink of their row) and draws all 8 icons from them, without the ornament; the favicons' padding is 4 % a side. Only the 8 icons are regenerated, pixel-identical to option B; the emblem images, so the 12 screenshots, do not change. A test reads the two 512 px icons and checks the letters (light ink) and the rows above and below them (deep blue only). | Changes requested |
-| 2026-11-18 | 4 | `d165b33` | | | Awaiting review |
+| 2026-11-18 | 4 | `d165b33` | None: the product owner approved round 4 as it stands. | | **Approved** (2026-11-18) |
+
+The approval takes the open questions below as answered by the implementation as it stands: the
+gallery's `sm` mark keeps the whole emblem, the icons keep the letters alone with their padding (4 % on
+the favicons, 15 % on the maskable icon), the marks off the top bar keep the near-black ink in Light,
+and the small sizes keep their lift. Any of these can still change in a later milestone; each is a
+parameter of `scripts/make_logo.py` or a rule in `app.css`.
+
+On the same day the product owner checked by hand, on the deployed branch, the browser tab in a desktop
+browser and the home-screen icon on their phone (the letters ЯНМ alone): both look fine (quickstart
+§3.6 and §3.7, task T019).
 
 ## Questions for round 4
 

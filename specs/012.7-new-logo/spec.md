@@ -97,6 +97,16 @@ does not want. Seven things become true when this milestone is done:
   library and checks that points inside the letters are the light ink and that the rows above and below
   the letters, where the emblem's loops would be, hold only the deep blue.
 
+### Session 2026-11-18 (design review round 4)
+
+- Q: The product owner approved round 4 and checked the real browser tab on a desktop and the home
+  screen on their phone, on the deployed branch. Of the four browser-tab screenshots, one was taken
+  (`tab-1280-dark`). Are the other three still needed? → A: No. The product owner's own check of the real
+  tab and home screen stands in for them, and `round-4-icons.png` records the icons in a drawn tab and
+  home screen, in light and dark. The browser's own tab styling changes with every browser update, so
+  real tab screenshots are a poor record for later. FR-025 and SC-009 follow: 12 headless screenshots,
+  the tab screenshot taken, and the hand check.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A visitor recognises the application by its emblem in the top bar (Priority: P1)
@@ -223,8 +233,9 @@ screenshots and records a dated approving round before merge.
 **Acceptance Scenarios**:
 
 1. **Given** the change is ready, **When** the product owner reviews it, **Then** they see screenshots of
-   the top bar on the sign-in page and on an area page, of the gallery's **Identity** section and of the
-   browser tab, at 375 px and 1280 px, each in **Light** and **Dark**.
+   the top bar on the sign-in page and on an area page and of the gallery's **Identity** section, at
+   375 px and 1280 px, each in **Light** and **Dark**, and they check the real browser tab and home
+   screen themselves.
 2. **Given** the product owner asks for changes, **When** they are made, **Then** a new round is reviewed
    and recorded, and the milestone does not merge until a round is approved.
 3. **Given** the approval, **When** it is recorded, **Then** it is in this milestone's design approval
@@ -413,8 +424,9 @@ addresses; read the UI guidelines and the README.
 **Approval and manual checks**
 
 - **FR-025**: Before merge, the product owner MUST review screenshots of the top bar on the sign-in page
-  and on an area page, of the gallery's **Identity** section and of the browser tab, at 375 px and
-  1280 px, in **Light** and **Dark**.
+  and on an area page and of the gallery's **Identity** section, at 375 px and 1280 px, in **Light** and
+  **Dark**, and check the real browser tab and home screen, which a headless browser does not draw (a
+  tab screenshot, where one is taken, goes in the record with the others).
 - **FR-026**: The approval, or the changes asked for and the round that approves them, MUST be recorded
   with its date in a design approval file in this milestone's spec folder. Milestone 10's design approval
   MUST NOT be edited.
@@ -521,8 +533,9 @@ addresses; read the UI guidelines and the README.
 - **SC-007**: CI and the image install 0 new packages; the application gains 0 runtime dependencies.
 - **SC-008**: 0 references to the old favicon paths or the old mark classes remain under `app/` and
   `tests/`.
-- **SC-009**: The product owner's approval is recorded with its date before merge, covering all 16
-  screenshots (4 views × 2 widths × 2 themes).
+- **SC-009**: The product owner's approval is recorded with its date before merge, covering the 12
+  headless screenshots (3 views × 2 widths × 2 themes) and the product owner's check of the real browser
+  tab and home screen.
 - **SC-010**: The full test suite passes on both database engines with 0 tests skipped because of this
   milestone, and the style checks pass.
 - **SC-011**: In 100% of the checked emblem images, in both inks, every sample point inside the letters

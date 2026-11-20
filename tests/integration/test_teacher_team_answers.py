@@ -58,6 +58,7 @@ from tests.conftest import (
     make_team,
     save_team_answer,
 )
+from tests.integration.test_invitation_refusals import tampered
 from tests.integration.test_routes import ALL_ROUTES
 from tests.integration.test_teacher_competition_entries import (
     denied,
@@ -531,7 +532,7 @@ def test_a_reload_repeats_nothing_and_a_foreign_notice_shows_nothing(scene: Scen
         assert "Answers of “Comets” were saved" in get(scene.taras, target)
     assert snapshot(scene.engine) == [(scene.competition, scene.comets, scene.copies[0], "Sodium")]
     token = parse_qs(urlsplit(target).query)["notice"][0]
-    for notice in (token[:-2] + "xx", "abc"):
+    for notice in (tampered(token), "abc"):
         assert "were saved" not in get(scene.taras, sheet_url(scene, query=f"&notice={notice}"))
     gymnasium_team = make_team(scene.engine, scene.gymnasium, "Stars")
     add_competition_team(scene.engine, scene.competition, gymnasium_team)

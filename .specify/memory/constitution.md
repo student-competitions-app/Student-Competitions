@@ -8,8 +8,9 @@ Sync Impact Report
     published final scores are open information for every teacher (answers and per-question
     grades stay scoped); deactivated-subject rule follows
   - VI. Trustworthy LLM Evaluation: no hand adjustment and no evaluation after publishing
-  - VII. Data Integrity & Migrations: published is stored, not a status; published results are
-    stored PDF snapshots, the official confirmation, never remade, served as stored
+  - VII. Data Integrity & Migrations: a fifth derived status, Published (a finished competition
+    whose results are published; every finished rule applies, grades frozen); published results
+    are stored PDF snapshots, the official confirmation, never remade, served as stored
 - Added sections: none; a "Results files" row in Technology Stack and a "PDF library and font"
   row in Open stack decisions (milestone 12.8)
 - Removed sections: none
@@ -190,13 +191,16 @@ provider outages and manipulation.
   time zone MUST be converted to UTC on the server before they are stored or compared, and
   converted back only for display.
 - A competition has a start time and no duration: it is upcoming before its start, in progress
-  from its start until a teacher stops it, then finished; or cancelled. Its status MUST be
-  derived on the server from the stored start and the stored stop or cancel, and enforced
+  from its start until a teacher stops it, then finished, and published once its results are
+  published; or cancelled. Its status MUST be derived on the server from the stored start, the
+  stored stop or cancel, and the stored publishing, and enforced
   server-side on every read of questions and every answer submission: students read questions
   only while the competition is in progress, and answers are entered, by students or teachers,
   only while it is in progress; answers are graded only once it is finished and until its
-  results are published. Publishing is not a status: a published competition stays **Finished**,
-  and whether it is published MUST be stored with it.
+  results are published. Publishing gives a finished competition the status **Published**,
+  derived from its stored publishing. A published competition is a finished competition whose
+  results are published: every rule for finished competitions applies to it as well, except that
+  its grades never change (Principle IV).
 - Results MUST be persisted: the grade of every answer, and the best answers, are stored. A
   team's score, the sum of its grades, and its place are calculated from the stored grades
   whenever they are shown in the application's pages, and are not stored apart from them.

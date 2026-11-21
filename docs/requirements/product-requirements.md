@@ -10,7 +10,7 @@ A web application for running online competitions among students, testing their 
 
 - Takes part in competitions as a member of a team. The team answers the questions in writing, one answer per question; a student has no answers of their own.
 - Cannot edit their own profile.
-- Can view the list of competitions they have taken part in, with results:
+- Can view the list of competitions they have taken part in, with results once they are published:
   - name
   - subject
   - date
@@ -100,14 +100,15 @@ A web application for running online competitions among students, testing their 
 
 - **Upcoming** — before its start. Only an upcoming competition can be edited.
 - **In progress** — from its start, reached on its own with nobody acting, until a teacher stops it. A team's answers are entered only while its competition is in progress.
-- **Finished** — after a teacher allowed to manage competitions stops it (the action **Finish competition**). A finished competition cannot be cancelled, and its questions, teams and answers never change again; its answers are graded until its results are published, and its results can always be reviewed. Publishing its results does not change its status: it stays **Finished**.
-- **Cancelled** — after a teacher allowed to manage competitions cancels it, which is possible in any status except **Finished**. Cancelling is final: a cancelled competition never changes again and cannot be restored.
+- **Finished** — after a teacher allowed to manage competitions stops it (the action **Finish competition**). A finished competition cannot be cancelled, and its questions, teams and answers never change again; its answers are graded until its results are published, and its results can always be reviewed.
+- **Published** — after a teacher allowed to manage competitions publishes the results of a finished competition (see [Published results](#published-results)). A published competition is a finished competition whose results are published: everything said about finished competitions holds for it too, except that its grades can no longer be changed.
+- **Cancelled** — after a teacher allowed to manage competitions cancels it, which is possible in any status except **Finished** and **Published**. Cancelling is final: a cancelled competition never changes again and cannot be restored.
 
 Deleting a team is the one exception to "only an upcoming competition can be edited" and "a cancelled competition never changes again": it takes the team out of every competition that is not finished (upcoming, in progress and cancelled). A deleted team stays only in finished competitions, so their record stays complete.
 
 ### Published results
 
-- **When.** A teacher allowed to manage competitions publishes the results of a finished competition once every one of its teams is fully graded. Publishing is permanent: there is no unpublish, and the grades of the competition can no longer be changed by anyone, so the announced results never change and give participants nothing to complain about.
+- **When.** A teacher allowed to manage competitions publishes the results of a finished competition once every one of its teams is fully graded, and the competition becomes **Published**. Results (scores, places and the winner) are shown only for published competitions. Publishing is permanent: there is no unpublish, and the grades of the competition can no longer be changed by anyone, so the announced results never change and give participants nothing to complain about.
 - **Open information.** Like the results of a school competition, the published results are open: every teacher sees them, whatever their links to educational institutions. They hold each team's name, educational institution, region and final score, never its answers or its grades per question, which stay visible only as described for each role.
 - **A stored snapshot.** At publishing the application makes the results files once, as PDF, one in Ukrainian and one in English, and keeps them with the competition. They are the official confirmation of the competition's results: they are never made again or changed, so they show the names and scores as they were at publishing even if a region, institution or team is later renamed, deactivated or deleted. Every download hands out the stored file, so nothing is calculated again.
 

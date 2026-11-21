@@ -866,7 +866,7 @@ Back or Forward restores, with a 200 ms delay; that it never disables a control 
 would drop its value from the form); and that it stays small. `tests/integration/test_layout.py`
 checks that every kind of page loads it once and has the one frame block with a hidden bar. How the
 bar, the busy button and the pinned frame behave in a browser is checked by hand from the
-milestone 10.1 quickstart, until end-to-end tests arrive in milestone 16.
+milestone 10.1 quickstart, until end-to-end tests arrive in milestone 15.
 
 `tests/unit/test_time_zone_script.py` reads `time-zone.js` as text (milestone 12.1). It checks that
 the script imports, fetches and stores nothing but the one cookie and names no other site; that it

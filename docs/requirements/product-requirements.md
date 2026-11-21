@@ -41,35 +41,37 @@ A web application for running online competitions among students, testing their 
    - the participating teams (a team usually has fewer than 10 members, at most 50)
 5. **Entering team answers.** While a competition is in progress, a teacher with Write access to an educational institution enters the answers of its teams, one text answer per question per team. A teacher with Read access sees the answers read-only and never enters or changes them. After the competition has finished, the answers can no longer be changed: a teacher with Read or Write access sees them read-only, with their grades and the team's score, to discuss them with the team.
 6. **Viewing competitions.** The teacher can view the list of all competitions, both past and planned. A teacher allowed to manage competitions can edit the name, the start, the participating teams and the list of questions of any upcoming competition, stop (finish) any competition in progress, and cancel any competition that is not finished (see [Competition statuses](#competition-statuses)).
-7. **Grading answers.** After a competition has finished, a teacher allowed to manage competitions grades its teams' answers by hand: each answer gets a whole-number grade from 0 to 10. They grade the answers of every team in the competition, whatever its educational institution, and can change a grade at any time. A team's score is the sum of its grades.
+7. **Grading answers.** After a competition has finished, a teacher allowed to manage competitions grades its teams' answers by hand: each answer gets a whole-number grade from 0 to 10. They grade the answers of every team in the competition, whatever its educational institution, and can change a grade at any time until the competition's results are published. A team's score is the sum of its grades.
+8. **Publishing results.** Once every team of a finished competition is fully graded, a teacher allowed to manage competitions publishes its results (see [Published results](#published-results)). Publishing is permanent: from then on the grades can no longer be changed.
+9. **Downloading results.** Every teacher downloads the published results of every competition, whatever their links to educational institutions.
 
 #### Teacher access rights to competitions
 
-- **Read** — every teacher has read access to all competitions.
-- **Manage** — a teacher whom an administrator allowed to manage competitions creates, edits, stops, cancels and grades any competition, whoever created it. There are no access rights per competition.
+- **Read** — every teacher has read access to all competitions and to the published results of every competition.
+- **Manage** — a teacher whom an administrator allowed to manage competitions creates, edits, stops, cancels, grades and publishes the results of any competition, whoever created it. There are no access rights per competition.
 
 #### Teacher access to students
 
 - A teacher is linked to one or more educational institutions.
 - A teacher only has access to the list of students from their own educational institutions.
-- Each link has an access level: **Read** (see everything of the institution and change nothing: its students, its teams, and its teams' answers, grades, scores and results in competitions) or **Write** (also add, edit and delete the students, manage the teams and enter the teams' answers). In competitions the two levels see the same; only Write enters and changes answers.
+- Each link has an access level: **Read** (see everything of the institution and change nothing: its students, its teams, and its teams' answers, grades, scores and results in competitions) or **Write** (also add, edit and delete the students, manage the teams and enter the teams' answers). In competitions the two levels see the same; only Write enters and changes answers. The published results of a competition are open to every teacher, linked to the institution or not (see [Published results](#published-results)).
 - The students of an educational institution are divided into classes (for example "KN-21"). Each class has a year of study, shared by all its students. A student belongs to exactly one educational institution and exactly one class in it. A teacher with Write access keeps the list of classes of that institution.
 - A teacher sees a student's data only for their own institutions, never anything about an institution the student belonged to before.
 - Only an administrator can link a teacher to an educational institution and set the access level.
-- Only a teacher whom an administrator allowed to manage competitions can create and manage competitions and change the question bank.
+- Only a teacher whom an administrator allowed to manage competitions can create and manage competitions, publish their results and change the question bank.
 
 ### Administrator
 
 - Adds and deletes teachers in the application.
 - Links a teacher to one or more educational institutions, selecting them from the list of institutions, with Read or Write access to each.
-- Decides whether a teacher can manage competitions: create, edit, stop, cancel and grade any competition, and change the question bank.
+- Decides whether a teacher can manage competitions: create, edit, stop, cancel and grade any competition, publish its results, and change the question bank.
 - Is the only role that can edit the list of educational institutions.
 - Is the only role that can edit the list of subjects.
 
 ## Personal data
 
 - Email, first name and last name are personal data for every role. A student's educational institution, class (and so their year of study) and the teams they belong to are personal data too. A student agrees again each time they join an educational institution.
-- A team's answers are not personal data: they belong to the team, and who entered them is not stored.
+- A team's answers are not personal data: they belong to the team, and who entered them is not stored. Neither are published results: a team's name, educational institution, region and score.
 - Personal data is stored only after the person has agreed to it. An administrator or teacher who adds someone sends an invitation. The person's data is saved only when that person opens the invitation and accepts the consent text. Until then, nothing about them is kept.
 - Every person can see the personal data stored about them and can withdraw consent at any time, even after being removed. Withdrawing erases their personal data and ends their access.
 - Administrators are the exception: they are set by deployment configuration, not invited. Withdrawing consent does not remove an administrator's role or email.
@@ -89,18 +91,25 @@ A web application for running online competitions among students, testing their 
 - A teacher organizes a competition in one subject for a specific date and time. A competition has no duration: it starts on its own at its start time and runs until a teacher stops it.
 - Teams take part in a competition: each participating team gives one written (text) answer to each question. The answers belong to the team, not to its students: the team's members, or a teacher with Write access to its educational institution, enter them, and the last save wins. A student has no answers of their own.
 - After the competition has finished, a teacher allowed to manage competitions grades the answers by hand, a whole number from 0 to 10 per answer. A question a team did not answer has no grade. Who graded an answer, or when, is not stored.
-- A team's score is the sum of the grades of its answers. The grades are stored; the score is always calculated from them.
-- Later, answers are also evaluated using AI. The input for evaluation is the question text and the correct answer prepared in advance by the teacher. The AI proposes a grade for each answer, on the same 0–10 scale; it is the foundation of the answer's grade, and a teacher allowed to manage competitions can still adjust it by hand. The stored grade, proposed or adjusted, is the one that counts.
+- A team's score is the sum of the grades of its answers. The grades are stored; the score is always calculated from them. The one exception is the published results, stored as files when they are published (see [Published results](#published-results)).
+- When every team is fully graded, a teacher allowed to manage competitions publishes the competition's results. From then on its grades never change.
+- Later, answers are also evaluated using AI. The input for evaluation is the question text and the correct answer prepared in advance by the teacher. The AI proposes a grade for each answer, on the same 0–10 scale; it is the foundation of the answer's grade, and a teacher allowed to manage competitions can still adjust it by hand until the results are published. The stored grade, proposed or adjusted, is the one that counts. The AI never grades a competition whose results are published.
 - The winner is the team with the highest score.
 
 ### Competition statuses
 
 - **Upcoming** — before its start. Only an upcoming competition can be edited.
 - **In progress** — from its start, reached on its own with nobody acting, until a teacher stops it. A team's answers are entered only while its competition is in progress.
-- **Finished** — after a teacher allowed to manage competitions stops it (the action **Finish competition**). A finished competition cannot be cancelled, and its questions, teams and answers never change again; its answers are graded, and its results can always be reviewed.
+- **Finished** — after a teacher allowed to manage competitions stops it (the action **Finish competition**). A finished competition cannot be cancelled, and its questions, teams and answers never change again; its answers are graded until its results are published, and its results can always be reviewed. Publishing its results does not change its status: it stays **Finished**.
 - **Cancelled** — after a teacher allowed to manage competitions cancels it, which is possible in any status except **Finished**. Cancelling is final: a cancelled competition never changes again and cannot be restored.
 
 Deleting a team is the one exception to "only an upcoming competition can be edited" and "a cancelled competition never changes again": it takes the team out of every competition that is not finished (upcoming, in progress and cancelled). A deleted team stays only in finished competitions, so their record stays complete.
+
+### Published results
+
+- **When.** A teacher allowed to manage competitions publishes the results of a finished competition once every one of its teams is fully graded. Publishing is permanent: there is no unpublish, and the grades of the competition can no longer be changed by anyone, so the announced results never change and give participants nothing to complain about.
+- **Open information.** Like the results of a school competition, the published results are open: every teacher sees them, whatever their links to educational institutions. They hold each team's name, educational institution, region and final score, never its answers or its grades per question, which stay visible only as described for each role.
+- **A stored snapshot.** At publishing the application makes the results files once, as PDF, one in Ukrainian and one in English, and keeps them with the competition. They are the official confirmation of the competition's results: they are never made again or changed, so they show the names and scores as they were at publishing even if a region, institution or team is later renamed, deactivated or deleted. Every download hands out the stored file, so nothing is calculated again.
 
 ### Question
 
@@ -112,7 +121,7 @@ A team is a named group of students of one educational institution, put together
 
 ### Subject
 
-A subject is a knowledge area, such as mathematics or physics, that competitions test. Administrators keep the list of subjects. Every question and every competition belongs to exactly one subject, and a competition contains only questions of its own subject. A subject used by any question, even a deleted one, or by any competition can only be deactivated, never deleted, so completed competitions keep showing it. Deactivating a subject hides its questions and every one of its competitions that is not finished, and they cannot be opened until it is activated again; its finished competitions stay available, so their answers can still be graded and their results reviewed; nothing else about them changes.
+A subject is a knowledge area, such as mathematics or physics, that competitions test. Administrators keep the list of subjects. Every question and every competition belongs to exactly one subject, and a competition contains only questions of its own subject. A subject used by any question, even a deleted one, or by any competition can only be deactivated, never deleted, so completed competitions keep showing it. Deactivating a subject hides its questions and every one of its competitions that is not finished, and they cannot be opened until it is activated again; its finished competitions stay available, so their answers can still be graded until their results are published and their results can be reviewed; nothing else about them changes.
 
 ## Production usage
 

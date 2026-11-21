@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  student-competitions\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-21 16:18+0200\n"
+"POT-Creation-Date: 2026-11-21 16:57+0200\n"
 "PO-Revision-Date: 2026-11-15 17:00+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -1133,39 +1133,84 @@ msgstr "An educational institution named “%(name)s” already exists in this r
 msgid "A region named “%(name)s” already exists."
 msgstr "A region named “%(name)s” already exists."
 
-#: app/services/results_pdf.py:91
+#: app/services/results_pdf.py:99
 #, python-format
 msgid "Page %(page)d of %(total)s"
 msgstr "Page %(page)d of %(total)s"
 
-#: app/services/results_pdf.py:104
+#: app/services/results_pdf.py:112
 #, python-format
 msgid "Results of “%(name)s”"
 msgstr "Results of “%(name)s”"
 
-#: app/services/results_pdf.py:136
+#: app/services/results_pdf.py:144
 #, python-format
 msgid "Started: %(moment)s"
 msgstr "Started: %(moment)s"
 
-#: app/services/results_pdf.py:137
+#: app/services/results_pdf.py:145
 #, python-format
 msgid "Finished: %(moment)s"
 msgstr "Finished: %(moment)s"
 
-#: app/services/results_pdf.py:138
+#: app/services/results_pdf.py:146
 #, python-format
 msgid "Published: %(date)s"
 msgstr "Published: %(date)s"
 
-#: app/services/results_pdf.py:150
+#: app/services/results_pdf.py:147
+#, python-format
+msgid "Maximum score: %(score)d"
+msgstr "Maximum score: %(score)d"
+
+#: app/services/results_pdf.py:159
 msgid "No teams took part in this competition."
 msgstr "No teams took part in this competition."
 
-#: app/services/results_pdf.py:171
-#, python-format
-msgid "%(institution)s, %(team)s, %(score)d"
-msgstr "%(institution)s, %(team)s, %(score)d"
+#: app/services/results_pdf.py:161
+#: app/templates/pages/admin/_institution_picker.html:14
+#: app/templates/pages/admin/_institution_picker.html:17
+#: app/templates/pages/profile.html:22
+#: app/templates/pages/teacher/competition_answers.html:38
+#: app/templates/pages/teacher/competition_answers.html:42
+#: app/templates/pages/teacher/competition_grades.html:41
+#: app/templates/pages/teacher/competition_grades.html:45
+#: app/templates/pages/teacher/competition_teams.html:30
+#: app/templates/pages/teacher/competition_teams.html:38
+#: app/templates/pages/teacher/competition_teams_add.html:36
+#: app/templates/pages/teacher/competition_teams_add.html:40
+#: app/templates/pages/teacher/student_form.html:15
+#: app/templates/pages/teacher/student_invite.html:14
+#: app/templates/pages/teacher/student_remove.html:13
+#: app/templates/pages/teacher/students.html:22
+#: app/templates/pages/teacher/team_answer_sheet.html:17
+#: app/templates/pages/teacher/team_answers_read_only.html:18
+#: app/templates/pages/teacher/team_delete.html:12
+#: app/templates/pages/teacher/team_grading_sheet.html:21
+#: app/templates/pages/teacher/teams.html:22
+msgid "Educational institution"
+msgstr "Educational institution"
+
+#: app/services/results_pdf.py:161
+#: app/templates/pages/teacher/competition_answers.html:38
+#: app/templates/pages/teacher/competition_answers.html:41
+#: app/templates/pages/teacher/competition_grades.html:41
+#: app/templates/pages/teacher/competition_grades.html:44
+#: app/templates/pages/teacher/competition_teams.html:30
+#: app/templates/pages/teacher/competition_teams.html:37
+#: app/templates/pages/teacher/competition_teams_add.html:36
+#: app/templates/pages/teacher/competition_teams_add.html:39
+#: app/templates/pages/teacher/teams.html:27
+msgid "Team"
+msgstr "Team"
+
+#: app/services/results_pdf.py:161
+#: app/templates/pages/teacher/competition_answers.html:38
+#: app/templates/pages/teacher/competition_answers.html:47
+#: app/templates/pages/teacher/competition_grades.html:41
+#: app/templates/pages/teacher/competition_grades.html:49
+msgid "Score"
+msgstr "Score"
 
 #: app/services/students.py:53
 msgid "This email already belongs to a student"
@@ -2118,29 +2163,6 @@ msgstr "Yes"
 msgid "No"
 msgstr "No"
 
-#: app/templates/pages/admin/_institution_picker.html:14
-#: app/templates/pages/admin/_institution_picker.html:17
-#: app/templates/pages/profile.html:22
-#: app/templates/pages/teacher/competition_answers.html:38
-#: app/templates/pages/teacher/competition_answers.html:42
-#: app/templates/pages/teacher/competition_grades.html:41
-#: app/templates/pages/teacher/competition_grades.html:45
-#: app/templates/pages/teacher/competition_teams.html:30
-#: app/templates/pages/teacher/competition_teams.html:38
-#: app/templates/pages/teacher/competition_teams_add.html:36
-#: app/templates/pages/teacher/competition_teams_add.html:40
-#: app/templates/pages/teacher/student_form.html:15
-#: app/templates/pages/teacher/student_invite.html:14
-#: app/templates/pages/teacher/student_remove.html:13
-#: app/templates/pages/teacher/students.html:22
-#: app/templates/pages/teacher/team_answer_sheet.html:17
-#: app/templates/pages/teacher/team_answers_read_only.html:18
-#: app/templates/pages/teacher/team_delete.html:12
-#: app/templates/pages/teacher/team_grading_sheet.html:21
-#: app/templates/pages/teacher/teams.html:22
-msgid "Educational institution"
-msgstr "Educational institution"
-
 #: app/templates/pages/profile.html:23 app/templates/pages/profile.html:33
 #: app/templates/pages/teacher/student_form.html:24
 #: app/templates/pages/teacher/student_invite.html:15
@@ -2356,18 +2378,6 @@ msgid "Pages, top"
 msgstr "Pages, top"
 
 #: app/templates/pages/teacher/competition_answers.html:38
-#: app/templates/pages/teacher/competition_answers.html:41
-#: app/templates/pages/teacher/competition_grades.html:41
-#: app/templates/pages/teacher/competition_grades.html:44
-#: app/templates/pages/teacher/competition_teams.html:30
-#: app/templates/pages/teacher/competition_teams.html:37
-#: app/templates/pages/teacher/competition_teams_add.html:36
-#: app/templates/pages/teacher/competition_teams_add.html:39
-#: app/templates/pages/teacher/teams.html:27
-msgid "Team"
-msgstr "Team"
-
-#: app/templates/pages/teacher/competition_answers.html:38
 #: app/templates/pages/teacher/competition_answers.html:43
 #: app/templates/pages/teacher/competition_grades.html:41
 #: app/templates/pages/teacher/competition_grades.html:46
@@ -2391,13 +2401,6 @@ msgstr "Answered"
 #: app/templates/pages/teacher/competition_grades.html:48
 msgid "Graded"
 msgstr "Graded"
-
-#: app/templates/pages/teacher/competition_answers.html:38
-#: app/templates/pages/teacher/competition_answers.html:47
-#: app/templates/pages/teacher/competition_grades.html:41
-#: app/templates/pages/teacher/competition_grades.html:49
-msgid "Score"
-msgstr "Score"
 
 #: app/templates/pages/teacher/competition_answers.html:44
 #: app/templates/pages/teacher/competition_answers.html:46

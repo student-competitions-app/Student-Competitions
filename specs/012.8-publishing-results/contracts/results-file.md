@@ -13,11 +13,15 @@ English texts are shown; the Ukrainian file holds their catalogue translations.
    - "Started: <start>" and "Finished: <finish>": date and time in Kyiv time, labelled ("14
      March 2027, 10:00 (Kyiv time)");
    - "Published: <date>": the date in Kyiv time.
-5. **Body**: either
-   - for each region, in order: a heading with the region's name, then one line per team, "<institution>, <team>,
-     <score>", institutions then teams in order; or
+5. **Maximum score**: "Maximum score: <n>", 10 for each of the competition's questions (design
+   review round 1).
+6. **Body**: either
+   - for each region, in order: a heading with the region's name, then a table with the heading row
+     "Educational institution | Team | Score" and one row per team, institutions then teams in
+     order; the score column just wide enough for the score or its heading; the heading row repeated
+     on a page the table continues onto; or
    - "No teams took part in this competition." when the competition has no teams.
-6. **Footer on every page**: "Page <n> of <total>".
+7. **Footer on every page**: "Page <n> of <total>".
 
 ## Rules
 
@@ -29,7 +33,9 @@ English texts are shown; the Ukrainian file holds their catalogue translations.
 | Names as entered, never translated, Cyrillic extractable as typed | text read back with pypdf |
 | No question text, reference answer, answer, grade per question or member name | text read back: none of the seeded strings appear |
 | Labels in the file's language | text read back per language |
-| Every page numbered, total correct | text read back from a multi-page sample |
+| Every page numbered, total correct; a continued table repeats its heading row | text read back from a multi-page sample |
+| The maximum score is 10 × the number of questions | snapshot test; text read back |
+| The score column is just wide enough for its heading or the widest score | `_column_widths` unit test |
 | Fonts embedded (subset), logo image present | pypdf: font descriptors carry a font file; one image on page 1 |
 | Metadata: title, language `uk-UA` / `en-GB`, creation date = publishing moment, no author | pypdf metadata |
 | Stored once; served byte for byte; unchanged after later renames, deactivations, deletions | service and route tests compare bytes |

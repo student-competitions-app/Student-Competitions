@@ -52,6 +52,19 @@ competition. Nine things become true when this milestone is done:
    the blocked confirmation** are added to the component library, the component gallery
    (`/admin/components`) and the UI guidelines before any page uses them.
 
+## Clarifications
+
+### Session 2026-11-21 (design review round 1)
+
+- Q: What should the header show besides the dates? → A: Under "Published", the maximum score a team
+  could get: "Maximum score: 40" («Максимальний бал: 40»), 10 (the grade scale's maximum) for each of
+  the competition's questions, so a reader can judge every score against it (FR-023).
+- Q: How are a region's teams laid out? → A: As a table under the region's heading, with the columns
+  "Educational institution", "Team" and "Score" («Заклад освіти», «Команда», «Бал»), one row per
+  team. The score column is just wide enough to show the score (or its heading, if wider); the other
+  two share the rest of the width, and long names wrap within their cell. A table that continues on
+  a new page repeats its heading row (FR-025).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A teacher with the setting publishes the results of a graded competition (Priority: P1)
@@ -253,13 +266,14 @@ read-only grades, the missing button, the refusal and that no grade changed.
 ### User Story 6 - The results files hold the official results (Priority: P1)
 
 The Ukrainian file of "Spring round" starts with the logo, the title "Results of “Spring round”" in
-Ukrainian, "Chemistry", the start and the finish date and time in Kyiv time, labelled, and the date of
-publishing. Then come the regions in Ukrainian alphabetical order, each with a heading, and under each
-one line per team, ordered by institution and then by team, such as "School No. 5, Comets, 17". The
+Ukrainian, "Chemistry", the start and the finish date and time in Kyiv time, labelled, the date of
+publishing and "Maximum score: 40". Then come the regions in Ukrainian alphabetical order, each with a
+heading over a table of its teams, ordered by institution and then by team, with the columns
+"Educational institution", "Team" and "Score", such as the row "School No. 5 | Comets | 17". The
 deleted team "Meteors" is listed with its score like every other team. The list runs over three pages,
 each numbered ("Page 2 of 3"). The English file shows the same teams and scores with the English
-labels. A month later the school is renamed and "Comets" is deleted; both files still show "School No.
-5, Comets, 17".
+labels. A month later the school is renamed and "Comets" is deleted; both files still show the row
+"School No. 5 | Comets | 17".
 
 **Why this priority**: The files are the official confirmation of the results; their content and
 their permanence are what publishing is for.
@@ -273,10 +287,13 @@ institutions and teams, and compare the stored files with the ones read before.
 
 1. **Given** a published competition, **When** either file is read, **Then** it starts with a header
    holding the logo of milestone 12.7, the title "Results of “<name>”", the subject, the start and
-   finish date and time, and the date of publishing, the times in Kyiv time and labelled as such.
+   finish date and time, the date of publishing, the times in Kyiv time and labelled as such, and the
+   maximum score (10 for each of the competition's questions).
 2. **Given** the header, **When** the teams follow, **Then** there is a heading for each region, and
-   under it one line per team with the institution's name, the team's name and its score, the sum of
-   its grades ("School No. 5, Comets, 17"); a team with no answers has the score 0.
+   under it a table with the columns "Educational institution", "Team" and "Score" and one row per
+   team, its score the sum of its grades ("School No. 5 | Comets | 17"); a team with no answers has
+   the score 0. The score column is just wide enough for the score, and a table continued on a new
+   page repeats its heading row.
 3. **Given** teams of several regions and institutions, **When** they are listed, **Then** the regions,
    the institutions within a region and the teams within an institution are in alphabetical order by
    the Ukrainian alphabet rule of milestone 12.5, in both files.
@@ -546,17 +563,21 @@ capability of its own.
 #### The results files
 
 - **FR-023**: Each file MUST start with a header: the logo of milestone 12.7, the title "Results of
-  “<name>”", the subject, the start and finish date and time, and the date of publishing. The start
-  and finish times MUST be in Kyiv time, labelled as such, as in milestone 12.5; the date of publishing
-  MUST be the date in Kyiv time.
+  “<name>”", the subject, the start and finish date and time, the date of publishing, and under it
+  the maximum score, "Maximum score: <n>", where n is 10 (the grade scale's maximum) for each of the
+  competition's questions. The start and finish times MUST be in Kyiv time, labelled as such, as in
+  milestone 12.5; the date of publishing MUST be the date in Kyiv time.
 - **FR-024**: Two files MUST be made at publishing, one with every label in Ukrainian and one with every
   label in English, and stored with the competition. Names (of the competition, subject, regions,
   institutions and teams) MUST be shown as entered, never translated, and Cyrillic letters MUST render
   correctly on any device, with no font needed on the reader's side.
-- **FR-025**: Below the header each file MUST show a heading for each region, and under it one line per
-  team with the institution's name, the team's name and its score, the sum of its grades ("School No.
-  5, Comets, 17"). Every team of the competition MUST be listed, a deleted team and a team of a
-  deactivated institution or region included, like every other team.
+- **FR-025**: Below the header each file MUST show a heading for each region, and under it a table
+  with the columns "Educational institution", "Team" and "Score" and one row per team: the
+  institution's name, the team's name and its score, the sum of its grades. The score column MUST be
+  just wide enough to show the score (or its heading, if wider); long names MUST wrap within their
+  cell; a table continued on a new page MUST repeat its heading row. Every team of the competition
+  MUST be listed, a deleted team and a team of a deactivated institution or region included, like
+  every other team.
 - **FR-026**: Regions, the institutions within a region and the teams within an institution MUST be
   ordered alphabetically with the Ukrainian alphabet rule of milestone 12.5, the same in both files.
 - **FR-027**: The files MUST hold only each team's region, institution, name and final score: never an

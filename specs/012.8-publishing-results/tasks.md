@@ -855,8 +855,9 @@ and US2, the MVP is complete.
     `specs/012.7-new-logo/design-approval.md`: the round number, the date, the samples, what to
     look at (layout, fonts, logo size and place, header, spacing, wording), and the product owner's
     decision (pending).
-- [ ] T049 [US8] Apply each round's change requests in `app/services/results_pdf.py` (and, if a larger logo is needed, one dark-ink print size in `scripts/make_logo.py` and its committed image), regenerate the samples, re-run `tests/unit/test_results_pdf.py`, and record the round in `design-approval.md` (depends on T048; repeat until approved). Wording changes go through the catalogues (T024's workflow). Record each round's decisions in the spec's Clarifications if they change a rule.
-- [ ] T050 [US8] Record the approval (depends on T049): the approved round, the date and the product owner's words in `design-approval.md`; the milestone is not done before this (FR-040).
+- [X] T049 [US8] Apply each round's change requests in `app/services/results_pdf.py` (and, if a larger logo is needed, one dark-ink print size in `scripts/make_logo.py` and its committed image), regenerate the samples, re-run `tests/unit/test_results_pdf.py`, and record the round in `design-approval.md` (depends on T048; repeat until approved). Wording changes go through the catalogues (T024's workflow). Record each round's decisions in the spec's Clarifications if they change a rule.
+  - **Round 1 (2026-11-21)**: changes requested and made: the maximum score under "Published"; a table per region (institution, team, score; the score column just wide enough). Recorded in the spec's Clarifications, FR-023, FR-025, contracts/results-file.md, research R8 and data-model §5. Round 2 approved by the product owner on 2026-11-21.
+- [X] T050 [US8] Record the approval (depends on T049): the approved round, the date and the product owner's words in `design-approval.md`; the milestone is not done before this (FR-040).
 
 **Checkpoint**: the design of both files is approved and recorded. US8 is done.
 

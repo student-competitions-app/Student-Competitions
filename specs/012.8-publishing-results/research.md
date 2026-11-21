@@ -216,10 +216,14 @@ The **initial design**, the starting point of the review rounds (FR-038):
     about 270 dpi;
   - the title "Results of “<name>”" (Bold 16 pt), with long names wrapping;
   - the subject;
-  - "Started: <start>", "Finished: <finish>", "Published: <date>" (10 pt).
-- **Body**: per region, a heading (Bold 12 pt) with a thin rule, then one line per team, "School
-  No. 5, Comets, 17" (10.5 pt, one message `"%(institution)s, %(team)s, %(score)d"`), wrapping
-  under itself when long. A region heading is never left alone at the bottom of a page.
+  - "Started: <start>", "Finished: <finish>", "Published: <date>" and "Maximum score: <n>" (10 × the
+    competition's questions; design review round 1) (10 pt).
+- **Body** (design review round 1): per region, a heading (Bold 12 pt), then a table (fpdf2's
+  `table()`): the heading row "Educational institution | Team | Score" (bold, light fill, repeated on
+  every page the table continues onto), one row per team, horizontal rules only, 10.5 pt, long names
+  wrapping within their cell. The score column is just wide enough for its heading or the widest
+  score; the institution takes 56% of the rest, the team the remainder. A region heading is kept
+  with its table's heading row and first team.
 - **Footer on every page**: "Page <n> of <total>" (9 pt, centred), through fpdf2's `{nb}` alias. On
   pages after the first, a small running title with the competition's name.
 - **No teams**: "No teams took part in this competition." in place of the regions.

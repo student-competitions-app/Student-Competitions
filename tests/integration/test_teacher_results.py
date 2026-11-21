@@ -654,7 +654,7 @@ def test_a_real_publish_then_its_download(scene: Scene) -> None:
     stored = files(scene.engine)
     response = download(scene.taras, scene.competition, scene.chemistry)
     assert response.content == stored[(scene.competition, "en")]
-    assert "School No. 5, Comets, 17" in pdf_text(response.content)
+    assert "School No. 5 Comets 17" in pdf_text(response.content)
     scene.taras.cookies.set("sc_lang", "uk")
     response = download(scene.taras, scene.competition, scene.chemistry)
     assert response.content == stored[(scene.competition, "uk")]

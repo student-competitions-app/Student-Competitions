@@ -50,6 +50,7 @@ def snapshot(*regions: RegionResults, name: str = "Spring round") -> ResultsSnap
         starts_at=STARTED,
         finished_at=FINISHED,
         published_at=PUBLISHED,
+        max_score=40,
         regions=regions,
     )
 
@@ -111,7 +112,7 @@ def test_a_very_long_name_wraps() -> None:
         Language.EN,
     )
     text = pdf_text(content).replace("\n", " ")
-    assert "Comets, 3" in text
+    assert "Comets 3" in text
     assert text.count("Науково-технічний") >= 18
 
 
@@ -124,11 +125,13 @@ def test_the_english_file() -> None:
         "Started: 14 March 2027, 10:00 (Kyiv time)",
         "Finished: 14 March 2027, 12:30 (Kyiv time)",
         "Published: 21 March 2027",
+        "Maximum score: 40",
         "Kyiv",
-        "School No. 5, Comets, 17",
-        "School No. 5, Rockets, 0",
+        "Educational institution Team Score",
+        "School No. 5 Comets 17",
+        "School No. 5 Rockets 0",
         "Львівська",
-        "Ліцей №2 імені Ґете, Зорі ʼЄдність, 22",
+        "Ліцей №2 імені Ґете Зорі ʼЄдність 22",
         "Page 1 of 1",
     ]
     lines = [line.strip() for line in text.splitlines()]
@@ -144,12 +147,14 @@ def test_the_ukrainian_file() -> None:
         "Chemistry",
         "14 березня 2027, 10:00 (за київським часом)",
         "21 березня 2027",
-        "School No. 5, Comets, 17",
-        "Ліцей №2 імені Ґете, Зорі ʼЄдність, 22",
+        "Максимальний бал: 40",
+        "Заклад освіти Команда Бал",
+        "School No. 5 Comets 17",
+        "Ліцей №2 імені Ґете Зорі ʼЄдність 22",
         "Сторінка 1 з 1",
     ):
         assert part in text
-    for english in ("Results of", "Started", "Kyiv time", "Page 1"):
+    for english in ("Results of", "Started", "Kyiv time", "Page 1", "Maximum score", "Team"):
         assert english not in text
 
 
@@ -164,7 +169,8 @@ def test_no_teams(language: Language) -> None:
 
 
 def test_a_long_list_runs_over_numbered_pages() -> None:
-    """FR-028: every page numbered with the right total; a region heading never ends a page."""
+    """FR-028: every page numbered with the right total; a region heading never ends a page; a
+    table continued on a new page repeats its heading row."""
     lines = tuple(ResultLine(f"School No. {n}", f"Team {n:03d}", n % 11) for n in range(40))
     regions = tuple(RegionResults(f"Region {r}", lines) for r in range(3))
     content = render_results_pdf(snapshot(*regions), Language.EN)
@@ -175,11 +181,17 @@ def test_a_long_list_runs_over_numbered_pages() -> None:
         assert f"Page {number} of {pages}" in page
         body = [line for line in page.splitlines() if line and not line.startswith("Page ")]
         assert not body[-1].startswith("Region "), f"page {number} ends with a heading"
+        assert body[-1] != "Educational institution Team Score", f"page {number} ends with headings"
+        if number > 1:
+            rows = [line for line in body if line.startswith("School No. ")]
+            if rows:
+                first_row = body.index(rows[0])
+                assert "Educational institution Team Score" in body[:first_row], number
     for r in range(3):
         assert sum(f"Region {r}" in page for page in texts) >= 1
     joined = "\n".join(texts)
     for n in range(40):
-        assert joined.count(f"Team {n:03d}, ") == 3
+        assert joined.count(f"Team {n:03d} {n % 11}") == 3
 
 
 # ---------------------------------------------------------------------------------------------
@@ -215,3 +227,27 @@ def test_the_file_name(name: str, starts_at: datetime, expected: str) -> None:
 )
 def test_the_ascii_fallback(file_name: str, expected: str) -> None:
     assert ascii_file_name(file_name) == expected
+
+
+def test_the_score_column_is_just_wide_enough() -> None:
+    """Design review round 1: the score column fits its heading or the widest score, and the
+    institution and team columns share the rest of the width."""
+    from fpdf import FPDF
+
+    from app.services.results_pdf import (
+        CELL_PADDING,
+        FAMILY,
+        LINE_SIZE,
+        _column_widths,
+    )
+
+    document = FPDF(unit="mm", format="A4")
+    document.set_margins(20, 20, 20)
+    document.add_font(FAMILY, "", FONT_REGULAR)
+    document.add_font(FAMILY, "B", FONT_BOLD)
+    institution, team, score = _column_widths(document, TWO_REGIONS, "Score")
+    document.set_font(FAMILY, "B", LINE_SIZE)
+    assert score == pytest.approx(document.get_string_width("Score") + 2 * CELL_PADDING + 1)
+    assert score < 20
+    assert institution + team + score == pytest.approx(document.epw)
+    assert institution > team > score

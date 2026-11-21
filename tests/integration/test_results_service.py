@@ -295,15 +295,16 @@ def test_the_files_hold_the_scores_in_each_language(scene: Scene) -> None:
     english = pdf_text(stored[(scene.competition, "en")])
     ukrainian = pdf_text(stored[(scene.competition, "uk")])
     for line in (
-        "School No. 5, Comets, 17",
-        "School No. 5, Rockets, 4",
-        "Lyceum No. 2, Lions, 0",
-        "Kyiv Lyceum, Novas, 0",
-        "Odesa College, Stars, 9",
+        "School No. 5 Comets 17",
+        "School No. 5 Rockets 4",
+        "Lyceum No. 2 Lions 0",
+        "Kyiv Lyceum Novas 0",
+        "Odesa College Stars 9",
     ):
         assert line in english
         assert line in ukrainian
     assert "Results of “Spring round”" in english
+    assert "Maximum score: 20" in english and "Максимальний бал: 20" in ukrainian
     assert "Результати «Spring round»" in ukrainian
 
 
@@ -437,7 +438,7 @@ def test_a_team_with_no_answers_counts_as_graded(scene: Scene) -> None:
     """Nobody answered: every team is fully graded, every score 0."""
     publish(scene)
     english = pdf_text(files(scene.engine)[(scene.competition, "en")])
-    assert "School No. 5, Comets, 0" in english
+    assert "School No. 5 Comets 0" in english
 
 
 @pytest.mark.parametrize(("language", "text"), [
@@ -457,7 +458,7 @@ def test_a_competition_with_no_questions_is_published_with_every_score_0(scene: 
     bare = make_competition(scene.engine, scene.chemistry, "Bare", starts_at=STARTED, stopped=True)
     add_competition_team(scene.engine, bare, scene.comets)
     publish(scene, competition=bare)
-    assert "School No. 5, Comets, 0" in pdf_text(files(scene.engine)[(bare, "en")])
+    assert "School No. 5 Comets 0" in pdf_text(files(scene.engine)[(bare, "en")])
 
 
 # ---------------------------------------------------------------------------------------------
@@ -563,7 +564,7 @@ def test_a_grade_saved_first_is_in_the_files(scene: Scene) -> None:
     grade_everything(scene)
     save_grades(scene, {scene.copies[0]: "3"})
     publish(scene)
-    assert "School No. 5, Comets, 13" in pdf_text(files(scene.engine)[(scene.competition, "en")])
+    assert "School No. 5 Comets 13" in pdf_text(files(scene.engine)[(scene.competition, "en")])
 
 
 def test_a_grade_emptied_first_blocks_the_publish(scene: Scene) -> None:
@@ -603,7 +604,7 @@ def test_a_grade_save_racing_a_publish(engine: Engine, database_url: str, scene:
     assert outcomes[1] in ("ok", "GradingClosed")
     score = 13 if outcomes[1] == "ok" else 17
     english = pdf_text(files(engine)[(scene.competition, "en")])
-    assert f"School No. 5, Comets, {score}" in english
+    assert f"School No. 5 Comets {score}" in english
     with Session(engine) as session:
         counts = grades.grade_counts(session, scene.competition)
     assert counts[scene.comets].score == score
@@ -672,8 +673,10 @@ def test_equal_names_are_ordered_by_id_and_kept_apart(scene: Scene) -> None:
 
 
 def test_the_snapshot_header(scene: Scene) -> None:
+    """The maximum score is 10 for each of the competition's questions (2 here)."""
     snapshot = snapshot_of(scene)
     assert (snapshot.competition_name, snapshot.subject_name) == ("Spring round", "Chemistry")
+    assert snapshot.max_score == 20
     assert (snapshot.starts_at, snapshot.finished_at, snapshot.published_at) == (
         STARTED,
         competition_row(scene.engine, scene.competition)[3],
@@ -716,7 +719,7 @@ def test_the_files_never_change_afterwards(scene: Scene) -> None:
         session.commit()
     assert files(scene.engine) == stored
     english = pdf_text(stored[(scene.competition, "en")])
-    assert "School No. 5, Comets, 17" in english and "Renamed" not in english
+    assert "School No. 5 Comets 17" in english and "Renamed" not in english
 
 
 def test_no_code_updates_or_deletes_a_results_file() -> None:

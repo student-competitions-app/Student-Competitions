@@ -23,7 +23,7 @@
 
 ## Round 1 (2026-11-21): the initial design
 
-**Status**: pending the product owner's review.
+**Status**: changes requested (2026-11-21), made in round 2.
 
 The starting point of research R8:
 
@@ -49,4 +49,35 @@ The starting point of research R8:
    should the publishing date carry a time?
 4. **Anything else**: fonts, spacing, the running title, the page number.
 
-**Decision**: _pending._
+**Decision** (2026-11-21): changes requested.
+
+- **Maximum score**: under "Published", show the maximum score a team could get. Made: "Maximum
+  score: <n>" / «Максимальний бал: <n>», 10 for each of the competition's questions.
+- **A table per region**: under each region's heading, a table with the school, the team and the
+  score, the last column just wide enough for the score. Made: the columns "Educational
+  institution", "Team", "Score" («Заклад освіти», «Команда», «Бал»); the score column is measured
+  to fit its heading or the widest score, right-aligned; the other two share the rest (56% / 44%),
+  long names wrapping within their cell; the heading row repeats on a page the table continues
+  onto. This also answers question 2 (long entries no longer run together).
+- Recorded as rules in the spec's Clarifications, FR-023 and FR-025.
+
+## Round 2 (2026-11-21): maximum score and tables
+
+**Status**: **Approved** (2026-11-21).
+
+The samples in [samples/](./samples/) are made again with the round 1 changes:
+
+- [long-list-uk.pdf](./samples/long-list-uk.pdf) / [long-list-en.pdf](./samples/long-list-en.pdf):
+  seven tables over four pages, the heading row repeated where a table continues;
+- [long-names-uk.pdf](./samples/long-names-uk.pdf) / [long-names-en.pdf](./samples/long-names-en.pdf):
+  names of about 200 characters wrapping inside their cells, the score column staying narrow;
+- [no-teams-uk.pdf](./samples/no-teams-uk.pdf) / [no-teams-en.pdf](./samples/no-teams-en.pdf):
+  the maximum score, then "No teams took part in this competition.".
+
+Still open from round 1: the logo's size and place (question 1), the header wording and whether the
+publishing date carries a time (question 3), and anything else (question 4).
+
+**Decision** (2026-11-21): **approved**. The product owner's words: "I approve the pdfs in the
+samples folder." The open questions are settled as the samples show them: the logo 18 mm high, top
+left; «Початок», «Завершено», «Опубліковано» and «Максимальний бал» as they are; the publishing
+date without a time; nothing else changed. The gate of FR-040 is met.

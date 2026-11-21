@@ -36,13 +36,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from itertools import groupby
 
-from sqlalchemy import update
+from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, col
+from sqlmodel import Session, col, select
 
 from app.core.i18n import Language
 from app.core.time_zone import KYIV
-from app.models import Competition, CompetitionResultsFile, Subject
+from app.models import Competition, CompetitionQuestion, CompetitionResultsFile, Subject
+from app.schemas.grade import GRADE_MAX
 from app.schemas.names import name_sort_key
 from app.services import competitions, results_pdf
 from app.services.competition_entries import team_entries
@@ -89,6 +90,9 @@ class ResultsSnapshot:
     """UTC: `competitions.stopped_at`."""
     published_at: datetime
     """UTC: the publishing moment."""
+    max_score: int
+    """The highest score a team could reach: the grade scale's maximum (10) for each of the
+    competition's questions (design review round 1)."""
     regions: tuple[RegionResults, ...]
     """In the Ukrainian alphabet order; empty for a competition with no teams."""
 
@@ -127,8 +131,12 @@ def build_snapshot(
     teams and teams of deactivated institutions or regions included, with no mark (FR-025).
     Regions, institutions within a region and teams within an institution by name in the
     Ukrainian alphabet order (milestone 12.5), ties by id (FR-026). Reads nothing else about a
-    team: no member, answer or grade per question (FR-027)."""
+    team: no member, answer or grade per question (FR-027). The maximum score is 10 for each of
+    the competition's questions."""
     assert competition.id is not None and competition.stopped_at is not None
+    questions = session.exec(
+        select(func.count()).where(CompetitionQuestion.competition_id == competition.id)
+    ).one()
     counts = grade_counts(session, competition.id)
     entries = sorted(
         team_entries(session, competition.id),
@@ -159,6 +167,7 @@ def build_snapshot(
         starts_at=competition.starts_at,
         finished_at=competition.stopped_at,
         published_at=published_at,
+        max_score=GRADE_MAX * questions,
         regions=tuple(regions),
     )
 

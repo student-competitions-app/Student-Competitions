@@ -89,6 +89,7 @@ Upcoming ──start passes──▶ In progress ──finish──▶ Finished 
 | `competition_name` | `str` | `competitions.name` |
 | `subject_name` | `str` | `subjects.name` |
 | `starts_at`, `finished_at`, `published_at` | aware `datetime` (UTC) | `starts_at`, `stopped_at`, the publishing moment |
+| `max_score` | `int` | 10 (`app.schemas.grade.GRADE_MAX`) × the competition's questions (design review round 1) |
 | `regions` | `tuple[RegionResults, ...]` | ordered by `name_sort_key`, then id |
 | `RegionResults.name` | `str` | `regions.name` |
 | `RegionResults.lines` | `tuple[ResultLine, ...]` | institutions by `name_sort_key`, then id; within one, teams by `name_sort_key`, then id |

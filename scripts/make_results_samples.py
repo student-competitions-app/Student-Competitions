@@ -9,7 +9,8 @@ publishing would store. It writes six files to `specs/012.8-publishing-results/s
 (milestone 12.8 research R12, FR-039):
 
 - `long-list-{uk,en}.pdf`: seven regions, sixty teams in twenty institutions, Cyrillic names with
-  the apostrophe and the letters ґ, є, ї, enough to continue across pages;
+  the apostrophe and the letters ґ, є, ї, enough to continue across pages (4 questions, so a
+  maximum score of 40);
 - `long-names-{uk,en}.pdf`: one region with institution and team names of about two hundred
   characters, so the wrapping can be judged;
 - `no-teams-{uk,en}.pdf`: a competition with no teams.
@@ -89,6 +90,7 @@ def long_list() -> ResultsSnapshot:
         starts_at=STARTED,
         finished_at=FINISHED,
         published_at=PUBLISHED,
+        max_score=40,
         regions=tuple(regions),
     )
 
@@ -112,6 +114,7 @@ def long_names() -> ResultsSnapshot:
         starts_at=STARTED,
         finished_at=FINISHED,
         published_at=PUBLISHED,
+        max_score=50,
         regions=(
             RegionResults(
                 "Харківська",
@@ -128,6 +131,7 @@ def no_teams() -> ResultsSnapshot:
         starts_at=STARTED,
         finished_at=FINISHED,
         published_at=PUBLISHED,
+        max_score=30,
         regions=(),
     )
 

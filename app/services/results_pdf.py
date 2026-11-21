@@ -9,9 +9,10 @@ publishing transaction calls it once per language, and the sample script calls i
 built in memory.
 
 **What a file holds**, in order: the logo of milestone 12.7 (dark ink, for white paper); the title
-"Results of “<name>”"; the subject; the start and the finish in Kyiv time, labelled, and the date
-of publishing; then a heading per region with one line per team, "School No. 5, Comets, 17", or
-"No teams took part in this competition."; and "Page n of N" at the foot of every page. Every
+"Results of “<name>”"; the subject; the start and the finish in Kyiv time, labelled, the date of
+publishing and the maximum score; then a heading per region over a table of its teams
+(educational institution, team, score; the score column just wide enough for the score), or "No
+teams took part in this competition."; and "Page n of N" at the foot of every page. Every
 label goes through the catalogues in the file's language; names are shown as entered, never
 translated.
 
@@ -26,13 +27,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fpdf import FPDF
-from fpdf.enums import XPos, YPos
+from fpdf.enums import TableBordersLayout, XPos, YPos
+from fpdf.fonts import FontFace
 
 from app.core.i18n import Language, _, use_language
 from app.core.time_zone import format_local_date, format_local_time
 
 if TYPE_CHECKING:
-    from app.services.results import ResultsSnapshot
+    from app.services.results import RegionResults, ResultsSnapshot
 
 STATIC = Path(__file__).resolve().parent.parent / "static"
 FONT_REGULAR = STATIC / "fonts" / "OpenSans-Regular.ttf"
@@ -50,6 +52,7 @@ LOGO_HEIGHT = 18.0
 INK = (0x1C, 0x1C, 0x22)
 MUTED = (0x5A, 0x5D, 0x6B)
 RULE = (0xC8, 0xCB, 0xD3)
+HEADING_FILL = (0xEE, 0xF0, 0xF4)
 
 TITLE_SIZE = 16
 META_SIZE = 10
@@ -64,6 +67,11 @@ REGION_LEADING = 7.0
 LINE_LEADING = 5.6
 REGION_GAP = 6.0
 """Space above each region heading."""
+CELL_PADDING = 1.6
+"""mm, around the text of every table cell."""
+INSTITUTION_SHARE = 0.56
+"""Of the width left after the score column: the educational institution's column; the team's
+takes the rest."""
 
 
 class _ResultsDocument(FPDF):
@@ -136,6 +144,7 @@ def render_results_pdf(snapshot: "ResultsSnapshot", language: Language) -> bytes
             str(_("Started: %(moment)s", moment=_moment(snapshot.starts_at))),
             str(_("Finished: %(moment)s", moment=_moment(snapshot.finished_at))),
             str(_("Published: %(date)s", date=format_local_date(snapshot.published_at, None))),
+            str(_("Maximum score: %(score)d", score=snapshot.max_score)),
         )
         for text in meta:
             document.multi_cell(
@@ -149,9 +158,12 @@ def render_results_pdf(snapshot: "ResultsSnapshot", language: Language) -> bytes
             document.multi_cell(
                 0, LINE_LEADING, str(_("No teams took part in this competition.")), align="L"
             )
+        headings = (str(_("Educational institution")), str(_("Team")), str(_("Score")))
+        widths = _column_widths(document, snapshot, headings[2])
         for region in snapshot.regions:
-            # Never leave a region heading alone at the foot of a page.
-            if document.will_page_break(REGION_GAP + REGION_LEADING + 2 + LINE_LEADING):
+            # Never leave a region heading alone at the foot of a page: keep it with the table's
+            # heading row and its first team.
+            if document.will_page_break(REGION_GAP + REGION_LEADING + 3 * (LINE_LEADING + 4)):
                 document.add_page()
             else:
                 document.ln(REGION_GAP)
@@ -159,22 +171,54 @@ def render_results_pdf(snapshot: "ResultsSnapshot", language: Language) -> bytes
             document.multi_cell(
                 0, REGION_LEADING, region.name, align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT
             )
-            y = document.get_y() + 0.6
-            document.set_draw_color(*RULE)
-            document.set_line_width(0.3)
-            document.line(MARGIN, y, document.w - MARGIN, y)
-            document.set_y(y + 1.6)
-            document.set_font(FAMILY, "", LINE_SIZE)
-            for line in region.lines:
-                text = str(
-                    _(
-                        "%(institution)s, %(team)s, %(score)d",
-                        institution=line.institution,
-                        team=line.team,
-                        score=line.score,
-                    )
-                )
-                document.multi_cell(
-                    0, LINE_LEADING, text, align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT
-                )
+            document.ln(1.5)
+            _region_table(document, region, headings, widths)
         return bytes(document.output())
+
+
+def _column_widths(
+    document: FPDF, snapshot: "ResultsSnapshot", score_heading: str
+) -> tuple[float, float, float]:
+    """The columns' widths in mm: the score column just wide enough for its heading or the widest
+    score, whichever is wider; the rest shared between the institution and the team."""
+    scores = [str(line.score) for region in snapshot.regions for line in region.lines]
+    document.set_font(FAMILY, "B", LINE_SIZE)
+    widest = document.get_string_width(score_heading)
+    document.set_font(FAMILY, "", LINE_SIZE)
+    widest = max([widest, *(document.get_string_width(score) for score in scores)])
+    score = widest + 2 * CELL_PADDING + 1
+    rest = document.epw - score
+    return (rest * INSTITUTION_SHARE, rest * (1 - INSTITUTION_SHARE), score)
+
+
+def _region_table(
+    document: FPDF,
+    region: "RegionResults",
+    headings: tuple[str, str, str],
+    widths: tuple[float, float, float],
+) -> None:
+    """One region's teams: a heading row (repeated at the top of a page the table continues on),
+    then one row per team; long names wrap within their cell."""
+    document.set_font(FAMILY, "", LINE_SIZE)
+    document.set_draw_color(*RULE)
+    document.set_line_width(0.2)
+    with document.table(
+        width=document.epw,
+        col_widths=widths,
+        align="LEFT",
+        text_align=("LEFT", "LEFT", "RIGHT"),
+        v_align="TOP",
+        borders_layout=TableBordersLayout.HORIZONTAL_LINES,
+        headings_style=FontFace(emphasis="BOLD", fill_color=HEADING_FILL),
+        line_height=LINE_LEADING,
+        padding=CELL_PADDING,
+        repeat_headings=1,
+    ) as table:
+        heading = table.row()
+        for text in headings:
+            heading.cell(text)
+        for line in region.lines:
+            row = table.row()
+            row.cell(line.institution)
+            row.cell(line.team)
+            row.cell(str(line.score))

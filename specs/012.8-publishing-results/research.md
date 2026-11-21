@@ -376,7 +376,7 @@ no database or seed data is needed.
 
 - `docs/requirements/ui-guidelines.md`:
   - the statuses list and the Published badge;
-  - the actions menu order and example, and the download entry rule (FR-046);
+  - the actions menu order and example, and the download entry rule (FR-042);
   - the blocked confirmation;
   - the read-only grading sheet.
 - `README.md`:

@@ -1,6 +1,6 @@
 # Feature Specification: Publishing a Competition's Results as PDF Files (Teacher) (Milestone 12.8)
 
-**Feature Branch**: `023.8_publishing_results`
+**Feature Branch**: `012.8-publishing-results`
 
 **Created**: 2026-11-21
 
@@ -48,9 +48,9 @@ competition. Nine things become true when this milestone is done:
    named after the competition and its start date.
 8. **The product owner approves the design of the files** in review rounds on sample files made from
    realistic data, as in milestone 12.7.
-9. **The Published badge and the download entry of the actions menu** are added to the component
-   library, the component gallery (`/admin/components`) and the UI guidelines before any page uses
-   them.
+9. **The Published badge, the download entry of the actions menu, the read-only grading sheet and
+   the blocked confirmation** are added to the component library, the component gallery
+   (`/admin/components`) and the UI guidelines before any page uses them.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -370,7 +370,8 @@ each round and its decision in the design approval record of this milestone.
 
 A developer opens the component gallery and the UI guidelines. They show the **Published** status
 badge next to the other status badges, the actions menu with a **Download results** entry marked as a
-download, and the read-only grading sheet of a published competition with its note.
+download, the read-only grading sheet of a published competition with its note, and the publish
+confirmation both ready and blocked.
 
 **Why this priority**: It follows the project rule that pages use only library components; it adds no
 capability of its own.
@@ -380,11 +381,12 @@ capability of its own.
 **Acceptance Scenarios**:
 
 1. **Given** the gallery, **When** it is opened, **Then** it shows the **Published** badge with the
-   other competition status badges, an actions menu with a download entry, and the read-only grading
-   sheet with the published note.
+   other competition status badges, an actions menu with a download entry, the read-only grading
+   sheet with the published note, and the publish confirmation ready (with **Publish results**) and
+   blocked (with the reason, **Grade the remaining teams** and no button).
 2. **Given** the UI guidelines, **When** they are read, **Then** they describe the **Published** status
    and badge, the download entry of the actions menu (a link marked as a download, no loading bar, no
-   page in between), the new menu order and the changes of FR-046.
+   page in between), the blocked confirmation, the new menu order and the changes of FR-045.
 
 ---
 
@@ -544,8 +546,9 @@ capability of its own.
 #### The results files
 
 - **FR-023**: Each file MUST start with a header: the logo of milestone 12.7, the title "Results of
-  “<name>”", the subject, the start and finish date and time, and the date of publishing. The times
-  MUST be in Kyiv time, labelled as such, as in milestone 12.5.
+  “<name>”", the subject, the start and finish date and time, and the date of publishing. The start
+  and finish times MUST be in Kyiv time, labelled as such, as in milestone 12.5; the date of publishing
+  MUST be the date in Kyiv time.
 - **FR-024**: Two files MUST be made at publishing, one with every label in Ukrainian and one with every
   label in English, and stored with the competition. Names (of the competition, subject, regions,
   institutions and teams) MUST be shown as entered, never translated, and Cyrillic letters MUST render
@@ -576,7 +579,8 @@ capability of its own.
   characters, Cyrillic included, MUST be kept.
 - **FR-033**: The download MUST answer 404 with the page "Competition not found" (milestone 12.1) for
   an unknown competition, a competition of another subject, and a competition that is not
-  **Published**.
+  **Published**; and 404 with the page "Subject not found" (milestone 12.1) for an unknown subject, as
+  every competition route does.
 
 #### Checks and shared behaviour
 
@@ -623,17 +627,21 @@ capability of its own.
   gallery and the UI guidelines before any page uses it, next to the other competition status badges.
 - **FR-042**: The **download entry of the actions menu** (a link marked as a download that starts no
   loading feedback and opens no page) MUST be added to the component library, the component gallery and
-  the UI guidelines before any page uses it.
+  the UI guidelines before any page uses it. The UI guidelines MUST state the rule for every download:
+  it is offered as a link marked as a download, never through a page in between, and it starts no
+  loading feedback.
 - **FR-043**: The **read-only state of the grading sheet** (the grading sheet with each grade as text,
   no field, no save button and a note under the heading) MUST be added to the component library and the
   component gallery before any page uses it.
-- **FR-044**: Apart from these, the pages MUST be built from existing components: the confirmation and
-  refusal pages, the non-destructive confirmation, the filter links, notices, back links, the local-time
-  display and the competition status badges.
+- **FR-044**: Apart from these four (FR-041, FR-042, FR-043 and FR-046), the pages MUST be built from
+  existing components: the confirmation and refusal pages, the non-destructive confirmation, the
+  filter links, notices, back links, the local-time display and the competition status badges.
 - **FR-045**: The documentation MUST be updated in the same change: the UI guidelines' actions menu
   order and example, the list of statuses and their badges, and the wording patterns for the new texts.
-- **FR-046**: The UI guidelines MUST state that a download is offered as a link marked as a download,
-  never through a page in between, and that it starts no loading feedback.
+- **FR-046**: The **blocked state of the non-destructive confirmation** (the confirmation page of an
+  action that cannot be taken yet because work is left: the reason in place of the confirming button,
+  a link to the work left, and the link back) MUST be added to the component library, the component
+  gallery and the UI guidelines before any page uses it. Only a primary confirmation can be blocked.
 
 #### Rules already written down
 

@@ -58,7 +58,7 @@ Each addition goes into the component library (`app/templates/components/`), the
 | Competitions list | `pages/teacher/competitions.html` | `actions_menu`, `menu_link(download=True)`, `competition_status_badge` |
 | Grading sheet | `pages/teacher/team_grading_sheet.html` | `grading_sheet(read_only=…, note=…)` |
 
-## 6. UI guidelines changes (FR-045, FR-046)
+## 6. UI guidelines changes (FR-042, FR-045, FR-046)
 
 - **Actions menu**: the order **Edit**, **Questions**, **Teams**, **Answers**, **Grades**,
   **Publish results**, **Download results**, **Finish competition**, **Cancel competition**; the

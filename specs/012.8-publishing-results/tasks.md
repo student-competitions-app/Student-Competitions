@@ -221,11 +221,12 @@ database. Delivers **US9**.
     published") with the `accent` badge;
   - **Actions menu**: the Competitions entries in the order **Edit**, **Questions**, **Teams**,
     **Answers**, **Grades**, **Publish results**, **Download results**, **Finish competition**,
-    **Cancel competition**; the example template for a published competition; the download entry
-    rule of FR-046 verbatim in spirit ("a link marked as a download, never through a page in
-    between; it starts no loading feedback");
-  - **Confirmations**: the blocked state; **Publish results** / **Keep unpublished** among the
-    primary confirmations;
+    **Cancel competition**; the example template for a published competition; the download rule
+    of FR-042 ("a download is offered as a link marked as a download, never through a page in
+    between, and it starts no loading feedback");
+  - **Confirmations**: the blocked state of FR-046 (only a primary confirmation can be blocked; the
+    reason in place of the button, a link to the work left, the link back); **Publish results** /
+    **Keep unpublished** among the primary confirmations;
   - **Grading sheet**: the read-only state with its note;
   - **Wording patterns**: the notice "The results of “<name>” were published", the refusal reasons
     of contracts/http-routes.md §2;
@@ -284,8 +285,8 @@ suite must be green at its end.
     by hand as a frozen snapshot (plain SQLAlchemy types, nothing imported from `app`);
   - upgrade:
     - `with op.batch_alter_table("competitions") as batch:`
-      `batch.add_column(sa.Column("published_at", <the UTC type the 12.1 migration used for
-      stopped_at>, nullable=True))` and
+      `batch.add_column(sa.Column("published_at", sa.DateTime(timezone=True), nullable=True))`
+      (the type `72e46cb10175` used for `stopped_at`) and
       `batch.create_check_constraint(op.f("ck_competitions_published_after_finish"),
       "published_at IS NULL OR stopped_at IS NOT NULL")`;
     - `op.create_table("competition_results_files", sa.Column("competition_id", sa.Integer(),
@@ -331,8 +332,14 @@ suite must be green at its end.
     - `ANSWER_REFUSALS[PUBLISHED]` = the `FINISHED` text;
     - both `finished = competition.status is CompetitionStatus.FINISHED` lines become
       `competition.status.has_finished`;
-  - **`app/routers/teacher_grades.py`** `_open`: `if not competition.status.has_finished:` → the
-    refusal (the read-only behaviour on Published is US5);
+  - **`app/routers/teacher_grades.py`**:
+    - `_open`: `if not competition.status.has_finished:` → the refusal (the read-only behaviour on
+      Published is US5);
+    - `GRADE_REFUSALS[PUBLISHED]` = `_("The results of “%(name)s” are published, so its grades can
+      no longer be changed.", name=name)`, so the `GradingClosed(PUBLISHED)` that `save_grades`
+      raises once publishing exists (T026) never meets a missing key. Until T038 a late save gets
+      this text on the 12.4 refusal page; T038 replaces that with the read-only sheet and the same
+      note, and removes the entry if nothing else reads it;
   - **`app/templates/pages/teacher/competitions.html`**:
     - **Answers** on `c.status in ("in_progress", "finished", "published")`;
     - **Grades** on `can_manage and c.status in ("finished", "published")`;
@@ -576,7 +583,12 @@ stored.
   - **Afterwards**: the menu has no **Publish results**; exactly two file rows; reloading the
     landing page sends nothing again;
   - **The menu**: a teacher with the setting sees **Publish results** after **Grades** on a
-    **Finished** competition only; a teacher without the setting never sees it.
+    **Finished** competition only; a teacher without the setting never sees it;
+  - **The setting taken away** (FR-003, spec Edge Cases): Olena opens the confirmation, the
+    administrator removes her **Can manage competitions**, she sends the publish → 403 "access
+    denied", `published_at` stays `NULL` and no file row exists; her next `GET …/publish` is 403 too;
+  - **No setting**: `GET` and `POST …/publish` with an unknown competition id answer 403, not 404
+    (the setting is checked before any id).
 
 **Checkpoint**: a fully graded competition can be published from the menu, with its confirmation,
 notice, landing and two stored files. US1 is done.
@@ -601,10 +613,13 @@ refused publish, and publishing a competition with no teams.
   - when `not progress.complete`, call `confirmation(...)` with
     `blocked=_("Every team must be graded before the results can be published.")` and
     `alternative=(_("Grade the remaining teams"), grade_remaining_href)`;
-  - `grade_remaining_href` is built in the router with `teacher_grades.grades_path(competition.id,
-    context, GradeFilter.UNGRADED)` from the list context; build the `ListContext` as
-    `teacher_competition_entries.find_context` does, or import the helper that does, so the Grades
-    page's back link returns to the same list page;
+  - `grade_remaining_href` is built in `teacher_competitions.py` as
+    `f"/teacher/competitions/{competition.id}/grades?{list_query(selected.id, status_filter, return_page)}&show=ungraded"`.
+    **Do not import `teacher_grades` or `teacher_competition_entries` here**:
+    `teacher_grades` → `teacher_competition_entries` → `teacher_competitions` already import one
+    another in that direction, so the import would be circular. The parameters (`subject`,
+    `status`, `page`, then `show`) are the ones `teacher_competition_entries.address` writes, so the
+    Grades page reads the same list context and its back link returns to the same list page;
   - the same template answers the `NotFullyGraded` refusal of the `POST` with status 409.
 - [ ] T032 [US2] Add the route tests to `tests/integration/test_teacher_results.py` (depends on T031):
   - **The blocked confirmation**: "Graded 2 of 3 teams", the explanation verbatim, the link
@@ -612,6 +627,9 @@ refused publish, and publishing a competition with no teams.
     **Keep unpublished**, and no submit;
   - following that link opens **Grades** under **Ungraded only**, whose back link leads to the
     original list page;
+  - the link equals `teacher_grades.grades_path(competition_id, context, GradeFilter.UNGRADED)` for
+    the same list context (the test imports both, so a change to `address` that breaks the
+    hand-built link fails here);
   - a crafted `POST` → 409 with the blocked page and nothing stored;
   - after grading the last answer, the same `GET` shows the button;
   - a team-less competition shows "Graded 0 of 0 teams" with the button and publishes.
@@ -646,7 +664,7 @@ publish and a grade save, and the same form twice at the same moment.
     `GradingClosed(PUBLISHED)` and changes no grade;
   - **Publish and cancel**: impossible by status (a Finished competition cannot be cancelled); a
     cancel sent during a publish raises `NotCancellable` with `FINISHED` or `PUBLISHED`.
-- [ ] T035 [P] [US3] Add the SQLite fallback test to `tests/integration/test_results_service.py` (depends on T026): with a file row for `uk` inserted beforehand by `store_results_files` on a Finished competition whose `published_at` is `NULL` (a simulated lost race), `publish_results` raises `NotPublishable(PUBLISHED)`, leaves `published_at` `NULL` and keeps the existing row unchanged.
+- [ ] T035 [P] [US3] Add the primary-key guard test to `tests/integration/test_results_service.py` (depends on T026). It exercises the guard against a lost race on SQLite, where the row locks render nothing; the state it sets up (a file present while `published_at` is `NULL`) is not reachable through the application (data-model.md §4 invariant 1), so the test names that in its docstring. With a file row for `uk` inserted beforehand by `store_results_files` on a Finished competition whose `published_at` is `NULL` (a simulated lost race), `publish_results` raises `NotPublishable(PUBLISHED)`, leaves `published_at` `NULL` and keeps the existing row unchanged.
 
 **Checkpoint**: publishing is refused where it must be and is applied exactly once. US3 is done.
 
@@ -754,7 +772,7 @@ deactivated cases, publish, read both files, change the data, and compare bytes.
   - both rows are byte-for-byte unchanged, still name the old names, and still hold two rows;
   - a scan of `app/` (a test that greps the source for `update(CompetitionResultsFile` and
     `delete(CompetitionResultsFile`) finds none.
-- [ ] T043 [US6] Add the timing test to `tests/integration/test_results_service.py` (depends on T026): a competition of 500 teams in 10 regions with 10 graded answers each publishes in under 5 seconds (SC-007), measured with `time.perf_counter`, skipped under `CI=true` if the runner is known to be slow; mark it with a clear name, so a slow run is visible.
+- [ ] T043 [US6] Add the timing test to `tests/integration/test_results_service.py` (depends on T026): a competition of 500 teams in 10 regions with 10 graded answers each publishes in under 5 seconds (SC-007), measured with `time.perf_counter` around `publish_results` only (not the seeding). It runs everywhere, CI and both engines included, and is never skipped. Name it `test_publishing_500_teams_takes_under_5_seconds`, and make the assertion message state the measured time. If CI cannot meet the bound, record that as a deviation in plan.md's Complexity Tracking and agree a new bound with the product owner; do not skip the test.
 
 **Checkpoint**: the files hold exactly the official results, in both languages, and never change.
 US6 is done.

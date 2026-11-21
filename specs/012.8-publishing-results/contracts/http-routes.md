@@ -23,8 +23,12 @@ The publish confirmation. Router: `teacher_competitions.py`.
 | **Finished**, a team ungraded | 200 | the blocked confirmation: question, badge, progress, "Every team must be graded before the results can be published.", **Grade the remaining teams**, **Keep unpublished**, no button |
 
 **Grade the remaining teams** →
-`/teacher/competitions/{id}/grades?<list context>&show=ungraded` (page 1; built with
-`teacher_grades.grades_path(..., show=GradeFilter.UNGRADED)`).
+`/teacher/competitions/{id}/grades?<list_query(subject, status, page)>&show=ungraded` (page 1). It is
+built in `teacher_competitions.py` from `list_query` and the literal `show=ungraded`, never by
+importing `teacher_grades`: that module imports `teacher_competition_entries`, which imports
+`teacher_competitions`, so the import would be circular. The parameter order is the one
+`teacher_competition_entries.address` writes (`subject`, `status`, `page`, then `show`), and a test
+asserts that the two agree.
 
 **Keep unpublished** and **Back to competitions** → `list_path(subject, status, page,
 anchor=competition_id)`.

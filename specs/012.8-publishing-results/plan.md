@@ -1,6 +1,6 @@
 # Implementation Plan: Publishing a Competition's Results as PDF Files (Teacher) (Milestone 12.8)
 
-**Branch**: `012.8-publishing-results` (local: `023.8_publishing_results`) | **Date**: 2026-11-21 | **Spec**: [spec.md](./spec.md)
+**Branch**: `012.8-publishing-results` | **Date**: 2026-11-21 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/012.8-publishing-results/spec.md`
 
@@ -72,7 +72,7 @@ library, the gallery and `ui-guidelines.md` before a page uses it:
 UI guidelines and the README are updated in this PR; `milestones.md` on delivery. This plan
 records the open stack decision "PDF library and font" (R1, R2).
 
-**Tests** (R14): three new modules, updates to eleven, plus a new development dependency, `pypdf`,
+**Tests** (R14): three new modules, updates to twelve, plus a new development dependency, `pypdf`,
 to read files back.
 
 ## Technical Context
@@ -104,8 +104,8 @@ to read files back.
   - `tests/integration/test_results_service.py`;
   - `tests/integration/test_teacher_results.py`.
 - **Updated modules**:
-  - the teacher pages: `test_teacher_competitions`, `test_teacher_grades`,
-    `test_teacher_team_answers`;
+  - the teacher pages: `test_teacher_competitions`, `test_teacher_competition_entries`,
+    `test_teacher_grades`, `test_teacher_team_answers`;
   - the services: `test_competition_service`, `test_grade_service`;
   - the cross-cutting checks: `test_routes`, `test_migrations`, `test_form_contract` (+
     `form_contract.json`), `test_component_gallery`, `test_page_patterns`, `test_templates`;

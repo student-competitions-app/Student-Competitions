@@ -24,6 +24,7 @@ patching `app.services.competitions.utc_now`; no test waits. The browser's zone 
 The access sweep is built from the router's own route table, so a later route is covered too.
 """
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -36,7 +37,7 @@ from sqlalchemy import Engine
 from sqlmodel import Session, select
 
 from app.main import app
-from app.models import AccessLevel, Role, TeamAnswer
+from app.models import AccessLevel, Competition, Role, TeamAnswer
 from app.schemas.teachers import MAX_ID
 from app.services.subjects import set_subject_active
 from app.services.teachers import get_teacher, update_teacher
@@ -993,7 +994,8 @@ def test_the_later_save_wins(scene: Scene, client_as: ClientAs) -> None:
 
 
 def test_a_deactivated_subject_keeps_its_finished_competition_gradable(scene: Scene) -> None:
-    """US13-1, US13-2, FR-042: the menu offers **Answers** and **Grades** only; the Grades page,
+    """US13-1, US13-2, FR-042: the menu offers **Answers** and **Grades** (and, since milestone
+    12.8 FR-005, **Publish results**), with nothing that changes the competition; the Grades page,
     the sheet and the save work; an In progress competition of it is not found."""
     running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=STARTED)
     with Session(scene.engine) as session:
@@ -1002,7 +1004,7 @@ def test_a_deactivated_subject_keeps_its_finished_competition_gradable(scene: Sc
     menu = [
         link.text for link in html.links(listing, "main") if f"/{scene.competition}/" in link.href
     ]
-    assert menu == ["Questions", "Teams", "Answers", "Grades"]
+    assert menu == ["Questions", "Teams", "Answers", "Grades", "Publish results"]
     assert "Graded 11 of 25 teams" in html.text(get(scene.olena, grades_url(scene)), "main")
     get(scene.olena, sheet_url(scene))
     before = snapshot(scene.engine)
@@ -1014,3 +1016,100 @@ def test_a_deactivated_subject_keeps_its_finished_competition_gradable(scene: Sc
         f"{TAB}/{running}/finish?{scene.ctx}",
     ):
         not_found(scene.olena.get(url), COMPETITION_NOT_FOUND)
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.8: the grades of a published competition are frozen (specs/012.8-publishing-results
+# US5, FR-021, FR-022)
+# ---------------------------------------------------------------------------------------------
+
+PUBLISHED_NOTE = (
+    "The results of “Spring round” are published, so its grades can no longer be changed."
+)
+
+
+def publish_directly(s: Scene) -> None:
+    """The competition's results published, as `results.publish_results` would leave it (the
+    files are not read here)."""
+    with Session(s.engine) as session:
+        competition = session.get(Competition, s.competition)
+        assert competition is not None
+        competition.published_at = competition.stopped_at
+        session.add(competition)
+        session.commit()
+
+
+def test_the_grading_sheet_of_a_published_competition_is_read_only(scene: Scene) -> None:
+    """US5-1: the note, the reference answers, each grade as text; no field and no button."""
+    publish_directly(scene)
+    response = scene.olena.get(sheet_url(scene))
+    assert response.status_code == 200
+    body = response.text
+    assert ("status", PUBLISHED_NOTE) in html.notices(body)
+    assert sheet_forms(body) == []
+    main = html.region(body, "main")
+    for absent in ('<input type="text"', '<button type="submit">Save grades'):
+        assert absent not in main
+    items = cards(body)
+    assert all("Reference answer" in item for item in items)
+    assert items[0].endswith("Grade: 5 of 10")
+    assert items[1].endswith("Grade: 7 of 10")
+    assert items[3].endswith("Not graded yet")
+
+
+def test_a_grade_save_on_a_published_competition_is_refused(scene: Scene) -> None:
+    """US5-2: a crafted save, and one from a sheet opened before publishing: the read-only sheet
+    with the note, 409; no grade saved, changed or emptied."""
+    form_before = sheet_forms(scene.olena.get(sheet_url(scene)).text)
+    assert form_before
+    publish_directly(scene)
+    before = snapshot(scene.engine)
+    for grades in ({scene.copies[0]: "9"}, {scene.copies[0]: "", scene.copies[3]: "4"}):
+        response = post_grades(scene, scene.olena, grades)
+        assert response.status_code == 409
+        assert ("status", PUBLISHED_NOTE) in html.notices(response.text)
+        assert sheet_forms(response.text) == []
+    assert snapshot(scene.engine) == before
+
+
+def test_a_save_published_meanwhile_gets_the_read_only_sheet(
+    scene: Scene, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The router read **Finished**, then the results were published before the save took its
+    lock: the service refuses with `GradingClosed(PUBLISHED)`, and the answer is the same."""
+    import app.routers.teacher_grades as teacher_grades
+    from app.services import grades as grade_service
+
+    real = grade_service.save_grades
+
+    def published_first(*args: Any, **kwargs: Any) -> Any:
+        publish_directly(scene)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(teacher_grades, "save_grades", published_first)
+    before = snapshot(scene.engine)
+    response = post_grades(scene, scene.olena, {scene.copies[0]: "9"})
+    assert response.status_code == 409
+    assert PUBLISHED_NOTE in html.text(response.text, "main")
+    assert snapshot(scene.engine) == before
+
+
+def test_the_grades_page_of_a_published_competition_is_unchanged(scene: Scene) -> None:
+    """US5-3, FR-022: the same rows, Graded, Score and progress as before publishing."""
+    before = scene.olena.get(grades_url(scene)).text
+    publish_directly(scene)
+    after = scene.olena.get(grades_url(scene)).text
+    assert rows(after) == rows(before)
+
+    def progress(body: str) -> list[str]:
+        return re.findall(r"Graded \d+ of \d+ teams", html.text(body, "main"))
+
+    assert progress(after) == progress(before) == ["Graded 11 of 25 teams"]
+    assert "Published" in html.badges(after)
+
+
+def test_a_finished_competition_is_still_graded(scene: Scene) -> None:
+    """US5 (unchanged for Finished): the editable sheet and a save."""
+    assert fields(scene.olena.get(sheet_url(scene)).text)
+    assert post_grades(scene, scene.olena, {scene.copies[3]: "8"}).status_code == 303
+    assert stored(scene)[scene.copies[3]] == ("Answer of Comets", 8)

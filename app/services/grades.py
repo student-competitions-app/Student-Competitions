@@ -38,10 +38,12 @@ text or grade value is ever logged (FR-045).
 **The imports run one way**: `team_answers` → `grades` → `competition_entries`. This module never
 imports `app.services.team_answers`, which reads `grade_counts` for its finished pages.
 
-**Contract for later milestones**: milestone 14 proposes a grade for each row of a **Finished**
-competition; the stored `team_answers.grade`, proposed or adjusted through `save_grades`, is the
-one that counts. Milestone 15 reads a team's score as `grade_counts(…)[team].score` and works out
-places from it, never storing them apart from the grades.
+**Contract for later milestones**: milestone 12.8 publishes a competition once
+`grading_progress` is complete, and from then on `save_grades` refuses every change (the status
+**Published**). Milestone 13 proposes a grade for each row of a **Finished** competition, never a
+**Published** one; the stored `team_answers.grade`, proposed or adjusted through `save_grades`, is
+the one that counts. Milestone 14 reads a team's score as `grade_counts(…)[team].score` and works
+out places from it, never storing them apart from the grades.
 """
 
 import logging
@@ -120,6 +122,23 @@ class GradeTeamRow:
     """The competition's questions."""
     graded: int
     score: int
+
+
+@dataclass(frozen=True)
+class GradingProgress:
+    """How far the grading of a competition is (milestone 12.8 contracts/services.md §1): the
+    fully graded teams of all its teams, counted as the Grades page counts them."""
+
+    graded: int
+    """The fully graded teams: every answer has a grade, so a team with no answers is."""
+    total: int
+    """All the competition's teams, deleted teams and teams of deactivated institutions and
+    regions included."""
+
+    @property
+    def complete(self) -> bool:
+        """Every team is fully graded, so the results can be published; 0 of 0 is complete."""
+        return self.graded == self.total
 
 
 @dataclass(frozen=True)
@@ -272,6 +291,18 @@ def grade_counts(session: Session, competition_id: int) -> dict[int, GradeCount]
     }
 
 
+def _progress(entries: list[TeamEntry], counts: Mapping[int, GradeCount]) -> GradingProgress:
+    graded = sum(1 for team, _, _ in entries if team.id and count_of(counts, team.id).fully_graded)
+    return GradingProgress(graded=graded, total=len(entries))
+
+
+def grading_progress(session: Session, competition_id: int) -> GradingProgress:
+    """The fully graded teams of all the competition's teams (milestone 12.8 FR-011): what the
+    Grades page shows as "Graded 37 of 52 teams", and the condition of publishing its results."""
+    entries, _, counts = _listed(session, competition_id, GradeFilter.ALL)
+    return _progress(entries, counts)
+
+
 def grade_team_page(
     session: Session, competition_id: int, show: GradeFilter, p: int
 ) -> GradeTeamPage:
@@ -306,8 +337,8 @@ def grade_team_page(
         return rows
 
     groups, paging = group_by_region(listed, p, make_rows)
-    graded = sum(1 for team, _, _ in entries if team.id and count_of(counts, team.id).fully_graded)
-    return GradeTeamPage(groups, paging, teams_total=len(entries), teams_graded=graded)
+    progress = _progress(entries, counts)
+    return GradeTeamPage(groups, paging, teams_total=progress.total, teams_graded=progress.graded)
 
 
 def is_listed(session: Session, competition_id: int, team_id: int, show: GradeFilter) -> bool:
@@ -385,7 +416,12 @@ def save_grades(
     `competition_question_id`, the values as sent), as a teacher with the setting, while the
     competition is Finished: every check of R3 in order, under lock, then the change and one
     commit. Raises `ManageRequired`, `CompetitionNotFound`, `GradingClosed`,
-    `GradedTeamNotFound`, `GradedQuestionNotFound` or `InvalidGrades`; nothing is stored then."""
+    `GradedTeamNotFound`, `GradedQuestionNotFound` or `InvalidGrades`; nothing is stored then.
+
+    A **Published** competition raises `GradingClosed(PUBLISHED)` (milestone 12.8 FR-021): its
+    grades are frozen. The share lock makes this exact: publishing takes the competition `FOR
+    UPDATE`, so a save that holds the share lock first is counted in the published files, and a
+    save that comes after the publish reads **Published** here."""
     if not can_manage_competitions(session, teacher_id, lock=True):
         raise _rollback(session, ManageRequired())
     competition, _ = competitions.lock_competition(session, competition_id, subject_id, share=True)

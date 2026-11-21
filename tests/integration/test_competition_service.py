@@ -188,18 +188,33 @@ def test_status_of_each_status() -> None:
         status_of(competition(starts_at=at(1, 8), cancelled_at=NOW), at(5))
         is CompetitionStatus.CANCELLED
     )
+    assert (
+        status_of(competition(starts_at=at(1, 8), stopped_at=NOW, published_at=NOW), NOW)
+        is CompetitionStatus.PUBLISHED
+    )
 
 
 def test_status_labels_and_the_filter() -> None:
+    """Milestone 12.8 FR-020: **Published** after **Finished**, in the filter's order."""
     assert [s.label for s in CompetitionStatus] == [
         "Upcoming",
         "In progress",
         "Finished",
+        "Published",
         "Cancelled",
     ]
     assert parse_status_filter("in_progress") is CompetitionStatus.IN_PROGRESS
+    assert parse_status_filter("published") is CompetitionStatus.PUBLISHED
     for raw in (None, "", "bogus", "Upcoming", "UPCOMING", "\x00"):
         assert parse_status_filter(raw) is None
+
+
+def test_has_finished_is_finished_or_published() -> None:
+    """Milestone 12.8 research R4: a published competition is a finished one."""
+    assert [s for s in CompetitionStatus if s.has_finished] == [
+        CompetitionStatus.FINISHED,
+        CompetitionStatus.PUBLISHED,
+    ]
 
 
 def test_a_start_passing_changes_the_status_and_writes_nothing(
@@ -262,19 +277,23 @@ def test_each_status_filter(
     make_competition(engine, scene.chemistry, "Upcoming one", starts_at=at(20))
     make_competition(engine, scene.chemistry, "Running one", starts_at=at(1, 8))
     make_competition(engine, scene.chemistry, "Finished one", starts_at=at(1, 7), stopped=True)
+    make_competition(
+        engine, scene.chemistry, "Published one", starts_at=at(1, 6), stopped=True, published=True
+    )
     make_competition(engine, scene.chemistry, "Cancelled one", starts_at=at(10), cancelled=True)
     make_competition(engine, scene.physics, "Other subject", starts_at=at(20))
     expected = {
         CompetitionStatus.UPCOMING: ["Upcoming one"],
         CompetitionStatus.IN_PROGRESS: ["Running one"],
         CompetitionStatus.FINISHED: ["Finished one"],
+        CompetitionStatus.PUBLISHED: ["Published one"],
         CompetitionStatus.CANCELLED: ["Cancelled one"],
     }
     for status, listed in expected.items():
         filtered = page(engine, scene.chemistry, status)
         assert names(filtered) == listed
-        assert filtered.subject_total == 4
-    assert len(page(engine, scene.chemistry).competitions) == 4
+        assert filtered.subject_total == 5
+    assert len(page(engine, scene.chemistry).competitions) == 5
 
 
 def test_an_empty_subject(engine: Engine, scene: Scene) -> None:
@@ -338,6 +357,22 @@ def test_a_deactivated_subject_shows_only_its_finished_competitions(
             with pytest.raises(CompetitionNotFound):
                 get_competition(session, hidden, scene.chemistry)
         assert get_competition(session, finished, scene.chemistry).status == "finished"
+
+
+def test_a_published_competition_of_a_deactivated_subject_stays_available(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """Milestone 12.8 FR-018: a published competition is a finished one, so it stays listed and
+    found, and its subject stays offered."""
+    published = make_competition(
+        engine, scene.chemistry, "Published", starts_at=at(1, 7), stopped=True, published=True
+    )
+    deactivate(engine, scene.chemistry)
+    assert names(page(engine, scene.chemistry)) == ["Published"]
+    with Session(engine) as session:
+        assert get_competition(session, published, scene.chemistry).status == "published"
+        offered = offered_subjects(session)
+    assert [s.id for s in offered.deactivated] == [scene.chemistry]
 
 
 def test_unknown_and_other_subjects_competitions_are_not_found(
@@ -1008,6 +1043,33 @@ def test_a_finished_competition_is_final(
         again = create_competition(session, scene.manager, scene.chemistry, "spring ROUND", at(20))
     assert again.name == "spring ROUND"
     assert row(engine, competition)[3] is None
+
+
+def test_a_published_competition_is_final(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """Milestone 12.8 FR-018: like a finished one, it is never cancelled or edited, and its name
+    is free again."""
+    competition = make_competition(
+        engine, scene.chemistry, "Spring round", starts_at=at(1, 8), stopped=True, published=True
+    )
+    before = snapshot(engine)
+    with Session(engine) as session:
+        with pytest.raises(NotCancellable) as not_cancelled:
+            cancel_competition(session, scene.manager, competition, scene.chemistry, None)
+        assert not_cancelled.value.status is CompetitionStatus.PUBLISHED
+        with pytest.raises(NotEditable) as not_edited:
+            update_competition(
+                session, scene.manager, competition, scene.chemistry, "Spring round", at(20)
+            )
+        assert not_edited.value.status is CompetitionStatus.PUBLISHED
+        with pytest.raises(NotFinishable) as not_finished:
+            finish_competition(session, scene.manager, competition, scene.chemistry, None)
+        assert not_finished.value.status is CompetitionStatus.PUBLISHED
+    assert snapshot(engine) == before
+    with Session(engine) as session:
+        again = create_competition(session, scene.manager, scene.chemistry, "Spring round", at(20))
+    assert again.name == "Spring round"
 
 
 def test_a_lost_finish_race_is_refused(

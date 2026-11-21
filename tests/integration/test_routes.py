@@ -78,8 +78,8 @@ def test_the_write_routes_are_exact() -> None:
     teacher actions, accepting an invitation, the teacher's class and student actions, the
     question bank's add, edit and delete, the teacher's team actions (milestone 11.1), the
     competitions' add, edit and cancel (milestone 12.1), a competition's questions and teams
-    (milestone 12.2), a team's answers (milestone 12.3), and finishing and grading (milestone
-    12.4)."""
+    (milestone 12.2), a team's answers (milestone 12.3), finishing and grading (milestone 12.4),
+    and publishing the results (milestone 12.8; the download is a read)."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -136,6 +136,7 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/teacher/competitions/{competition_id:int}/answers/{team_id:int}"),
         ("POST", "/teacher/competitions/{competition_id:int}/finish"),
         ("POST", "/teacher/competitions/{competition_id:int}/grades/{team_id:int}"),
+        ("POST", "/teacher/competitions/{competition_id:int}/publish"),
     }
 
 
@@ -293,12 +294,13 @@ MANAGE_PATHS = frozenset(
         "/teacher/competitions/{competition_id:int}/finish",
         "/teacher/competitions/{competition_id:int}/grades",
         "/teacher/competitions/{competition_id:int}/grades/{team_id:int}",
+        "/teacher/competitions/{competition_id:int}/publish",
     }
 )
 """The pages that need Can manage competitions: the question bank's (milestone 11 FR-037), the
 competitions' (milestone 12.1 FR-042), the add pages and remove confirmations of a competition's
-questions and teams (milestone 12.2 FR-045), and the finish confirmation, the Grades page and the
-grading sheets (milestone 12.4 FR-043)."""
+questions and teams (milestone 12.2 FR-045), the finish confirmation, the Grades page and the
+grading sheets (milestone 12.4 FR-043), and the publish confirmation (milestone 12.8 FR-034)."""
 
 ENTRY_READ_PATHS = frozenset(
     {
@@ -306,11 +308,13 @@ ENTRY_READ_PATHS = frozenset(
         "/teacher/competitions/{competition_id:int}/teams",
         "/teacher/competitions/{competition_id:int}/answers",
         "/teacher/competitions/{competition_id:int}/answers/{team_id:int}",
+        "/teacher/competitions/{competition_id:int}/results",
     }
 )
-"""A competition's questions and teams (milestone 12.2), and a competition's team answers page and
-answer sheets (milestone 12.3), which every teacher may open: they are swept with the cast teacher
-allowed; id 1 names no competition and answers 404, not 403."""
+"""A competition's questions and teams (milestone 12.2), a competition's team answers page and
+answer sheets (milestone 12.3), and its results download (milestone 12.8 FR-002), which every
+teacher may open: they are swept with the cast teacher allowed; id 1 names no competition and
+answers 404, not 403."""
 
 
 def test_there_are_declared_pages_to_sweep() -> None:

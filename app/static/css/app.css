@@ -1811,6 +1811,13 @@ details.actions-menu[open] > summary {
   color: var(--sc-primary);
 }
 
+/* Published results (milestone 12.8 contracts/components.md §1): the accent pair, so a published
+   competition stands apart from a finished one; the word is always shown. */
+.badge-accent {
+  background: var(--sc-accent);
+  color: var(--sc-on-accent);
+}
+
 /* Notices and empty states (components/feedback.html, FR-029, FR-030). */
 .notice {
   max-width: var(--sc-measure);

@@ -1224,3 +1224,83 @@ def test_the_grading_refusal(
     back = f"/teacher/competitions?subject={subject}#competition-{competition}"
     assert (back, "Back to competitions") in html.link_pairs(body, "main")
     assert [b for f in html.forms(body, "main") for b in f.buttons] == []
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.8: publishing the results
+# ---------------------------------------------------------------------------------------------
+
+
+def test_the_publish_confirmation_patterns(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The `confirmation` with a primary, not destructive, submit and **Keep unpublished**, after
+    the badge and the progress."""
+    response = contract.CASES["teacher-competition-publish"](
+        world(client, client_as, outbox, monkeypatch)
+    )
+    body = response.text
+    assert html.h1(body).startswith("Publish the results of “Done” of Chemistry, started ")
+    sections = [s for s in html.parse(body).find_all("section") if "confirmation" in s.classes()]
+    assert len(sections) == 1
+    (form,) = [f for f in html.forms(body, "main") if f.action.endswith("/publish")]
+    assert_busy_ready(form, "Publish results")
+    assert "destructive" not in form.buttons[0].attrs.get("class", "")
+    assert primary_actions(body) == ["Publish results"]
+    assert html.badges(body) == ["Finished"]
+    assert [text for _, text in html.link_pairs(body, "main")][-1] == "Keep unpublished"
+
+
+def test_the_blocked_publish_confirmation_patterns(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The blocked `confirmation`: the reason as a notice, no form and no primary action, the work
+    left before the way back."""
+    response = contract.CASES["teacher-competition-publish-blocked"](
+        world(client, client_as, outbox, monkeypatch)
+    )
+    body = response.text
+    assert response.status_code == 200
+    assert html.forms(body, "main") == []
+    assert primary_actions(body) == []
+    assert (
+        "status",
+        "Every team must be graded before the results can be published.",
+    ) in html.notices(body)
+    links = [text for _, text in html.link_pairs(body, "main")]
+    assert links[-2:] == ["Grade the remaining teams", "Keep unpublished"]
+
+
+def test_the_published_grading_sheet_has_no_form(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The read-only grading sheet: the back link, one heading, the note, no form, no field."""
+    response = contract.CASES["teacher-grades-sheet-published"](
+        world(client, client_as, outbox, monkeypatch)
+    )
+    body = response.text
+    assert html.h1(body) == "Grade answers of “Comets” in “Spring round”"
+    assert html.forms(body, "main") == []
+    assert primary_actions(body) == []
+    assert "<input" not in html.region(body, "main").replace('type="hidden"', "")
+    assert "Back to the grades" in [t for _, t in html.link_pairs(body, "main")]
+
+
+def test_the_publish_refusal(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The 409 `refusal` with **Back to competitions** and no button."""
+    browser, subject, competition = contract.a_competition_manager(
+        world(client, client_as, outbox, monkeypatch)
+    )
+    response = browser.get(f"/teacher/competitions/{competition}/publish?subject={subject}")
+    assert response.status_code == 409
+    body = response.text
+    assert html.h1(body) == "Publish the results of “Spring round”?"
+    sections = [
+        s for s in html.parse(body).find_all("section") if "confirmation-refused" in s.classes()
+    ]
+    assert len(sections) == 1
+    back = f"/teacher/competitions?subject={subject}#competition-{competition}"
+    assert (back, "Back to competitions") in html.link_pairs(body, "main")
+    assert [b for f in html.forms(body, "main") for b in f.buttons] == []

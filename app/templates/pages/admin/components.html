@@ -240,7 +240,7 @@
 
 <section id="actions-menu" aria-labelledby="actions-menu-heading">
   <h2 id="actions-menu-heading">Actions menu</h2>
-  <p>A row's actions behind one button, in the row's actions cell. It opens and closes without JavaScript; opening one closes the others where the browser supports it. The first menu is shown open, over the rows below it, with every entry a competition can have, in their order: Edit, Questions, Teams, Answers, Grades, Finish competition (not destructive: it is the normal next step), then the destructive Cancel competition (no competition has all seven at once: Edit is Upcoming only, Finish competition In progress only, Grades Finished only); the last row has only the entries every teacher gets.</p>
+  <p>A row's actions behind one button, in the row's actions cell. It opens and closes without JavaScript; opening one closes the others where the browser supports it. The first menu is shown open, over the rows below it, with every entry a competition can have, in their order: Edit, Questions, Teams, Answers, Grades, Publish results, Download results, Finish competition (not destructive: it is the normal next step), then the destructive Cancel competition (no competition has all nine at once: Edit is Upcoming only, Finish competition In progress only, Publish results Finished only, Download results Published only). Download results is a link marked as a download: it opens no page and starts no loading bar, and the teacher stays on the list. The published row shows what a teacher with the setting gets; the last row has only the entries every teacher gets.</p>
   {% call data_table(["Name", "Start", "Status", "Actions"]) %}
   <tr>
     {{ cell("Name", "Spring final") }}
@@ -253,8 +253,24 @@
     {{ menu_link("Teams", "/admin/components#actions-menu") }}
     {{ menu_link("Answers", "/admin/components#actions-menu") }}
     {{ menu_link("Grades", "/admin/components#actions-menu") }}
+    {{ menu_link("Publish results", "/admin/components#actions-menu") }}
+    {{ menu_link("Download results", "/admin/components#actions-menu", download=True) }}
     {{ menu_link("Finish competition", "/admin/components#actions-menu") }}
     {{ menu_link("Cancel competition", "/admin/components#actions-menu", destructive=True) }}
+    {%- endcall -%}
+    {% endcall %}
+  </tr>
+  <tr>
+    {{ cell("Name", "Winter round") }}
+    {% call cell("Start") %}{{ local_time(sample_moment, zone=kyiv) }}{% endcall %}
+    {% call cell("Status") %}{{ competition_status_badge("published") }}{% endcall %}
+    {% call actions_cell() %}
+    {%- call actions_menu("Winter round") -%}
+    {{ menu_link("Questions", "/admin/components#actions-menu") }}
+    {{ menu_link("Teams", "/admin/components#actions-menu") }}
+    {{ menu_link("Answers", "/admin/components#actions-menu") }}
+    {{ menu_link("Grades", "/admin/components#actions-menu") }}
+    {{ menu_link("Download results", "/admin/components#actions-menu", download=True) }}
     {%- endcall -%}
     {% endcall %}
   </tr>
@@ -367,6 +383,9 @@
   <h3>Read-only, without grades</h3>
   <p>The answers while the competition is in progress, for a teacher who may only read them.</p>
   {{ answers_read_only(read_only_items, grades=False) }}
+  <h3>Read-only, results published</h3>
+  <p>The grading sheet once the results are published: the note says why, the reference answers stay, each grade is text, and there is no field and no button.</p>
+  {{ grading_sheet(published_items, "#", {}, read_only=True, note=published_note) }}
   <p>Narrow the window below 768 px: each grade field takes the card's full width.</p>
 </section>
 
@@ -384,6 +403,16 @@
   <p>An action that cannot be undone but is the normal next step of the work has a primary button.</p>
   {% set finish_question %}Finish competition “Spring round” of Chemistry, started {{ local_time(sample_moment, zone=kyiv) }}?{% endset %}
   {{ confirmation(finish_question, "The competition will be marked Finished. Its answers can no longer be entered or changed, and it cannot be cancelled or restarted. Its answers can then be graded.", "/admin/components", "Finish competition", "/admin/components#confirmations", back_label="Keep in progress", kind="primary") }}
+  <h3>A blocked confirmation</h3>
+  <p>When an action cannot be taken yet because work is left to do, its confirmation page says what is left and links to it, and has no confirming button. Only a primary confirmation can be blocked. Ready, then blocked:</p>
+  {% set publish_question %}Publish the results of “Spring round” of Chemistry, started {{ local_time(sample_moment, zone=kyiv) }}?{% endset %}
+  {% set publish_consequence = "The results will be published for every teacher as PDF files in Ukrainian and English. Publishing is permanent: the results cannot be unpublished, and the grades can no longer be changed." %}
+  {% call confirmation(publish_question, publish_consequence, "/admin/components", "Publish results", "/admin/components#confirmations", back_label="Keep unpublished", kind="primary") %}
+  <p>{{ competition_status_badge("finished") }} Graded 52 of 52 teams</p>
+  {% endcall %}
+  {% call confirmation(publish_question, publish_consequence, "/admin/components", "Publish results", "/admin/components#confirmations", back_label="Keep unpublished", kind="primary", blocked="Every team must be graded before the results can be published.", alternative=("Grade the remaining teams", "/admin/components#confirmations")) %}
+  <p>{{ competition_status_badge("finished") }} Graded 37 of 52 teams</p>
+  {% endcall %}
 </section>
 
 <section id="details" aria-labelledby="details-heading">

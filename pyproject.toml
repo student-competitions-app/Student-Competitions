@@ -13,6 +13,7 @@ dependencies = [
     "python-multipart>=0.0.32",
     "cryptography>=50.0.2",
     "babel>=2.18.0",
+    "fpdf2>=2.9",
 ]
 
 [dependency-groups]
@@ -20,6 +21,7 @@ dev = [
     "pytest",
     "httpx2",
     "ruff",
+    "pypdf>=7.1.1",
 ]
 logo = ["numpy>=2.1", "pillow>=11.1"]
 

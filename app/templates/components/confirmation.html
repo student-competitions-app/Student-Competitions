@@ -7,13 +7,21 @@
     (**Finish competition**). The link back reads `back_label`: Cancel, unless the verb ends
     something, where it says what is kept (**Keep competition**, **Keep in progress**). A refusal
     keeps the question, gives the reason, and offers the alternative the page offers today (through
-    `{% call %}`), then the way back. -#}
+    `{% call %}`), then the way back.
+
+    **Blocked** (milestone 12.8 contracts/components.md §3): when an action cannot be taken yet
+    because work is left to do, its confirmation page says what is left and links to it, and has no
+    confirming button. `blocked` is the reason, shown as a notice in place of the button;
+    `alternative` is the `(label, href)` of the work left, shown before the link back. Only a
+    primary confirmation can be blocked: a destructive action is never waiting for work. -#}
 
 {% from "components/button.html" import post_button %}
 {% from "components/feedback.html" import notice %}
 
-{% macro confirmation(question, consequence, action, verb, cancel_href, hidden={}, back_label=None, kind="destructive") -%}
+{% macro confirmation(question, consequence, action, verb, cancel_href, hidden={}, back_label=None, kind="destructive", blocked=None, alternative=None) -%}
 {%- if kind not in ("destructive", "primary") %}{{ template_error("confirmation: kind must be destructive or primary") }}{% endif -%}
+{%- if blocked and kind != "primary" %}{{ template_error("confirmation: only a primary confirmation can be blocked") }}{% endif -%}
+{%- if alternative and not blocked %}{{ template_error("confirmation: an alternative needs a blocked confirmation") }}{% endif -%}
 <section class="confirmation">
   <h1>{{ question }}</h1>
   {%- if consequence %}
@@ -22,8 +30,17 @@
   {%- if caller is defined %}
   {{ caller() }}
   {%- endif %}
+  {%- if blocked %}
+  {{ notice(blocked, "info") }}
+  {%- endif %}
   <div class="form-actions">
+    {%- if blocked %}
+    {%- if alternative %}
+    <a href="{{ alternative[1] }}">{{ alternative[0] }}</a>
+    {%- endif %}
+    {%- else %}
     {{ post_button(action, verb, kind=kind, hidden=hidden) }}
+    {%- endif %}
     <a href="{{ cancel_href }}">{{ back_label or _("Cancel") }}</a>
   </div>
 </section>

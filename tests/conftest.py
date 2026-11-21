@@ -53,6 +53,7 @@ from app.models import (
     AccessLevel,
     Competition,
     CompetitionQuestion,
+    CompetitionResultsFile,
     CompetitionTeam,
     Question,
     Region,
@@ -761,14 +762,18 @@ def make_competition(
     starts_at: datetime,
     cancelled: bool = False,
     stopped: bool = False,
+    published: bool = False,
 ) -> int:
-    """A competition of the subject, inserted directly (cancelled or stopped when asked); returns
-    its id. `starts_at` is an aware UTC whole minute.
+    """A competition of the subject, inserted directly (cancelled, stopped or published when
+    asked); returns its id. `starts_at` is an aware UTC whole minute. `published` (milestone 12.8)
+    needs `stopped`, as the `published_after_finish` constraint does; it stores no file, so pair it
+    with `store_results_files` when a test reads the files.
 
     **Test-only**, but harmless: a competition carries no personal data; this is the only way to
     store a **Finished** competition before stopping exists, and seeding skips only the setting,
     name and start checks that `test_competition_service.py` covers.
     """
+    assert stopped or not published, "make_competition: a published competition is finished"
     now = utc_now()
     with Session(engine) as db_session:
         competition = Competition(
@@ -778,6 +783,7 @@ def make_competition(
             starts_at=starts_at,
             cancelled_at=now if cancelled else None,
             stopped_at=now if stopped else None,
+            published_at=now if published else None,
             created_at=now,
             updated_at=now,
         )
@@ -887,4 +893,31 @@ def grade_answer(
         assert answer is not None, "grade_answer: the team has no answer to this question"
         answer.grade = grade
         db_session.add(answer)
+        db_session.commit()
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.8: published results
+# ---------------------------------------------------------------------------------------------
+
+UK_FILE = b"%PDF-1.7 uk test file"
+EN_FILE = b"%PDF-1.7 en test file"
+
+
+def store_results_files(
+    engine: Engine, competition_id: int, uk: bytes = UK_FILE, en: bytes = EN_FILE
+) -> None:
+    """The two results files of a competition, inserted directly with known bytes.
+
+    **Test-only**: it skips publishing, which `test_results_service.py` covers; real files come
+    from `app.services.results.publish_results`. Pair it with `make_competition(...,
+    published=True)` for a Published competition whose download returns these bytes.
+    """
+    with Session(engine) as db_session:
+        for language, content in (("uk", uk), ("en", en)):
+            db_session.add(
+                CompetitionResultsFile(
+                    competition_id=competition_id, language=language, content=content
+                )
+            )
         db_session.commit()

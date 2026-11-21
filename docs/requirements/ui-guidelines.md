@@ -386,10 +386,10 @@ The name is required and the total is at least 1. _Gallery_: [region group](/adm
 
 ### Actions menu (`components/menu.html`)
 
-**`actions_menu(item_name, label="Actions")`** with **`menu_link(label, href, destructive=False)`**
-puts a row's actions behind one button, in the row's actions cell, when the row has more actions
-than fit a phone card (the **Competitions** tab, milestone 12.1). It is a native `<details>`, like
-the user menu, so it opens and closes without JavaScript.
+**`actions_menu(item_name, label="Actions")`** with **`menu_link(label, href, destructive=False,
+download=False)`** puts a row's actions behind one button, in the row's actions cell, when the row
+has more actions than fit a phone card (the **Competitions** tab, milestone 12.1). It is a native
+`<details>`, like the user menu, so it opens and closes without JavaScript.
 
 ```jinja
 {% call actions_cell() %}
@@ -397,8 +397,10 @@ the user menu, so it opens and closes without JavaScript.
 {% if can_add and c.status == "upcoming" %}{{ menu_link("Edit", edit_href) }}{% endif %}
 {{ menu_link("Questions", questions_href) }}
 {{ menu_link("Teams", teams_href) }}
-{% if c.status in ("in_progress", "finished") %}{{ menu_link("Answers", answers_href) }}{% endif %}
-{% if can_manage and c.status == "finished" %}{{ menu_link("Grades", grades_href) }}{% endif %}
+{% if c.status in ("in_progress", "finished", "published") %}{{ menu_link("Answers", answers_href) }}{% endif %}
+{% if can_manage and c.status in ("finished", "published") %}{{ menu_link("Grades", grades_href) }}{% endif %}
+{% if can_manage and c.status == "finished" %}{{ menu_link("Publish results", publish_href) }}{% endif %}
+{% if c.status == "published" %}{{ menu_link("Download results", results_href, download=True) }}{% endif %}
 {% if can_manage and c.status == "in_progress" %}{{ menu_link("Finish competition", finish_href) }}{% endif %}
 {% if can_add and c.status in ("upcoming", "in_progress") %}{{ menu_link("Cancel competition", cancel_href, destructive=True) }}{% endif %}
 {%- endcall -%}
@@ -408,9 +410,14 @@ the user menu, so it opens and closes without JavaScript.
 - **The button** reads "Actions" and is announced "Actions for “Spring round”"; the item name is
   required. It is a small outline secondary button with a chevron, a full touch target.
 - **The entries** come in a fixed order, each where it is available: on the **Competitions** tab
-  **Edit**, **Questions**, **Teams**, **Answers**, **Grades**, **Finish competition**, **Cancel
-  competition** (milestones 12.2–12.4). **Finish competition** is not destructive: it cannot be
-  undone, but it is the normal next step of the work.
+  **Edit**, **Questions**, **Teams**, **Answers**, **Grades**, **Publish results**, **Download
+  results**, **Finish competition**, **Cancel competition** (milestones 12.2–12.4 and 12.8).
+  **Finish competition** and **Publish results** are not destructive: they cannot be undone, but
+  each is the normal next step of the work.
+- **A download** (milestone 12.8) is an entry like any other, a link marked as a download
+  (`download=True`, the HTML `download` attribute). It is offered this way, never through a page in
+  between: the browser saves the file at once and the person stays where they were. It starts no
+  loading feedback (the loading script skips `a[download]`), and it is never destructive.
 - **Every entry** is a link to a page (a list, a form or a confirmation), never a `POST`, so every destructive
   action still goes through its confirmation. A destructive entry is in the danger colour. Each
   entry is 44 px tall and as wide as the panel; a long label wraps.
@@ -426,8 +433,9 @@ _Gallery_: [actions menu](/admin/components#actions-menu).
 
 **`status_badge(is_active)`** gives **Active** or **Deactivated**; **`access_badge(level)`**
 gives **Read** or **Write**; **`competition_status_badge(status)`** (milestone 12.1) gives
-**Upcoming** (`info`), **In progress** (`success`), **Finished** (`neutral`) or **Cancelled**
-(`muted`), and refuses any other value. **`badge(text, kind)`** is for a new status with its own
+**Upcoming** (`info`), **In progress** (`success`), **Finished** (`neutral`), **Published**
+(`accent`, milestone 12.8: a finished competition whose results are published) or **Cancelled**
+(`muted`), in the order of the status filter, and refuses any other value. **`badge(text, kind)`** is for a new status with its own
 word; an empty text is refused. Use a badge for every status, never coloured text or "(deactivated)".
 _Gallery_: [badges](/admin/components#badges).
 
@@ -556,6 +564,11 @@ to someone who may only read them.
 - **The read-only variant** shows the question and "Answer to question 3" (or "Not answered"); with
   `grades`, under each answered question "Grade: 7 of 10" or "Not graded yet". Never a reference
   answer, no form, no field, no button.
+- **Once the results are published** (milestone 12.8), the grading sheet itself is read-only:
+  `grading_sheet(..., read_only=True, note=…)`. The note says why ("The results of “Spring round”
+  are published, so its grades can no longer be changed."), the reference answers stay (it is still
+  the grader's view), each grade is text ("Grade: 7 of 10"), and there is no field, no error and no
+  button.
 - **On a phone** the cards are one column and each grade field takes the card's full width; on a
   wide screen it is a short field.
 
@@ -564,13 +577,21 @@ _Gallery_: [grading sheet](/admin/components#grading-sheet).
 ### Confirmations (`components/confirmation.html`)
 
 - **`confirmation(question, consequence, action, verb, cancel_href, back_label="Cancel",
-  kind="destructive")`**: the question names the item ("Delete “Physics”?"), the consequence says
-  what happens, the button repeats the verb, then **Cancel**. Whenever the verb ends something, the
-  link back says what is kept instead: **Cancel competition** and **Keep competition**, **Finish
-  competition** and **Keep in progress** (`back_label`).
+  kind="destructive", blocked=None, alternative=None)`**: the question names the item ("Delete
+  “Physics”?"), the consequence says what happens, the button repeats the verb, then **Cancel**.
+  Whenever the verb ends something, the link back says what is kept instead: **Cancel
+  competition** and **Keep competition**, **Finish competition** and **Keep in progress**,
+  **Publish results** and **Keep unpublished** (`back_label`).
 - **`kind`**: the button is destructive (the default) when the action removes, hides or calls off
   something (**Delete**, **Deactivate**, **Withdraw consent**, **Cancel competition**), and primary
-  (`kind="primary"`) when it is the normal next step of the work (**Finish competition**).
+  (`kind="primary"`) when it is the normal next step of the work (**Finish competition**,
+  **Publish results**).
+- **Blocked** (milestone 12.8): when an action cannot be taken yet because work is left to do, its
+  confirmation page says what is left and links to it, and has no confirming button. `blocked` is
+  the reason, shown as a notice in place of the button ("Every team must be graded before the
+  results can be published."); `alternative` is the link to the work left (**Grade the remaining
+  teams**), shown before the link back. Only a primary confirmation can be blocked: a destructive
+  action is never waiting for work.
 - **`refusal(question, reason, back_href, back_text)`**: when the action cannot be done, with the
   reason ("is in use") and the alternative, through `{% call %}` (**Deactivate**).
 
@@ -677,9 +698,13 @@ gallery. There is no icon font or icon library. _Gallery_: [identity](/admin/com
 - **Empty states** say what is missing, then what to do: "No subjects yet" / "Create the first
   subject with Create subject."; "Select a region" / "Choose a region from the list to see its
   educational institutions."
-- **Notices** state the outcome: "Invitation sent to olena@example.org".
+- **Notices** state the outcome: "Invitation sent to olena@example.org", "The results of “Spring
+  round” were published".
 - **Statuses** use one short term each, everywhere: **Active** or **Deactivated**; **Read** or
-  **Write**; **Upcoming**, **In progress**, **Finished** or **Cancelled**.
+  **Write**; **Upcoming**, **In progress**, **Finished**, **Published** or **Cancelled**.
+- **A refusal for the status** gives the reason for that status, in one sentence: "“Spring round”
+  has not started yet, so it has no results to publish.", "The results of “Spring round” are already
+  published.".
 - **Times** read "14 March 2027, 10:00" in the person's zone (the day without a leading zero, the
   month in full, a 24-hour clock), and "14 March 2027, 10:00 (Kyiv time)" when the zone is not
   known. A form names its zone under the time field: "Time zone: Europe/Kyiv".
@@ -744,7 +769,8 @@ Approved by the product owner on 2026-11-15. Every Ukrainian text uses these ter
 | question bank | банк питань |
 | reference answer | еталонна відповідь |
 | competition | змагання |
-| Upcoming / In progress / Finished / Cancelled | Заплановано / Триває / Завершено / Скасовано |
+| Upcoming / In progress / Finished / Published / Cancelled | Заплановано / Триває / Завершено / Опубліковано / Скасовано |
+| results (published, milestone 12.8) | результати |
 | Active / Deactivated (per kind of record, `pgettext(kind, …)`) | Активний (предмет, регіон, заклад освіти), Активна (група) / Деактивовано |
 | Read / Write (access) | Перегляд / Редагування |
 | Can manage competitions | Може керувати змаганнями |
@@ -866,7 +892,7 @@ Back or Forward restores, with a 200 ms delay; that it never disables a control 
 would drop its value from the form); and that it stays small. `tests/integration/test_layout.py`
 checks that every kind of page loads it once and has the one frame block with a hidden bar. How the
 bar, the busy button and the pinned frame behave in a browser is checked by hand from the
-milestone 10.1 quickstart, until end-to-end tests arrive in milestone 16.
+milestone 10.1 quickstart, until end-to-end tests arrive in milestone 15.
 
 `tests/unit/test_time_zone_script.py` reads `time-zone.js` as text (milestone 12.1). It checks that
 the script imports, fetches and stores nothing but the one cookie and names no other site; that it

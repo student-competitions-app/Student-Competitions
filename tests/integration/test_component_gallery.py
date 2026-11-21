@@ -86,6 +86,7 @@ SECTIONS = {
         "Upcoming",
         "In progress",
         "Finished",
+        "Published",
         "Cancelled",
     ],
     "empty-states": ["No subjects yet", "Select a region"],
@@ -366,37 +367,51 @@ def test_the_two_button_form_and_the_textareas(admin_client: TestClient) -> None
 def test_the_actions_menu_variants(admin_client: TestClient) -> None:
     """Milestone 12.1 contracts/components.md §1, with the entries of milestones 12.2
     (contracts/components.md §2), 12.3 (contracts/components.md §4) and 12.4 (contracts/
-    components.md §5, which adds **Grades** and a non-destructive **Finish competition**): an open
-    menu with every entry in order, the last one destructive; a closed one for a 200-character
-    name, in progress; and the two-entry read-only menu."""
+    components.md §5, which adds **Grades** and a non-destructive **Finish competition**) and 12.8
+    (contracts/components.md §2, which adds **Publish results** and the download entry **Download
+    results**): an open menu with every entry in order, the last one destructive; a published
+    competition's menu; a closed one for a 200-character name, in progress; and the two-entry
+    read-only menu."""
     body = admin_client.get(GALLERY).text
     section = gallery_section(body, "actions-menu")
     menus = [d for d in section.find_all("details") if "actions-menu" in d.classes()]
-    assert [m.attrs.get("name") for m in menus] == ["row-actions"] * 3
-    assert ["open" in m.attrs for m in menus] == [True, False, False]
-    assert [m.find_all("summary")[0].text() for m in menus] == ["Actions"] * 3
+    assert [m.attrs.get("name") for m in menus] == ["row-actions"] * 4
+    assert ["open" in m.attrs for m in menus] == [True, False, False, False]
+    assert [m.find_all("summary")[0].text() for m in menus] == ["Actions"] * 4
     summaries = [m.find_all("summary")[0].attrs["aria-label"] for m in menus]
     assert summaries[0] == "Actions for “Spring final”"
-    assert summaries[1].startswith("Actions for “Regional robotics")
-    assert len(summaries[1]) == len("Actions for “”") + 200
-    links = [(a.text(), a.classes()) for a in menus[0].find_all("a")]
+    assert summaries[1] == "Actions for “Winter round”"
+    assert summaries[2].startswith("Actions for “Regional robotics")
+    assert len(summaries[2]) == len("Actions for “”") + 200
+    links = [(a.text(), a.classes(), "download" in a.attrs) for a in menus[0].find_all("a")]
     assert links == [
-        ("Edit", ["actions-menu-link"]),
-        ("Questions", ["actions-menu-link"]),
-        ("Teams", ["actions-menu-link"]),
-        ("Answers", ["actions-menu-link"]),
-        ("Grades", ["actions-menu-link"]),
-        ("Finish competition", ["actions-menu-link"]),
-        ("Cancel competition", ["actions-menu-link", "actions-menu-link-destructive"]),
+        ("Edit", ["actions-menu-link"], False),
+        ("Questions", ["actions-menu-link"], False),
+        ("Teams", ["actions-menu-link"], False),
+        ("Answers", ["actions-menu-link"], False),
+        ("Grades", ["actions-menu-link"], False),
+        ("Publish results", ["actions-menu-link"], False),
+        ("Download results", ["actions-menu-link"], True),
+        ("Finish competition", ["actions-menu-link"], False),
+        ("Cancel competition", ["actions-menu-link", "actions-menu-link-destructive"], False),
     ]
-    assert [a.text() for a in menus[1].find_all("a")] == [
+    published = [(a.text(), "download" in a.attrs) for a in menus[1].find_all("a")]
+    assert published == [
+        ("Questions", False),
+        ("Teams", False),
+        ("Answers", False),
+        ("Grades", False),
+        ("Download results", True),
+    ]
+    assert [a.text() for a in menus[2].find_all("a")] == [
         "Questions",
         "Teams",
         "Answers",
         "Finish competition",
         "Cancel competition",
     ]
-    assert [a.text() for a in menus[2].find_all("a")] == ["Questions", "Teams"]
+    assert [a.text() for a in menus[3].find_all("a")] == ["Questions", "Teams"]
+    assert '<span class="badge badge-accent">Published</span>' in body
 
 
 def test_a_short_value_stays_on_one_line(admin_client: TestClient) -> None:
@@ -548,6 +563,28 @@ def test_the_primary_confirmation(admin_client: TestClient) -> None:
     assert [b.classes() for b in others[0].find_all("button")] == [["destructive"]]
 
 
+def test_the_blocked_confirmation(admin_client: TestClient) -> None:
+    """Milestone 12.8 contracts/components.md §3: the publish confirmation ready (a primary
+    **Publish results**, **Keep unpublished**) and blocked (the reason as a notice, no button, the
+    link to the work left before the link back)."""
+    section = gallery_section(admin_client.get(GALLERY).text, "confirmations")
+    ready, blocked = [c for c in section.find_all("section") if "Keep unpublished" in c.text()]
+    question = "Publish the results of “Spring round” of Chemistry, started 14 March 2027, 10:00?"
+    for page in (ready, blocked):
+        assert page.find_all("h1")[0].text() == question
+        assert "Finished" in page.text()
+    assert "Graded 52 of 52 teams" in ready.text()
+    assert [(b.text(), b.classes()) for b in ready.find_all("button")] == [("Publish results", [])]
+    assert [a.text() for a in ready.find_all("a")] == ["Keep unpublished"]
+    assert "Graded 37 of 52 teams" in blocked.text()
+    assert blocked.find_all("button") == [] and blocked.find_all("form") == []
+    assert "Every team must be graded before the results can be published." in blocked.text()
+    assert [a.text() for a in blocked.find_all("a")] == [
+        "Grade the remaining teams",
+        "Keep unpublished",
+    ]
+
+
 def test_the_grading_sheet(admin_client: TestClient) -> None:
     """Milestone 12.4 contracts/components.md §2: one post form holding the hidden field, an
     `ol.answer-sheet` of three numbered text cards, each with its reference answer; questions 1 and
@@ -562,8 +599,8 @@ def test_the_grading_sheet(admin_client: TestClient) -> None:
     (form,) = section.find_all("form")
     assert form.attrs["method"] == "post"
     sheets = [o for o in section.find_all("ol") if "answer-sheet" in o.classes()]
-    assert len(sheets) == 3
-    sheet, with_grades, without_grades = sheets
+    assert len(sheets) == 4
+    sheet, with_grades, without_grades, published = sheets
     assert sheet.start > form.start and sheet.end < form.end
     items = sheet.find_all("li")
     assert len(items) == 3
@@ -609,6 +646,15 @@ def test_the_grading_sheet(admin_client: TestClient) -> None:
     assert "Not graded yet" in with_grades.text()
     assert "Grade:" not in without_grades.text()
     assert "Not graded yet" not in without_grades.text()
+    # Milestone 12.8 contracts/components.md §4: the read-only grading sheet of published results.
+    assert (len(section.find_all("form")), published.find_all("input")) == (1, [])
+    assert published.find_all("button") == []
+    assert published.text().count("Reference answer") == 3
+    assert "Grade: 7 of 10" in published.text() and "Grade: 10 of 10" in published.text()
+    assert "Not answered" in published.text()
+    note = "The results of “Spring round” are published, so its grades can no longer be changed."
+    (notice,) = [e for e in section.iter() if "notice" in e.classes() and note in e.text()]
+    assert without_grades.end < notice.start < published.start
 
 
 def test_the_filter_links(admin_client: TestClient) -> None:

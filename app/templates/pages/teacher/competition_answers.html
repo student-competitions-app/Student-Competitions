@@ -34,7 +34,7 @@
 {{ page_navigation(listing.paging, page_href, _("Teams"), _("Pages, top")) }}
 {% for g in listing.groups %}
 {% call region_group(g.region_name, g.total, "region-" ~ g.region_id ~ "-p" ~ listing.paging.number) %}
-{% set finished = competition.status == "finished" %}
+{% set finished = competition.status in ("finished", "published") %}
 {% call data_table([_("Team"), _("Educational institution"), _("Active members"), _("Answered"), _("Graded"), _("Score"), _("Actions")] if finished else [_("Team"), _("Educational institution"), _("Active members"), _("Answered"), _("Actions")]) %}
 {% for row in g.rows %}
 <tr id="team-{{ row.team_id }}">

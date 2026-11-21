@@ -81,12 +81,14 @@ ENTRY_ROUTES = (
     f"{TAB}/{{competition_id:int}}/teams",
     f"{TAB}/{{competition_id:int}}/answers",
     f"{TAB}/{{competition_id:int}}/grades",
+    f"{TAB}/{{competition_id:int}}/results",
 )
 """A competition's questions and teams (milestone 12.2), swept in
 `test_teacher_competition_entries.py`, its team answers (milestone 12.3), swept in
 `test_teacher_team_answers.py`, and its grades (milestone 12.4), swept in
-`test_teacher_grades.py`, each with their own order of checks. Finishing (milestone 12.4) is swept
-here, with editing and cancelling."""
+`test_teacher_grades.py`, each with their own order of checks; and its results download
+(milestone 12.8, open to every teacher), swept in `test_teacher_results.py`. Finishing (milestone
+12.4) and publishing (milestone 12.8) are swept here, with editing and cancelling."""
 COMPETITION_ROUTES = sorted(
     (method, path)
     for path, methods, _ in ALL_ROUTES
@@ -615,7 +617,8 @@ def test_pages_of_ten_with_navigation_above_and_below(scene: Scene) -> None:
 
 
 def test_the_status_list(scene: Scene) -> None:
-    """US2-6: five options, All by default; the form keeps the subject and drops the page."""
+    """US2-6: All by default, then each status in the filter's order, **Published** after
+    **Finished** (milestone 12.8 FR-020); the form keeps the subject and drops the page."""
     make_competition(scene.engine, scene.chemistry, starts_at=at(14))
     body = listed(scene, "&page=2")
     assert [(o.value, o.text, o.selected) for o in html.options(body, "status")] == [
@@ -623,6 +626,7 @@ def test_the_status_list(scene: Scene) -> None:
         ("upcoming", "Upcoming", False),
         ("in_progress", "In progress", False),
         ("finished", "Finished", False),
+        ("published", "Published", False),
         ("cancelled", "Cancelled", False),
     ]
     subject_form, status_form = [f for f in html.forms(body, "main") if f.method == "get"]
@@ -1251,9 +1255,13 @@ def test_cancelled_and_finished_competitions_cannot_be_edited(
     (row,) = rows(listed(scene))
     # Replaced by milestone 12.2 FR-002 (SC-009): no Edit, but a read-only menu; replaced again
     # by milestone 12.4 FR-004 (SC-011): a finished row adds **Answers** and, with the setting,
-    # **Grades**.
+    # **Grades**; and by milestone 12.8 FR-005: with the setting, **Publish results**.
     query = f"subject={scene.chemistry}"
-    finished = [answers(competition, query), ("Grades", f"{TAB}/{competition}/grades?{query}")]
+    finished = [
+        answers(competition, query),
+        ("Grades", f"{TAB}/{competition}/grades?{query}"),
+        ("Publish results", f"{TAB}/{competition}/publish?{query}"),
+    ]
     assert (row.menu, row.menu_label) == (
         lists(competition, query) + (finished if end == "stopped" else []),
         "Actions for “Spring round”",
@@ -1320,9 +1328,10 @@ def send(browser: TestClient, method: str, url: str, subject_id: int | str, **kw
 
 
 def test_the_sweep_has_every_route() -> None:
-    """Milestone 12.4 adds the finish confirmation and the finish (9 and 8, from 7 and 6)."""
-    assert len(COMPETITION_ROUTES) == 9
-    assert len(MANAGE_ROUTES) == 8
+    """Milestone 12.4 adds the finish confirmation and the finish (9 and 8, from 7 and 6), and
+    milestone 12.8 the publish confirmation and the publish (11 and 10)."""
+    assert len(COMPETITION_ROUTES) == 11
+    assert len(MANAGE_ROUTES) == 10
 
 
 @pytest.mark.parametrize(("method", "path"), COMPETITION_ROUTES)
@@ -1373,9 +1382,12 @@ def test_a_teacher_without_the_setting_is_refused_before_anything_is_looked_up(
 
 @pytest.mark.parametrize(("method", "path"), COMPETITION_ROUTES)
 def test_a_teacher_with_the_setting_is_admitted(scene: Scene, method: str, path: str) -> None:
-    """SC-002: every route, with real ids; finishing needs an In progress competition."""
-    starts_at = at(1, 8) if path.endswith("/finish") else at(14)
-    competition = make_competition(scene.engine, scene.chemistry, starts_at=starts_at)
+    """SC-002: every route, with real ids; finishing needs an In progress competition, and
+    publishing a Finished one (with no teams, so fully graded)."""
+    starts_at = at(1, 8) if path.endswith(("/finish", "/publish")) else at(14)
+    competition = make_competition(
+        scene.engine, scene.chemistry, starts_at=starts_at, stopped=path.endswith("/publish")
+    )
     response = send(
         scene.manager, method, concrete(path, competition, scene.chemistry), scene.chemistry
     )
@@ -1654,7 +1666,8 @@ def test_a_deactivated_subject_lists_only_its_finished_competitions(
     ]
     # Replaced by milestone 12.2 FR-002 (SC-009): a finished row of a deactivated subject keeps
     # a read-only menu; replaced again by milestone 12.4 FR-004, FR-042 (SC-011): with
-    # **Answers** and, with the setting, **Grades**.
+    # **Answers** and, with the setting, **Grades**; and by milestone 12.8 FR-005: with the
+    # setting, **Publish results**.
     query = f"subject={scene.chemistry}"
     assert [(r.id, r.status, r.menu) for r in rows(body)] == [
         (
@@ -1664,6 +1677,7 @@ def test_a_deactivated_subject_lists_only_its_finished_competitions(
                 *lists(deactivated.finished, query),
                 answers(deactivated.finished, query),
                 ("Grades", f"{TAB}/{deactivated.finished}/grades?{query}"),
+                ("Publish results", f"{TAB}/{deactivated.finished}/publish?{query}"),
             ],
         )
     ]
@@ -1793,14 +1807,18 @@ def test_every_teacher_gets_answers_on_an_in_progress_row(
     teacher), only the In progress row offers **Answers**, after **Teams** and before **Cancel
     competition**. Replaced by milestone 12.4 FR-004 (SC-011): the Finished row offers
     **Answers** too, and with the setting the In progress row offers **Finish competition** and
-    the Finished one **Grades**."""
+    the Finished one **Grades**; and by milestone 12.8 FR-005: **Publish results** after it."""
     running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
     make_competition(scene.engine, scene.chemistry, "Later", starts_at=at(14))
     done = make_competition(scene.engine, scene.chemistry, "Done", starts_at=at(1, 7), stopped=True)
     make_competition(scene.engine, scene.chemistry, "Off", starts_at=at(14), cancelled=True)
     query = f"subject={scene.chemistry}"
     for browser, running_tail, done_tail in (
-        (scene.manager, ["Finish competition", "Cancel competition"], ["Grades"]),
+        (
+            scene.manager,
+            ["Finish competition", "Cancel competition"],
+            ["Grades", "Publish results"],
+        ),
         (scene.reader, [], []),
         (client_as(TEACHER_EMAIL), [], []),
     ):
@@ -2028,23 +2046,32 @@ def test_the_menu_per_status_and_setting(scene: Scene) -> None:
     `test_a_started_competition_is_in_progress`, `test_cancelled_and_finished_competitions_cannot
     _be_edited`, `test_every_teacher_gets_answers_on_an_in_progress_row` and
     `test_teacher_competition_entries.test_the_menu_entries_per_status_and_setting`: the order
-    Edit, Questions, Teams, Answers, Grades, Finish competition, Cancel competition; **Finish
-    competition** not destructive, **Cancel competition** destructive; every entry carries the
+    Edit, Questions, Teams, Answers, Grades, Publish results, Download results, Finish
+    competition, Cancel competition (milestone 12.8 FR-004); **Finish competition** and **Publish
+    results** not destructive, **Cancel competition** destructive; **Download results** a link
+    marked as a download, for every teacher on a Published row only; every entry carries the
     list's subject, status and page; the setting given and taken away shows on the next page."""
     make_competition(scene.engine, scene.chemistry, "Upcoming", starts_at=at(14))
     running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
-    make_competition(scene.engine, scene.chemistry, "Finished", starts_at=at(1, 7), stopped=True)
+    finished = make_competition(
+        scene.engine, scene.chemistry, "Finished", starts_at=at(1, 7), stopped=True
+    )
+    published = make_competition(
+        scene.engine, scene.chemistry, "Published", starts_at=at(1, 7), stopped=True, published=True
+    )
     make_competition(scene.engine, scene.chemistry, "Cancelled", starts_at=at(1, 6), cancelled=True)
     with_setting = {
         "Upcoming": ["Edit", "Questions", "Teams", "Cancel competition"],
         "Running": ["Questions", "Teams", "Answers", "Finish competition", "Cancel competition"],
-        "Finished": ["Questions", "Teams", "Answers", "Grades"],
+        "Finished": ["Questions", "Teams", "Answers", "Grades", "Publish results"],
+        "Published": ["Questions", "Teams", "Answers", "Grades", "Download results"],
         "Cancelled": ["Questions", "Teams"],
     }
     without_setting = {
         "Upcoming": ["Questions", "Teams"],
         "Running": ["Questions", "Teams", "Answers"],
         "Finished": ["Questions", "Teams", "Answers"],
+        "Published": ["Questions", "Teams", "Answers", "Download results"],
         "Cancelled": ["Questions", "Teams"],
     }
     body = listed(scene)
@@ -2060,6 +2087,21 @@ def test_the_menu_per_status_and_setting(scene: Scene) -> None:
     classes = {a.text(): a.classes() for a in details.find_all("a")}
     assert "actions-menu-link-destructive" not in classes["Finish competition"]
     assert "actions-menu-link-destructive" in classes["Cancel competition"]
+    entries = {
+        a.text(): a
+        for d in html.parse(body).find_all("details")
+        if "actions-menu" in d.classes()
+        for a in d.find_all("a")
+        if a.text() in ("Publish results", "Download results")
+    }
+    assert "actions-menu-link-destructive" not in entries["Publish results"].classes()
+    assert entries["Publish results"].attrs["href"] == (
+        f"{TAB}/{finished}/publish?subject={scene.chemistry}"
+    )
+    download = entries["Download results"]
+    assert "download" in download.attrs
+    assert download.attrs["href"] == f"{TAB}/{published}/results?subject={scene.chemistry}"
+    assert "download" not in entries["Publish results"].attrs
     paged = listed(scene, "&status=in_progress&page=1")
     query = f"subject={scene.chemistry}&status=in_progress"
     (running_row,) = [r for r in rows(paged) if r.id == running]
@@ -2068,3 +2110,55 @@ def test_the_menu_per_status_and_setting(scene: Scene) -> None:
     assert menu_texts(listed(scene, browser=scene.reader)) == with_setting
     set_setting(scene.engine, READER, False)
     assert menu_texts(listed(scene, browser=scene.reader)) == without_setting
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.8: the Published status (spec US4, FR-018–FR-020)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_the_published_filter_and_badge(scene: Scene) -> None:
+    """US4-1, US4-2, FR-020: **Published** lists only the published competitions, with their
+    badge; **Finished** lists only the unpublished finished ones; **All** lists both."""
+    make_competition(scene.engine, scene.chemistry, "Finished", starts_at=at(1, 7), stopped=True)
+    make_competition(
+        scene.engine, scene.chemistry, "Published", starts_at=at(1, 6), stopped=True, published=True
+    )
+    assert [(r.name, r.status) for r in rows(listed(scene, "&status=published"))] == [
+        ("Published", "Published")
+    ]
+    assert names(listed(scene, "&status=finished")) == ["Finished"]
+    assert names(listed(scene)) == ["Finished", "Published"]
+    assert html.badges(listed(scene, "&status=published")) == ["Published"]
+
+
+@pytest.mark.parametrize(
+    ("action", "question", "reason"),
+    [
+        (
+            "edit",
+            "Edit competition “Spring round”?",
+            "“Spring round” has finished and can no longer be edited.",
+        ),
+        (
+            "cancel",
+            "Cancel competition “Spring round”?",
+            "“Spring round” has finished and cannot be cancelled.",
+        ),
+        ("finish", "Finish competition “Spring round”?", "“Spring round” has already finished."),
+    ],
+)
+def test_a_published_competition_gets_the_finished_refusals(
+    scene: Scene, action: str, question: str, reason: str
+) -> None:
+    """US4-4, FR-018: every rule of a finished competition holds for a published one."""
+    competition = make_competition(
+        scene.engine, scene.chemistry, starts_at=at(1, 7), stopped=True, published=True
+    )
+    back = f"{TAB}?subject={scene.chemistry}#competition-{competition}"
+    before = snapshot(scene.engine)
+    url = f"{TAB}/{competition}/{action}?subject={scene.chemistry}"
+    refused(scene.manager.get(url), question, reason, back)
+    sent = {"edit": edit, "cancel": cancel, "finish": finish}[action]
+    refused(sent(scene.manager, competition, scene.chemistry), question, reason, back)
+    assert snapshot(scene.engine) == before

@@ -911,7 +911,8 @@ def test_the_menu_entries_per_status_and_setting(
     (SC-011): they gain **Answers** after **Teams**, for every teacher. Replaced again by
     milestone 12.4 FR-004 (SC-011): the In progress menu gains **Finish competition** before
     **Cancel competition** with the setting, and the Finished menu gains **Answers** for every
-    teacher and **Grades** with the setting."""
+    teacher and **Grades** with the setting; milestone 12.8 FR-005 adds **Publish results** after
+    it."""
     running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
     finished = make_competition(
         scene.engine, scene.chemistry, "Done", starts_at=at(1, 7), stopped=True
@@ -931,7 +932,7 @@ def test_the_menu_entries_per_status_and_setting(
             "Finish competition",
             "Cancel competition",
         ],
-        f"competition-{finished}": ["Questions", "Teams", "Answers", "Grades"],
+        f"competition-{finished}": ["Questions", "Teams", "Answers", "Grades", "Publish results"],
     }
     mykola = {k: [t for t, _ in v] for k, v in menus(get(scene.mykola, url)).items()}
     assert mykola.pop(f"competition-{running}") == ["Questions", "Teams", "Answers"]
@@ -1707,3 +1708,47 @@ def test_the_teams_page_never_offers_enter_answers(scene: Scene, client_as: Clie
             can_change = browser is scene.olena and status == "upcoming"
             assert ("Add team" in body) is can_change, status
             assert (">Remove<" in body) is can_change, status
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.8: the Questions and Teams pages of a published competition (US4-3, FR-019)
+# ---------------------------------------------------------------------------------------------
+
+
+def test_a_published_competition_shows_both_lists_read_only(scene: Scene) -> None:
+    """As a finished one: read-only for everyone, with the **Published** badge; its changes get
+    the finished refusals; a deactivated subject keeps it readable."""
+    published = make_competition(
+        scene.engine, scene.chemistry, "Summer round", starts_at=at(1, 7), stopped=True,
+        published=True,
+    )  # fmt: skip
+    question = make_question(scene.engine, scene.chemistry, "Kept as copied")
+    team = make_team(scene.engine, scene.school, "Comets")
+    add_competition_question(scene.engine, published, question)
+    add_competition_team(scene.engine, published, team)
+    kyiv = region_of(scene.engine, scene.school)
+    before = snapshot(scene.engine)
+    for subject_active in (True, False):
+        if not subject_active:
+            with Session(scene.engine) as session:
+                set_subject_active(session, scene.chemistry, False)
+        questions = get(scene.olena, page_of(scene, "questions", competition=published))
+        assert [c.boxes[0] for c in cards(questions)] == ["Kept as copied"]
+        assert "Published" in html.badges(questions)
+        teams = get(scene.olena, page_of(scene, "teams", competition=published))
+        assert [r["Team"] for r in team_rows(teams).values()] == ["Comets"]
+        assert heading_action(teams) == []
+        for kind, response in (
+            ("questions", scene.olena.get(page_of(scene, "questions/add", competition=published))),
+            ("teams", scene.olena.get(page_of(scene, "teams/add", competition=published))),
+            ("questions", add_question(scene.olena, scene, question, published)),
+            ("teams", add_team(scene.olena, scene, team, kyiv, published)),
+            ("questions", remove(scene.olena, scene, "questions", question, published)),
+            ("teams", remove(scene.olena, scene, "teams", team, published)),
+        ):
+            assert response.status_code == 409
+            reason = f"“Summer round” has finished and its {kind} can no longer be changed."
+            assert reason in html.text(response.text, "main")
+    with Session(scene.engine) as session:
+        set_subject_active(session, scene.chemistry, True)
+    assert snapshot(scene.engine) == before

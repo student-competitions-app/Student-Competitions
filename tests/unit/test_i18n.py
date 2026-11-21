@@ -250,6 +250,7 @@ def test_the_labels_are_the_glossary_terms() -> None:
             "Заплановано",
             "Триває",
             "Завершено",
+            "Опубліковано",
             "Скасовано",
         ]
         assert [str(a.label) for a in AccessLevel] == ["Перегляд", "Редагування"]

@@ -899,6 +899,7 @@ def test_the_competitions_table_at_head(
         "stopped_at": True,
         "created_at": False,
         "updated_at": False,
+        "published_at": True,
     }
     indexes = {
         i["name"]: (i["column_names"], bool(i["unique"]))
@@ -910,8 +911,8 @@ def test_the_competitions_table_at_head(
     }
     [foreign_key] = inspector.get_foreign_keys("competitions")
     assert foreign_key["name"] == "fk_competitions_subject_id_subjects"
-    checks = [c["name"] for c in inspector.get_check_constraints("competitions")]
-    assert checks == ["ck_competitions_one_end"]
+    checks = {c["name"] for c in inspector.get_check_constraints("competitions")}
+    assert checks == {"ck_competitions_one_end", "ck_competitions_published_after_finish"}
 
 
 def test_the_live_competition_name_index_is_partial(
@@ -1306,9 +1307,8 @@ def test_the_answer_grades_revision_follows_team_answers() -> None:
 LOCALISATION_REVISION = "7110bec350d2"
 
 
-def test_the_head_is_the_localisation_revision() -> None:
+def test_the_localisation_revision_follows_answer_grades() -> None:
     """Milestone 12.5 follows milestone 12.4's revision."""
-    assert head_revision() == LOCALISATION_REVISION
     script = ScriptDirectory.from_config(alembic_config())
     assert script.get_revision(LOCALISATION_REVISION).down_revision == ANSWER_GRADES_REVISION
 
@@ -1635,3 +1635,115 @@ def test_the_same_names_in_other_scopes_upgrade_cleanly(
     run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
     keys = _keys(migration_engine)
     assert [r[2] for r in keys["teams"]] == ["марʼяна", "марʼяна"]
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.8: published results (data-model §1, §2, §6, research R3)
+# ---------------------------------------------------------------------------------------------
+
+PUBLISHED_RESULTS_REVISION = "c730fd883079"
+
+results_files_t = sa.table(
+    "competition_results_files",
+    sa.column("competition_id", sa.Integer()),
+    sa.column("language", sa.String()),
+    sa.column("content", sa.LargeBinary()),
+)
+
+
+def test_the_head_is_the_published_results_revision() -> None:
+    """Milestone 12.8 follows milestone 12.5's revision."""
+    assert head_revision() == PUBLISHED_RESULTS_REVISION
+    script = ScriptDirectory.from_config(alembic_config())
+    assert script.get_revision(PUBLISHED_RESULTS_REVISION).down_revision == LOCALISATION_REVISION
+
+
+def test_the_results_files_table_at_head(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    inspector = inspect(migration_engine)
+    columns = {c["name"]: c for c in inspector.get_columns("competition_results_files")}
+    assert list(columns) == ["competition_id", "language", "content"]
+    assert [c["nullable"] for c in columns.values()] == [False, False, False]
+    assert isinstance(columns["content"]["type"], sa.LargeBinary)
+    primary_key = inspector.get_pk_constraint("competition_results_files")
+    assert primary_key["constrained_columns"] == ["competition_id", "language"]
+    [foreign_key] = inspector.get_foreign_keys("competition_results_files")
+    assert foreign_key["referred_table"] == "competitions"
+    assert foreign_key["options"].get("ondelete") is None
+    checks = {c["name"] for c in inspector.get_check_constraints("competition_results_files")}
+    assert checks == {
+        "ck_competition_results_files_results_file_language",
+        "ck_competition_results_files_results_file_not_empty",
+    }
+
+
+def test_upgrading_keeps_every_finished_competition_unpublished(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Data-model §6: no data step; a finished competition stays Finished."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", LOCALISATION_REVISION)
+    with migration_engine.begin() as connection:
+        connection.execute(spring_round(add_subject(connection, "Chemistry"), stopped=utc_now()))
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.connect() as connection:
+        row = connection.execute(text("SELECT stopped_at, published_at FROM competitions")).one()
+    assert row[0] is not None and row[1] is None
+
+
+def test_only_a_finished_competition_is_published_with_one_file_per_language(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """Data-model §1–§2: `published_after_finish`, the language check, a non-empty file, and the
+    primary key's one file per language."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        chemistry = add_subject(connection, "Chemistry")
+        live = connection.execute(spring_round(chemistry).returning(competitions_t.c.id))
+        live_id = live.scalar_one()
+        finished = connection.execute(
+            spring_round(chemistry, stopped=utc_now()).returning(competitions_t.c.id)
+        ).scalar_one()
+    publish = text("UPDATE competitions SET published_at = :now WHERE id = :id")
+    with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+        connection.execute(publish, {"now": utc_now(), "id": live_id})
+    with migration_engine.begin() as connection:
+        connection.execute(publish, {"now": utc_now(), "id": finished})
+        connection.execute(
+            results_files_t.insert().values(competition_id=finished, language="uk", content=b"%")
+        )
+    for language, content in (("de", b"%PDF"), ("en", b""), ("uk", b"%PDF again")):
+        with pytest.raises(IntegrityError), migration_engine.begin() as connection:
+            connection.execute(
+                results_files_t.insert().values(
+                    competition_id=finished, language=language, content=content
+                )
+            )
+
+
+def test_the_downgrade_drops_the_files_and_keeps_the_competitions(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.begin() as connection:
+        competition = connection.execute(
+            spring_round(add_subject(connection, "Chemistry"), stopped=utc_now()).returning(
+                competitions_t.c.id
+            )
+        ).scalar_one()
+        connection.execute(
+            text("UPDATE competitions SET published_at = :now WHERE id = :id"),
+            {"now": utc_now(), "id": competition},
+        )
+        connection.execute(
+            results_files_t.insert().values(competition_id=competition, language="uk", content=b"%")
+        )
+    run_alembic(monkeypatch, empty_database_url, "downgrade", LOCALISATION_REVISION)
+    inspector = inspect(migration_engine)
+    assert "competition_results_files" not in inspector.get_table_names()
+    assert "published_at" not in {c["name"] for c in inspector.get_columns("competitions")}
+    checks = {c["name"] for c in inspector.get_check_constraints("competitions")}
+    assert checks == {"ck_competitions_one_end"}
+    with migration_engine.connect() as connection:
+        assert connection.execute(text("SELECT count(*) FROM competitions")).scalar_one() == 1

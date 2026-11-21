@@ -43,6 +43,11 @@ Deliberate changes since (each is a contract change, recorded here):
   `teacher-competitions` are links, so that case is unchanged.
 - **Milestone 12.5**: the language switch's form (`/language`) is on every page, in the top bar;
   it is left out like the theme switch's. No other form changes.
+- **Milestone 12.8**: publishing (`teacher-competition-publish*`, `teacher-grades-sheet-published`
+  cases) is new, generated once with `UPDATE_FORM_CONTRACT=1` for those cases only. The blocked
+  confirmation and the read-only grading sheet have no form of their own. The new **Publish
+  results** and **Download results** menu entries of `teacher-competitions` are links, so that
+  case is unchanged.
 """
 
 import json
@@ -62,7 +67,7 @@ from sqlmodel import Session, select
 import app.services.institutions
 import app.services.subjects
 from app.main import app as application
-from app.models import AccessLevel, CompetitionTeam, Institution, Role
+from app.models import AccessLevel, Competition, CompetitionTeam, Institution, Role
 from app.services.email import EmailMessage
 from app.services.regions import create_region
 from app.services.subjects import create_subject, set_subject_active
@@ -1041,6 +1046,47 @@ def _(w: World) -> Response:
     reader = w.client_as(TARAS)
     response = reader.get(f"{base}/answers/{team}?{context}")
     assert response.status_code == 200 and "Score: 0" in response.text
+    return response
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.8: publishing the results
+# ---------------------------------------------------------------------------------------------
+
+
+@case("teacher-competition-publish")
+def _(w: World) -> Response:
+    """The publish confirmation of a fully graded finished competition (no teams): one post form,
+    the context."""
+    engine = application.state.engine
+    browser, subject, _ = a_competition_manager(w)
+    start = datetime.now(UTC).replace(second=0, microsecond=0) - timedelta(hours=1)
+    done = make_competition(engine, subject, "Done", starts_at=start, stopped=True)
+    return browser.get(f"/teacher/competitions/{done}/publish?subject={subject}&page=2")
+
+
+@case("teacher-competition-publish-blocked")
+def _(w: World) -> Response:
+    """The blocked confirmation, a team still to grade: links only, no form of its own."""
+    browser, base, context, _ = grading_scene(w)
+    response = browser.get(f"{base}/publish?{context}")
+    assert "Grade the remaining teams" in response.text
+    return response
+
+
+@case("teacher-grades-sheet-published")
+def _(w: World) -> Response:
+    """The grading sheet of a published competition: read-only, no form of its own."""
+    browser, base, context, team = grading_scene(w)
+    competition_id = int(base.rsplit("/", 1)[-1])
+    with Session(application.state.engine) as session:
+        competition = session.get(Competition, competition_id)
+        assert competition is not None
+        competition.published_at = competition.stopped_at
+        session.add(competition)
+        session.commit()
+    response = browser.get(f"{base}/grades/{team}?{context}")
+    assert "are published, so its grades can no longer be changed" in response.text
     return response
 
 

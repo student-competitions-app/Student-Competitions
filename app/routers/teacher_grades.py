@@ -33,6 +33,7 @@ ever reaches an address or a log line (FR-045). Nothing here logs; the service l
 """
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import timedelta
 from typing import Annotated, Any
 
@@ -106,7 +107,18 @@ GRADE_REFUSALS: dict[Any, Callable[..., Text]] = {
         "“%(name)s” has been cancelled, so its answers cannot be graded.", name=name
     ),
 }
-"""The reason of the refusal, by the competition's status (http-routes.md §Refusals)."""
+"""The reason of the refusal, by the competition's status (http-routes.md §Refusals). A Published
+competition is not refused: its sheets open read-only with `published_note` (milestone 12.8)."""
+
+
+def published_note(name: str) -> Text:
+    """The note of every grading sheet of a published competition, and the answer to a grade save
+    sent to one (milestone 12.8 FR-021)."""
+    return _(
+        "The results of “%(name)s” are published, so its grades can no longer be changed.",
+        name=name,
+    )
+
 
 GRADES_NOTICE_PURPOSE = "grades-notice"
 GRADES_NOTICE_TTL = timedelta(minutes=10)
@@ -224,13 +236,14 @@ def _open(
 ) -> tuple[ListContext, CompetitionView] | HTMLResponse:
     """Checks 2–4: the setting (403, raised before any value is parsed); the context and the
     competition, or the not-found page; then the refusal for a competition that is not
-    Finished."""
+    Finished or Published (milestone 12.8: a published competition's Grades page and sheets open,
+    read-only)."""
     require_manage(request, session)
     found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
-    if competition.status is not CompetitionStatus.FINISHED:
+    if not competition.status.has_finished:
         return grades_refused(request, competition, competition.status, context)
     return context, competition
 
@@ -312,10 +325,15 @@ def _render_sheet(
     sent: dict[int, str] | None = None,
     errors: dict[int, str] | None = None,
     notice: str | None = None,
+    status_code: int | None = None,
 ) -> HTMLResponse:
     """The sheet: every question with its reference answer and the team's answer, a grade field
     under each answered one holding the saved grade, or after a refused save, the value as it was
-    sent, each error at its field and the summary in question order."""
+    sent, each error at its field and the summary in question order.
+
+    On a **Published** competition (milestone 12.8 FR-021) the sheet is read-only: the note, each
+    grade as text, no field and no **Save grades**."""
+    read_only = competition.status is CompetitionStatus.PUBLISHED
     sent, errors = sent or {}, errors or {}
     items = []
     for q in sheet.questions:
@@ -329,6 +347,7 @@ def _render_sheet(
                 "field_id": f"{GRADE_FIELD_PREFIX}{q.competition_question_id}",
                 "value": sent.get(q.competition_question_id, saved),
                 "error": errors.get(q.competition_question_id),
+                "grade": q.grade,
             }
         )
     field_errors: dict[str, Any] = {
@@ -351,8 +370,10 @@ def _render_sheet(
             "errors": field_errors,
             "field_order": [item["field_id"] for item in items if item["answer"] is not None],
             "notice": notice,
+            "read_only": read_only,
+            "published_note": published_note(competition.name) if read_only else None,
         },
-        status_code=400 if errors else 200,
+        status_code=status_code or (400 if errors else 200),
     )
 
 
@@ -371,7 +392,8 @@ def team_grading_sheet_page(
     notice: str | None = Query(None),
 ) -> HTMLResponse:
     """A team's grading sheet: every question with its reference answer, the team's answer and a
-    grade field, and one **Save grades** (FR-021–FR-024). Opening it changes nothing."""
+    grade field, and one **Save grades** (FR-021–FR-024); read-only on a Published competition
+    (milestone 12.8 FR-021). Opening it changes nothing."""
     opened = _open(request, session, competition_id, subject, status, page)
     if isinstance(opened, HTMLResponse):
         return opened
@@ -412,13 +434,16 @@ def save_grades_action(
 ) -> Response:
     """Saves every grade of the sheet at once and stays on it with the notice, also when nothing
     changed (FR-024, FR-026); an invalid grade saves nothing and shows the sheet again with every
-    value as sent (FR-025)."""
+    value as sent (FR-025). On a Published competition, or one published while the sheet was open,
+    nothing is saved: the read-only sheet with its note, 409 (milestone 12.8 FR-021)."""
     opened = _open(request, session, competition_id, subject, status, page)
     if isinstance(opened, HTMLResponse):
         return opened
     context, competition = opened
     if team_id > MAX_ID:
         return not_found(request, TEAM_NOT_FOUND)
+    if competition.status is CompetitionStatus.PUBLISHED:
+        return _published_sheet(request, session, competition, context, team_id, show, back)
     grades = parse_prefixed(fields, GRADE_FIELD_PREFIX)
     if grades is None:
         return not_found(request, QUESTION_NOT_FOUND)
@@ -434,6 +459,9 @@ def save_grades_action(
     except CompetitionNotFound:
         return not_found(request, COMPETITION_NOT_FOUND)
     except GradingClosed as refused:
+        if refused.status is CompetitionStatus.PUBLISHED:
+            published = replace(competition, status=CompetitionStatus.PUBLISHED)
+            return _published_sheet(request, session, published, context, team_id, show, back)
         return grades_refused(request, competition, refused.status, context)
     except GradedTeamNotFound:
         return not_found(request, TEAM_NOT_FOUND)
@@ -458,4 +486,26 @@ def save_grades_action(
     token = grades_notice_token(request, competition.id, team_id)
     return redirect(
         grading_sheet_path(competition.id, team_id, context, shown, back_to, notice=token)
+    )
+
+
+def _published_sheet(
+    request: Request,
+    session: Session,
+    competition: CompetitionView,
+    context: ListContext,
+    team_id: int,
+    show: str,
+    back: str,
+) -> HTMLResponse:
+    """A grade save refused because the results are published: the read-only sheet with its
+    note, 409, and nothing saved (milestone 12.8 FR-021)."""
+    try:
+        sheet = grading_sheet(session, competition.id, team_id)
+    except GradedTeamNotFound:
+        return not_found(request, TEAM_NOT_FOUND)
+    shown = parse_grade_filter(show)
+    back_to = back_page(back) or team_page_of(session, competition.id, team_id, shown)
+    return _render_sheet(
+        request, session, competition, context, sheet, shown, back_to, status_code=409
     )

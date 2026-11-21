@@ -5,6 +5,7 @@ from app.models.boot_counter import BootCounter
 from app.models.competition import (
     Competition,
     CompetitionQuestion,
+    CompetitionResultsFile,
     CompetitionTeam,
     TeamAnswer,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "BootCounter",
     "Competition",
     "CompetitionQuestion",
+    "CompetitionResultsFile",
     "CompetitionTeam",
     "ConsentRecord",
     "ConsentText",

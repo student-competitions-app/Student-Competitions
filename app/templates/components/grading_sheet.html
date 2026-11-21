@@ -16,12 +16,19 @@
     The read-only variant, `answers_read_only`, shows the same cards with the question and the
     answer (or "Not answered"), and with `grades` the grade under each answered question ("Grade: 7
     of 10" or "Not graded yet"). It reads `number`, `text`, `answer` and `grade`; never a reference
-    answer, no form, no field, no button. -#}
+    answer, no form, no field, no button.
+
+    **Read-only** (milestone 12.8 contracts/components.md §4): once the results are published, the
+    grading sheet is read-only, with a note saying why (`note`, a notice above the list). It keeps
+    the question, the reference answer and the answer (it is still the grader's view), shows each
+    grade as text ("Grade: 7 of 10", "Not graded yet") in place of its field, and has no form, no
+    field, no error and no button. Each item also carries `grade`. -#}
 
 {% from "components/card.html" import text_card, text_box %}
+{% from "components/feedback.html" import notice %}
 {% from "components/form.html" import field, form_actions %}
 
-{% macro _graded_cards(items) -%}
+{% macro _graded_cards(items, read_only=False) -%}
 <ol class="answer-sheet">
   {%- for item in items %}
   <li>
@@ -30,7 +37,15 @@
     {{ text_box(_("Reference answer"), item.reference_answer) }}
     {%- if item.answer is not none %}
     {{ text_box(_("Answer to question %(number)d", number=item.number), item.answer) }}
+    {%- if read_only %}
+    {%- if item.grade is not none %}
+    <p class="grade-line">{{ _("Grade: %(grade)d of 10", grade=item.grade) }}</p>
+    {%- else %}
+    <p class="grade-line">{{ _("Not graded yet") }}</p>
+    {%- endif %}
+    {%- else %}
     {{ field(item.field_id, _("Grade for question %(number)d", number=item.number), value=item.value, error=item.error, hint=_("A whole number from 0 to 10."), placeholder=_("Not graded"), attrs={"inputmode": "numeric", "autocomplete": "off"}) }}
+    {%- endif %}
     {%- else %}
     <p class="grade-line">{{ _("Not answered") }}</p>
     {%- endif %}
@@ -40,9 +55,13 @@
 </ol>
 {%- endmacro %}
 
-{% macro grading_sheet(items, action, hidden, submit_label=None) -%}
+{% macro grading_sheet(items, action, hidden, submit_label=None, read_only=False, note=None) -%}
 {%- if not items %}{{ template_error("grading_sheet: at least one question is required") }}{% endif -%}
-{%- if items | selectattr("answer", "ne", none) | list -%}
+{%- if note and not read_only %}{{ template_error("grading_sheet: a note needs the read-only sheet") }}{% endif -%}
+{%- if read_only -%}
+{%- if note %}{{ notice(note, "info") }}{% endif -%}
+{{ _graded_cards(items, read_only=True) }}
+{%- elif items | selectattr("answer", "ne", none) | list -%}
 <form method="post" action="{{ action }}">
   {%- for name, value in hidden.items() %}
   <input type="hidden" name="{{ name }}" value="{{ value }}">

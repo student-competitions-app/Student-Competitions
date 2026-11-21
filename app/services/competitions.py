@@ -6,8 +6,10 @@ research R2, R3, R7, R8, R11, R13; finishing is specs/012.4-finish-and-grade/con
 §`competitions` and research R1. Every teacher reads every competition; reading needs only the
 teacher role, which the routes check.
 
-- **The status is derived, never stored** (`status_of`): Cancelled, Finished, Upcoming before the
-  start, In progress from it. **The clock** is this module's `utc_now`, read once per call and used
+- **The status is derived, never stored** (`status_of`): Cancelled, Published (milestone 12.8),
+  Finished, Upcoming before the start, In progress from it. `CompetitionStatus.has_finished`
+  is true for Finished and Published: a published competition is a finished one whose results
+  are published. **The clock** is this module's `utc_now`, read once per call and used
   for every row that call derives, so tests replace it with
   `monkeypatch.setattr("app.services.competitions.utc_now", …)` and nothing ever waits.
 - **Visibility**: every competition of an active subject; only the finished ones of a deactivated
@@ -36,7 +38,11 @@ is Upcoming, under the competition's lock (`lock_competition`), which
 entered only while it is In progress, under the competition's share lock
 (`lock_competition(share=True)`, `app.services.team_answers`, milestone 12.3), and students
 (milestone 13) may answer only so too, while it is visible; answers are graded only once it is
-Finished, under the same share lock (`app.services.grades`, milestone 12.4).
+Finished, under the same share lock (`app.services.grades`, milestone 12.4). Publishing is
+`app.services.results.publish_results` (milestone 12.8), which writes `published_at` once, only on
+a fully graded Finished competition, under the competition's `FOR UPDATE`, in the transaction that
+stores its results files; from then on its grades never change. Milestone 13 never evaluates or
+grades a Published competition, and milestone 14 shows results only for Published competitions.
 """
 
 import logging
@@ -61,22 +67,34 @@ logger = logging.getLogger("uvicorn.error")
 
 
 class CompetitionStatus(StrEnum):
+    """The statuses, in the order of the status filter (milestone 12.8 research R4)."""
+
     UPCOMING = "upcoming"
     IN_PROGRESS = "in_progress"
     FINISHED = "finished"
+    PUBLISHED = "published"
     CANCELLED = "cancelled"
 
     @property
     def label(self) -> Text:
         """The one word shown for the status, everywhere (Заплановано, Триває, Завершено,
-        Скасовано: impersonal forms, so they agree with nothing)."""
+        Опубліковано, Скасовано: impersonal forms, so they agree with nothing)."""
         return _LABELS[self]
+
+    @property
+    def has_finished(self) -> bool:
+        """Whether the competition has ended: **Finished**, or **Published**, a finished
+        competition whose results are published (milestone 12.8). Every rule of a finished
+        competition holds for a published one; only its grades can no longer change, so a check
+        that means "grades may still change" asks for `FINISHED` itself."""
+        return self in (CompetitionStatus.FINISHED, CompetitionStatus.PUBLISHED)
 
 
 _LABELS = {
     CompetitionStatus.UPCOMING: _("Upcoming"),
     CompetitionStatus.IN_PROGRESS: _("In progress"),
     CompetitionStatus.FINISHED: _("Finished"),
+    CompetitionStatus.PUBLISHED: _("Published"),
     CompetitionStatus.CANCELLED: _("Cancelled"),
 }
 
@@ -218,6 +236,8 @@ def status_of(row: Competition, now: datetime) -> CompetitionStatus:
     the start minute itself it is In progress (R2)."""
     if row.cancelled_at is not None:
         return CompetitionStatus.CANCELLED
+    if row.published_at is not None:
+        return CompetitionStatus.PUBLISHED
     if row.stopped_at is not None:
         return CompetitionStatus.FINISHED
     if row.starts_at > now:
@@ -368,6 +388,22 @@ def subject_id_of(session: Session, competition_id: int) -> int | None:
     subject and the competition as usual."""
     row = session.get(Competition, competition_id)
     return row.subject_id if row is not None else None
+
+
+def listed_views(
+    session: Session, subject: Subject, status: CompetitionStatus | None, now: datetime
+) -> list[CompetitionView]:
+    """The subject's visible competitions matching `status` (All for `None`), sorted: the list a
+    landing is worked out on, before and after a change made outside this module (publishing,
+    `app.services.results`, milestone 12.8)."""
+    listed, _ = _listed(session, subject, status, now)
+    return listed
+
+
+def reread_status(session: Session, competition_id: int) -> CompetitionStatus:
+    """After a conditional update outside this module matched no row (a lost race): roll back,
+    and the competition's status now."""
+    return _reread_status(session, competition_id)
 
 
 def locate(
@@ -532,7 +568,7 @@ def cancel_competition(
     row, subject = lock_competition(session, competition_id, subject_id)
     now = utc_now()
     current = status_of(row, now)
-    if current in (CompetitionStatus.CANCELLED, CompetitionStatus.FINISHED):
+    if current is CompetitionStatus.CANCELLED or current.has_finished:
         raise _refuse(session, True, NotCancellable(current))
     before, _ = _listed(session, subject, status, now)
     ids = [view.id for view in before]

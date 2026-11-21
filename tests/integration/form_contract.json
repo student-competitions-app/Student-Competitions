@@ -888,6 +888,32 @@
       "method": "post"
     }
   ],
+  "teacher-competition-publish": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/teacher/competitions/{id}/publish",
+      "buttons": [],
+      "fields": [
+        "page",
+        "status",
+        "subject"
+      ],
+      "method": "post"
+    }
+  ],
+  "teacher-competition-publish-blocked": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
   "teacher-competition-questions": [
     {
       "action": "/logout",
@@ -1039,6 +1065,14 @@
         "status",
         "subject"
       ],
+      "method": "post"
+    }
+  ],
+  "teacher-grades-sheet-published": [
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
       "method": "post"
     }
   ],

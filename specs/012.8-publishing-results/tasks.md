@@ -137,17 +137,17 @@ the blocked confirmation and the read-only grading sheet, in the library, the ga
 guidelines (research R1, R2, R11, contracts/components.md §1–§4, §6). Nothing here touches the
 database. Delivers **US9**.
 
-- [ ] T001 Add the dependencies in `pyproject.toml` and `uv.lock` per research R1, R14:
+- [X] T001 Add the dependencies in `pyproject.toml` and `uv.lock` per research R1, R14:
   - run `uv add "fpdf2>=2.9"` (runtime) and `uv add --dev pypdf` (development), then
     `uv lock --check`;
   - confirm that `uv sync --locked --no-dev` (the Dockerfile's command) installs fpdf2, Pillow and
     fontTools, and not pypdf;
   - the `logo` dependency group (`pillow`, `numpy`) stays as it is.
-- [ ] T002 [P] Commit the fonts `app/static/fonts/OpenSans-Regular.ttf` and `app/static/fonts/OpenSans-Bold.ttf` per research R2:
+- [X] T002 [P] Commit the fonts `app/static/fonts/OpenSans-Regular.ttf` and `app/static/fonts/OpenSans-Bold.ttf` per research R2:
   - take the static TrueType instances from the upstream Open Sans release (googlefonts/opensans,
     `fonts/ttf/`); record the release tag and the two files' SHA-256 for the README (T066);
   - they are covered by the existing `app/static/fonts/OFL.txt`; add no other font file.
-- [ ] T003 [P] Create `tests/pdf.py` (depends on T001), a test helper beside `tests/html.py`:
+- [X] T003 [P] Create `tests/pdf.py` (depends on T001), a test helper beside `tests/html.py`:
   - `pdf_text(content: bytes) -> str`: every page's `extract_text()` joined with `"\n"`;
   - `pdf_pages(content: bytes) -> int`;
   - `pdf_metadata(content: bytes) -> dict[str, str]`;
@@ -155,7 +155,7 @@ database. Delivers **US9**.
   - `pdf_fonts_embedded(content: bytes) -> bool`: every font of every page has a `/FontFile2` in
     its descriptor.
   - A docstring: test-only, reads with pypdf, never imported by `app/`.
-- [ ] T004 [P] Add the `accent` badge and the **Published** status badge per contracts/components.md §1:
+- [X] T004 [P] Add the `accent` badge and the **Published** status badge per contracts/components.md §1:
   - in `app/templates/components/badge.html`:
     - `badge`'s `badge_classes` gains `"accent": "badge badge-accent"`;
     - `competition_status_badge` gains `{%- elif value == "published" %}{{ badge(_("Published"), "accent") }}`
@@ -163,7 +163,7 @@ database. Delivers **US9**.
     - update the header comment (five statuses);
   - in the badge section of `app/static/css/app.css`:
     `.badge-accent { background: var(--sc-accent); color: var(--sc-on-accent); }`.
-- [ ] T005 [P] Add the download entry to `app/templates/components/menu.html` per contracts/components.md §2:
+- [X] T005 [P] Add the download entry to `app/templates/components/menu.html` per contracts/components.md §2:
   - the signature becomes `menu_link(label, href, destructive=False, download=False)`;
   - with `download=True`, the `<a>` gets the bare attribute `download`;
   - `destructive=True` together with `download=True` is `template_error("menu_link: a download is never destructive")`;
@@ -171,7 +171,7 @@ database. Delivers **US9**.
   - the header comment gains: "A download is an entry like any other, a link marked as a download:
     it opens no page, and the loading script of milestone 10.1 never starts for it (it skips
     `a[download]`)."
-- [ ] T006 [P] Add the blocked state to `confirmation` in `app/templates/components/confirmation.html` per contracts/components.md §3:
+- [X] T006 [P] Add the blocked state to `confirmation` in `app/templates/components/confirmation.html` per contracts/components.md §3:
   - the signature becomes `confirmation(question, consequence, action, verb, cancel_href, hidden={}, back_label=None, kind="destructive", blocked=None, alternative=None)`;
   - with `blocked` (a reason):
     - no `post_button`; `notice(blocked, "info")` above `.form-actions`;
@@ -181,7 +181,7 @@ database. Delivers **US9**.
   - `alternative` without `blocked` is a template error;
   - without `blocked`, the markup is byte-for-byte the current one;
   - extend the header comment with the rule of contracts/components.md §3.
-- [ ] T007 [P] Add the read-only state to `grading_sheet` in `app/templates/components/grading_sheet.html` per contracts/components.md §4 and research R11:
+- [X] T007 [P] Add the read-only state to `grading_sheet` in `app/templates/components/grading_sheet.html` per contracts/components.md §4 and research R11:
   - the signature gains `read_only=False, note=None`; `note` is accepted only with `read_only`
     (template error otherwise);
   - read-only:
@@ -193,7 +193,7 @@ database. Delivers **US9**.
     - no `<form>`, no field, no error, no button;
   - the editable state is byte-for-byte unchanged;
   - extend the header comment.
-- [ ] T008 Add the gallery entries (depends on T004–T007):
+- [X] T008 Add the gallery entries (depends on T004–T007):
   - `app/routers/admin_components.py`:
     - `COMPETITION_STATUSES = ("upcoming", "in_progress", "finished", "published", "cancelled")`;
     - a read-only grading sample: the three items of the existing grading sample with grades
@@ -216,7 +216,7 @@ database. Delivers **US9**.
         before the results can be published."` and `alternative=("Grade the remaining teams",
         "#confirmations")`;
     - in `#grading-sheet`, the read-only sample with its note.
-- [ ] T009 [P] Update `docs/requirements/ui-guidelines.md` per contracts/components.md §6 (depends on T004–T007):
+- [X] T009 [P] Update `docs/requirements/ui-guidelines.md` per contracts/components.md §6 (depends on T004–T007):
   - **Statuses**: five statuses, **Published** ("a finished competition whose results are
     published") with the `accent` badge;
   - **Actions menu**: the Competitions entries in the order **Edit**, **Questions**, **Teams**,
@@ -231,7 +231,7 @@ database. Delivers **US9**.
   - **Wording patterns**: the notice "The results of “<name>” were published", the refusal reasons
     of contracts/http-routes.md §2;
   - gallery links for each.
-- [ ] T010 [P] Extend the component tests (depends on T008):
+- [X] T010 [P] Extend the component tests (depends on T008):
   - `tests/integration/test_component_gallery.py`:
     - the status badges sample shows five badges in order, **Published** with `badge-accent`;
     - `#actions-menu` holds an `a[download]` "Download results" that is not destructive;
@@ -262,7 +262,7 @@ contracts/services.md §1–§5).
 **⚠️ CRITICAL**: no user story work can begin until this phase is complete, and the whole existing
 suite must be green at its end.
 
-- [ ] T011 Add the column and the table to `app/models/competition.py` per data-model.md §1–§2:
+- [X] T011 Add the column and the table to `app/models/competition.py` per data-model.md §1–§2:
   - `Competition.published_at: datetime | None = Field(default=None, sa_type=UTCDateTime, nullable=True)`
     with the docstring "Set once by `app.services.results.publish_results` (milestone 12.8), only
     while the competition is Finished and fully graded; never cleared.";
@@ -280,7 +280,7 @@ suite must be green at its end.
   - update the docstrings of `Competition` (the status now also derives **Published** from
     `published_at`) and `TeamAnswer` (a grade never changes once the competition is published), and
     the module docstring (cite specs/012.8-publishing-results/data-model.md §1–§2).
-- [ ] T012 Create the migration `migrations/versions/2026_11_<dd>_<rev>_published_results.py` (`down_revision = "7110bec350d2"`) per data-model.md §6 (depends on T011):
+- [X] T012 Create the migration `migrations/versions/2026_11_<dd>_<rev>_published_results.py` (`down_revision = "7110bec350d2"`) per data-model.md §6 (depends on T011):
   - generate the id with `uv run alembic revision -m "published results"` and write the operations
     by hand as a frozen snapshot (plain SQLAlchemy types, nothing imported from `app`);
   - upgrade:
@@ -297,7 +297,7 @@ suite must be green at its end.
   - downgrade: drop the table, then the constraint and the column in a batch;
   - a module docstring in the style of `04d5b638615c`'s; run `uv run alembic upgrade head`
     locally.
-- [ ] T013 [P] Extend `tests/integration/test_migrations.py` (depends on T012):
+- [X] T013 [P] Extend `tests/integration/test_migrations.py` (depends on T012):
   - the head is the new revision, and the stairway and drift checks cover it on both engines;
   - a finished competition inserted at `7110bec350d2` is kept with `published_at` `NULL`;
   - after upgrade:
@@ -306,7 +306,7 @@ suite must be green at its end.
     - a results file with `language` `'de'` or empty `content` fails;
     - a second row for the same `(competition_id, language)` fails;
   - downgrade to `7110bec350d2` drops the table and the column and keeps every competition.
-- [ ] T014 Add the status to `app/services/competitions.py` per contracts/services.md §4 and research R4 (depends on T011):
+- [X] T014 Add the status to `app/services/competitions.py` per contracts/services.md §4 and research R4 (depends on T011):
   - `CompetitionStatus.PUBLISHED = "published"`, declared between `FINISHED` and `CANCELLED`, and
     `_LABELS[PUBLISHED] = _("Published")`;
   - the property `has_finished` (`self in (FINISHED, PUBLISHED)`) with a docstring: "has ended";
@@ -320,7 +320,7 @@ suite must be green at its end.
     "`published_at` is written once by `app.services.results.publish_results` (milestone 12.8);
     milestone 13 never evaluates or grades a Published competition; milestone 14 shows results only
     for Published competitions".
-- [ ] T015 Move every status call site to the new status per research R4's table (depends on T014):
+- [X] T015 Move every status call site to the new status per research R4's table (depends on T014):
   - **`app/routers/teacher_competitions.py`**:
     - `EDIT_REFUSALS`, `CANCEL_REFUSALS` and `FINISH_REFUSALS` gain `CompetitionStatus.PUBLISHED`
       mapped to the same text as `FINISHED` in each ("“%(name)s” has finished and can no longer be
@@ -349,14 +349,14 @@ suite must be green at its end.
   - grep `app/` for `CompetitionStatus.FINISHED`, `"finished"` and `stopped_at` once more. Every
     remaining hit means either "grades may still change" (`grades.save_grades`, the `Grades` badge
     case) or reads `stopped_at` (visibility, `offered_subjects`, `teams.delete_team`) and stays.
-- [ ] T016 [P] Add the seeders to `tests/conftest.py` in a new "Milestone 12.8: published results" section (depends on T011):
+- [X] T016 [P] Add the seeders to `tests/conftest.py` in a new "Milestone 12.8: published results" section (depends on T011):
   - `make_competition(..., published: bool = False)`: with `published=True` (which requires
     `stopped=True`, else an assertion), sets `published_at` to the same `now`;
   - `store_results_files(engine, competition_id, uk: bytes = b"%PDF-uk test", en: bytes = b"%PDF-en test") -> None`
     inserts the two rows; with `make_competition(..., published=True)` it gives a Published
     competition with known bytes. Docstring: "**Test-only**: it skips publishing, which
     `test_results_service.py` covers; real files come from `publish_results`."
-- [ ] T017 [P] Add the status tests to `tests/integration/test_competition_service.py` (depends on T014, T016):
+- [X] T017 [P] Add the status tests to `tests/integration/test_competition_service.py` (depends on T014, T016):
   - the enum order is Upcoming, In progress, Finished, Published, Cancelled;
   - `has_finished` is true only for Finished and Published;
   - `status_of` gives **Published** for a row with `stopped_at` and `published_at`, and
@@ -368,7 +368,7 @@ suite must be green at its end.
   - a new competition of the subject can take a Published one's name;
   - `competition_page(..., status=PUBLISHED)` lists only Published competitions, and
     `status=FINISHED` lists none of them.
-- [ ] T018 Add `grading_progress` to `app/services/grades.py` per contracts/services.md §1, §3 (depends on T014):
+- [X] T018 Add `grading_progress` to `app/services/grades.py` per contracts/services.md §1, §3 (depends on T014):
   - in `grades.py`: `@dataclass(frozen=True) class GradingProgress(graded: int, total: int)` with
     the property `complete` (`graded == total`, so 0 of 0 is complete); `results` imports it from
     `grades`, keeping the one-way import `results` → `grades`;
@@ -379,14 +379,14 @@ suite must be green at its end.
   - the `save_grades` docstring states that a Published competition raises
     `GradingClosed(PUBLISHED)` under the share lock, which publishing's `FOR UPDATE` excludes;
   - update the module docstring's "Contract for later milestones".
-- [ ] T019 [P] Add the progress tests to `tests/integration/test_grade_service.py` (depends on T016, T018):
+- [X] T019 [P] Add the progress tests to `tests/integration/test_grade_service.py` (depends on T016, T018):
   - one fully graded, one partly graded and one unanswered team → `GradingProgress(2, 3)`, not
     complete;
   - a deleted team and a team of a deactivated institution count;
   - no teams → `(0, 0)`, complete;
   - `save_grades` on a Published competition raises `GradingClosed(PUBLISHED)`, and the grade is
     unchanged.
-- [ ] T020 Create `app/services/results.py` with its types, the snapshot and the file names per contracts/services.md §1 and research R7, R9 (depends on T014, T018):
+- [X] T020 Create `app/services/results.py` with its types, the snapshot and the file names per contracts/services.md §1 and research R7, R9 (depends on T014, T018):
   - a module docstring in the style of `grades.py`'s:
     - who publishes (a teacher with **Can manage competitions**, any competition) and only a fully
       graded **Finished** one;
@@ -419,7 +419,7 @@ suite must be green at its end.
   - `results_file(session, competition_id, language: Language) -> bytes | None`:
     `session.get(CompetitionResultsFile, (competition_id, language.value))`, returning its
     `content`.
-- [ ] T021 Create `app/services/results_pdf.py` with `render_results_pdf(snapshot, language) -> bytes` per contracts/services.md §2, contracts/results-file.md and the initial design of research R8 (depends on T002, T020):
+- [X] T021 Create `app/services/results_pdf.py` with `render_results_pdf(snapshot, language) -> bytes` per contracts/services.md §2, contracts/results-file.md and the initial design of research R8 (depends on T002, T020):
   - **Setup**:
     - a module docstring: pure, no session, the layout and why;
     - asset paths from `Path(__file__).resolve().parent.parent / "static"`: the two TTFs and
@@ -446,7 +446,7 @@ suite must be green at its end.
     `set_creation_date(snapshot.published_at)`, `set_producer("Student Competitions")`; no author;
   - **Return**: `bytes(pdf.output())`.
   - Nothing reads the wall clock, so the same snapshot and language give the same bytes.
-- [ ] T022 [P] Create `tests/unit/test_results_pdf.py` with the renderer's base tests (depends on T003, T021):
+- [X] T022 [P] Create `tests/unit/test_results_pdf.py` with the renderer's base tests (depends on T003, T021):
   - **Fonts**: both cover every character of "АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ", its lower case, A–Z,
     a–z, the apostrophes `'` `’` `ʼ`, “ ” « », `–` and `№` (read the `cmap` with
     `fontTools.ttLib.TTFont`);
@@ -455,7 +455,7 @@ suite must be green at its end.
     date;
   - **Determinism**: the same snapshot rendered twice gives identical bytes;
   - **Wrapping**: a 200-character institution name renders without error.
-- [ ] T023 [P] Add the file name tests to `tests/unit/test_results_pdf.py` (depends on T020):
+- [X] T023 [P] Add the file name tests to `tests/unit/test_results_pdf.py` (depends on T020):
   - "Spring round" started 2027-03-14 08:00 UTC → "Spring round 2027-03-14.pdf";
   - a start at 23:30 UTC on 2027-03-13 → `2027-03-14` (Kyiv);
   - `A/B: final?` → `A_B_ final_ 2027-03-14.pdf`;
@@ -463,7 +463,7 @@ suite must be green at its end.
   - `"..."` → `results 2027-03-14.pdf`;
   - a Cyrillic name is kept in `results_file_name` and becomes `_` runs in `ascii_file_name`;
   - a tab or NUL in the name becomes `_`.
-- [ ] T024 Extract and translate the messages of Phase 1 and 2 (depends on T004–T007, T014, T021):
+- [X] T024 Extract and translate the messages of Phase 1 and 2 (depends on T004–T007, T014, T021):
   - run `scripts/translations.sh update`;
   - translate every new Ukrainian entry in `app/locale/uk/LC_MESSAGES/messages.po`:
     - "Published" → «Опубліковано»;
@@ -496,7 +496,7 @@ competition from the list under each status filter, and check the confirmation, 
 unpublished**, the notice, the landing, the new status and menu, and that exactly two files are
 stored.
 
-- [ ] T025 [P] [US1] Add the `publish_results` service tests to `tests/integration/test_results_service.py` (new; depends on T016, T020):
+- [X] T025 [P] [US1] Add the `publish_results` service tests to `tests/integration/test_results_service.py` (new; depends on T016, T020):
   - **Success**: a fully graded **Finished** competition is published:
     - `published_at` = the patched now; `status_of` → **Published**;
     - only `published_at` changes on `competitions`;
@@ -512,7 +512,7 @@ stored.
   - **Render failure**: with `results_pdf.render_results_pdf` patched to raise, the call raises,
     `published_at` stays `NULL`, no file row exists, and the competition is still **Finished**
     (FR-009).
-- [ ] T026 [US1] Add `publish_results` to `app/services/results.py` per contracts/services.md §1 and research R5 (depends on T021, T025):
+- [X] T026 [US1] Add `publish_results` to `app/services/results.py` per contracts/services.md §1 and research R5 (depends on T021, T025):
   - **Checks, each refusal rolling back first** (`competitions._refuse`-style):
     - `can_manage_competitions(session, teacher_id, lock=True)`, else `ManageRequired`;
     - `row, subject = competitions.lock_competition(session, competition_id, subject_id)`;
@@ -532,7 +532,7 @@ stored.
     - `after`; commit; the log line; `return competitions.landing(after, competition_id,
       old_index)`;
   - a docstring as `finish_competition`'s, naming the share lock of `save_grades`.
-- [ ] T027 [US1] Add the publish routes to `app/routers/teacher_competitions.py` and the template `app/templates/pages/teacher/competition_publish.html` per contracts/http-routes.md §1–§2 (depends on T006, T026):
+- [X] T027 [US1] Add the publish routes to `app/routers/teacher_competitions.py` and the template `app/templates/pages/teacher/competition_publish.html` per contracts/http-routes.md §1–§2 (depends on T006, T026):
   - **Refusal and notice**:
     - `PUBLISH_REFUSALS` with the four reasons of http-routes.md §2 verbatim;
     - `_publish_refused(...)` with the question "Publish the results of “<name>”?" through
@@ -567,10 +567,10 @@ stored.
       variant comes in US2;
     - a header comment citing contracts/http-routes.md §1;
   - update the module docstring: publishing joins finishing, and the manage routes.
-- [ ] T028 [US1] Add **Publish results** to the row menu in `app/templates/pages/teacher/competitions.html` per research R10 (depends on T027):
+- [X] T028 [US1] Add **Publish results** to the row menu in `app/templates/pages/teacher/competitions.html` per research R10 (depends on T027):
   - after **Grades**: `{%- if can_manage and c.status == "finished" %}{{ menu_link(_("Publish results"), "/teacher/competitions/" ~ c.id ~ "/publish?" ~ return_query) }}{% endif -%}`, not destructive;
   - update the template's header comment with the menu order of FR-004.
-- [ ] T029 [US1] Add the publishing route tests to `tests/integration/test_teacher_results.py` (new; depends on T028):
+- [X] T029 [US1] Add the publishing route tests to `tests/integration/test_teacher_results.py` (new; depends on T028):
   - **The confirmation**: it names the competition, its subject and its start in the browser's
     zone, shows the **Finished** badge, "Graded 3 of 3 teams" and the consequence verbatim, with a
     primary (not destructive) submit **Publish results** and the link **Keep unpublished** to the
@@ -602,14 +602,14 @@ refused publish, and publishing a competition with no teams.
 
 **Independent Test**: as in spec US2, on partly graded, unanswered and team-less competitions.
 
-- [ ] T030 [P] [US2] Add the service tests to `tests/integration/test_results_service.py` (depends on T026):
+- [X] T030 [P] [US2] Add the service tests to `tests/integration/test_results_service.py` (depends on T026):
   - one answer without a grade → `NotFullyGraded(GradingProgress(2, 3))`, and nothing is stored;
   - a team with no answers counts as graded;
   - a deleted team with an ungraded answer blocks publishing;
   - a competition with no teams is published, and both files contain "No teams took part in this
     competition." (and its Ukrainian translation in the `uk` file);
   - a competition with no questions (every team unanswered) is published with every score 0.
-- [ ] T031 [US2] Render the blocked state in `app/templates/pages/teacher/competition_publish.html` per contracts/http-routes.md §1 (depends on T027):
+- [X] T031 [US2] Render the blocked state in `app/templates/pages/teacher/competition_publish.html` per contracts/http-routes.md §1 (depends on T027):
   - when `not progress.complete`, call `confirmation(...)` with
     `blocked=_("Every team must be graded before the results can be published.")` and
     `alternative=(_("Grade the remaining teams"), grade_remaining_href)`;
@@ -621,7 +621,7 @@ refused publish, and publishing a competition with no teams.
     `status`, `page`, then `show`) are the ones `teacher_competition_entries.address` writes, so the
     Grades page reads the same list context and its back link returns to the same list page;
   - the same template answers the `NotFullyGraded` refusal of the `POST` with status 409.
-- [ ] T032 [US2] Add the route tests to `tests/integration/test_teacher_results.py` (depends on T031):
+- [X] T032 [US2] Add the route tests to `tests/integration/test_teacher_results.py` (depends on T031):
   - **The blocked confirmation**: "Graded 2 of 3 teams", the explanation verbatim, the link
     **Grade the remaining teams** (to `…/grades?subject=…&status=…&page=…&show=ungraded`) then
     **Keep unpublished**, and no submit;
@@ -646,14 +646,14 @@ left. US2 is done.
 **Independent Test**: as in spec US3: typed addresses and forms for each status; two publishes, a
 publish and a grade save, and the same form twice at the same moment.
 
-- [ ] T033 [P] [US3] Add the refusal tests to `tests/integration/test_teacher_results.py` (depends on T027):
+- [X] T033 [P] [US3] Add the refusal tests to `tests/integration/test_teacher_results.py` (depends on T027):
   - for an **Upcoming** (typed address), an **In progress**, a **Cancelled** and a **Published**
     competition, both `GET …/publish` and `POST …/publish` answer 409 with the question "Publish
     the results of “<name>”?", the reason verbatim and **Back to competitions** to the list at the
     competition; nothing changes;
   - the `POST` sent twice → the first 303, the second 409 "The results of “<name>” are already
     published.", with two files stored in all.
-- [ ] T034 [P] [US3] Add the PostgreSQL-only race tests to `tests/integration/test_results_service.py` (depends on T026):
+- [X] T034 [P] [US3] Add the PostgreSQL-only race tests to `tests/integration/test_results_service.py` (depends on T026):
   - **Two publishes**: two sessions behind a `threading.Barrier` → exactly one returns a `Landing`,
     the other raises `NotPublishable(PUBLISHED)`, and there are exactly two file rows;
   - **Grade save first**: a session holding `lock_competition(share=True)` (a grade save in
@@ -664,7 +664,7 @@ publish and a grade save, and the same form twice at the same moment.
     `GradingClosed(PUBLISHED)` and changes no grade;
   - **Publish and cancel**: impossible by status (a Finished competition cannot be cancelled); a
     cancel sent during a publish raises `NotCancellable` with `FINISHED` or `PUBLISHED`.
-- [ ] T035 [P] [US3] Add the primary-key guard test to `tests/integration/test_results_service.py` (depends on T026). It exercises the guard against a lost race on SQLite, where the row locks render nothing; the state it sets up (a file present while `published_at` is `NULL`) is not reachable through the application (data-model.md §4 invariant 1), so the test names that in its docstring. With a file row for `uk` inserted beforehand by `store_results_files` on a Finished competition whose `published_at` is `NULL` (a simulated lost race), `publish_results` raises `NotPublishable(PUBLISHED)`, leaves `published_at` `NULL` and keeps the existing row unchanged.
+- [X] T035 [P] [US3] Add the primary-key guard test to `tests/integration/test_results_service.py` (depends on T026). It exercises the guard against a lost race on SQLite, where the row locks render nothing; the state it sets up (a file present while `published_at` is `NULL`) is not reachable through the application (data-model.md §4 invariant 1), so the test names that in its docstring. With a file row for `uk` inserted beforehand by `store_results_files` on a Finished competition whose `published_at` is `NULL` (a simulated lost race), `publish_results` raises `NotPublishable(PUBLISHED)`, leaves `published_at` `NULL` and keeps the existing row unchanged.
 
 **Checkpoint**: publishing is refused where it must be and is applied exactly once. US3 is done.
 
@@ -678,7 +678,7 @@ pages offered on Published, and the deactivated-subject case.
 **Independent Test**: as in spec US4: competitions of every status, one published; badges, filter
 lists, pages and the deactivated subject.
 
-- [ ] T036 [P] [US4] Add the list tests to `tests/integration/test_teacher_competitions.py` (depends on T015, T016):
+- [X] T036 [P] [US4] Add the list tests to `tests/integration/test_teacher_competitions.py` (depends on T015, T016):
   - **The filter**: the **Status** list offers All, Upcoming, In progress, Finished, Published,
     Cancelled in that order; `?status=published` lists only the published competition with its
     **Published** badge; `?status=finished` no longer lists it; All lists both;
@@ -690,7 +690,7 @@ lists, pages and the deactivated subject.
     - (**Download results** arrives in US7; assert it there if this task runs first);
   - **Refusals**: the edit, cancel and finish addresses of a published competition answer their
     finished refusals.
-- [ ] T037 [P] [US4] Add the page tests for a Published competition to `tests/integration/test_teacher_competition_entries.py` and `tests/integration/test_teacher_team_answers.py` (depends on T015, T016):
+- [X] T037 [P] [US4] Add the page tests for a Published competition to `tests/integration/test_teacher_competition_entries.py` and `tests/integration/test_teacher_team_answers.py` (depends on T015, T016):
   - **Questions** and **Teams** open read-only, with the **Published** badge under the heading,
     and their add and remove addresses show the 12.2 finished refusals;
   - **Answers** opens with **Graded** and **Score** and **View answers**, and the read-only sheet
@@ -708,7 +708,7 @@ lists, pages and the deactivated subject.
 
 **Independent Test**: as in spec US5: publish, open the Grades page and sheets, send saves.
 
-- [ ] T038 [US5] Make the grading sheet read-only on Published in `app/routers/teacher_grades.py` and `app/templates/pages/teacher/team_grading_sheet.html` per contracts/http-routes.md §4 and research R6 (depends on T007, T015):
+- [X] T038 [US5] Make the grading sheet read-only on Published in `app/routers/teacher_grades.py` and `app/templates/pages/teacher/team_grading_sheet.html` per contracts/http-routes.md §4 and research R6 (depends on T007, T015):
   - `PUBLISHED_NOTE = lambda name: _("The results of “%(name)s” are published, so its grades can no longer be changed.", name=name)`;
   - `_render_sheet(..., read_only: bool, status_code=200)` passes `read_only=True` and
     `note=PUBLISHED_NOTE(competition.name)` to the template, which calls `grading_sheet(...,
@@ -720,7 +720,7 @@ lists, pages and the deactivated subject.
     - `GradingClosed(PUBLISHED)` from the service (published meanwhile) → the same;
     - `GradingClosed` of other statuses keeps `grades_refused`;
   - the Grades page (`GET /grades`) is unchanged and keeps **Grade answers**.
-- [ ] T039 [US5] Add the route tests to `tests/integration/test_teacher_grades.py` (depends on T038, T016):
+- [X] T039 [US5] Add the route tests to `tests/integration/test_teacher_grades.py` (depends on T038, T016):
   - **The sheet on Published**: the note verbatim, "Reference answer" for each question,
     "Grade: 7 of 10" for each grade, and no `form`, `input` or **Save grades**;
   - **A save**: a crafted `POST` → 409 with the same sheet and note, and every grade is unchanged
@@ -743,7 +743,7 @@ never change.
 **Independent Test**: as in spec US6: seed a multi-region competition with deleted, renamed and
 deactivated cases, publish, read both files, change the data, and compare bytes.
 
-- [ ] T040 [P] [US6] Add the snapshot tests to `tests/integration/test_results_service.py` (depends on T020):
+- [X] T040 [P] [US6] Add the snapshot tests to `tests/integration/test_results_service.py` (depends on T020):
   - **Order**: three regions "Харківська", "Київська", "Lviv" (a Latin name sorts before Cyrillic
     under `name_sort_key`), institutions and teams named to exercise the Ukrainian order (Ґ after
     Г, Є after Е, І and Ї after И, apostrophes ignored);
@@ -752,7 +752,7 @@ deactivated cases, publish, read both files, change the data, and compare bytes.
     and region, with no mark;
   - **Scores**: each the sum of its grades, 0 for a team with no answers;
   - two teams with the same name in different institutions are both listed.
-- [ ] T041 [P] [US6] Add the content tests to `tests/unit/test_results_pdf.py` (depends on T022):
+- [X] T041 [P] [US6] Add the content tests to `tests/unit/test_results_pdf.py` (depends on T022):
   - **The English file's text** holds, in this order: "Results of “Spring round”", the subject,
     "Started: 14 March 2027, 10:00 (Kyiv time)", "Finished: …", "Published: …", each region name,
     and each line "School No. 5, Comets, 17";
@@ -764,7 +764,7 @@ deactivated cases, publish, read both files, change the data, and compare bytes.
   - **Nothing extra**: none of the answer, reference answer, question text or member names known to
     the test appear (render a snapshot built through `build_snapshot` from a seeded competition
     whose answers and questions carry unique marker strings).
-- [ ] T042 [US6] Add the permanence tests to `tests/integration/test_results_service.py` (depends on T026):
+- [X] T042 [US6] Add the permanence tests to `tests/integration/test_results_service.py` (depends on T026):
   - publish, read both file rows' bytes, then:
     - rename the region, the institution, a team and the subject;
     - deactivate the institution and the subject;
@@ -772,7 +772,7 @@ deactivated cases, publish, read both files, change the data, and compare bytes.
   - both rows are byte-for-byte unchanged, still name the old names, and still hold two rows;
   - a scan of `app/` (a test that greps the source for `update(CompetitionResultsFile` and
     `delete(CompetitionResultsFile`) finds none.
-- [ ] T043 [US6] Add the timing test to `tests/integration/test_results_service.py` (depends on T026): a competition of 500 teams in 10 regions with 10 graded answers each publishes in under 5 seconds (SC-007), measured with `time.perf_counter` around `publish_results` only (not the seeding). It runs everywhere, CI and both engines included, and is never skipped. Name it `test_publishing_500_teams_takes_under_5_seconds`, and make the assertion message state the measured time. If CI cannot meet the bound, record that as a deviation in plan.md's Complexity Tracking and agree a new bound with the product owner; do not skip the test.
+- [X] T043 [US6] Add the timing test to `tests/integration/test_results_service.py` (depends on T026): a competition of 500 teams in 10 regions with 10 graded answers each publishes in under 5 seconds (SC-007), measured with `time.perf_counter` around `publish_results` only (not the seeding). It runs everywhere, CI and both engines included, and is never skipped. Name it `test_publishing_500_teams_takes_under_5_seconds`, and make the assertion message state the measured time. If CI cannot meet the bound, record that as a deviation in plan.md's Complexity Tracking and agree a new bound with the product owner; do not skip the test.
 
 **Checkpoint**: the files hold exactly the official results, in both languages, and never change.
 US6 is done.
@@ -787,7 +787,7 @@ stored file of the current language.
 **Independent Test**: as in spec US7: every kind of teacher, both languages, headers, file name,
 404s, 403s.
 
-- [ ] T044 [US7] Create `app/routers/teacher_results.py` with the download per contracts/http-routes.md §3 and research R9, and include it in `app/main.py` next to `teacher_grades.router` (depends on T020):
+- [X] T044 [US7] Create `app/routers/teacher_results.py` with the download per contracts/http-routes.md §3 and research R9, and include it in `app/main.py` next to `teacher_grades.router` (depends on T020):
   - a module docstring:
     - any teacher, no setting;
     - the published results are open information;
@@ -805,11 +805,11 @@ stored file of the current language.
       `COMPETITION_NOT_FOUND` (cannot happen, invariant 1);
     - `name = results_file_name(competition.name, competition.starts_at)`;
     - `Response(content, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{ascii_file_name(name)}"; filename*=UTF-8\'\'{quote(name, safe="")}', "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})`.
-- [ ] T045 [US7] Add **Download results** to the row menu in `app/templates/pages/teacher/competitions.html` (depends on T005, T044):
+- [X] T045 [US7] Add **Download results** to the row menu in `app/templates/pages/teacher/competitions.html` (depends on T005, T044):
   - after **Publish results**: `{%- if c.status == "published" %}{{ menu_link(_("Download results"), "/teacher/competitions/" ~ c.id ~ "/results?subject=" ~ selected.id, download=True) }}{% endif -%}`;
   - every teacher, whatever their setting and links;
   - check the full order against FR-004.
-- [ ] T046 [US7] Add the download tests to `tests/integration/test_teacher_results.py` (depends on T045, T016):
+- [X] T046 [US7] Add the download tests to `tests/integration/test_teacher_results.py` (depends on T045, T016):
   - **Every teacher** gets 200 with the stored `uk` bytes exactly (`store_results_files` with known
     bytes) and the four headers: a teacher with **Read**, one with **Write**, one with the setting,
     and one linked to no institution of the competition's teams;
@@ -836,7 +836,7 @@ and US2, the MVP is complete.
 
 **Independent Test**: run the sample script, review the samples, record each round.
 
-- [ ] T047 [US8] Create `scripts/make_results_samples.py` per research R12 (depends on T021, T024):
+- [X] T047 [US8] Create `scripts/make_results_samples.py` per research R12 (depends on T021, T024):
   - a module docstring in the style of `scripts/make_logo.py`'s (what it writes, that it takes no
     arguments, that the outputs are committed review evidence);
   - three `ResultsSnapshot`s built in memory, with fixed times (start 14 March 2027 10:00 Kyiv,
@@ -848,7 +848,7 @@ and US2, the MVP is complete.
   - each rendered with `render_results_pdf` for `Language.UK` and `Language.EN`, after
     `load_translations()`, to `specs/012.8-publishing-results/samples/<set>-<lang>.pdf`;
   - the outputs are deterministic, so a re-run without a design change leaves them unchanged.
-- [ ] T048 [US8] Make the first samples and open the review (depends on T047):
+- [X] T048 [US8] Make the first samples and open the review (depends on T047):
   - run `uv run python scripts/make_results_samples.py`;
   - commit the six PDFs;
   - create `specs/012.8-publishing-results/design-approval.md` in the format of
@@ -867,17 +867,17 @@ and US2, the MVP is complete.
 **Purpose**: the route sweep, the form contract, the page patterns, the documents, the catalogues,
 and the whole suite on both engines.
 
-- [ ] T051 [P] Update `tests/integration/test_routes.py` (depends on T027, T044):
+- [X] T051 [P] Update `tests/integration/test_routes.py` (depends on T027, T044):
   - the write routes list gains `POST /teacher/competitions/{competition_id}/publish`;
   - the declared-GET sweep finds `GET …/publish` among the manage pages and `GET …/results` among
     the teacher pages;
   - every new route redirects anonymous requests and denies administrators and students.
-- [ ] T052 [P] Update `tests/integration/test_form_contract.py` and `tests/integration/form_contract.json` (depends on T027): the publish form posts `subject`, `status`, `page` and the cross-site token, with no other field; a cross-site `POST` to `…/publish` is refused and nothing changes (as `test_cross_site.py` does for finishing).
-- [ ] T053 [P] Update `tests/integration/test_page_patterns.py` (depends on T027, T031, T038):
+- [X] T052 [P] Update `tests/integration/test_form_contract.py` and `tests/integration/form_contract.json` (depends on T027): the publish form posts `subject`, `status`, `page` and the cross-site token, with no other field; a cross-site `POST` to `…/publish` is refused and nothing changes (as `test_cross_site.py` does for finishing).
+- [X] T053 [P] Update `tests/integration/test_page_patterns.py` (depends on T027, T031, T038):
   - the publish confirmation (both states), the publish refusal and the read-only grading sheet
     follow the page patterns: one `h1`, the back link, no inline style, labelled landmarks;
   - at 360 px width (the existing pattern check) there is no element wider than the content.
-- [ ] T054 Extract and translate every message added since T024 (depends on T027–T045):
+- [X] T054 Extract and translate every message added since T024 (depends on T027–T045):
   - run `scripts/translations.sh update`;
   - translate the new Ukrainian entries in `app/locale/uk/LC_MESSAGES/messages.po`:
     - "Publish results" → «Опублікувати результати»;
@@ -891,18 +891,18 @@ and the whole suite on both engines.
     - the notice;
     - the published grading note;
   - compile; the catalogue tests pass.
-- [ ] T055 [P] Update `README.md` per research R15 (depends on T044, T047):
+- [X] T055 [P] Update `README.md` per research R15 (depends on T044, T047):
   - in the feature overview: publishing and downloading results;
   - in the dependencies section: `fpdf2` (why: the "Results files" row) and `pypdf` (tests only);
   - a font note: Open Sans TTF from upstream release <tag>, SHA-256 of both files, OFL;
   - in the scripts section: `scripts/make_results_samples.py`.
-- [ ] T056 [P] Finish `docs/requirements/ui-guidelines.md` against the pages as built (depends on T009, T027, T038, T045): the examples match the final markup, and the actions menu example matches `competitions.html`.
-- [ ] T057 Run the whole suite on both engines (depends on everything above):
+- [X] T056 [P] Finish `docs/requirements/ui-guidelines.md` against the pages as built (depends on T009, T027, T038, T045): the examples match the final markup, and the actions menu example matches `competitions.html`.
+- [X] T057 Run the whole suite on both engines (depends on everything above):
   - `uv run ruff check && uv run ruff format --check`;
   - `TEST_POSTGRES_URL=… uv run pytest`;
   - fix any failure. Then `docker build .` and the image's smoke run (the CI `image` job), to
     confirm fpdf2, Pillow and fontTools install from the lock and a publish works in the container.
-- [ ] T058 Walk through [quickstart.md](./quickstart.md) §2–§5 by hand:
+- [X] T058 Walk through [quickstart.md](./quickstart.md) §2–§5 by hand:
   - the migration up and down on a copy of a 12.7 database;
   - the samples;
   - the full flow as Olena and Taras, including the language switch, the download with no loading

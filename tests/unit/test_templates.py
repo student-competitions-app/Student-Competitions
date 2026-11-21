@@ -151,6 +151,22 @@ def test_actions_menu_with_entries() -> None:
     )
 
 
+def test_a_download_entry() -> None:
+    """Milestone 12.8 contracts/components.md §2: the bare `download` attribute, the plain link
+    class; without `download` the entry is unchanged."""
+    out = render(MENU + '{{ menu_link("Download results", "/r?subject=3", download=True) }}')
+    assert out == (
+        '<li><a href="/r?subject=3" class="actions-menu-link" download>Download results</a></li>'
+    )
+    plain = render(MENU + '{{ menu_link("Edit", "/e") }}')
+    assert plain == '<li><a href="/e" class="actions-menu-link">Edit</a></li>'
+
+
+def test_a_download_is_never_destructive() -> None:
+    with pytest.raises(TemplateRuntimeError, match="menu_link: a download is never destructive"):
+        render(MENU + '{{ menu_link("Download", "/d", destructive=True, download=True) }}')
+
+
 def test_actions_menu_with_a_blank_call_block_emits_nothing() -> None:
     for block in ("", "   \n  ", "{% if false %}{{ menu_link('Edit', '/e') }}{% endif %}"):
         source = MENU + '{% call actions_menu("Spring round") %}' + block + "{% endcall %}"
@@ -168,6 +184,7 @@ def test_actions_menu_needs_an_item_name() -> None:
         ("upcoming", '<span class="badge badge-info">Upcoming</span>'),
         ("in_progress", '<span class="badge badge-success">In progress</span>'),
         ("finished", '<span class="badge badge-neutral">Finished</span>'),
+        ("published", '<span class="badge badge-accent">Published</span>'),
         ("cancelled", '<span class="badge badge-muted">Cancelled</span>'),
     ],
 )
@@ -354,6 +371,43 @@ def test_confirmation_refuses_another_kind() -> None:
         render(CONFIRMATION + '{{ confirmation("Q?", "C.", "/a", "Go", "/b", kind="secondary") }}')
 
 
+def test_a_blocked_confirmation() -> None:
+    """Milestone 12.8 contracts/components.md §3: the reason as a notice in place of the button,
+    the work left before the link back, no form."""
+    out = render(
+        CONFIRMATION
+        + '{{ confirmation("Q?", "C.", "/a", "Publish results", "/back",'
+        + ' back_label="Keep unpublished", kind="primary", blocked="Grade every team first.",'
+        + ' alternative=("Grade the remaining teams", "/grades?show=ungraded")) }}'
+    )
+    assert "<form" not in out and "<button" not in out
+    assert "Grade every team first." in out
+    assert out.index("Grade every team first.") < out.index('<div class="form-actions">')
+    assert (
+        '<a href="/grades?show=ungraded">Grade the remaining teams</a>\n'
+        '    <a href="/back">Keep unpublished</a>'
+    ) in out
+
+
+@pytest.mark.parametrize(
+    ("call", "message"),
+    [
+        (
+            '{{ confirmation("Q?", "C.", "/a", "Delete", "/b", blocked="Not yet.") }}',
+            "confirmation: only a primary confirmation can be blocked",
+        ),
+        (
+            '{{ confirmation("Q?", "C.", "/a", "Go", "/b", kind="primary",'
+            ' alternative=("Do", "/d")) }}',
+            "confirmation: an alternative needs a blocked confirmation",
+        ),
+    ],
+)
+def test_a_blocked_confirmation_is_refused_where_it_cannot_be(call: str, message: str) -> None:
+    with pytest.raises(TemplateRuntimeError, match=message):
+        render(CONFIRMATION + call)
+
+
 # ---------------------------------------------------------------------------------------------
 # Milestone 12.3: the placeholder and the answer sheet (specs/012.3-team-answers contracts/
 # components.md §1–§2)
@@ -492,6 +546,41 @@ def test_the_grading_sheet_with_no_answer_has_no_form_and_no_button() -> None:
     assert "<input" not in out
     assert out.count("Reference answer") == 2
     assert out.count("Not answered") == 2
+
+
+def test_the_read_only_grading_sheet() -> None:
+    """Milestone 12.8 contracts/components.md §4: the note first, the reference answers kept, each
+    grade as text, no form, field or button."""
+    graded = {**grading_item(1, "Yes"), "grade": 7}
+    out = render(
+        GRADING + '{{ grading_sheet(items, "/g", {"back": "2"}, read_only=True, note="Frozen.") }}',
+        items=[graded, grading_item(2, None), grading_item(3, "No")],
+    )
+    assert out.index("Frozen.") < out.index('<ol class="answer-sheet">')
+    for absent in ("<form", "<input", "<button", "<label"):
+        assert absent not in out
+    assert out.count("Reference answer") == 3
+    assert "Grade: 7 of 10" in out
+    assert "Not graded yet" in out
+    assert "Not answered" in out
+
+
+def test_the_editable_grading_sheet_is_unchanged_by_the_read_only_flag() -> None:
+    items = [grading_item(1, "Yes"), grading_item(2, None)]
+    default = render(GRADING + '{{ grading_sheet(items, "/g", {"back": "2"}) }}', items=items)
+    explicit = render(
+        GRADING + '{{ grading_sheet(items, "/g", {"back": "2"}, read_only=False) }}', items=items
+    )
+    assert default == explicit
+    assert "Grade:" not in default and "Not graded yet" not in default
+
+
+def test_a_note_needs_the_read_only_grading_sheet() -> None:
+    with pytest.raises(TemplateRuntimeError, match="grading_sheet: a note needs the read-only"):
+        render(
+            GRADING + '{{ grading_sheet(items, "/g", {}, note="Frozen.") }}',
+            items=[grading_item(1, "Yes")],
+        )
 
 
 def test_the_grading_sheets_need_a_question() -> None:

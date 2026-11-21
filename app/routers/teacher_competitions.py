@@ -80,7 +80,9 @@ from app.services.competitions import (
     parse_status_filter,
     update_competition,
 )
+from app.services.grades import GradingProgress, grading_progress
 from app.services.paging import parse_page
+from app.services.results import NotFullyGraded, NotPublishable, publish_results
 from app.services.teacher_access import can_manage_competitions
 
 router = APIRouter(prefix="/teacher/competitions")
@@ -116,10 +118,16 @@ EDIT_REFUSALS: dict[Any, Callable[..., Text]] = {
     CompetitionStatus.FINISHED: lambda name: _(
         "“%(name)s” has finished and can no longer be edited.", name=name
     ),
+    CompetitionStatus.PUBLISHED: lambda name: _(
+        "“%(name)s” has finished and can no longer be edited.", name=name
+    ),
 }
 CANCEL_REFUSALS: dict[Any, Callable[..., Text]] = {
     CompetitionStatus.CANCELLED: lambda name: _("“%(name)s” is already cancelled.", name=name),
     CompetitionStatus.FINISHED: lambda name: _(
+        "“%(name)s” has finished and cannot be cancelled.", name=name
+    ),
+    CompetitionStatus.PUBLISHED: lambda name: _(
         "“%(name)s” has finished and cannot be cancelled.", name=name
     ),
 }
@@ -131,9 +139,30 @@ FINISH_REFUSALS: dict[Any, Callable[..., Text]] = {
         "“%(name)s” has been cancelled and cannot be finished.", name=name
     ),
     CompetitionStatus.FINISHED: lambda name: _("“%(name)s” has already finished.", name=name),
+    CompetitionStatus.PUBLISHED: lambda name: _("“%(name)s” has already finished.", name=name),
 }
 """The reason of each refusal, by the competition's status (http-routes.md §4, §6; milestone 12.4
-http-routes.md §Refusals)."""
+http-routes.md §Refusals). A **Published** competition is a finished one (milestone 12.8 FR-018),
+so it gets the **Finished** reason of each."""
+
+PUBLISH_REFUSALS: dict[Any, Callable[..., Text]] = {
+    CompetitionStatus.UPCOMING: lambda name: _(
+        "“%(name)s” has not started yet, so it has no results to publish.", name=name
+    ),
+    CompetitionStatus.IN_PROGRESS: lambda name: _(
+        "“%(name)s” is still in progress. Finish it and grade its answers before publishing its "
+        "results.",
+        name=name,
+    ),
+    CompetitionStatus.CANCELLED: lambda name: _(
+        "“%(name)s” has been cancelled, so it has no results to publish.", name=name
+    ),
+    CompetitionStatus.PUBLISHED: lambda name: _(
+        "The results of “%(name)s” are already published.", name=name
+    ),
+}
+"""The reason of each publish refusal, by the competition's status (milestone 12.8 http-routes.md
+§2): every status but Finished."""
 
 COMPETITION_NOTICE_PURPOSE = "competition-notice"
 COMPETITION_NOTICE_TTL = timedelta(minutes=10)
@@ -142,6 +171,7 @@ NOTICES: dict[Any, Callable[..., Text]] = {
     "saved": lambda name: _("Competition “%(name)s” was saved", name=name),
     "cancelled": lambda name: _("Competition “%(name)s” was cancelled", name=name),
     "finished": lambda name: _("Competition “%(name)s” was finished", name=name),
+    "published": lambda name: _("The results of “%(name)s” were published", name=name),
 }
 """The success notice of each outcome; the name is read when the list is shown."""
 
@@ -434,6 +464,19 @@ def _finish_refused(
 ) -> HTMLResponse:
     question = _("Finish competition “%(name)s”?", name=competition.name)
     reason = FINISH_REFUSALS[status](name=competition.name)
+    return _refused(request, question, reason, subject, filter_status, page, competition.id)
+
+
+def _publish_refused(
+    request: Request,
+    competition: CompetitionView,
+    status: CompetitionStatus,
+    subject: Subject,
+    filter_status: CompetitionStatus | None,
+    page: int,
+) -> HTMLResponse:
+    question = _("Publish the results of “%(name)s”?", name=competition.name)
+    reason = PUBLISH_REFUSALS[status](name=competition.name)
     return _refused(request, question, reason, subject, filter_status, page, competition.id)
 
 
@@ -813,6 +856,134 @@ def finish_competition_action(
             request, competition, refused.status, selected, status_filter, return_page
         )
     notice = _notice_token(request, competition_id, "finished")
+    return redirect(
+        list_path(selected.id, status_filter, landing.page, landing.competition_id, notice)
+    )
+
+
+# ---------------------------------------------------------------------------------------------
+# Publishing the results (milestone 12.8 http-routes.md §1–§2)
+# ---------------------------------------------------------------------------------------------
+
+
+def _publish_page(
+    request: Request,
+    competition: CompetitionView,
+    subject: Subject,
+    filter_status: CompetitionStatus | None,
+    page: int,
+    progress: GradingProgress,
+    status_code: int = 200,
+) -> HTMLResponse:
+    """The confirmation, ready when every team is fully graded, blocked otherwise.
+
+    **Grade the remaining teams** is built here from `list_query` and the literal
+    `show=ungraded`, never by importing `teacher_grades`: that module imports
+    `teacher_competition_entries`, which imports this one, so the import would be circular. The
+    parameters are the ones `teacher_competition_entries.address` writes (`subject`, `status`,
+    `page`, then `show`), so the Grades page reads the same list context and its back link returns
+    to this list page; `tests/integration/test_teacher_results.py` checks that the two agree."""
+    assert subject.id is not None
+    query = list_query(subject.id, filter_status, page)
+    return render_teacher(
+        request,
+        "pages/teacher/competition_publish.html",
+        TAB,
+        {
+            "competition": competition,
+            "subject": subject,
+            "progress": progress,
+            "status_value": filter_status.value if filter_status is not None else "",
+            "page": page,
+            "back": list_path(subject.id, filter_status, page, anchor=competition.id),
+            "grade_remaining": (
+                f"/teacher/competitions/{competition.id}/grades?{query}&show=ungraded"
+            ),
+        },
+        status_code=status_code,
+    )
+
+
+@router.get("/{competition_id:int}/publish", response_class=HTMLResponse)
+@allow_roles(Role.TEACHER)
+def publish_results_page(
+    request: Request,
+    session: SessionDep,
+    competition_id: int,
+    subject: str | None = Query(None),
+    status: str | None = Query(None),
+    page: str | None = Query(None),
+) -> HTMLResponse:
+    """The confirmation, naming the competition, its subject and its start, with its badge and
+    the grading progress (FR-007): a primary **Publish results** and **Keep unpublished** when
+    every team is fully graded, else the blocked state (FR-012); the refusal for a competition
+    that is not Finished (FR-015). Opening it changes nothing."""
+    require_manage(request, session)
+    selected = offered_subject(offered_subjects(session), subject)
+    if selected is None:
+        return not_found(request, SUBJECT_NOT_FOUND)
+    assert selected.id is not None
+    competition = find_competition(session, competition_id, selected)
+    if competition is None:
+        return not_found(request, COMPETITION_NOT_FOUND)
+    status_filter, return_page = parse_status_filter(status), parse_page(page)
+    if competition.status in PUBLISH_REFUSALS:
+        return _publish_refused(
+            request, competition, competition.status, selected, status_filter, return_page
+        )
+    progress = grading_progress(session, competition.id)
+    return _publish_page(request, competition, selected, status_filter, return_page, progress)
+
+
+@router.post("/{competition_id:int}/publish", response_class=HTMLResponse)
+@allow_roles(Role.TEACHER)
+def publish_results_action(
+    request: Request,
+    session: SessionDep,
+    competition_id: int,
+    subject: str = Form(""),
+    status: str = Form(""),
+    page: str = Form(""),
+) -> Response:
+    """Publishes the results for good, storing both files, and lands where the competition was in
+    the filtered list, as finishing does (FR-009, FR-010). A competition with a team not fully
+    graded gets the blocked confirmation again, 409, and nothing changes (FR-013)."""
+    require_manage(request, session)
+    selected = offered_subject(offered_subjects(session), subject)
+    if selected is None:
+        return not_found(request, SUBJECT_NOT_FOUND)
+    assert selected.id is not None
+    competition = find_competition(session, competition_id, selected)
+    if competition is None:
+        return not_found(request, COMPETITION_NOT_FOUND)
+    status_filter, return_page = parse_status_filter(status), parse_page(page)
+    if competition.status in PUBLISH_REFUSALS:
+        return _publish_refused(
+            request, competition, competition.status, selected, status_filter, return_page
+        )
+    try:
+        landing = publish_results(
+            session, teacher_id(request), competition_id, selected.id, status_filter
+        )
+    except ManageRequired:
+        raise AccessDenied(Role.TEACHER) from None
+    except CompetitionNotFound:
+        return not_found(request, COMPETITION_NOT_FOUND)
+    except NotPublishable as refused:
+        return _publish_refused(
+            request, competition, refused.status, selected, status_filter, return_page
+        )
+    except NotFullyGraded as refused:
+        return _publish_page(
+            request,
+            competition,
+            selected,
+            status_filter,
+            return_page,
+            refused.progress,
+            status_code=409,
+        )
+    notice = _notice_token(request, competition_id, "published")
     return redirect(
         list_path(selected.id, status_filter, landing.page, landing.competition_id, notice)
     )

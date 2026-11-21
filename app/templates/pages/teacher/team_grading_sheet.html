@@ -4,7 +4,8 @@
     the error summary after a refused save, the notice after a save, then every question of the
     competition in the `grading_sheet`, with its reference answer, saved at once. A competition with
     no questions shows its empty state; a team with no answers shows every question with "Not
-    answered" and no form. -#}
+    answered" and no form. On a Published competition (milestone 12.8 FR-021) the sheet is
+    read-only, with the note saying why, each grade as text and no Save grades. -#}
 {% from "components/frame.html" import back_link, page_heading %}
 {% from "components/details.html" import details_list %}
 {% from "components/feedback.html" import empty_state, notice as notice_box %}
@@ -27,6 +28,10 @@
 {% if sheet.count.answered == 0 %}
 <p>{{ _("“%(team)s” gave no answers, so there is nothing to grade", team=sheet.team_name) }}</p>
 {% endif %}
+{% if read_only %}
+{{ grading_sheet(items, action, hidden, read_only=True, note=published_note) }}
+{% else %}
 {{ grading_sheet(items, action, hidden) }}
+{% endif %}
 {% endif %}
 {% endblock %}

@@ -105,6 +105,9 @@ ANSWER_REFUSALS: dict[Any, Callable[..., Text]] = {
     CompetitionStatus.FINISHED: lambda name: _(
         "“%(name)s” has finished, so its answers can no longer be entered.", name=name
     ),
+    CompetitionStatus.PUBLISHED: lambda name: _(
+        "“%(name)s” has finished, so its answers can no longer be entered.", name=name
+    ),
 }
 """The reason of the refusal, by the competition's status (http-routes.md §Refusal)."""
 
@@ -231,8 +234,13 @@ def _open(
     return context, competition
 
 
-_PAGE_STATUSES = (CompetitionStatus.IN_PROGRESS, CompetitionStatus.FINISHED)
-"""The statuses whose Answers pages open (milestone 12.4 FR-041)."""
+_PAGE_STATUSES = (
+    CompetitionStatus.IN_PROGRESS,
+    CompetitionStatus.FINISHED,
+    CompetitionStatus.PUBLISHED,
+)
+"""The statuses whose Answers pages open (milestone 12.4 FR-041); a Published competition is a
+finished one (milestone 12.8 FR-019)."""
 
 
 # ---------------------------------------------------------------------------------------------
@@ -259,7 +267,7 @@ def competition_answers_page(
     if isinstance(opened, HTMLResponse):
         return opened
     context, competition = opened
-    finished = competition.status is CompetitionStatus.FINISHED
+    finished = competition.status.has_finished
     listing = answer_team_page(
         session, teacher_id(request), competition.id, parse_page(p), finished=finished
     )
@@ -425,7 +433,7 @@ def team_answer_sheet_page(
     if team_id > MAX_ID:
         return not_found(request, TEAM_NOT_FOUND)
     teacher = teacher_id(request)
-    finished = competition.status is CompetitionStatus.FINISHED
+    finished = competition.status.has_finished
     try:
         sheet = answer_sheet(session, teacher, competition.id, team_id, finished=finished)
     except TeamNotFound:

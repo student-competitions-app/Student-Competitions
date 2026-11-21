@@ -909,7 +909,7 @@ and the whole suite on both engines.
   - the full flow as Olena and Taras, including the language switch, the download with no loading
     bar, phone width and both themes;
   - fix what it finds.
-- [ ] T059 On delivery (after T050 and the PR's merge): move 12.8 to **Delivered** in `docs/requirements/milestones.md` with the spec link and a one-paragraph summary in the style of 12.4's and 12.7's entries.
+- [X] T059 On delivery (after T050 and the PR's merge): move 12.8 to **Delivered** in `docs/requirements/milestones.md` with the spec link and a one-paragraph summary in the style of 12.4's and 12.7's entries.
 
 ---
 

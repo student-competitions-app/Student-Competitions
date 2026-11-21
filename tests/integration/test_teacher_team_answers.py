@@ -29,7 +29,7 @@ from sqlalchemy import Engine
 from sqlmodel import Session, select
 
 from app.main import app
-from app.models import AccessLevel, Role, Team, TeamAnswer
+from app.models import AccessLevel, Competition, Role, Team, TeamAnswer
 from app.schemas.teachers import MAX_ID
 from app.services.competitions import cancel_competition, finish_competition
 from app.services.institutions import set_institution_active
@@ -1294,3 +1294,63 @@ def test_a_finished_competition_of_a_deactivated_subject_stays_readable(
     assert "Score: 17" in html.text(sheet, "main")
     for url in (answers_url(scene), sheet_url(scene)):
         not_found(scene.taras.get(url), COMPETITION_NOT_FOUND)
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.8: the Answers pages of a published competition (specs/012.8-publishing-results
+# US4-3, FR-019, FR-022)
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def published(scene: Scene, finished: Finished) -> Finished:
+    """The same "Autumn round", now Published (its results published directly)."""
+    with Session(scene.engine) as session:
+        competition = session.get(Competition, finished.competition)
+        assert competition is not None
+        competition.published_at = competition.stopped_at
+        session.add(competition)
+        session.commit()
+    return finished
+
+
+def test_the_answers_pages_of_a_published_competition(scene: Scene, published: Finished) -> None:
+    """As on a Finished competition: the teams of the teacher's institutions with **Answered**,
+    **Graded**, **Score** and **View answers**; the read-only sheet with the grades and score."""
+    body = get(scene.taras, answers_url(scene, competition=published.competition))
+    assert ("Status", "Published") in html.details(body)
+    listed = {r["Team"]: r for g in region_groups(body) for r in g.rows}
+    assert (listed["Comets"]["Graded"], listed["Comets"]["Score"]) == ("3 of 4", "17")
+    assert actions(body) == {"Comets": "View answers", "Lions": "View answers"}
+    assert "Enter answers" not in body
+    sheet = get(scene.taras, sheet_url(scene, competition=published.competition))
+    text = html.text(sheet, "main")
+    assert "Score: 17" in text and "Graded 3 of 4 answers" in text
+    for absent in ("<form", "<textarea", "<button", "Hidden reference"):
+        assert absent not in html.region(sheet, "main"), absent
+
+
+def test_a_save_on_a_published_competition_is_refused(scene: Scene, published: Finished) -> None:
+    """FR-019: the refusal of a finished competition; nothing changes."""
+    before = snapshot(scene.engine)
+    refused(
+        post_answers(
+            scene, scene.taras, {published.copies[0]: "After"}, competition=published.competition
+        ),
+        "Autumn round",
+        "has finished, so its answers can no longer be entered.",
+        scene,
+        published.competition,
+    )
+    assert snapshot(scene.engine) == before
+
+
+def test_a_published_competition_of_a_deactivated_subject_stays_readable(
+    scene: Scene, published: Finished
+) -> None:
+    with Session(scene.engine) as session:
+        set_subject_active(session, scene.chemistry, False)
+    body = get(scene.taras, answers_url(scene, competition=published.competition))
+    assert actions(body) == {"Comets": "View answers", "Lions": "View answers"}
+    sheet = get(scene.taras, sheet_url(scene, competition=published.competition))
+    assert "Score: 17" in html.text(sheet, "main")

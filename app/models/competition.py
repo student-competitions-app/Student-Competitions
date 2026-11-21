@@ -1,11 +1,12 @@
 """The `competitions` table: a named event of one subject with a start, which teams of students
 take part in; a competition's questions and teams (milestone 12.2); the teams' answers (milestone
-12.3); and their grades (milestone 12.4).
+12.3); their grades (milestone 12.4); and its published results files (milestone 12.8).
 
 See specs/012.1-teacher-competitions/data-model.md §1 and research R1–R3,
 specs/012.2-competition-questions-teams/data-model.md §1–§2 and research R1,
 specs/012.3-team-answers/data-model.md §1 and research R1–R2, and
-specs/012.4-finish-and-grade/data-model.md §1–§2 and research R1–R2.
+specs/012.4-finish-and-grade/data-model.md §1–§2 and research R1–R2, and
+specs/012.8-publishing-results/data-model.md §1–§2 and research R3.
 """
 
 from datetime import datetime
@@ -15,6 +16,7 @@ from sqlalchemy import (
     Column,
     ForeignKeyConstraint,
     Index,
+    LargeBinary,
     SmallInteger,
     String,
     UniqueConstraint,
@@ -35,8 +37,11 @@ class Competition(SQLModel, table=True):
     """A competition of one subject.
 
     The status is derived, never stored (`app.services.competitions.status_of`): **Cancelled**
-    once `cancelled_at` is set, **Finished** once `stopped_at` is set, otherwise **Upcoming**
-    before `starts_at` and **In progress** from it. Nothing is written when a start passes.
+    once `cancelled_at` is set, **Published** once `published_at` is set (milestone 12.8),
+    **Finished** once `stopped_at` is set, otherwise **Upcoming** before `starts_at` and **In
+    progress** from it. Nothing is written when a start passes. A published competition is a
+    finished one whose results are published: `published_after_finish` keeps `published_at` from
+    being set without `stopped_at`.
 
     A competition is **live** ⇔ `cancelled_at IS NULL AND stopped_at IS NULL` (Upcoming or In
     progress). Names are unique among the live competitions of a subject, ignoring case, through
@@ -45,7 +50,8 @@ class Competition(SQLModel, table=True):
     cancelled and finished.
 
     Who created or changed it is not stored (FR-001), so it is not personal data. `stopped_at` is
-    written once by `app.services.competitions.finish_competition` (milestone 12.4).
+    written once by `app.services.competitions.finish_competition` (milestone 12.4), and
+    `published_at` once by `app.services.results.publish_results` (milestone 12.8).
     Competitions are never deleted.
     """
 
@@ -60,6 +66,9 @@ class Competition(SQLModel, table=True):
             postgresql_where=text(LIVE),
         ),
         CheckConstraint("cancelled_at IS NULL OR stopped_at IS NULL", name="one_end"),
+        CheckConstraint(
+            "published_at IS NULL OR stopped_at IS NOT NULL", name="published_after_finish"
+        ),
     )
 
     id: int | None = Field(default=None, primary_key=True)
@@ -79,6 +88,10 @@ class Competition(SQLModel, table=True):
     stopped_at: datetime | None = Field(default=None, sa_type=UTCDateTime, nullable=True)
     """Set once by `app.services.competitions.finish_competition` (milestone 12.4), only while the
     competition is In progress; never cleared (FR-008)."""
+    published_at: datetime | None = Field(default=None, sa_type=UTCDateTime, nullable=True)
+    """Set once by `app.services.results.publish_results` (milestone 12.8), only while the
+    competition is Finished and every one of its teams is fully graded, in the transaction that
+    stores its two results files; never cleared."""
     created_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
     """Set once at creation; never changes."""
     updated_at: datetime = Field(default_factory=utc_now, sa_type=UTCDateTime, nullable=False)
@@ -153,7 +166,8 @@ class TeamAnswer(SQLModel, table=True):
     of its rows. Neither who saved it nor when is stored (FR-023): it belongs to the team and is
     not personal data. Its writers are `app.services.team_answers.save_answers` (insert, update,
     delete; `text` only), only while the competition is In progress;
-    `app.services.grades.save_grades` (`grade` only, milestone 12.4), only while it is Finished;
+    `app.services.grades.save_grades` (`grade` only, milestone 12.4), only while it is Finished,
+    so a grade never changes once the competition is published (milestone 12.8);
     and `app.services.teams.delete_team`, which deletes a deleted team's answers in every
     competition that is not finished, where no grade exists."""
 
@@ -182,5 +196,30 @@ class TeamAnswer(SQLModel, table=True):
     empty: an emptied answer deletes the row."""
     grade: int | None = Field(default=None, sa_type=SmallInteger, nullable=True)
     """`NULL`: not graded. A whole number 0–10 (`grade_range`), written only by
-    `app.services.grades.save_grades`, only while the competition is Finished. Who graded it, or
-    when, is not stored."""
+    `app.services.grades.save_grades`, only while the competition is Finished (never once it is
+    published, milestone 12.8). Who graded it, or when, is not stored."""
+
+
+class CompetitionResultsFile(SQLModel, table=True):
+    """The stored snapshot of a published competition's results in one language (milestone 12.8,
+    data-model.md §2): the PDF exactly as it was made at publishing. A published competition has
+    exactly two, `uk` and `en`, inserted only by `app.services.results.publish_results` in the
+    transaction that sets `competitions.published_at`; an unpublished one has none. A row is never
+    updated or deleted, so every download hands out the file as it was made (constitution
+    Principle VII). A separate table, so listing competitions never reads a file. Not personal
+    data: it holds team, institution and region names and scores."""
+
+    __tablename__ = "competition_results_files"
+    __table_args__ = (
+        CheckConstraint("language IN ('uk', 'en')", name="results_file_language"),
+        CheckConstraint("length(content) > 0", name="results_file_not_empty"),
+    )
+
+    competition_id: int = Field(foreign_key="competitions.id", primary_key=True)
+    """No `ON DELETE`: competitions are never deleted. The primary key's leading column serves
+    the lookup by competition."""
+    language: str = Field(sa_column=Column(String(2), primary_key=True))
+    """`uk` or `en` (`app.core.i18n.Language`). With `competition_id`, the primary key: at most one
+    file per language, so a lost race can never store a second pair."""
+    content: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
+    """The PDF as rendered at publishing; never written again."""

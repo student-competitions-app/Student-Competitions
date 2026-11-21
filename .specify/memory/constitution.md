@@ -1,13 +1,24 @@
 <!--
 Sync Impact Report
-- Version change: 2.3.0 → 2.4.0 (MINOR: a new stack category, Localisation)
-- Modified principles: none
-- Added sections: none; a Localisation row in Technology & Architecture Constraints →
-  Technology Stack (gettext + Babel through jinja2.ext.i18n; Ukrainian by default, English as the
-  alternative; milestone 12.5)
+- Version change: 2.4.0 → 2.5.0 (MINOR: materially expanded guidance on publishing results,
+  a new stack category, Results files)
+- Modified principles:
+  - IV. Role-Based Access & Data Scoping: publishing results is a right of teachers allowed to
+    manage competitions; grading ends when results are published, and grades never change after;
+    published final scores are open information for every teacher (answers and per-question
+    grades stay scoped); deactivated-subject rule follows
+  - VI. Trustworthy LLM Evaluation: no hand adjustment and no evaluation after publishing
+  - VII. Data Integrity & Migrations: a fifth derived status, Published (a finished competition
+    whose results are published; every finished rule applies, grades frozen); published results
+    are stored PDF snapshots, the official confirmation, never remade, served as stored
+- Added sections: none; a "Results files" row in Technology Stack and a "PDF library and font"
+  row in Open stack decisions (milestone 12.8)
 - Removed sections: none
+- Corrected: milestone numbers follow docs/requirements/milestones.md (LLM evaluation 13,
+  Playwright and the React stretch goal 15)
 - Templates: plan/spec/tasks templates read the constitution at runtime; no change needed
-- Related docs: docs/requirements/technical-requirements.md gains the same stack row
+- Related docs: product-requirements.md, technical-requirements.md and milestones.md (12.8, 13,
+  14) updated in the same change
 - Follow-up TODOs: none
 -->
 # Student Competitions Constitution
@@ -38,7 +49,7 @@ The UI is server-rendered with Jinja2, made interactive with HTMX and styled wit
 - Pages MUST be rendered on the server; interactivity MUST use HTMX partials
   (`app/templates/partials/`) returning HTML fragments, not JSON consumed by client code.
 - Custom JavaScript MUST be minimal and MUST NOT require a build step (no bundlers, no SPA
-  framework). The optional React migration in milestone 16 requires a constitution amendment.
+  framework). The optional React migration in milestone 15 requires a constitution amendment.
 - Every feature MUST use the stack defined in Technology & Architecture Constraints →
   Technology Stack. Adding a new runtime dependency MUST be justified in the feature's `plan.md`.
 - Prefer the simplest design that satisfies the spec (YAGNI); abstractions MUST have at least
@@ -61,7 +72,7 @@ students from year 1 to university, and stop each milestone from inventing its o
   acceptance scenarios.
 - Tests live in `tests/unit/` (pure logic, services), `tests/integration/` (HTTP routes via
   the FastAPI test client, database, auth flows) and `tests/e2e/` (Playwright, from
-  milestone 16).
+  milestone 15).
 - Every protected route MUST have tests proving both allowed and denied access per role.
 - Tests MUST NOT call real external services: the LLM provider and the email sender MUST be
   replaced by fakes/stubs in the test suite.
@@ -83,13 +94,24 @@ The application has three roles — student, teacher, administrator — with rig
   to; only administrators can link teachers to institutions and edit the institution list.
 - Competition rights MUST follow the product rules: every teacher can read all competitions;
   only teachers whom an administrator allowed to manage competitions can create, edit, stop,
-  cancel or grade one, and each of them can manage every competition, whoever created it (there
-  are no per-competition rights); only upcoming competitions are editable; any competition that is
-  not finished can be cancelled, and a cancelled competition never changes again.
+  cancel, grade or publish the results of one, and each of them can manage every competition,
+  whoever created it (there are no per-competition rights); only upcoming competitions are
+  editable; any competition that is not finished can be cancelled, and a cancelled competition
+  never changes again.
 - Grading MUST follow the product rules: only a teacher allowed to manage competitions grades
-  answers, only once the competition is finished, and the answers of every team in it, whatever
-  its educational institution. Grading MUST add or change grades only, never the competition's
-  questions, teams or answers.
+  answers, only once the competition is finished and until its results are published, and the
+  answers of every team in it, whatever its educational institution. Grading MUST add or change
+  grades only, never the competition's questions, teams or answers.
+- Publishing results MUST follow the product rules: only a teacher allowed to manage competitions
+  publishes, only the results of a finished competition every team of which is fully graded.
+  Publishing is permanent: there is no unpublish, and from then on the competition's grades MUST
+  never change; every grade change sent for it MUST be refused server-side, whoever or whatever
+  (a teacher or the LLM evaluation) sends it.
+- Published results are open information, like the results of a school competition: once a
+  competition's results are published, every teacher MUST be able to see the final score of every
+  one of its teams, with the team's name, educational institution and region, whatever their own
+  links to institutions. Only these are open; a team's answers and their per-question grades keep
+  the scoping of the rules below.
 - Deleting a team is the one exception to these rules: the deletion, done by a teacher with
   Write access to the team's institution, MUST take the team out of every competition that is
   not finished (upcoming, in progress and cancelled), with or without the right to manage
@@ -98,7 +120,7 @@ The application has three roles — student, teacher, administrator — with rig
 - Competitions of a deactivated subject MUST be hidden and inaccessible unless they are
   finished; finished ones stay available, so their results can be reviewed. They are read-only
   for their participants: no answer is entered or changed. Their existing answers can still be
-  graded.
+  graded until their results are published, and their published results stay available.
 - Answers belong to a team, never to a single student: one text answer per question per team.
   Students MUST only access their own profile (read-only), the competitions their teams take
   part in, and their teams' answers and results.
@@ -106,11 +128,15 @@ The application has three roles — student, teacher, administrator — with rig
   educational institution; with Read access they see the team's answers, grades and scores
   read-only and MUST never enter or change them. A teacher sees the answers, grades and scores of
   the teams of their own institutions only; a teacher allowed to manage competitions also sees
-  those of every team of a competition they grade.
+  those of every team of a competition they grade. The one exception is the published results
+  (above): the final scores of a published competition are open to every teacher.
 - The administrator list MUST come from deployment configuration, not from the UI.
 
 **Rationale**: The system holds personal data of students and competition results; a single
-missing check leaks data or allows score tampering.
+missing check leaks data or allows score tampering. Final scores are not personal data and are
+public by nature once announced, while answers and per-question grades are the institution's own
+working material. Results that could still change after being announced would invite complaints
+from participants, so publishing freezes them for good.
 
 ### V. Secure Authentication & Secrets
 
@@ -137,8 +163,10 @@ these rules close the common gaps.
   grade, and MUST account for the level of detail, with the question text and the teacher's
   reference answer as inputs.
 - The proposed grade is the foundation of the answer's grade, never the last word: a teacher
-  allowed to manage competitions MUST be able to adjust it by hand, and the stored grade,
-  proposed or adjusted, is the one that counts.
+  allowed to manage competitions MUST be able to adjust it by hand until the competition's
+  results are published, and the stored grade, proposed or adjusted, is the one that counts.
+  Evaluation MUST NOT run on, or change a grade of, a competition whose results are published
+  (Principle IV).
 - Answers (a team's answers, entered by its students or by a teacher) MUST be treated as
   untrusted input: clearly delimited in the prompt and never able to alter scoring
   instructions (prompt-injection resistance).
@@ -163,18 +191,33 @@ provider outages and manipulation.
   time zone MUST be converted to UTC on the server before they are stored or compared, and
   converted back only for display.
 - A competition has a start time and no duration: it is upcoming before its start, in progress
-  from its start until a teacher stops it, then finished; or cancelled. Its status MUST be
-  derived on the server from the stored start and the stored stop or cancel, and enforced
+  from its start until a teacher stops it, then finished, and published once its results are
+  published; or cancelled. Its status MUST be derived on the server from the stored start, the
+  stored stop or cancel, and the stored publishing, and enforced
   server-side on every read of questions and every answer submission: students read questions
   only while the competition is in progress, and answers are entered, by students or teachers,
-  only while it is in progress; answers are graded only once it is finished.
+  only while it is in progress; answers are graded only once it is finished and until its
+  results are published. Publishing gives a finished competition the status **Published**,
+  derived from its stored publishing. A published competition is a finished competition whose
+  results are published: every rule for finished competitions applies to it as well, except that
+  its grades never change (Principle IV).
 - Results MUST be persisted: the grade of every answer, and the best answers, are stored. A
   team's score, the sum of its grades, and its place are calculated from the stored grades
-  whenever they are shown, and are not stored apart from them. Deletions MUST NOT silently orphan
-  or destroy historical competition results.
+  whenever they are shown in the application's pages, and are not stored apart from them.
+  Deletions MUST NOT silently orphan or destroy historical competition results.
+- The published results are the exception: they MUST be stored as snapshots. When a
+  competition's results are published, the application MUST make its results files (PDF, one per
+  supported language) once, and store them in the database in the same transaction that
+  publishes it. The snapshots are the official confirmation of the competition's results: they
+  MUST never be made again, changed or deleted, a later rename, deactivation or deletion of a
+  region, institution or team MUST NOT change them, and every download MUST serve the stored file
+  as it is, without calculating anything again. Since the grades are frozen at publishing
+  (Principle IV), the snapshots and the scores calculated from the grades always agree.
 
 **Rationale**: Competition results are the product's core record; they must survive restarts,
-deployments and database engine changes.
+deployments and database engine changes. A stored snapshot confirms the published results
+whatever happens to the data later, and serving it as stored spends no computation on a
+download.
 
 ## Technology & Architecture Constraints
 
@@ -203,8 +246,9 @@ column shows when each component enters the codebase.
 | Authentication | Email one-time code (OTP) + server-side sessions in a signed cookie | No passwords, no third-party identity provider (Principle V). | 4 |
 | Authorization | Roles: student / teacher / administrator; administrator list from deploy-time configuration | Enforced server-side, deny-by-default (Principle IV). | 5 |
 | Localisation | gettext catalogues managed with Babel, through Jinja2's `jinja2.ext.i18n` | Ukrainian is the default language of the interface, the consent texts and every other user-facing communication; English is the alternative, chosen per browser. Every user-facing message goes through the catalogues; what people enter is never translated. Babel is the only localisation dependency. | 12.5 |
-| Answer evaluation | LLM API (Claude or OpenAI) with structured output | Behind one provider-agnostic service; provider chosen by configuration (Principle VI). | 14 |
-| End-to-end tests | Playwright | Added "later", as part of polish and hardening; lives in `tests/e2e/`. | 16 |
+| Results files | PDF made on the server by one Python library | Made once, at publishing, and stored in the database (Principle VII); fonts embedded so Cyrillic renders everywhere; no external service. The library is a runtime dependency justified in milestone 12.8's `plan.md`. | 12.8 |
+| Answer evaluation | LLM API (Claude or OpenAI) with structured output | Behind one provider-agnostic service; provider chosen by configuration (Principle VI). | 13 |
+| End-to-end tests | Playwright | Added "later", as part of polish and hardening; lives in `tests/e2e/`. | 15 |
 | Development process | GitHub Spec Kit | Every feature goes through the Spec Kit flow (see Development Workflow). | all |
 
 **Stack rules**:
@@ -216,7 +260,7 @@ column shows when each component enters the codebase.
   application. External brokers or workers (e.g. Redis, Celery) are not part of the stack.
 - Server-side session and OTP state MUST be stored in the application database, not in new
   infrastructure.
-- The milestone-16 stretch goal of moving part of the UI to React is **not** approved. Adopting
+- The milestone-15 stretch goal of moving part of the UI to React is **not** approved. Adopting
   it requires a constitution amendment (Principle II).
 - Choosing between alternatives the table already lists (Render / Railway / Fly.io;
   Claude / OpenAI) needs no amendment, but the choice MUST be recorded in the relevant
@@ -231,7 +275,8 @@ decided and recorded in the `plan.md` of the named milestone, within the rules a
 | Python version (pinned via `.python-version` / `requires-python`) | 1 |
 | Hosting provider (Render unless justified) and managed PostgreSQL offering | 2 |
 | Email delivery service (SMTP or transactional-email API) for sending OTP codes | 4 |
-| LLM provider and model for answer evaluation | 14 |
+| PDF library and the font embedded in the results files | 12.8 |
+| LLM provider and model for answer evaluation | 13 |
 
 ### Application Layout
 
@@ -295,4 +340,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 2.4.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-14
+**Version**: 2.5.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-21

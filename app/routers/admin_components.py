@@ -128,7 +128,7 @@ LONG_COMPETITION_NAME = (
     " done this past winter"
 )
 """A 200-character competition name, the longest allowed, to show the wrap in a menu row."""
-COMPETITION_STATUSES = ("upcoming", "in_progress", "finished", "cancelled")
+COMPETITION_STATUSES = ("upcoming", "in_progress", "finished", "published", "cancelled")
 SUBJECT_GROUPS = (("Deactivated subjects", [(7, "Astronomy")]),)
 """A subject list's option group, as the Competitions tab offers deactivated subjects."""
 DATE_TIME_VALUES = {
@@ -238,6 +238,15 @@ READ_ONLY_ITEMS = tuple(
 )
 """The read-only answers of the same questions: question 1 graded 7, question 2 not answered,
 question 3 answered and not graded yet."""
+PUBLISHED_ITEMS = tuple(
+    {**item, "grade": grade, "error": None}
+    for item, grade in zip(GRADING_SHEET_ITEMS, (7, None, 10), strict=True)
+)
+"""The grading sheet of a published competition (milestone 12.8): the same questions, question 1
+graded 7, question 2 not answered, question 3 graded 10, every grade shown as text."""
+PUBLISHED_NOTE = (
+    "The results of “Spring round” are published, so its grades can no longer be changed."
+)
 FILTER_LINKS = (
     ("All teams", "#filter-links", True),
     ("Ungraded only", "#filter-links", False),
@@ -314,6 +323,8 @@ def _samples() -> dict[str, Any]:
         "grading_sheet_errors": GRADING_SHEET_ERRORS,
         "grading_sheet_order": GRADING_SHEET_ORDER,
         "read_only_items": READ_ONLY_ITEMS,
+        "published_items": PUBLISHED_ITEMS,
+        "published_note": PUBLISHED_NOTE,
         "filter_links": FILTER_LINKS,
     }
 

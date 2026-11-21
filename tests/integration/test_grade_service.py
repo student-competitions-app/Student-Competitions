@@ -46,6 +46,7 @@ from app.services.grades import (
     GradeFilter,
     GradeSaveResult,
     GradingClosed,
+    GradingProgress,
     InvalidGrades,
     count_of,
     parse_grade_filter,
@@ -369,6 +370,39 @@ def test_no_teams(scene: Scene) -> None:
         assert (listing.groups, listing.teams_total, listing.teams_graded) == ([], 0, 0)
 
 
+def progress(s: Scene, competition: int | None = None) -> GradingProgress:
+    with Session(s.engine) as session:
+        return grades.grading_progress(
+            session, s.competition if competition is None else competition
+        )
+
+
+def test_the_grading_progress(scene: Scene) -> None:
+    """Milestone 12.8 FR-011: the fully graded teams of all the competition's teams, as the
+    Grades page counts them; a team with no answers counts as graded; a deleted team and teams of
+    a deactivated institution or region count."""
+    answer(scene, scene.comets, scene.copies[0], grade=6)
+    answer(scene, scene.comets, scene.copies[1])
+    answer(scene, scene.lions, scene.copies[0], grade=3)
+    assert progress(scene) == GradingProgress(graded=4, total=5)
+    assert not progress(scene).complete
+    assert (page(scene).teams_graded, page(scene).teams_total) == (4, 5)
+    answer(scene, scene.rockets, scene.copies[0])
+    assert progress(scene) == GradingProgress(graded=3, total=5)
+    grade_answer(scene.engine, scene.competition, scene.comets, scene.copies[1], 8)
+    grade_answer(scene.engine, scene.competition, scene.rockets, scene.copies[0], 0)
+    assert progress(scene) == GradingProgress(graded=5, total=5)
+    assert progress(scene).complete
+
+
+def test_no_teams_is_complete_progress(scene: Scene) -> None:
+    empty = make_competition(
+        scene.engine, scene.chemistry, "Empty", starts_at=STARTED, stopped=True
+    )
+    assert progress(scene, empty) == GradingProgress(graded=0, total=0)
+    assert progress(scene, empty).complete
+
+
 def test_twenty_five_teams_page_as_ten_ten_five(scene: Scene) -> None:
     """US3-5, FR-017: region totals across pages; `team_page_of` under each filter."""
     competition = make_competition(
@@ -557,6 +591,28 @@ def test_grading_needs_a_finished_competition(
         with pytest.raises(GradingClosed) as refused:
             save(scene, {copy: "5"}, competition=competition, team=team)
         assert refused.value.status is status
+    assert snapshot(scene.engine) == before
+    assert not [r for r in caplog.records if r.getMessage().startswith("Grades")]
+
+
+def test_a_published_competition_is_never_graded(
+    scene: Scene, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Milestone 12.8 FR-021: its grades are frozen; a save is refused with the status and changes
+    nothing."""
+    answer(scene, scene.comets, scene.copies[0], grade=6)
+    with Session(scene.engine) as session:
+        session.exec(
+            text("UPDATE competitions SET published_at = stopped_at WHERE id = :id"),
+            params={"id": scene.competition},
+        )
+        session.commit()
+    before = snapshot(scene.engine)
+    caplog.set_level(logging.INFO, logger="uvicorn.error")
+    for raw in ({scene.copies[0]: "9"}, {scene.copies[0]: ""}):
+        with pytest.raises(GradingClosed) as refused:
+            save(scene, raw)
+        assert refused.value.status is CompetitionStatus.PUBLISHED
     assert snapshot(scene.engine) == before
     assert not [r for r in caplog.records if r.getMessage().startswith("Grades")]
 

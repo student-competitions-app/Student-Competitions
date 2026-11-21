@@ -1,0 +1,32 @@
+{% extends "layouts/teacher.html" %}
+{#- The publish confirmation (specs/012.8-publishing-results/contracts/http-routes.md §1–§2): it
+    names the competition, its subject and its start in the browser's zone, and shows its status
+    badge and the grading progress counted as on the Grades page. Publishing cannot be undone but
+    is the normal next step of the work, so the button is primary, and the link back keeps the
+    results unpublished: Keep unpublished.
+
+    While a team is not fully graded, the confirmation is **blocked** (contracts/components.md §3):
+    the explanation in place of the button, and **Grade the remaining teams** (the Grades page under
+    Ungraded only) before the link back. A publish sent anyway gets this page again, 409. -#}
+{% from "components/frame.html" import back_link %}
+{% from "components/badge.html" import competition_status_badge %}
+{% from "components/confirmation.html" import confirmation %}
+{% from "components/time.html" import local_time with context %}
+
+{% block title %}{{ _("Publish the results of “%(name)s”?", name=competition.name) }} — {{ app_name }}{% endblock %}
+
+{% block teacher_content %}
+{{ back_link(back, _("Back to the competitions")) }}
+{% set question %}{{ _("Publish the results of “%(name)s” of %(subject)s, started %(time)s?", name=competition.name, subject=subject.name, time=local_time(competition.starts_at)) }}{% endset %}
+{% set consequence = _("The results will be published for every teacher as PDF files in Ukrainian and English. Publishing is permanent: the results cannot be unpublished, and the grades can no longer be changed.") %}
+{% set hidden = {"subject": subject.id, "status": status_value, "page": page} %}
+{% if progress.complete %}
+{% call confirmation(question, consequence, "/teacher/competitions/" ~ competition.id ~ "/publish", _("Publish results"), back, hidden=hidden, back_label=_("Keep unpublished"), kind="primary") %}
+<p>{{ competition_status_badge(competition.status) }} {{ ngettext("Graded %(graded)d of %(num)d team", "Graded %(graded)d of %(num)d teams", progress.total, graded=progress.graded) }}</p>
+{% endcall %}
+{% else %}
+{% call confirmation(question, consequence, "/teacher/competitions/" ~ competition.id ~ "/publish", _("Publish results"), back, back_label=_("Keep unpublished"), kind="primary", blocked=_("Every team must be graded before the results can be published."), alternative=(_("Grade the remaining teams"), grade_remaining)) %}
+<p>{{ competition_status_badge(competition.status) }} {{ ngettext("Graded %(graded)d of %(num)d team", "Graded %(graded)d of %(num)d teams", progress.total, graded=progress.graded) }}</p>
+{% endcall %}
+{% endif %}
+{% endblock %}

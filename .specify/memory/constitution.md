@@ -4,9 +4,10 @@ Sync Impact Report
   and on the PDF stack row, for milestone 12.10)
 - Modified principles:
   - IV. Role-Based Access & Data Scoping: the competition-rights rule now excepts a competition's
-    questions; a new rule, a competition's questions are kept back until it starts (only teachers
-    allowed to manage competitions see them before), then every teacher gets their texts without
-    the reference answers as a PDF file for the teams; a new rule, a subject's study materials are
+    questions; a new rule, a competition's questions with their reference answers are seen only by
+    teachers allowed to manage competitions, in every status; nobody else sees them before it
+    starts, and once it starts every teacher gets their texts without the reference answers as a
+    PDF file for the teams; a new rule, a subject's study materials are
     open to every teacher and never hold additional or deleted questions or bank numbers; the
     milestone 12.9 gap exception is removed; rationale extended
 - Modified sections:
@@ -17,8 +18,8 @@ Sync Impact Report
 - Added sections: none
 - Removed sections: none
 - Templates: plan/spec/tasks templates read the constitution at runtime; no change needed
-- Related docs: technical-requirements.md (PDF files row) and milestones.md (12.10) updated in
-  the same change; product-requirements.md already states the 12.10 rules
+- Related docs: technical-requirements.md (PDF files row), milestones.md (12.10) and
+  product-requirements.md (Read access, Additional questions) updated in the same change
 - Follow-up TODOs: none
 -->
 # Student Competitions Constitution
@@ -93,8 +94,7 @@ The application has three roles — student, teacher, administrator — with rig
 - Teachers MUST only see and manage students of the educational institutions they are linked
   to; only administrators can link teachers to institutions and edit the institution list.
 - Competition rights MUST follow the product rules: every teacher can read all competitions,
-  except a competition's questions before it starts and the additional questions, both kept back
-  (below);
+  except a competition's questions and the additional questions, both kept back (below);
   only teachers whom an administrator allowed to manage competitions can create, edit, stop,
   cancel, grade or publish the results of one, and each of them can manage every competition,
   whoever created it (there are no per-competition rights); only upcoming competitions are
@@ -108,12 +108,13 @@ The application has three roles — student, teacher, administrator — with rig
   for good, since it can be added to later competitions. Once a competition that holds it starts, its
   copy is one of that competition's questions, read as the competition's rules allow; the mark
   itself is shown only to teachers allowed to manage competitions.
-- A competition's questions MUST be kept back until it starts: before then they MUST be seen only
-  by teachers allowed to manage competitions, who choose them. No other teacher, administrator or
-  student sees them, or learns which questions the competition holds, on any page or in any
-  response; this is enforced server-side, never only hidden in a template. Once it starts, every
-  teacher can download its question texts, without the reference answers, the bank numbers or the
-  additional mark, as a PDF file to give to the teams.
+- A competition's questions MUST be kept back: with their reference answers they MUST be seen
+  only by teachers allowed to manage competitions, who choose them, in every status of the
+  competition. Before it starts, no other teacher, administrator or student sees them, or learns
+  which questions the competition holds, on any page or in any response; this is enforced
+  server-side, never only hidden in a template. Once it starts, every teacher can download its
+  question texts, without the reference answers, the bank numbers or the additional mark, as a
+  PDF file to give to the teams; that file is the only way other teachers see them.
 - The study materials of a subject are open to every teacher: the questions of its bank with their
   reference answers, as a PDF file to give to the students before competitions. They MUST leave out
   the additional questions and the deleted questions whoever downloads them, a teacher allowed to

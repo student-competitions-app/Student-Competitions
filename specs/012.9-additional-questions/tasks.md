@@ -237,13 +237,17 @@ what is stored and how the list shows each question.
     - `tests/integration/test_grade_service.py:455`;
     - `tests/integration/test_team_answer_service.py:497`;
     - `tests/integration/test_teacher_competition_entries.py:545` and `:1075`;
-    - `app/routers/teacher_questions.py` (passes the parsed value; T015).
+    - `app/routers/teacher_questions.py`: in `update_question_action`, `_, subject = found` becomes
+      `question, subject = found`, and the call passes `is_additional=question.is_additional`. This
+      keeps the stored mark, so the suite stays green until T015 replaces it with the checkbox's
+      value. `create_question_action` needs no change yet, since the argument has a default.
 - [ ] T015 [US1] Read the checkbox in `app/routers/teacher_questions.py` per contracts/http-routes.md §The question bank (depends on T014):
   - **Parameters**: `create_question_action` and `update_question_action` gain
     `additional: str | None = Form(None)`, and `marked = bool(additional)`.
   - **On a 400**: `values = {"text": …, "reference_answer": …, "additional": marked}`.
   - **On success**: `create_question(..., is_additional=marked)` and
-    `update_question(..., is_additional=marked)`.
+    `update_question(..., is_additional=marked)`. This replaces T014's interim
+    `is_additional=question.is_additional`.
   - **Opening the forms**: `new_question_page` sets `"additional": False`; `edit_question_page`
     sets `"additional": question.is_additional`.
   - **Docstring**: the module's "Every teacher reads the bank…" paragraph becomes "Every teacher
@@ -281,6 +285,10 @@ what is stored and how the list shows each question.
   - **Deleted or deactivated subject** (US1-10): edit and save of a deleted question, and of a
     question of a deactivated subject, seeded `additional=True` and sent without the field, answer
     "Question not found" and the stored mark stays true.
+  - **No badge on the two single-question pages** (FR-015): the edit form of a question seeded
+    `additional=True` shows the checked box, and its heading "Edit question <id>" holds no
+    `span.badge`; the page holds no badge reading "Additional". The delete confirmation of the same
+    question reads "Delete question <id>?" and holds no badge.
   - **Ukrainian**: «Додаткове питання», the hint, and «Додаткове» on the badge.
 - [ ] T020 [US1] Update the form contract in `tests/integration/test_form_contract.py` and `tests/integration/form_contract.json` (depends on T016):
   - regenerate with `UPDATE_FORM_CONTRACT=1` for the cases `teacher-question-new`,
@@ -328,21 +336,32 @@ questions, and check the responses, the counts and the page navigation.
       `include_additional=True`, with a comment saying the setting was checked first;
     - `tests/integration/test_question_service.py` (every existing call, `include_additional=True`).
 - [ ] T023 [US2] Add the route tests to `tests/integration/test_teacher_questions.py` (depends on T022, T019):
-  - **Setup**: extend `Scene` with one subject "Astronomy" holding two additional questions only,
-    and mark three Mathematics questions additional through `make_question(..., additional=True)`
-    (add them, or flip three of `maths_ids` with a direct update). Keep the existing tests' counts
-    valid, adjusting the asserted numbers where they count Mathematics.
-  - **The list** (US2-1, US2-2): as `scene.reader` (Write, no setting), Mathematics shows only the
-    other questions. The page navigation's "Questions 1–10 of N" counts them. The raw
-    `response.text` of every page contains no additional question's text, reference answer,
-    `question-<id>`, "Question <id>" or the word "Additional".
+  - **Setup**: leave `Scene` and Mathematics unchanged. About ten existing tests read Mathematics
+    as `scene.reader` and assert exact counts and ids. Add a fixture `kept_back(scene)` beside
+    `scene`, used only by this milestone's tests, which returns a small frozen dataclass `KeptBack`
+    with:
+    - `literature`: a new subject "Literature" with 12 ordinary questions, then 3 additional ones
+      (so the newest question is additional), then 1 additional question deleted
+      (`make_question(..., additional=True, deleted=True)`). The ids are kept as `literature_ids`,
+      `literature_additional` and `literature_deleted`;
+    - `astronomy`: a new subject "Astronomy" with 2 additional questions only;
+    - `read_only`: a client for a new teacher `READ_ONLY` (`make_teacher` with
+      `{institution: AccessLevel.READ}`, no setting);
+    - `unlinked`: a client for a new teacher `UNLINKED` (`make_teacher` with `institutions={}`, no
+      setting).
+    Existing tests do not use the fixture, so their subject lists and counts stay as they are.
+  - **The list** (US2-1, US2-2): as `scene.reader` (Write, no setting), Literature shows the 12
+    ordinary questions only:
+    - "Questions 1–10 of 12" with two pages, and page 2 holds 2;
+    - the raw `response.text` of both pages contains no additional question's text, reference
+      answer, `question-<id>`, "Question <id>" or the word "Additional".
   - **Empty** (US2-3): Astronomy shows the empty state "No questions yet" with no hint and no page
     navigation.
-  - **Past the end** (US2-4): `?page=99` opens the reader's last page.
-  - **Read access, no link** (US2-5): a teacher with **Read** access only, and one with no linked
-    institution (both `make_teacher` without `can_manage`), see the same as the reader.
-  - **The manager** (US2-6): `scene.manager` sees every question, the count including the
-    additional ones, each with the badge.
+  - **Past the end** (US2-4): `?page=99` opens page 2.
+  - **Read access, no link** (US2-5): `kept_back.read_only` and `kept_back.unlinked` get the same
+    card ids and counts as the reader.
+  - **The manager** (US2-6): `scene.manager` sees all 15 listed Literature questions ("Questions
+    1–10 of 15"), the 3 additional ones with the badge.
   - **Opening it changes nothing**: the existing `snapshot` is unchanged.
 
 **Checkpoint**: the bank keeps the additional questions back from every teacher without the setting.
@@ -360,15 +379,24 @@ question, and compare the responses.
 
 - [ ] T024 [P] [US3] Extend the denial tests in `tests/integration/test_teacher_questions.py` (depends on T011, T023):
   - `test_a_teacher_without_the_setting_is_refused_before_anything_is_looked_up` gains the target
-    `"additional"`: an additional question of Mathematics;
-  - a new test compares the response bodies of the four targets `listed`, `additional`, `missing`
-    and `deleted` for each `MANAGE_ROUTES` entry: identical status (403) and identical body;
-  - **US3-3**: `POST /teacher/questions` with `additional=1` by the reader answers 403 and stores
-    nothing (`snapshot` unchanged).
+    `"additional"`: one of `kept_back.literature_additional`, with `kept_back.literature` as its
+    subject. The test takes the `kept_back` fixture;
+  - the same test runs for both teachers without the setting, `scene.reader` (**Write**) and
+    `kept_back.read_only` (**Read**), as a third parameter `teacher` (milestone _Test:_ line,
+    FR-021);
+  - a new test compares, for each `MANAGE_ROUTES` entry and for both teachers, the responses to the
+    four targets `listed`, `additional`, `missing` and `deleted`: identical status (403) and
+    identical body;
+  - **US3-3**: `POST /teacher/questions` with `additional=1`, by each of the two teachers, answers
+    403 and stores nothing (`snapshot` unchanged).
 - [ ] T025 [P] [US3] Extend `test_a_teacher_without_the_setting_is_refused_before_any_id_is_read` in `tests/integration/test_teacher_competition_entries.py` (depends on T011):
-  - the target `"additional"` (a Chemistry question seeded `additional=True`) for the **Add
-    questions** page and its add;
-  - the response for it equals the response for `"listed"`, and nothing changes.
+  - the target `"additional"` (a Chemistry question seeded `additional=True` inside the test, as
+    the test already seeds its `question`) for the **Add questions** page and its add;
+  - the test runs for `scene.mykola` (**Write**) and for a new teacher with **Read** access only and
+    no setting, made inside the test with `make_teacher(..., institutions={scene.academy:
+    AccessLevel.READ})` (FR-021);
+  - for each teacher, the response for `"additional"` equals the response for `"listed"`, and
+    nothing changes.
 - [ ] T026 [US3] If T024 or T025 fails, fix the order of checks in the route it names in `app/routers/teacher_questions.py` or `app/routers/teacher_competition_entries.py`, so the setting is checked before any id is read (contracts/http-routes.md §Order of checks), and record the fix in research.md R4. Otherwise mark this task done with no change.
 
 **Checkpoint**: MVP complete. The mark exists, is shown only to teachers with the setting, and is
@@ -456,11 +484,10 @@ the **Questions** tab and a competition's **Questions** page after each change.
   - add a helper `give_setting(engine, email)` beside `remove_setting`, using `update_teacher(...,
     can_manage_competitions=True)` in the same way, and generalise `remove_setting` to take the email
     if needed;
-  - **Given** (US5-1): `scene.reader`'s list counts only the other questions; after
-    `give_setting(READER)` the next request lists every question with the badges;
+  - **Given** (US5-1): with the `kept_back` fixture, `scene.reader`'s Literature list counts 12;
+    after `give_setting(READER)` the next request counts 15 and shows the badges;
   - **Taken away** (US5-2): `scene.manager` opens an edit form; after `remove_setting(MANAGER)` the
-    next list counts only the other questions, and sending the edit form answers 403 and changes
-    nothing.
+    next Literature list counts 12, and sending the edit form answers 403 and changes nothing.
 - [ ] T033 [P] [US5] Add the setting test to `tests/integration/test_teacher_competition_entries.py` (depends on T030): with a competition holding an additional question, Mykola's **Questions** page has no badge; after giving Mykola the setting, the next load shows it; after taking it away, it is gone again.
 
 **Checkpoint**: every story works on its own and together.
@@ -491,6 +518,13 @@ walk-through.
   - the migration up, down and up on a copy of a 12.8 database;
   - the full flow as Olena, Petro and Taras, including Ukrainian;
   - 360 px and both themes, with screenshots from the ad hoc headless Playwright recipe;
+  - the product owner confirms the three Ukrainian texts (spec Assumptions):
+    - «Додаткове питання»;
+    - the hint «Додаткові питання та відповіді на них не надаються учасникам до змагання.»;
+    - «Додаткове».
+
+    Any change goes through the catalogue workflow (T004 / T018), and the spec's Assumptions are
+    updated to match;
   - fix what it finds.
 - [ ] T039 On delivery (after the PR's merge), in `docs/requirements/milestones.md` (FR-034):
   - move 12.9 to **Delivered** with the spec link and a one-paragraph summary in the style of

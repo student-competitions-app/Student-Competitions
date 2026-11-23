@@ -294,8 +294,8 @@ in both themes, at 360 px and at desktop width, and compare them with the guidel
 - **The subject list** offers the same active subjects to every teacher, whatever their questions.
 - **Every question in a competition was additional**: the competition behaves as any other; teachers
   without the setting read it on its **Questions** page until milestone 12.10 (FR-027).
-- **The checkbox sent with an unexpected value**, or sent twice: any value sent for the checkbox
-  marks the question; no value clears it.
+- **The checkbox sent with an unexpected value**, or sent twice: any non-empty value sent for the
+  checkbox marks the question; an empty value, or no value, clears it.
 
 ## Requirements *(mandatory)*
 

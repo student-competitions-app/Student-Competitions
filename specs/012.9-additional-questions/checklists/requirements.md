@@ -42,7 +42,8 @@
   - the Ukrainian hint «Додаткові питання та відповіді на них не надаються учасникам до змагання.»;
   - the delete confirmation and the edit form show no badge (FR-015);
   - no filter or count of additional questions anywhere;
-  - any value sent for the checkbox marks the question; no value clears it.
+  - any non-empty value sent for the checkbox marks the question; an empty value, or no value,
+    clears it.
 - The milestone's "_Test:_" line is covered point by point: User Stories 1–5 and FR-035.
 - FR-027 records the accepted gap (every teacher reads a competition's **Questions** page until
   milestone 12.10), as the constitution v2.6.0 does.

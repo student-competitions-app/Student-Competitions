@@ -54,7 +54,11 @@ and the gallery before a page uses it; the guidelines are already updated:
 11 summaries) on delivery. The constitution v2.6.0, the product requirements and the UI guidelines
 are already in `main`.
 
-**Tests** (R9): no new module. Updates to ten modules plus the form contract.
+**Tests** (R9): no new module. Updates to twelve modules plus the form contract:
+- ten that gain tests;
+- two whose existing calls of `update_question` gain the now-required argument.
+
+A thirteenth, `test_page_patterns`, is updated only if it sweeps the question pages.
 
 ## Technical Context
 
@@ -79,8 +83,11 @@ development dependency.
     `test_teacher_team_answers`, `test_teacher_grades`.
   - **Cross-cutting**: `test_migrations`, `test_form_contract` (+ `form_contract.json`, five
     `teacher-question-*` cases regenerated), `test_component_gallery`, `unit/test_templates`.
+  - **Existing calls only**: `test_grade_service` and `test_team_answer_service`. Their calls of
+    `update_question` gain `is_additional=False`, since the argument becomes required.
   - `tests/conftest.py`: `make_question(..., additional=False)`.
-- `test_routes`, `test_page_patterns` and the catalogue tests stay green with no new entry.
+- `test_routes` and the catalogue tests stay green with no new entry. `test_page_patterns` gains a
+  case only if it sweeps the question pages (tasks T034).
 - Browser checks (360 px, both themes) by hand or with the ad hoc Playwright recipe
   ([quickstart.md](./quickstart.md) §3–4).
 
@@ -206,6 +213,7 @@ tests/
     ├── test_question_service.py, test_teacher_questions.py
     ├── test_competition_entries_service.py, test_teacher_competition_entries.py
     ├── test_teacher_team_answers.py, test_teacher_grades.py
+    ├── test_grade_service.py, test_team_answer_service.py   # existing update_question calls only
     ├── test_migrations.py, test_component_gallery.py
     └── test_form_contract.py + form_contract.json   # five teacher-question-* cases regenerated
 

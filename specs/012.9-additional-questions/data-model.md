@@ -61,7 +61,7 @@ the questions listed (R3).
 | Reader | Bank questions read | Mark read |
 |---|---|---|
 | **Questions** tab, teacher with the setting | every listed question | yes |
-| **Questions** tab, every other teacher | listed questions with `is_additional = false` only (count and rows) | no (all are false) |
+| **Questions** tab, every other teacher | listed questions with `is_additional = false` only (count and rows) | read with the row, always false (no additional question is ever read) |
 | Add / edit / delete pages and actions | only after the setting check | yes (forms) |
 | **Add questions** page of a competition | every listed question (setting checked first) | yes |
 | A competition's **Questions** page, teacher with the setting | the copies, joined to the bank | yes, live |

@@ -13,7 +13,7 @@ clock is controlled by patching `app.services.questions.utc_now`.
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -21,8 +21,9 @@ from sqlalchemy import Engine
 from sqlmodel import Session, col, select
 
 from app.core.config import AuthSettings
-from app.models import AccessLevel, Question, Role, User
+from app.models import AccessLevel, Question, Role, Subject, User
 from app.services.paging import PAGE_SIZE
+from app.services.question_files import StudyMaterials, study_materials
 from app.services.questions import (
     Landing,
     ManageRequired,
@@ -591,3 +592,60 @@ def test_a_subject_with_only_additional_questions_is_empty_without_them(
         with_them = question_page(session, scene.physics, 1, include_additional=True)
     assert (without.paging.total, without.questions) == (0, [])
     assert with_them.paging.total == 2
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.10: what a subject's study materials are made from
+# ---------------------------------------------------------------------------------------------
+
+
+def study(engine: Engine, subject_id: int) -> StudyMaterials:
+    with Session(engine) as session:
+        subject = session.get(Subject, subject_id)
+        assert subject is not None
+        return study_materials(session, subject)
+
+
+def test_the_study_materials_leave_out_additional_and_deleted_questions(
+    engine: Engine, scene: Scene, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Milestone 12.10 US5-2, US5-4, FR-027, FR-028: the ordinary questions only, oldest first,
+    as text and reference answer; another subject's never."""
+    monkeypatch.setattr(
+        "app.services.competitions.utc_now", lambda: datetime(2026, 11, 23, 9, tzinfo=UTC)
+    )
+    kept = []
+    for n in range(5):
+        kept.append((f"Q{n}", f"A{n}"))
+        make_question(engine, scene.maths, f"Q{n}", f"A{n}")
+        if n == 1:
+            make_question(engine, scene.maths, "Extra?", "Hidden.", additional=True)
+        if n == 2:
+            make_question(engine, scene.maths, "Gone?", "Gone.", deleted=True)
+            make_question(engine, scene.maths, "Both?", "Both.", deleted=True, additional=True)
+            make_question(engine, scene.physics, "Physics?", "Other subject.")
+    make_question(engine, scene.maths, "Late extra?", "Hidden.", additional=True)
+    materials = study(engine, scene.maths)
+    assert materials.entries == tuple(kept)
+    assert materials.subject_name == "Mathematics"
+    assert materials.downloaded_on == date(2026, 11, 23)
+
+
+def test_a_subject_of_only_left_out_questions_has_no_entries(engine: Engine, scene: Scene) -> None:
+    """Milestone 12.10 US5-5."""
+    make_question(engine, scene.physics, "Extra?", additional=True)
+    make_question(engine, scene.physics, "Gone?", deleted=True)
+    assert study(engine, scene.physics).entries == ()
+    assert study(engine, scene.maths).entries == ()
+
+
+def test_the_download_date_is_the_day_in_kyiv(
+    engine: Engine, scene: Scene, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Milestone 12.10 FR-026: 22:30 UTC on 22 November is already 23 November in Kyiv."""
+    for moment, expected in (
+        (datetime(2026, 11, 22, 21, 59, tzinfo=UTC), date(2026, 11, 22)),
+        (datetime(2026, 11, 22, 22, 30, tzinfo=UTC), date(2026, 11, 23)),
+    ):
+        monkeypatch.setattr("app.services.competitions.utc_now", lambda moment=moment: moment)
+        assert study(engine, scene.maths).downloaded_on == expected

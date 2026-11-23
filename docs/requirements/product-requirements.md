@@ -47,7 +47,7 @@ A web application for running online competitions among students, testing their 
 
 #### Teacher access rights to competitions
 
-- **Read** — every teacher has read access to all competitions and to the published results of every competition. The exceptions are the questions. A competition's questions, with their reference answers, are seen only by teachers allowed to manage competitions, in every status of the competition; every other teacher never sees them before the competition starts, and once it starts gets only their texts, without the reference answers, as a PDF file for the teams. The additional questions of the bank are seen only by teachers allowed to manage competitions (see [Additional questions](#additional-questions)).
+- **Read** — every teacher has read access to all competitions and to the published results of every competition. The exceptions are the questions. A competition's questions, with their reference answers, are seen only by teachers allowed to manage competitions, in every status of the competition; every other teacher never sees them before the competition starts, and once it starts gets their texts, without the reference answers, as a PDF file for the teams. Besides that file, other teachers see the texts, never the reference answers, only on the answer sheets of the teams of their own institutions. The additional questions of the bank are seen only by teachers allowed to manage competitions (see [Additional questions](#additional-questions)).
 - **Manage** — a teacher whom an administrator allowed to manage competitions creates, edits, stops, cancels, grades and publishes the results of any competition, whoever created it. There are no access rights per competition.
 
 #### Teacher access to students

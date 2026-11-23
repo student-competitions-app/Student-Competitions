@@ -295,26 +295,31 @@ MANAGE_PATHS = frozenset(
         "/teacher/competitions/{competition_id:int}/grades",
         "/teacher/competitions/{competition_id:int}/grades/{team_id:int}",
         "/teacher/competitions/{competition_id:int}/publish",
+        "/teacher/competitions/{competition_id:int}/questions",
     }
 )
 """The pages that need Can manage competitions: the question bank's (milestone 11 FR-037), the
 competitions' (milestone 12.1 FR-042), the add pages and remove confirmations of a competition's
 questions and teams (milestone 12.2 FR-045), the finish confirmation, the Grades page and the
-grading sheets (milestone 12.4 FR-043), and the publish confirmation (milestone 12.8 FR-034)."""
+grading sheets (milestone 12.4 FR-043), the publish confirmation (milestone 12.8 FR-034), and a
+competition's questions list, which only these teachers open (milestone 12.10 FR-001–FR-003)."""
 
 ENTRY_READ_PATHS = frozenset(
     {
-        "/teacher/competitions/{competition_id:int}/questions",
         "/teacher/competitions/{competition_id:int}/teams",
         "/teacher/competitions/{competition_id:int}/answers",
         "/teacher/competitions/{competition_id:int}/answers/{team_id:int}",
         "/teacher/competitions/{competition_id:int}/results",
+        "/teacher/competitions/{competition_id:int}/questions-file",
+        "/teacher/competitions/study-materials",
     }
 )
-"""A competition's questions and teams (milestone 12.2), a competition's team answers page and
-answer sheets (milestone 12.3), and its results download (milestone 12.8 FR-002), which every
-teacher may open: they are swept with the cast teacher allowed; id 1 names no competition and
-answers 404, not 403."""
+"""A competition's teams (milestone 12.2; its questions are a manage page since milestone 12.10),
+its team answers page and answer sheets (milestone 12.3), its results download (milestone 12.8
+FR-002), its questions download (milestone 12.10 FR-006), and a subject's study materials
+(milestone 12.10 FR-021), which every teacher may open: they are swept with the cast teacher
+allowed; id 1 names no competition and answers 404, not 403, and the study materials without
+`subject=` answer 404 as well."""
 
 
 def test_there_are_declared_pages_to_sweep() -> None:
@@ -331,7 +336,7 @@ def test_the_teacher_scoped_pages_are_found() -> None:
 
 def test_the_manage_pages_are_found() -> None:
     """Guard the skip below: exactly the question bank's and the competitions' management pages,
-    all declared, besides a competition's two lists, which every teacher reads."""
+    all declared, besides the pages of a competition every teacher reads (`ENTRY_READ_PATHS`)."""
     declared = {path for path, _ in declared_get_routes()}
     assert MANAGE_PATHS <= declared
     assert ENTRY_READ_PATHS <= declared

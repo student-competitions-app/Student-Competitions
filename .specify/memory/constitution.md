@@ -8,6 +8,9 @@ Sync Impact Report
     question texts (never the reference answers) to the teachers of the teams' institutions. The
     sentence now names both ways. No rule changes and no code is affected.
 - Templates: no change needed
+- Related docs: product-requirements.md (Read access) aligned with the same wording
+- Pull request: accepted by the product owner on the milestone 12.10 branch instead of a
+  dedicated pull request, as a wording-only fix
 - Follow-up TODOs: none
 
 Previous amendment

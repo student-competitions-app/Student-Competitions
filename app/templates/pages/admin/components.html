@@ -133,6 +133,11 @@
     {{ button(label ~ " small", kind=kind, small=True) }}
   </div>
   {% endfor %}
+  <h3>Download link</h3>
+  <p>A download outside a menu: secondary, never destructive. It opens no page and starts no loading feedback.</p>
+  <div class="button-row">
+    {{ link_button("Download file", "/admin/components#buttons", kind="secondary", outline=True, small=True, download=True) }}
+  </div>
 </section>
 
 <section id="cards" aria-labelledby="cards-heading">
@@ -446,6 +451,12 @@
   {{ chained_lists([
     {"id": "gallery-subject", "name": "subject", "label": "Subject", "placeholder": "Choose a subject", "options": [(1, "Physics"), (2, "Mathematics")], "selected": 7, "disabled": false, "carry": [], "groups": subject_groups},
   ], "/admin/components") }}
+  <h3>With an aside link</h3>
+  <p>A link about the chosen value, such as a download: beside the lists on a wide screen, under them on a phone.</p>
+  {{ chained_lists([
+    {"id": "gallery-aside-subject", "name": "subject", "label": "Subject", "placeholder": "Choose a subject", "options": [(1, "Physics"), (2, "Mathematics")], "selected": 1, "disabled": false, "carry": []},
+    {"id": "gallery-aside-status", "name": "status", "label": "Status", "placeholder": none, "options": [("", "All"), ("upcoming", "Upcoming")], "selected": "", "disabled": false, "carry": [("subject", 1)]},
+  ], "/admin/components", aside=link_button("Download study materials", "/admin/components#selectors", kind="secondary", outline=True, small=True, download=True)) }}
 </section>
 
 <section id="filter-links" aria-labelledby="filter-links-heading">

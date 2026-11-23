@@ -12,13 +12,8 @@ import pytest
 from fontTools.ttLib import TTFont
 
 from app.core.i18n import Language
-from app.services.results import (
-    RegionResults,
-    ResultLine,
-    ResultsSnapshot,
-    ascii_file_name,
-    results_file_name,
-)
+from app.services.file_names import ascii_file_name
+from app.services.results import RegionResults, ResultLine, ResultsSnapshot, results_file_name
 from app.services.results_pdf import FONT_BOLD, FONT_REGULAR, render_results_pdf
 from tests.pdf import (
     pdf_fonts_embedded,

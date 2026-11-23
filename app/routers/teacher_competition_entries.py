@@ -6,9 +6,11 @@ Thin handlers only, as in `teacher_competitions`: each reads its values as plain
 input ever gets FastAPI's 422), calls `app.services.competition_entries`, maps its outcomes to a
 status and a page, and on success redirects with a 303, so a reload never repeats a change.
 
-**Every teacher reads both lists; only a teacher with Can manage competitions changes them, and
-only while the competition is Upcoming.** The add pages, the additions, the remove confirmations
-and the removals are *manage* routes.
+**Every teacher reads a competition's teams; only a teacher with Can manage competitions opens its
+questions (milestone 12.10, specs/012.10-questions-study-materials/research.md R1) or changes
+either list, and only while the competition is Upcoming.** The questions list, the add pages, the
+additions, the remove confirmations and the removals are *manage* routes, so the whole
+`/questions` subtree refuses every other teacher with the same "access denied", whatever the id.
 
 **Order of checks** (http-routes.md §Order of checks): the role (`@allow_roles`); then, on a
 manage route, the setting, first thing in the handler, before any value is parsed (403 for an
@@ -452,19 +454,19 @@ def competition_questions_page(
     p: str | None = Query(None),
     notice: str | None = Query(None),
 ) -> HTMLResponse:
-    """The competition's questions in the order of adding, ten per page, for every teacher;
-    **Add question** and **Remove** only for a teacher who can make changes (FR-003–FR-009,
-    FR-015). Opening it changes nothing."""
+    """The competition's questions in the order of adding, ten per page, with the bank's additional
+    mark (milestone 12.9 FR-025), only for a teacher with Can manage competitions, in every status
+    (milestone 12.10 FR-001–FR-003); **Add question** and **Remove** only while it is Upcoming
+    (FR-003–FR-009, FR-015). The setting is checked first, so every other teacher gets the same
+    "access denied" for every competition, a missing one included. Opening it changes nothing."""
+    require_manage(request, session)
     found = find_context(request, session, competition_id, subject, status, page)
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
-    manage = can_manage(request, session)
-    # The bank's additional mark is read only for a teacher with the setting (milestone 12.9
-    # FR-025, FR-026); for everyone else it never reaches the page.
-    listing = question_page(session, competition.id, parse_page(p), with_bank_mark=manage)
+    listing = question_page(session, competition.id, parse_page(p), with_bank_mark=True)
     current = listing.paging.number
-    can_change = competition.status is CompetitionStatus.UPCOMING and manage
+    can_change = competition.status is CompetitionStatus.UPCOMING
     remove_hrefs = (
         {
             q.question_id: remove_path("questions", competition.id, q.question_id, context, current)

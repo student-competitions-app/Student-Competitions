@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 
 import pytest
 from jinja2 import TemplateRuntimeError
+from markupsafe import Markup
 
 from app.core.i18n import Language, use_language
 from app.core.templates import templates
@@ -166,6 +167,48 @@ def test_a_download_entry() -> None:
 def test_a_download_is_never_destructive() -> None:
     with pytest.raises(TemplateRuntimeError, match="menu_link: a download is never destructive"):
         render(MENU + '{{ menu_link("Download", "/d", destructive=True, download=True) }}')
+
+
+BUTTONS = '{% from "components/button.html" import link_button %}'
+SELECTORS = '{% from "components/selectors.html" import chained_lists %}'
+LEVEL = (
+    '{"id": "s", "name": "subject", "label": "Subject", "placeholder": none, '
+    '"options": [(1, "Physics")], "selected": 1, "disabled": false, "carry": []}'
+)
+
+
+def test_a_download_link_button() -> None:
+    """Milestone 12.10 contracts/components.md §2: the bare `download` attribute after the role;
+    without `download` the link is unchanged."""
+    out = render(BUTTONS + '{{ link_button("Get", "/g", kind="secondary", download=True) }}')
+    assert out == '<a href="/g" role="button" download class="secondary">Get</a>'
+    plain = render(BUTTONS + '{{ link_button("Get", "/g", kind="secondary") }}')
+    assert plain == '<a href="/g" role="button" class="secondary">Get</a>'
+
+
+def test_a_download_link_button_is_never_destructive() -> None:
+    with pytest.raises(TemplateRuntimeError, match="link_button: a download is never destructive"):
+        render(BUTTONS + '{{ link_button("Get", "/g", kind="destructive", download=True) }}')
+
+
+def test_chained_lists_without_an_aside_are_unchanged() -> None:
+    out = render(SELECTORS + "{{ chained_lists([" + LEVEL + '], "/a") }}')
+    assert "selectors-aside" not in out
+    assert out.rstrip().endswith("</form>\n</div>")
+
+
+def test_chained_lists_with_an_aside() -> None:
+    """Milestone 12.10 contracts/components.md §1: the aside is the last cell of the grid, its
+    markup kept as given."""
+    source = SELECTORS + "{{ chained_lists([" + LEVEL + '], "/a", aside=aside) }}'
+    out = render(source, aside=Markup('<a href="/d" download>D</a>'))
+    root = html.parse(out)
+    (grid,) = [e for e in root.iter() if "selectors-chained" in e.classes()]
+    cells = [c for c in grid.children if isinstance(c, html.Element)]
+    assert [c.tag for c in cells] == ["form", "div"]
+    assert cells[-1].classes() == ["selectors-aside"]
+    (link,) = cells[-1].find_all("a")
+    assert link.attrs == {"href": "/d", "download": ""}
 
 
 def test_actions_menu_with_a_blank_call_block_emits_nothing() -> None:

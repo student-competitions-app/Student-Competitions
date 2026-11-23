@@ -1,7 +1,12 @@
 {#- Buttons (contracts/components.md §2, FR-025, research D9). Three kinds: primary (Pico's
     default button), secondary (Pico's `.secondary`) and destructive (`.destructive`, app.css).
     `outline` and `small` add a class each. A link that opens a form or a confirmation is a
-    `link_button`, styled as the action it leads to. At most one primary per page or section. -#}
+    `link_button`, styled as the action it leads to. At most one primary per page or section.
+
+    A download outside a menu (milestone 12.10 contracts/components.md §2) is a
+    `link_button(download=True)` of the secondary kind: the bare `download` attribute, so it opens no
+    page and the loading script of milestone 10.1 skips it (`a[download]`). A download is never
+    destructive. -#}
 
 {% macro _classes(kind, outline, small) -%}
 {%- set kind_classes = {"primary": "", "secondary": "secondary", "destructive": "destructive"} -%}
@@ -19,9 +24,10 @@
 <button type="submit"{% if classes %} class="{{ classes }}"{% endif %}{% if name %} name="{{ name }}"{% endif %}{% if value is not none %} value="{{ value }}"{% endif %}{% for key, val in attrs.items() %} {{ key }}="{{ val }}"{% endfor %}{% if busy %} aria-busy="true"{% endif %}>{{ label }}</button>
 {%- endmacro %}
 
-{% macro link_button(label, href, kind="primary", outline=False, small=False) -%}
+{% macro link_button(label, href, kind="primary", outline=False, small=False, download=False) -%}
+{%- if download and kind == "destructive" %}{{ template_error("link_button: a download is never destructive") }}{% endif -%}
 {%- set classes = _classes(kind, outline, small) -%}
-<a href="{{ href }}" role="button"{% if classes %} class="{{ classes }}"{% endif %}>{{ label }}</a>
+<a href="{{ href }}" role="button"{% if download %} download{% endif %}{% if classes %} class="{{ classes }}"{% endif %}>{{ label }}</a>
 {%- endmacro %}
 
 {% macro post_button(action, label, kind="primary", hidden={}, outline=False, small=False) -%}

@@ -20,7 +20,7 @@ spec.
 
 | Line | English | Ukrainian |
 |---|---|---|
-| Title | Questions of “<name>” | Питання «<name>» |
+| Title | Questions of “<name>” | Питання змагань «<name>» |
 | Subject | <subject> | <subject> |
 | Meta | Started: 21 November 2026, 10:00 (Kyiv time) | Початок: 21 листопада 2026, 10:00 (за київським часом) |
 
@@ -95,7 +95,7 @@ design rounds can change.
 |---|---|
 | Download questions | Завантажити питання |
 | Download study materials | Завантажити навчальні матеріали |
-| Questions of “%(name)s” | Питання «%(name)s» |
+| Questions of “%(name)s” | Питання змагань «%(name)s» (the existing message of the Questions page, shared) |
 | Study materials | Навчальні матеріали |
 | Study materials: %(subject)s | Навчальні матеріали: %(subject)s |
 | Downloaded: %(date)s | Завантажено: %(date)s |

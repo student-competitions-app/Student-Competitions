@@ -1004,7 +1004,15 @@ def test_a_deactivated_subject_keeps_its_finished_competition_gradable(scene: Sc
     menu = [
         link.text for link in html.links(listing, "main") if f"/{scene.competition}/" in link.href
     ]
-    assert menu == ["Questions", "Teams", "Answers", "Grades", "Publish results"]
+    # Milestone 12.10 FR-006, FR-008: **Download questions** after **Answers**.
+    assert menu == [
+        "Questions",
+        "Teams",
+        "Answers",
+        "Download questions",
+        "Grades",
+        "Publish results",
+    ]
     assert "Graded 11 of 25 teams" in html.text(get(scene.olena, grades_url(scene)), "main")
     get(scene.olena, sheet_url(scene))
     before = snapshot(scene.engine)

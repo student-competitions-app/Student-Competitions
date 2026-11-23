@@ -31,7 +31,6 @@ bytes=%d`. A refusal and a download log nothing; no name of any kind is ever log
 """
 
 import logging
-import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from itertools import groupby
@@ -48,6 +47,7 @@ from app.schemas.names import name_sort_key
 from app.services import competitions, results_pdf
 from app.services.competition_entries import team_entries
 from app.services.competitions import CompetitionStatus, Landing, ManageRequired
+from app.services.file_names import clean_file_stem
 from app.services.grades import GradingProgress, count_of, grade_counts, grading_progress
 from app.services.teacher_access import can_manage_competitions
 
@@ -268,36 +268,8 @@ def results_file(session: Session, competition_id: int, language: Language) -> b
     return stored.content if stored is not None else None
 
 
-_UNSAFE = frozenset('/\\:*?"<>|')
-"""The characters a file name cannot hold on the common systems (research R9)."""
-
-
 def results_file_name(name: str, starts_at: datetime) -> str:
     """ "<name> <YYYY-MM-DD>.pdf": the competition's name and its start date in Kyiv time (FR-032).
-    Each character a file name cannot hold (`/ \\ : * ? " < > |` and control characters) becomes
-    `_`; spaces at the ends and trailing dots are removed; an empty name becomes "results". Every
+    The name is cleaned by `file_names.clean_file_stem` (an empty name becomes "results"); every
     other character, Cyrillic included, is kept."""
-    cleaned = "".join(
-        "_" if c in _UNSAFE or unicodedata.category(c) == "Cc" else c for c in name
-    ).strip()
-    cleaned = cleaned.rstrip(". ") or "results"
-    return f"{cleaned} {starts_at.astimezone(KYIV):%Y-%m-%d}.pdf"
-
-
-_ASCII_KEPT = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_.()")
-
-
-def ascii_file_name(file_name: str) -> str:
-    """The plain fallback of the `Content-Disposition` header's `filename=` for browsers that do
-    not read `filename*`: ASCII letters, digits, space and `-_.()` kept (accents dropped), every
-    other character `_`, runs of `_` collapsed to one."""
-    decomposed = unicodedata.normalize("NFKD", file_name)
-    kept = "".join(
-        c if c in _ASCII_KEPT else "_" for c in decomposed if not unicodedata.combining(c)
-    )
-    collapsed = []
-    for c in kept:
-        if c == "_" and collapsed and collapsed[-1] == "_":
-            continue
-        collapsed.append(c)
-    return "".join(collapsed)
+    return f"{clean_file_stem(name, 'results')} {starts_at.astimezone(KYIV):%Y-%m-%d}.pdf"

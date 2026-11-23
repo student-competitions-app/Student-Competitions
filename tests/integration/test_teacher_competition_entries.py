@@ -23,6 +23,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
+from markupsafe import escape
 from sqlalchemy import Engine, MetaData, select
 from sqlmodel import Session
 
@@ -497,20 +498,24 @@ def test_a_subject_with_no_questions(scene: Scene) -> None:
 
 
 # ---------------------------------------------------------------------------------------------
-# User story 3: every teacher reads a competition's questions
+# User story 3: a teacher with the setting reads a competition's questions (milestone 12.10: only
+# them; every other teacher is refused, user story 9 below)
 # ---------------------------------------------------------------------------------------------
 
 
-def test_a_teacher_without_the_setting_reads_the_same_list(scene: Scene) -> None:
-    """US3 story, FR-015: the same cards, no Add question and no Remove."""
-    for question in questions_of(scene, 2):
+def test_a_teacher_without_the_setting_is_refused_the_questions(scene: Scene) -> None:
+    """Replaced by milestone 12.10 FR-001–FR-003 (was: Mykola reads the same cards): Olena reads
+    the list with Remove; Mykola gets "access denied", with no question of the competition in it."""
+    ids = questions_of(scene, 2)
+    for question in ids:
         add_competition_question(scene.engine, scene.competition, question)
     olena = get(scene.olena, page_of(scene, "questions"))
-    mykola = get(scene.mykola, page_of(scene, "questions"))
-    assert [c[:3] for c in cards(olena)] == [c[:3] for c in cards(mykola)]
-    assert heading_action(mykola) == []
-    assert all(c.actions == [] for c in cards(mykola))
+    assert card_ids(olena) == ids
     assert all(c.actions == ["Remove"] for c in cards(olena))
+    response = scene.mykola.get(page_of(scene, "questions"))
+    denied(response)
+    for text in ("Text 0", "Answer 0", "Text 1", "Answer 1", f"question-{ids[0]}"):
+        assert text not in response.text
 
 
 def test_23_questions_are_paged_with_the_page_in_the_address(scene: Scene) -> None:
@@ -518,8 +523,8 @@ def test_23_questions_are_paged_with_the_page_in_the_address(scene: Scene) -> No
     ids = questions_of(scene, 23)
     for question in reversed(ids):
         add_competition_question(scene.engine, scene.competition, question)
-    first = get(scene.mykola, page_of(scene, "questions"))
-    second = get(scene.mykola, page_of(scene, "questions", "&p=2"))
+    first = get(scene.olena, page_of(scene, "questions"))
+    second = get(scene.olena, page_of(scene, "questions", "&p=2"))
     for body, expected in ((first, "Questions 1–10 of 23"), (second, "Questions 11–20 of 23")):
         for label in ("Pages, top", "Pages, bottom"):
             found = html.pagination(body, label)
@@ -529,7 +534,7 @@ def test_23_questions_are_paged_with_the_page_in_the_address(scene: Scene) -> No
     assert nav is not None
     assert (page_of(scene, "questions", "&p=2"), "2") in [(e.href, e.text) for e in nav[1]]
     for value in ("99", "x", "-1"):
-        body = get(scene.mykola, page_of(scene, "questions", f"&p={value}"))
+        body = get(scene.olena, page_of(scene, "questions", f"&p={value}"))
         expected = "Questions 21–23 of 23" if value == "99" else "Questions 1–10 of 23"
         found = html.pagination(body, "Pages, top")
         assert found is not None and found[0] == expected, value
@@ -544,7 +549,7 @@ def test_the_copies_survive_a_bank_edit_and_a_deletion(scene: Scene) -> None:
     with Session(scene.engine) as session:
         update_question(session, user_id, edited, "New text", "New answer", is_additional=False)
         delete_question(session, user_id, deleted)
-    body = get(scene.mykola, page_of(scene, "questions"))
+    body = get(scene.olena, page_of(scene, "questions"))
     assert [(c.heading, c.boxes, c.notes) for c in cards(body)] == [
         (f"Question {edited}", ["Text 0", "Answer 0"], []),
         (f"Question {deleted}", ["Text 1", "Answer 1"], ["Deleted from the question bank"]),
@@ -554,11 +559,11 @@ def test_the_copies_survive_a_bank_edit_and_a_deletion(scene: Scene) -> None:
 def test_the_empty_hint_only_for_a_teacher_who_can_make_changes(
     scene: Scene, clock: Callable[[timedelta], datetime]
 ) -> None:
-    """US3-6, FR-009."""
-    assert empty_state(get(scene.mykola, page_of(scene, "questions"))) == (
-        "No questions in this competition yet",
-        None,
-    )
+    """US3-6, FR-009. Milestone 12.10: only Olena opens the list, so the hint shows only while she
+    can still add questions."""
+    upcoming = empty_state(get(scene.olena, page_of(scene, "questions")))
+    assert upcoming is not None and upcoming[0] == "No questions in this competition yet"
+    assert upcoming[1] is not None
     clock(START - NOW)
     assert empty_state(get(scene.olena, page_of(scene, "questions"))) == (
         "No questions in this competition yet",
@@ -568,8 +573,8 @@ def test_the_empty_hint_only_for_a_teacher_who_can_make_changes(
 
 def test_the_back_link_leads_to_the_list_the_teacher_came_from(scene: Scene) -> None:
     """US3-7, FR-004."""
-    for kind in ("questions", "teams"):
-        body = get(scene.mykola, page_of(scene, kind, "&status=upcoming&page=2"))
+    for kind, browser in (("questions", scene.olena), ("teams", scene.mykola)):
+        body = get(browser, page_of(scene, kind, "&status=upcoming&page=2"))
         assert back_link(body) == (
             f"{TAB}?subject={scene.chemistry}&status=upcoming&page=2"
             f"#competition-{scene.competition}",
@@ -582,20 +587,25 @@ def test_without_a_subject_the_way_back_falls_back_to_the_competition(scene: Sce
     for day in range(15, 30):
         make_competition(scene.engine, scene.chemistry, f"Day {day}", starts_at=at(day))
     for query in ("", "?subject=", "?subject=&status=finished&page=7"):
-        body = get(scene.mykola, f"{TAB}/{scene.competition}/questions{query}")
+        body = get(scene.olena, f"{TAB}/{scene.competition}/questions{query}")
         assert back_link(body) == (
             f"{TAB}?subject={scene.chemistry}&page=2#competition-{scene.competition}",
             "Back to the competitions",
         )
-    not_found(scene.mykola.get(f"{TAB}/{MISSING}/questions"), COMPETITION_NOT_FOUND)
+    not_found(scene.olena.get(f"{TAB}/{MISSING}/questions"), COMPETITION_NOT_FOUND)
+    denied(scene.mykola.get(f"{TAB}/{MISSING}/questions"))
 
 
 def test_a_mismatched_or_unknown_subject_is_not_found(scene: Scene) -> None:
-    for kind in ("questions", "teams"):
+    """Milestone 12.10: the questions list is Olena's; Mykola is refused it before the subject is
+    read (user story 9)."""
+    for kind, browser in (("questions", scene.olena), ("teams", scene.mykola)):
         url = f"{TAB}/{scene.competition}/{kind}"
-        not_found(scene.mykola.get(f"{url}?subject={scene.physics}"), COMPETITION_NOT_FOUND)
-        not_found(scene.mykola.get(f"{url}?subject=abc"), SUBJECT_NOT_FOUND)
-        assert scene.mykola.get(f"{url}?subject={scene.chemistry}&status=bogus").status_code == 200
+        not_found(browser.get(f"{url}?subject={scene.physics}"), COMPETITION_NOT_FOUND)
+        not_found(browser.get(f"{url}?subject=abc"), SUBJECT_NOT_FOUND)
+        assert browser.get(f"{url}?subject={scene.chemistry}&status=bogus").status_code == 200
+    for query in (f"subject={scene.physics}", "subject=abc"):
+        denied(scene.mykola.get(f"{TAB}/{scene.competition}/questions?{query}"))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -912,7 +922,7 @@ def test_the_menu_entries_per_status_and_setting(
     milestone 12.4 FR-004 (SC-011): the In progress menu gains **Finish competition** before
     **Cancel competition** with the setting, and the Finished menu gains **Answers** for every
     teacher and **Grades** with the setting; milestone 12.8 FR-005 adds **Publish results** after
-    it."""
+    it. Milestone 12.10 FR-001, FR-002: **Questions** only with the setting."""
     running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
     finished = make_competition(
         scene.engine, scene.chemistry, "Done", starts_at=at(1, 7), stopped=True
@@ -929,31 +939,44 @@ def test_the_menu_entries_per_status_and_setting(
             "Questions",
             "Teams",
             "Answers",
+            "Download questions",
             "Finish competition",
             "Cancel competition",
         ],
-        f"competition-{finished}": ["Questions", "Teams", "Answers", "Grades", "Publish results"],
+        f"competition-{finished}": [
+            "Questions",
+            "Teams",
+            "Answers",
+            "Download questions",
+            "Grades",
+            "Publish results",
+        ],
     }
     mykola = {k: [t for t, _ in v] for k, v in menus(get(scene.mykola, url)).items()}
-    assert mykola.pop(f"competition-{running}") == ["Questions", "Teams", "Answers"]
-    assert mykola.pop(f"competition-{finished}") == ["Questions", "Teams", "Answers"]
-    assert set(map(tuple, mykola.values())) == {("Questions", "Teams")}
+    assert mykola.pop(f"competition-{running}") == ["Teams", "Answers", "Download questions"]
+    assert mykola.pop(f"competition-{finished}") == ["Teams", "Answers", "Download questions"]
+    assert set(map(tuple, mykola.values())) == {("Teams",)}
     assert len(mykola) == 2
 
 
 def test_the_menu_links_keep_the_list_and_lead_back_to_it(scene: Scene) -> None:
-    """US6-6, FR-004."""
+    """US6-6, FR-004. Milestone 12.10: **Questions** only for a teacher with the setting."""
     for day in range(15, 30):
         make_competition(scene.engine, scene.chemistry, f"Day {day}", starts_at=at(day))
     url = f"{TAB}?{scene.ctx}&status=upcoming&page=2"
-    entries = dict(menus(get(scene.mykola, url))[f"competition-{scene.competition}"])
     query = f"subject={scene.chemistry}&status=upcoming&page=2"
+    entries = dict(menus(get(scene.olena, url))[f"competition-{scene.competition}"])
     assert entries == {
+        "Edit": f"{TAB}/{scene.competition}/edit?{query}",
         "Questions": f"{TAB}/{scene.competition}/questions?{query}",
         "Teams": f"{TAB}/{scene.competition}/teams?{query}",
+        "Cancel competition": f"{TAB}/{scene.competition}/cancel?{query}",
     }
-    for href in entries.values():
-        assert back_link(get(scene.mykola, href)) == (
+    assert dict(menus(get(scene.mykola, url))[f"competition-{scene.competition}"]) == {
+        "Teams": f"{TAB}/{scene.competition}/teams?{query}"
+    }
+    for href in (entries["Questions"], entries["Teams"]):
+        assert back_link(get(scene.olena, href)) == (
             f"{TAB}?{query}#competition-{scene.competition}",
             "Back to the competitions",
         )
@@ -1145,11 +1168,12 @@ def test_nothing_changes_once_the_competition_is_not_upcoming(
     in_question, new_question, in_team, new_team = entries_of(scene, competition)
     if status == "in_progress":
         scene.clock(START - NOW)
-    for browser in (scene.olena, scene.mykola):
-        for kind in ("questions", "teams"):
+    for browser, kinds in ((scene.olena, ("questions", "teams")), (scene.mykola, ("teams",))):
+        for kind in kinds:
             body = get(browser, page_of(scene, kind, competition=competition))
             assert heading_action(body) == []
             assert "Remove" not in html.text(body, "main")
+    denied(scene.mykola.get(page_of(scene, "questions", competition=competition)))
     kyiv = region_of(scene.engine, scene.school)
     before = snapshot(scene.engine)
     for kind, response in [
@@ -1306,7 +1330,7 @@ def test_deleting_a_question_in_the_bank(scene: Scene) -> None:
     assert "can no longer be added to new competitions" in html.text(confirmation, "main")
     with Session(scene.engine) as session:
         delete_question(session, olena_id(scene.engine), question)
-    (card,) = cards(get(scene.mykola, page_of(scene, "questions")))
+    (card,) = cards(get(scene.olena, page_of(scene, "questions")))
     assert card.notes == ["Deleted from the question bank"]
     for competition in (scene.competition, other):
         assert question not in card_ids(
@@ -1337,11 +1361,17 @@ ENTRY_ROUTES = sorted(
     (method, path)
     for path, methods, _ in ALL_ROUTES
     if path.startswith((f"{PREFIX}questions", f"{PREFIX}teams"))
+    and path != f"{PREFIX}questions-file"  # every teacher's download (milestone 12.10)
     for method in methods
     if method in ("GET", "POST")
 )
-READ_ROUTES = [("GET", f"{PREFIX}questions"), ("GET", f"{PREFIX}teams")]
+READ_ROUTES = [("GET", f"{PREFIX}teams")]
+"""The pages every teacher reads. A competition's questions list joined the manage routes in
+milestone 12.10 (FR-001–FR-003), so the sweeps below refuse it to Mykola before any id is read."""
 MANAGE_ROUTES = [route for route in ENTRY_ROUTES if route not in READ_ROUTES]
+CHANGE_ROUTES = [route for route in MANAGE_ROUTES if route != ("GET", f"{PREFIX}questions")]
+"""The manage routes that add or remove something, or open the page that does: every one but the
+questions list, which has no status refusal."""
 
 
 def concrete(path: str, competition: int | str, entry: int | str, query: str) -> str:
@@ -1371,7 +1401,8 @@ def sweep_form(subject: int | str, entry: int | str, region: int | str) -> dict[
 
 def test_the_sweep_has_every_route() -> None:
     assert len(ENTRY_ROUTES) == 10
-    assert len(MANAGE_ROUTES) == 8
+    assert len(MANAGE_ROUTES) == 9
+    assert len(CHANGE_ROUTES) == 8
 
 
 @pytest.mark.parametrize(("method", "path"), ENTRY_ROUTES)
@@ -1508,7 +1539,7 @@ def test_the_subject_and_the_competition_come_before_the_status(
     assert snapshot(scene.engine) == before
 
 
-@pytest.mark.parametrize(("method", "path"), MANAGE_ROUTES)
+@pytest.mark.parametrize(("method", "path"), CHANGE_ROUTES)
 def test_the_status_comes_before_the_entry(scene: Scene, method: str, path: str) -> None:
     """FR-045 step 4: a cancelled competition with unknown question, team and region ids."""
     cancelled = make_competition(
@@ -1687,7 +1718,7 @@ def test_a_deactivated_subject(scene: Scene) -> None:
     before = snapshot(scene.engine)
     for competition in (scene.competition, running, cancelled):
         for response in (
-            scene.mykola.get(page_of(scene, "questions", competition=competition)),
+            scene.olena.get(page_of(scene, "questions", competition=competition)),
             scene.mykola.get(page_of(scene, "teams", competition=competition)),
             scene.olena.get(page_of(scene, "questions/add", competition=competition)),
             scene.olena.get(page_of(scene, "teams/add", competition=competition)),
@@ -1698,14 +1729,15 @@ def test_a_deactivated_subject(scene: Scene) -> None:
             remove(scene.olena, scene, "teams", team, competition),
         ):
             not_found(response, COMPETITION_NOT_FOUND)
-    questions = get(scene.mykola, page_of(scene, "questions", competition=finished))
+    questions = get(scene.olena, page_of(scene, "questions", competition=finished))
     assert [c.boxes[0] for c in cards(questions)] == ["Hidden by the bank"]
     teams = get(scene.olena, page_of(scene, "teams", competition=finished))
     assert [r["Team"] for r in team_rows(teams).values()] == ["Comets"]
     assert heading_action(teams) == []
     row_menu = menus(get(scene.mykola, f"{TAB}?{scene.ctx}"))[f"competition-{finished}"]
-    # Replaced by milestone 12.4 FR-004, FR-042 (SC-011): a finished row adds **Answers**.
-    assert [text for text, _ in row_menu] == ["Questions", "Teams", "Answers"]
+    # Replaced by milestone 12.4 FR-004, FR-042 (SC-011): a finished row adds **Answers**; and by
+    # milestone 12.10 FR-002, FR-008: no **Questions** without the setting; **Download questions**.
+    assert [text for text, _ in row_menu] == ["Teams", "Answers", "Download questions"]
     for kind, response in (
         ("questions", scene.olena.get(page_of(scene, "questions/add", competition=finished))),
         ("teams", scene.olena.get(page_of(scene, "teams/add", competition=finished))),
@@ -1886,15 +1918,17 @@ def competitions_in_every_status(scene: Scene) -> dict[str, tuple[int, int]]:
 
 def test_the_badge_on_a_competitions_questions_only_with_the_setting(scene: Scene) -> None:
     """US4-3, US4-4, FR-025, FR-026, SC-007: in every status, Olena sees the badge on the
-    additional question; Mykola sees the same questions, and the badge is not in his response."""
+    additional question. Replaced by milestone 12.10 FR-001–FR-003: Mykola no longer reads the
+    page at all, so neither the questions nor the badge are in his response."""
     for status, (competition, subject) in competitions_in_every_status(scene).items():
         url = f"{TAB}/{competition}/questions?subject={subject}"
-        olena, mykola = get(scene.olena, url), get(scene.mykola, url)
-        additional, ordinary = card_ids(olena)
+        olena = get(scene.olena, url)
+        additional, _ordinary = card_ids(olena)
         assert additional_badges(olena) == [f"question-{additional}"], status
-        assert card_ids(mykola) == [additional, ordinary], status
-        assert additional_badges(mykola) == [], status
-        assert "Additional" not in mykola, status
+        response = scene.mykola.get(url)
+        denied(response)
+        assert f"question-{additional}" not in response.text, status
+        assert "Additional" not in response.text, status
 
 
 def test_the_badge_and_the_deleted_note_together(scene: Scene) -> None:
@@ -1949,12 +1983,52 @@ def set_setting(engine: Engine, email: str, value: bool) -> None:
 
 
 def test_the_badge_follows_the_setting(scene: Scene) -> None:
-    """Milestone 12.9 US5, FR-017: given, the next load shows the badge; taken away, it is gone."""
+    """Milestone 12.9 US5, FR-017: given, the next load shows the badge; taken away, it is gone.
+    Milestone 12.10 US1-6, FR-005: with the setting goes the page itself."""
     hard = make_question(scene.engine, scene.chemistry, "Hard?", additional=True)
     add_competition_question(scene.engine, scene.competition, hard)
     url = page_of(scene, "questions")
-    assert additional_badges(get(scene.mykola, url)) == []
+    denied(scene.mykola.get(url))
     set_setting(scene.engine, MYKOLA, True)
     assert additional_badges(get(scene.mykola, url)) == [f"question-{hard}"]
     set_setting(scene.engine, MYKOLA, False)
-    assert additional_badges(get(scene.mykola, url)) == []
+    denied(scene.mykola.get(url))
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.10 user story 1: only teachers with the setting see a competition's questions
+# ---------------------------------------------------------------------------------------------
+
+
+def test_only_a_teacher_with_the_setting_reads_the_questions_in_every_status(
+    scene: Scene, client_as: ClientAs
+) -> None:
+    """Milestone 12.10 US1-1–US1-3, FR-001–FR-003, SC-001: Olena reads the list in every status,
+    a finished competition of a deactivated subject included; Mykola (Write) and a Read-only
+    teacher without the setting get the same "access denied" for every one of them, for a later
+    page and for a missing competition, with nothing of the questions in it, and nothing
+    changes."""
+    read_only = read_only_teacher(scene, client_as)
+    cases = competitions_in_every_status(scene)
+    before = snapshot(scene.engine)
+    for status, (competition, subject) in cases.items():
+        url = f"{TAB}/{competition}/questions?subject={subject}"
+        assert len(card_ids(get(scene.olena, url))) == 2, status
+    for browser in (scene.mykola, read_only):
+        bodies = []
+        for status, (competition, subject) in cases.items():
+            for url in (
+                f"{TAB}/{competition}/questions?subject={subject}",
+                f"{TAB}/{competition}/questions?subject={subject}&p=2",
+            ):
+                response = browser.get(url)
+                denied(response)
+                assert "question-" not in response.text, status
+                assert "Question?" not in response.text, status
+                bodies.append(response.text.replace(f'value="{escape(url)}"', 'value="{address}"'))
+        for url in (f"{TAB}/{MISSING}/questions?{scene.ctx}", f"{TAB}/{MISSING}/questions"):
+            response = browser.get(url)
+            denied(response)
+            bodies.append(response.text.replace(f'value="{escape(url)}"', 'value="{address}"'))
+        assert len(set(bodies)) == 1
+    assert snapshot(scene.engine) == before

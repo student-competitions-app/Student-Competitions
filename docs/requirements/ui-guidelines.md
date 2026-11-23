@@ -300,6 +300,10 @@ _Gallery_: [frame](/admin/components#frame), [language switch](/admin/components
 - **`button(label, kind, …)`**: a submit button inside a form.
 - **`link_button(label, href, kind, …)`**: a link that opens a form or a confirmation page. It
   looks like the action it leads to.
+- **`link_button(..., download=True)`** (milestone 12.10): a download outside a menu, such as
+  **Download study materials** beside the subject list. It follows the download rule of the actions
+  menu: a link marked as a download, never through a page in between, no loading feedback. It is of
+  the secondary kind (outline and small beside a list), never primary and never destructive.
 - **`post_button(action, label, kind, hidden={}, …)`**: a one-button `POST` form, such as
   **Activate** in a row or the destructive button of a confirmation.
 
@@ -399,9 +403,10 @@ has more actions than fit a phone card (the **Competitions** tab, milestone 12.1
 {% call actions_cell() %}
 {%- call actions_menu(c.name) -%}
 {% if can_add and c.status == "upcoming" %}{{ menu_link("Edit", edit_href) }}{% endif %}
-{{ menu_link("Questions", questions_href) }}
+{% if can_manage %}{{ menu_link("Questions", questions_href) }}{% endif %}
 {{ menu_link("Teams", teams_href) }}
 {% if c.status in ("in_progress", "finished", "published") %}{{ menu_link("Answers", answers_href) }}{% endif %}
+{% if c.status in ("in_progress", "finished", "published") %}{{ menu_link("Download questions", questions_file_href, download=True) }}{% endif %}
 {% if can_manage and c.status in ("finished", "published") %}{{ menu_link("Grades", grades_href) }}{% endif %}
 {% if can_manage and c.status == "finished" %}{{ menu_link("Publish results", publish_href) }}{% endif %}
 {% if c.status == "published" %}{{ menu_link("Download results", results_href, download=True) }}{% endif %}
@@ -414,8 +419,10 @@ has more actions than fit a phone card (the **Competitions** tab, milestone 12.1
 - **The button** reads "Actions" and is announced "Actions for “Spring round”"; the item name is
   required. It is a small outline secondary button with a chevron, a full touch target.
 - **The entries** come in a fixed order, each where it is available: on the **Competitions** tab
-  **Edit**, **Questions**, **Teams**, **Answers**, **Grades**, **Publish results**, **Download
-  results**, **Finish competition**, **Cancel competition** (milestones 12.2–12.4 and 12.8).
+  **Edit**, **Questions**, **Teams**, **Answers**, **Download questions**, **Grades**, **Publish
+  results**, **Download results**, **Finish competition**, **Cancel competition** (milestones
+  12.2–12.4, 12.8 and 12.10). **Questions** is only for teachers with **Can manage competitions**
+  (milestone 12.10); **Download questions** is for every teacher once a competition has started.
   **Finish competition** and **Publish results** are not destructive: they cannot be undone, but
   each is the normal next step of the work.
 - **A download** (milestone 12.8) is an entry like any other, a link marked as a download
@@ -621,6 +628,11 @@ store. A `None` value is left out; a rich value (a list, a badge) comes through
   institution → class. Without JavaScript, each list shows a **Show** button (inside `<noscript>`,
   so it never appears when the script runs). A level may carry `groups`, `(label, options)` pairs
   shown as option groups after its plain options (milestone 12.1).
+- **`chained_lists(levels, action, aside=...)`** (milestone 12.10): a chained list may carry one
+  aside, a link about the chosen value such as a download (`link_button(..., download=True)`). It is
+  one more cell of the lists' grid: beside the lists on a wide screen, level with the bottom of the
+  selects, and below them on a phone. It is never a primary action, and a page gives it only when
+  the chosen value allows it (on the **Competitions** tab, an active subject).
 
 Reuse these for the subject and class choices of milestones 11 and 12. _Gallery_:
 [selectors](/admin/components#selectors).

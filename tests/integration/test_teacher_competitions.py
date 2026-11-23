@@ -82,13 +82,17 @@ ENTRY_ROUTES = (
     f"{TAB}/{{competition_id:int}}/answers",
     f"{TAB}/{{competition_id:int}}/grades",
     f"{TAB}/{{competition_id:int}}/results",
+    f"{TAB}/{{competition_id:int}}/questions-file",
+    f"{TAB}/study-materials",
 )
 """A competition's questions and teams (milestone 12.2), swept in
 `test_teacher_competition_entries.py`, its team answers (milestone 12.3), swept in
 `test_teacher_team_answers.py`, and its grades (milestone 12.4), swept in
 `test_teacher_grades.py`, each with their own order of checks; and its results download
-(milestone 12.8, open to every teacher), swept in `test_teacher_results.py`. Finishing (milestone
-12.4) and publishing (milestone 12.8) are swept here, with editing and cancelling."""
+(milestone 12.8, open to every teacher), swept in `test_teacher_results.py`; and the questions
+download and the study materials (milestone 12.10, open to every teacher), swept in
+`test_teacher_question_files.py`. Finishing (milestone 12.4) and publishing (milestone 12.8) are
+swept here, with editing and cancelling."""
 COMPETITION_ROUTES = sorted(
     (method, path)
     for path, methods, _ in ALL_ROUTES
@@ -99,13 +103,20 @@ COMPETITION_ROUTES = sorted(
 MANAGE_ROUTES = [route for route in COMPETITION_ROUTES if route != ("GET", TAB)]
 
 
-def lists(competition: int, query: str) -> list[tuple[str, str]]:
-    """The menu entries every teacher gets on every row since milestone 12.2 (FR-001, FR-002):
-    the competition's **Questions** and **Teams**, with the list's context."""
-    return [
-        ("Questions", f"{TAB}/{competition}/questions?{query}"),
-        ("Teams", f"{TAB}/{competition}/teams?{query}"),
-    ]
+def lists(competition: int, query: str, manage: bool = True) -> list[tuple[str, str]]:
+    """The menu entries on every row since milestone 12.2 (FR-001, FR-002): the competition's
+    **Questions** and **Teams**, with the list's context. Since milestone 12.10 (FR-001, FR-002)
+    **Questions** only for a teacher with the setting (`manage`)."""
+    teams = ("Teams", f"{TAB}/{competition}/teams?{query}")
+    if not manage:
+        return [teams]
+    return [("Questions", f"{TAB}/{competition}/questions?{query}"), teams]
+
+
+def download_questions(competition: int, subject: int) -> tuple[str, str]:
+    """The menu entry every teacher gets on an In progress, Finished or Published row since
+    milestone 12.10 (FR-006, FR-009): **Download questions**, with the subject only."""
+    return ("Download questions", f"{TAB}/{competition}/questions-file?subject={subject}")
 
 
 def answers(competition: int, query: str) -> tuple[str, str]:
@@ -707,15 +718,24 @@ def test_no_subjects_yet(scene: Scene) -> None:
 def test_without_the_setting_no_add_and_read_only_menus(scene: Scene) -> None:
     """US2-9, US2-13. Replaced by milestone 12.2 FR-002 (SC-009): a teacher without the setting
     no longer gets rows with no menu, but a menu with only **Questions** and **Teams**; replaced
-    again by milestone 12.3 FR-001 (SC-011): an In progress row adds **Answers**."""
+    again by milestone 12.3 FR-001 (SC-011): an In progress row adds **Answers**; and by milestone
+    12.10 FR-001, FR-006: no **Questions** without the setting, and **Download questions**."""
     spring = make_competition(scene.engine, scene.chemistry, starts_at=at(14))
     running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
     body = listed(scene, browser=scene.reader)
     assert add_button(body) == []
     query = f"subject={scene.chemistry}"
     assert [(r.name, r.menu, r.menu_label) for r in rows(body)] == [
-        ("Spring round", lists(spring, query), "Actions for “Spring round”"),
-        ("Running", [*lists(running, query), answers(running, query)], "Actions for “Running”"),
+        ("Spring round", lists(spring, query, manage=False), "Actions for “Spring round”"),
+        (
+            "Running",
+            [
+                *lists(running, query, manage=False),
+                answers(running, query),
+                download_questions(running, scene.chemistry),
+            ],
+            "Actions for “Running”",
+        ),
     ]
     assert len(rows(listed(scene))[0].menu) == 4
 
@@ -1206,6 +1226,7 @@ def test_a_started_competition_is_in_progress(scene: Scene) -> None:
     assert row.menu == [
         *lists(competition, f"subject={scene.chemistry}"),
         answers(competition, f"subject={scene.chemistry}"),
+        download_questions(competition, scene.chemistry),
         ("Finish competition", f"{TAB}/{competition}/finish?subject={scene.chemistry}"),
         ("Cancel competition", f"{TAB}/{competition}/cancel?subject={scene.chemistry}"),
     ]
@@ -1255,10 +1276,12 @@ def test_cancelled_and_finished_competitions_cannot_be_edited(
     (row,) = rows(listed(scene))
     # Replaced by milestone 12.2 FR-002 (SC-009): no Edit, but a read-only menu; replaced again
     # by milestone 12.4 FR-004 (SC-011): a finished row adds **Answers** and, with the setting,
-    # **Grades**; and by milestone 12.8 FR-005: with the setting, **Publish results**.
+    # **Grades**; and by milestone 12.8 FR-005: with the setting, **Publish results**; and by
+    # milestone 12.10 FR-006: **Download questions** after **Answers**.
     query = f"subject={scene.chemistry}"
     finished = [
         answers(competition, query),
+        download_questions(competition, scene.chemistry),
         ("Grades", f"{TAB}/{competition}/grades?{query}"),
         ("Publish results", f"{TAB}/{competition}/publish?{query}"),
     ]
@@ -1667,7 +1690,7 @@ def test_a_deactivated_subject_lists_only_its_finished_competitions(
     # Replaced by milestone 12.2 FR-002 (SC-009): a finished row of a deactivated subject keeps
     # a read-only menu; replaced again by milestone 12.4 FR-004, FR-042 (SC-011): with
     # **Answers** and, with the setting, **Grades**; and by milestone 12.8 FR-005: with the
-    # setting, **Publish results**.
+    # setting, **Publish results**; and by milestone 12.10 FR-008: **Download questions**.
     query = f"subject={scene.chemistry}"
     assert [(r.id, r.status, r.menu) for r in rows(body)] == [
         (
@@ -1676,6 +1699,7 @@ def test_a_deactivated_subject_lists_only_its_finished_competitions(
             [
                 *lists(deactivated.finished, query),
                 answers(deactivated.finished, query),
+                download_questions(deactivated.finished, scene.chemistry),
                 ("Grades", f"{TAB}/{deactivated.finished}/grades?{query}"),
                 ("Publish results", f"{TAB}/{deactivated.finished}/publish?{query}"),
             ],
@@ -1807,28 +1831,32 @@ def test_every_teacher_gets_answers_on_an_in_progress_row(
     teacher), only the In progress row offers **Answers**, after **Teams** and before **Cancel
     competition**. Replaced by milestone 12.4 FR-004 (SC-011): the Finished row offers
     **Answers** too, and with the setting the In progress row offers **Finish competition** and
-    the Finished one **Grades**; and by milestone 12.8 FR-005: **Publish results** after it."""
+    the Finished one **Grades**; and by milestone 12.8 FR-005: **Publish results** after it; and
+    by milestone 12.10 FR-001, FR-006: **Questions** only with the setting, **Download questions**
+    after **Answers** for every teacher."""
     running = make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8))
     make_competition(scene.engine, scene.chemistry, "Later", starts_at=at(14))
     done = make_competition(scene.engine, scene.chemistry, "Done", starts_at=at(1, 7), stopped=True)
     make_competition(scene.engine, scene.chemistry, "Off", starts_at=at(14), cancelled=True)
     query = f"subject={scene.chemistry}"
-    for browser, running_tail, done_tail in (
+    for browser, head, running_tail, done_tail in (
         (
             scene.manager,
+            ["Questions"],
             ["Finish competition", "Cancel competition"],
             ["Grades", "Publish results"],
         ),
-        (scene.reader, [], []),
-        (client_as(TEACHER_EMAIL), [], []),
+        (scene.reader, [], [], []),
+        (client_as(TEACHER_EMAIL), [], [], []),
     ):
         for row in rows(listed(scene, browser=browser)):
             texts = [text for text, _ in row.menu]
             if row.id == running:
-                assert texts == ["Questions", "Teams", "Answers", *running_tail]
+                assert texts == [*head, "Teams", "Answers", "Download questions", *running_tail]
                 assert answers(running, query) in row.menu
+                assert download_questions(running, scene.chemistry) in row.menu
             elif row.id == done:
-                assert texts == ["Questions", "Teams", "Answers", *done_tail]
+                assert texts == [*head, "Teams", "Answers", "Download questions", *done_tail]
                 assert answers(done, query) in row.menu
             else:
                 assert "Answers" not in texts, row.name
@@ -2060,19 +2088,42 @@ def test_the_menu_per_status_and_setting(scene: Scene) -> None:
         scene.engine, scene.chemistry, "Published", starts_at=at(1, 7), stopped=True, published=True
     )
     make_competition(scene.engine, scene.chemistry, "Cancelled", starts_at=at(1, 6), cancelled=True)
+    # Milestone 12.10 FR-001, FR-006, FR-010: **Questions** only with the setting; **Download
+    # questions** after **Answers** for every teacher, once the competition has started.
     with_setting = {
         "Upcoming": ["Edit", "Questions", "Teams", "Cancel competition"],
-        "Running": ["Questions", "Teams", "Answers", "Finish competition", "Cancel competition"],
-        "Finished": ["Questions", "Teams", "Answers", "Grades", "Publish results"],
-        "Published": ["Questions", "Teams", "Answers", "Grades", "Download results"],
+        "Running": [
+            "Questions",
+            "Teams",
+            "Answers",
+            "Download questions",
+            "Finish competition",
+            "Cancel competition",
+        ],
+        "Finished": [
+            "Questions",
+            "Teams",
+            "Answers",
+            "Download questions",
+            "Grades",
+            "Publish results",
+        ],
+        "Published": [
+            "Questions",
+            "Teams",
+            "Answers",
+            "Download questions",
+            "Grades",
+            "Download results",
+        ],
         "Cancelled": ["Questions", "Teams"],
     }
     without_setting = {
-        "Upcoming": ["Questions", "Teams"],
-        "Running": ["Questions", "Teams", "Answers"],
-        "Finished": ["Questions", "Teams", "Answers"],
-        "Published": ["Questions", "Teams", "Answers", "Download results"],
-        "Cancelled": ["Questions", "Teams"],
+        "Upcoming": ["Teams"],
+        "Running": ["Teams", "Answers", "Download questions"],
+        "Finished": ["Teams", "Answers", "Download questions"],
+        "Published": ["Teams", "Answers", "Download questions", "Download results"],
+        "Cancelled": ["Teams"],
     }
     body = listed(scene)
     assert menu_texts(body) == with_setting
@@ -2102,6 +2153,14 @@ def test_the_menu_per_status_and_setting(scene: Scene) -> None:
     assert "download" in download.attrs
     assert download.attrs["href"] == f"{TAB}/{published}/results?subject={scene.chemistry}"
     assert "download" not in entries["Publish results"].attrs
+    # Milestone 12.10 US2-5, FR-009: a link marked as a download, carrying the subject only.
+    question_files = {
+        a.attrs["href"]: a
+        for a in html.parse(listed(scene, "&status=in_progress&page=1")).find_all("a")
+        if a.text() == "Download questions"
+    }
+    assert list(question_files) == [f"{TAB}/{running}/questions-file?subject={scene.chemistry}"]
+    assert all("download" in a.attrs for a in question_files.values())
     paged = listed(scene, "&status=in_progress&page=1")
     query = f"subject={scene.chemistry}&status=in_progress"
     (running_row,) = [r for r in rows(paged) if r.id == running]

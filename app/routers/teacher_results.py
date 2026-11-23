@@ -13,19 +13,13 @@ denied" before any id is read.
 competition, which must be **Published** ("Competition not found", 404, for an unknown
 competition, one of another subject, and one in any other status, FR-033).
 
-**The response** is the file itself, with no page in between, so the teacher stays on the list:
-
-- `Content-Disposition: attachment` names it "<name> <YYYY-MM-DD>.pdf", with an ASCII
-  `filename=` and the full name in `filename*` (RFC 6266 / 5987);
-- `Cache-Control: no-store`, since the same address answers the Ukrainian or the English file by
-  the language cookie, and a cached file must never answer after a switch;
-- `X-Content-Type-Options: nosniff`.
+**The response** is the file itself, with no page in between, so the teacher stays on the list;
+its headers are built by `app.routers.downloads.pdf_download`, shared with the questions file and
+the study materials (milestone 12.10).
 
 The menu offers it as a link marked as a download (`menu_link(..., download=True)`), which the
 loading script of milestone 10.1 skips. Opening it changes nothing and logs nothing.
 """
-
-from urllib.parse import quote
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import Response
@@ -34,6 +28,7 @@ from app.core.auth import allow_roles
 from app.core.db import SessionDep
 from app.core.i18n import Language
 from app.models import Role
+from app.routers.downloads import pdf_download
 from app.routers.teacher_competitions import (
     COMPETITION_NOT_FOUND,
     SUBJECT_NOT_FOUND,
@@ -42,7 +37,7 @@ from app.routers.teacher_competitions import (
     offered_subject,
 )
 from app.services.competitions import CompetitionStatus, offered_subjects
-from app.services.results import ascii_file_name, results_file, results_file_name
+from app.services.results import results_file, results_file_name
 
 router = APIRouter(prefix="/teacher/competitions/{competition_id:int}")
 
@@ -66,16 +61,4 @@ def download_results(
     content = results_file(session, competition.id, language)
     if content is None:  # never: a Published competition has both files (data-model.md §4)
         return not_found(request, COMPETITION_NOT_FOUND)
-    name = results_file_name(competition.name, competition.starts_at)
-    disposition = (
-        f"attachment; filename=\"{ascii_file_name(name)}\"; filename*=UTF-8''{quote(name, safe='')}"
-    )
-    return Response(
-        content,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": disposition,
-            "Cache-Control": "no-store",
-            "X-Content-Type-Options": "nosniff",
-        },
-    )
+    return pdf_download(content, results_file_name(competition.name, competition.starts_at))

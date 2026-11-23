@@ -144,14 +144,16 @@ def test_a_page_lists_only_the_subjects_listed_questions_newest_first(
     make_question(engine, scene.maths, "gone", deleted=True)
     newest_first = ids[::-1]
     with Session(engine) as session:
-        pages = [question_page(session, scene.maths, page) for page in (1, 2, 3)]
+        pages = [
+            question_page(session, scene.maths, page, include_additional=True) for page in (1, 2, 3)
+        ]
     assert [[q.id for q in p.questions] for p in pages] == [
         newest_first[:10],
         newest_first[10:20],
         newest_first[20:],
     ]
     assert all(p.paging.total == 25 and p.paging.last == 3 for p in pages)
-    assert pages[0].questions[0] == QuestionView(ids[24], scene.maths, "Q24", "A24")
+    assert pages[0].questions[0] == QuestionView(ids[24], scene.maths, "Q24", "A24", False)
 
 
 @pytest.mark.parametrize(("asked", "shown"), [(0, 1), (-5, 1), (99, 3)])
@@ -160,13 +162,16 @@ def test_a_page_out_of_range_is_clamped(
 ) -> None:
     seed(engine, scene.maths, 25)
     with Session(engine) as session:
-        assert question_page(session, scene.maths, asked).paging.number == shown
+        assert (
+            question_page(session, scene.maths, asked, include_additional=True).paging.number
+            == shown
+        )
 
 
 def test_a_subject_without_listed_questions_has_an_empty_page(engine: Engine, scene: Scene) -> None:
     make_question(engine, scene.maths, deleted=True)
     with Session(engine) as session:
-        page = question_page(session, scene.maths, 1)
+        page = question_page(session, scene.maths, 1, include_additional=True)
     assert page.questions == []
     assert (page.paging.total, page.paging.number, page.paging.last) == (0, 1, 1)
 
@@ -188,7 +193,7 @@ def test_a_question_is_found_only_while_listed(engine: Engine, scene: Scene, loc
     hidden = make_question(engine, scene.chemistry)
     with Session(engine) as session:
         view, subject = get_question(session, listed, lock=lock)
-        assert view == QuestionView(listed, scene.maths, "Why?", "Because.")
+        assert view == QuestionView(listed, scene.maths, "Why?", "Because.", False)
         assert subject.id == scene.maths
         for question_id in (MISSING, deleted, hidden):
             with pytest.raises(QuestionNotFound):
@@ -206,7 +211,7 @@ def test_a_question_is_stored_in_its_subject_with_both_timestamps(
     now = clock()
     with Session(engine) as session:
         view = create_question(session, scene.manager, scene.physics, "Why?", "Because.")
-    assert view == QuestionView(view.id, scene.physics, "Why?", "Because.")
+    assert view == QuestionView(view.id, scene.physics, "Why?", "Because.", False)
     assert rows(engine) == [(view.id, scene.physics, "Why?", "Because.", now, now, None)]
 
 
@@ -226,7 +231,10 @@ def test_a_duplicate_text_is_accepted(engine: Engine, scene: Scene) -> None:
     with Session(engine) as session:
         create_question(session, scene.manager, scene.maths, "Same?", "Yes.")
         create_question(session, scene.manager, scene.maths, "Same?", "Yes.")
-        assert [q.text for q in question_page(session, scene.maths, 1).questions] == [
+        assert [
+            q.text
+            for q in question_page(session, scene.maths, 1, include_additional=True).questions
+        ] == [
             "Same?",
             "Same?",
         ]
@@ -262,8 +270,10 @@ def test_an_edit_replaces_both_fields_and_keeps_the_number_and_subject(
         question = create_question(session, scene.manager, scene.maths, "Old?", "Old.").id
     edited = clock(timedelta(hours=1))
     with Session(engine) as session:
-        view = update_question(session, scene.manager, question, "New?", "New.")
-    assert view == QuestionView(question, scene.maths, "New?", "New.")
+        view = update_question(
+            session, scene.manager, question, "New?", "New.", is_additional=False
+        )
+    assert view == QuestionView(question, scene.maths, "New?", "New.", False)
     assert rows(engine) == [(question, scene.maths, "New?", "New.", created, edited, None)]
 
 
@@ -275,7 +285,7 @@ def test_an_edit_that_changes_nothing_keeps_the_time(
     before = rows(engine)
     clock(timedelta(hours=1))
     with Session(engine) as session:
-        update_question(session, scene.manager, question, "Same?", "Same.")
+        update_question(session, scene.manager, question, "Same?", "Same.", is_additional=False)
     assert rows(engine) == before
 
 
@@ -285,7 +295,9 @@ def test_editing_needs_the_setting(engine: Engine, scene: Scene, who: str) -> No
     before = rows(engine)
     with Session(engine) as session:
         with pytest.raises(ManageRequired):
-            update_question(session, getattr(scene, who), question, "New?", "New.")
+            update_question(
+                session, getattr(scene, who), question, "New?", "New.", is_additional=False
+            )
     assert rows(engine) == before
 
 
@@ -299,7 +311,7 @@ def test_editing_needs_a_listed_question(engine: Engine, scene: Scene, case: str
     before = rows(engine)
     with Session(engine) as session:
         with pytest.raises(QuestionNotFound):
-            update_question(session, scene.manager, question, "New?", "New.")
+            update_question(session, scene.manager, question, "New?", "New.", is_additional=False)
     assert rows(engine) == before
 
 
@@ -319,7 +331,7 @@ def test_a_deleted_question_stays_stored_unchanged(
         delete_question(session, scene.manager, question)
     assert rows(engine) == [(*before[:6], deleted)]
     with Session(engine) as session:
-        assert question_page(session, scene.maths, 1).questions == []
+        assert question_page(session, scene.maths, 1, include_additional=True).questions == []
         with pytest.raises(QuestionNotFound):
             get_question(session, question)
 
@@ -342,7 +354,12 @@ def test_where_the_list_lands_after_a_deletion(
     newest_first = seed(engine, scene.maths, count)[::-1]
     with Session(engine) as session:
         landing = delete_question(session, scene.manager, newest_first[index])
-        after = [q.id for q in question_page(session, scene.maths, landing.page).questions]
+        after = [
+            q.id
+            for q in question_page(
+                session, scene.maths, landing.page, include_additional=True
+            ).questions
+        ]
     remaining = [q for q in newest_first if q != newest_first[index]]
     assert landing == Landing(landing_page, remaining[landing_index])
     assert landing_index // PAGE_SIZE + 1 == landing_page
@@ -397,7 +414,7 @@ def test_a_subject_deactivated_after_the_form_refuses_the_write(
         with pytest.raises(SubjectUnavailable):
             create_question(session, scene.manager, scene.maths, "Why?", "Because.")
         with pytest.raises(QuestionNotFound):
-            update_question(session, scene.manager, question, "New?", "New.")
+            update_question(session, scene.manager, question, "New?", "New.", is_additional=False)
         with pytest.raises(QuestionNotFound):
             delete_question(session, scene.manager, question)
     assert rows(engine) == before
@@ -412,7 +429,7 @@ def test_a_refusal_under_lock_rolls_back(engine: Engine, scene: Scene) -> None:
         row.text = "changed, never committed"
         session.add(row)
         with pytest.raises(ManageRequired):
-            update_question(session, scene.reader, question, "New?", "New.")
+            update_question(session, scene.reader, question, "New?", "New.", is_additional=False)
         assert not session.dirty
     assert rows(engine)[0][2] == "Why?"
 
@@ -427,8 +444,12 @@ def test_each_change_logs_ids_only(
 ) -> None:
     with caplog.at_level(logging.INFO, logger="uvicorn.error"), Session(engine) as session:
         question = create_question(session, scene.manager, scene.maths, "Secret?", "Hidden.").id
-        update_question(session, scene.manager, question, "Secret 2?", "Hidden 2.")
-        update_question(session, scene.manager, question, "Secret 2?", "Hidden 2.")  # no-op
+        update_question(
+            session, scene.manager, question, "Secret 2?", "Hidden 2.", is_additional=False
+        )
+        update_question(
+            session, scene.manager, question, "Secret 2?", "Hidden 2.", is_additional=False
+        )  # no-op
         delete_question(session, scene.manager, question)
     messages = [r.getMessage() for r in caplog.records if r.name == "uvicorn.error"]
     assert messages == [
@@ -436,3 +457,137 @@ def test_each_change_logs_ids_only(
         f"Question updated: id={question}",
         f"Question deleted: id={question}",
     ]
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9: the additional mark (specs/012.9-additional-questions/contracts/services.md)
+# ---------------------------------------------------------------------------------------------
+
+
+def stored_mark(engine: Engine, question_id: int) -> bool:
+    with Session(engine) as session:
+        question = session.get(Question, question_id)
+        assert question is not None
+        return question.is_additional
+
+
+def test_a_new_question_is_not_additional_unless_marked(engine: Engine, scene: Scene) -> None:
+    """FR-001."""
+    with Session(engine) as session:
+        plain = create_question(session, scene.manager, scene.maths, "Plain?", "Yes.")
+        marked = create_question(
+            session, scene.manager, scene.maths, "Hard?", "Yes.", is_additional=True
+        )
+    assert (plain.is_additional, marked.is_additional) == (False, True)
+    assert (stored_mark(engine, plain.id), stored_mark(engine, marked.id)) == (False, True)
+
+
+def test_an_edit_sets_and_clears_the_mark(engine: Engine, scene: Scene) -> None:
+    """FR-003, FR-009."""
+    question = make_question(engine, scene.maths, "Q?", "A.")
+    with Session(engine) as session:
+        view = update_question(session, scene.manager, question, "Q?", "A.", is_additional=True)
+    assert view.is_additional and stored_mark(engine, question)
+    with Session(engine) as session:
+        view = update_question(session, scene.manager, question, "Q?", "A.", is_additional=False)
+    assert not view.is_additional and not stored_mark(engine, question)
+
+
+def test_changing_only_the_mark_is_a_change(
+    engine: Engine,
+    scene: Scene,
+    clock: Callable[[timedelta], datetime],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Research R5: the mark joins the other two values; an edit that repeats all three changes
+    nothing and logs nothing."""
+    with Session(engine) as session:
+        question = create_question(session, scene.manager, scene.maths, "Q?", "A.").id
+    created = clock()
+    later = clock(timedelta(minutes=5))
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"), Session(engine) as session:
+        update_question(session, scene.manager, question, "Q?", "A.", is_additional=True)
+    with Session(engine) as session:
+        stored = session.get(Question, question)
+        assert stored is not None and stored.updated_at == later != created
+    messages = [r.getMessage() for r in caplog.records if r.name == "uvicorn.error"]
+    assert messages == [f"Question updated: id={question}"]
+
+    clock(timedelta(minutes=5))
+    caplog.clear()
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"), Session(engine) as session:
+        update_question(session, scene.manager, question, "Q?", "A.", is_additional=True)
+    with Session(engine) as session:
+        stored = session.get(Question, question)
+        assert stored is not None and stored.updated_at == later
+    assert [r for r in caplog.records if r.name == "uvicorn.error"] == []
+
+
+@pytest.mark.parametrize("case", ["deleted", "deactivated-subject"])
+def test_a_question_that_cannot_be_edited_keeps_its_mark(
+    engine: Engine, scene: Scene, case: str
+) -> None:
+    """FR-005: a deleted question, or one of a deactivated subject, is not found, and its mark
+    stays as it is."""
+    if case == "deleted":
+        question = make_question(engine, scene.maths, additional=True, deleted=True)
+    else:
+        question = make_question(engine, scene.chemistry, additional=True)
+    with Session(engine) as session, pytest.raises(QuestionNotFound):
+        update_question(session, scene.manager, question, "Q?", "A.", is_additional=False)
+    assert stored_mark(engine, question)
+
+
+def test_deleting_keeps_the_mark(engine: Engine, scene: Scene) -> None:
+    question = make_question(engine, scene.maths, additional=True)
+    with Session(engine) as session:
+        delete_question(session, scene.manager, question)
+    assert stored_mark(engine, question)
+
+
+def mixed_subject(engine: Engine, subject_id: int) -> tuple[list[int], list[int]]:
+    """20 ordinary questions, then 3 additional ones (the newest is additional), then one deleted
+    additional question; the ordinary ids and the additional ids, in creation order."""
+    ordinary = seed(engine, subject_id, 20)
+    additional = [
+        make_question(engine, subject_id, f"X{i}", "A.", additional=True) for i in range(3)
+    ]
+    make_question(engine, subject_id, "Gone?", "A.", additional=True, deleted=True)
+    return ordinary, additional
+
+
+def test_without_the_additional_questions_count_and_pages_cover_the_others(
+    engine: Engine, scene: Scene
+) -> None:
+    """FR-014, FR-019, SC-001: left out of the count, the paging and the rows."""
+    ordinary, _ = mixed_subject(engine, scene.maths)
+    with Session(engine) as session:
+        pages = [
+            question_page(session, scene.maths, p, include_additional=False) for p in (1, 2, 9)
+        ]
+    assert all(p.paging.total == 20 and p.paging.last == 2 for p in pages)
+    assert [q.id for q in pages[0].questions] == ordinary[::-1][:10]
+    assert [q.id for q in pages[1].questions] == ordinary[::-1][10:]
+    assert pages[2].paging.number == 2  # a page past the end is clamped to the last
+    assert not any(q.is_additional for p in pages for q in p.questions)
+
+
+def test_with_the_additional_questions_everything_is_listed(engine: Engine, scene: Scene) -> None:
+    ordinary, additional = mixed_subject(engine, scene.maths)
+    with Session(engine) as session:
+        first = question_page(session, scene.maths, 1, include_additional=True)
+    assert first.paging.total == 23
+    assert [q.id for q in first.questions] == (ordinary + additional)[::-1][:10]
+    assert [q.is_additional for q in first.questions[:3]] == [True, True, True]
+
+
+def test_a_subject_with_only_additional_questions_is_empty_without_them(
+    engine: Engine, scene: Scene
+) -> None:
+    for i in range(2):
+        make_question(engine, scene.physics, f"X{i}", "A.", additional=True)
+    with Session(engine) as session:
+        without = question_page(session, scene.physics, 1, include_additional=False)
+        with_them = question_page(session, scene.physics, 1, include_additional=True)
+    assert (without.paging.total, without.questions) == (0, [])
+    assert with_them.paging.total == 2

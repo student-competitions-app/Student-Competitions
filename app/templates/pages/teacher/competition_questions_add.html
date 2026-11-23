@@ -2,13 +2,15 @@
 {#- "Add questions" (specs/012.2-competition-questions-teams/contracts/http-routes.md §2): the
     subject's listed questions, newest first, ten per page, between two page navigations; each
     with Add, or "Already in this competition" when the competition holds it. The way back leads
-    to the page of the competition's questions the teacher came from (`back`). -#}
+    to the page of the competition's questions the teacher came from (`back`). An additional
+    question shows the badge (milestone 12.9 FR-024); only teachers with the setting open the page. -#}
 {% from "components/frame.html" import back_link, page_heading %}
 {% from "components/feedback.html" import empty_state, notice as notice_box %}
 {% from "components/pagination.html" import page_navigation %}
 {% from "components/card.html" import text_card, text_box %}
 {% from "components/table.html" import row_note %}
 {% from "components/button.html" import post_button %}
+{% from "components/badge.html" import additional_badge %}
 
 {% block title %}{{ _("Add questions to “%(name)s”", name=competition.name) }} — {{ app_name }}{% endblock %}
 
@@ -23,7 +25,7 @@
 <ol class="text-card-list">
   {% for q in listing.questions %}
   <li>
-    {% call text_card(_("Question %(number)d", number=q.id), id="question-" ~ q.id) %}
+    {% call text_card(_("Question %(number)d", number=q.id), id="question-" ~ q.id, badge=additional_badge() if q.is_additional else none) %}
     {{ text_box(_("Question"), q.text) }}
     {{ text_box(_("Reference answer"), q.reference_answer) }}
     <div class="row-actions">

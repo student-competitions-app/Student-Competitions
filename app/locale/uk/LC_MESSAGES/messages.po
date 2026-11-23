@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  student-competitions\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-21 16:57+0200\n"
+"POT-Creation-Date: 2026-11-23 15:44+0200\n"
 "PO-Revision-Date: 2026-11-15 17:00+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: uk\n"
@@ -380,7 +380,7 @@ msgid "This region does not exist, or it is deactivated."
 msgstr "Такого регіону не існує, або його деактивовано."
 
 #: app/routers/teacher_competition_entries.py:110
-#: app/routers/teacher_questions.py:58 app/routers/teacher_team_answers.py:95
+#: app/routers/teacher_questions.py:64 app/routers/teacher_team_answers.py:95
 msgid "Question not found"
 msgstr "Питання не знайдено"
 
@@ -472,9 +472,9 @@ msgid "Team “%(team)s” is not in “%(name)s”"
 msgstr "Команда «%(team)s» не бере участі в змаганнях «%(name)s»"
 
 #: app/routers/teacher_competition_entries.py:172
-#: app/templates/pages/teacher/competition_questions_add.html:16
+#: app/templates/pages/teacher/competition_questions_add.html:18
 #: app/templates/pages/teacher/question_delete.html:9
-#: app/templates/pages/teacher/question_form.html:13
+#: app/templates/pages/teacher/question_form.html:14
 #: app/templates/pages/teacher/question_not_found.html:9
 msgid "Back to the questions"
 msgstr "Назад до питань"
@@ -498,31 +498,31 @@ msgstr "Змінити команди змагань «%(name)s»?"
 msgid "Back to the competition"
 msgstr "Назад до змагань"
 
-#: app/routers/teacher_competition_entries.py:630
+#: app/routers/teacher_competition_entries.py:637
 msgid "The question was deleted from the question bank and cannot be added again."
 msgstr "Питання видалено з банку питань, і його не можна додати знову."
 
-#: app/routers/teacher_competition_entries.py:632
+#: app/routers/teacher_competition_entries.py:639
 msgid "The question stays in the question bank and can be added again."
 msgstr "Питання залишається в банку питань, і його можна додати знову."
 
-#: app/routers/teacher_competition_entries.py:642
+#: app/routers/teacher_competition_entries.py:649
 #, python-format
 msgid "Remove question %(number)d from “%(name)s”?"
 msgstr "Вилучити питання %(number)d зі змагань «%(name)s»?"
 
-#: app/routers/teacher_competition_entries.py:950
+#: app/routers/teacher_competition_entries.py:957
 #, python-format
 msgid "Remove team “%(team)s” of %(institution)s, %(region)s from “%(name)s”?"
 msgstr ""
 "Вилучити команду «%(team)s» (%(institution)s, %(region)s) зі змагань "
 "«%(name)s»?"
 
-#: app/routers/teacher_competition_entries.py:956
+#: app/routers/teacher_competition_entries.py:963
 msgid "The team and its members are not changed, and the team can be added again."
 msgstr "Команда та її учасники не змінюються, і команду можна додати знову."
 
-#: app/routers/teacher_competitions.py:94 app/routers/teacher_questions.py:56
+#: app/routers/teacher_competitions.py:94 app/routers/teacher_questions.py:62
 #: app/templates/pages/admin/subject_not_found.html:4
 #: app/templates/pages/admin/subject_not_found.html:8
 msgid "Subject not found"
@@ -659,7 +659,7 @@ msgstr "Деактивовані предмети"
 #: app/templates/pages/teacher/competition_grades.html:25
 #: app/templates/pages/teacher/competition_not_found.html:10
 #: app/templates/pages/teacher/competition_publish.html:19
-#: app/templates/pages/teacher/competition_questions.html:19
+#: app/templates/pages/teacher/competition_questions.html:21
 #: app/templates/pages/teacher/competition_teams.html:21
 msgid "Back to the competitions"
 msgstr "Назад до змагань"
@@ -738,11 +738,11 @@ msgstr "Усі команди"
 msgid "Ungraded only"
 msgstr "Лише неоцінені"
 
-#: app/routers/teacher_questions.py:56
+#: app/routers/teacher_questions.py:62
 msgid "This subject does not exist or is deactivated."
 msgstr "Такого предмета не існує, або його деактивовано."
 
-#: app/routers/teacher_questions.py:59
+#: app/routers/teacher_questions.py:65
 msgid "This question does not exist, was deleted, or its subject is deactivated."
 msgstr "Такого питання не існує, його видалено, або його предмет деактивовано."
 
@@ -1015,23 +1015,23 @@ msgstr "Група «%(name)s» уже є в цьому закладі осві�
 msgid "%(name)s · year %(year)d"
 msgstr "%(name)s · %(year)d курс"
 
-#: app/services/competitions.py:94 app/templates/components/badge.html:36
+#: app/services/competitions.py:94 app/templates/components/badge.html:44
 msgid "Upcoming"
 msgstr "Заплановано"
 
-#: app/services/competitions.py:95 app/templates/components/badge.html:37
+#: app/services/competitions.py:95 app/templates/components/badge.html:45
 msgid "In progress"
 msgstr "Триває"
 
-#: app/services/competitions.py:96 app/templates/components/badge.html:38
+#: app/services/competitions.py:96 app/templates/components/badge.html:46
 msgid "Finished"
 msgstr "Завершено"
 
-#: app/services/competitions.py:97 app/templates/components/badge.html:39
+#: app/services/competitions.py:97 app/templates/components/badge.html:47
 msgid "Published"
 msgstr "Опубліковано"
 
-#: app/services/competitions.py:98 app/templates/components/badge.html:40
+#: app/services/competitions.py:98 app/templates/components/badge.html:48
 msgid "Cancelled"
 msgstr "Скасовано"
 
@@ -1283,9 +1283,9 @@ msgstr "Команда «%(name)s» уже існує."
 #: app/templates/components/answer_sheet.html:23
 #: app/templates/components/grading_sheet.html:35
 #: app/templates/components/grading_sheet.html:82
-#: app/templates/pages/teacher/competition_questions.html:32
-#: app/templates/pages/teacher/competition_questions_add.html:26
-#: app/templates/pages/teacher/questions.html:40
+#: app/templates/pages/teacher/competition_questions.html:34
+#: app/templates/pages/teacher/competition_questions_add.html:28
+#: app/templates/pages/teacher/questions.html:42
 #, python-format
 msgid "Question %(number)d"
 msgstr "Питання %(number)d"
@@ -1293,10 +1293,10 @@ msgstr "Питання %(number)d"
 #: app/templates/components/answer_sheet.html:24
 #: app/templates/components/grading_sheet.html:36
 #: app/templates/components/grading_sheet.html:83
-#: app/templates/pages/teacher/competition_questions.html:33
-#: app/templates/pages/teacher/competition_questions_add.html:27
-#: app/templates/pages/teacher/question_form.html:26
-#: app/templates/pages/teacher/questions.html:41
+#: app/templates/pages/teacher/competition_questions.html:35
+#: app/templates/pages/teacher/competition_questions_add.html:29
+#: app/templates/pages/teacher/question_form.html:27
+#: app/templates/pages/teacher/questions.html:43
 msgid "Question"
 msgstr "Питання"
 
@@ -1314,8 +1314,8 @@ msgid "Not answered"
 msgstr "Без відповіді"
 
 #: app/templates/components/answer_sheet.html:25
-#: app/templates/pages/teacher/question_form.html:26
 #: app/templates/pages/teacher/question_form.html:27
+#: app/templates/pages/teacher/question_form.html:28
 msgid "Up to 2,000 characters."
 msgstr "До 2000 символів."
 
@@ -1362,6 +1362,11 @@ msgstr "Активна"
 msgctxt "class"
 msgid "Deactivated"
 msgstr "Деактивовано"
+
+#: app/templates/components/badge.html:34
+msgctxt "question"
+msgid "Additional"
+msgstr "Додаткове"
 
 #: app/templates/components/confirmation.html:44
 #: app/templates/components/form.html:133
@@ -1410,10 +1415,10 @@ msgid "Language"
 msgstr "Мова"
 
 #: app/templates/components/grading_sheet.html:37
-#: app/templates/pages/teacher/competition_questions.html:34
-#: app/templates/pages/teacher/competition_questions_add.html:28
-#: app/templates/pages/teacher/question_form.html:27
-#: app/templates/pages/teacher/questions.html:42
+#: app/templates/pages/teacher/competition_questions.html:36
+#: app/templates/pages/teacher/competition_questions_add.html:30
+#: app/templates/pages/teacher/question_form.html:28
+#: app/templates/pages/teacher/questions.html:44
 msgid "Reference answer"
 msgstr "Еталонна відповідь"
 
@@ -1601,7 +1606,7 @@ msgstr ""
 #: app/templates/pages/admin/subjects.html:26
 #: app/templates/pages/teacher/class_delete.html:19
 #: app/templates/pages/teacher/question_delete.html:10
-#: app/templates/pages/teacher/questions.html:46
+#: app/templates/pages/teacher/questions.html:48
 #: app/templates/pages/teacher/students.html:55
 #: app/templates/pages/teacher/team_delete.html:10
 #: app/templates/pages/teacher/teams.html:50
@@ -1709,7 +1714,7 @@ msgstr "Створити заклад освіти"
 #: app/templates/pages/admin/subjects.html:18
 #: app/templates/pages/teacher/competition_answers.html:28
 #: app/templates/pages/teacher/competition_grades.html:29
-#: app/templates/pages/teacher/competition_questions.html:23
+#: app/templates/pages/teacher/competition_questions.html:25
 #: app/templates/pages/teacher/competition_teams.html:25
 #: app/templates/pages/teacher/competitions.html:36
 #: app/templates/pages/teacher/competitions.html:56
@@ -1822,7 +1827,7 @@ msgstr "Створіть перший предмет кнопкою «Створ
 
 #: app/templates/pages/admin/subjects.html:32
 #: app/templates/pages/teacher/competitions.html:45
-#: app/templates/pages/teacher/questions.html:30
+#: app/templates/pages/teacher/questions.html:32
 msgid "No subjects yet"
 msgstr "Предметів ще немає"
 
@@ -1898,7 +1903,7 @@ msgstr ""
 
 #: app/templates/pages/admin/teacher_remove.html:10
 #: app/templates/pages/teacher/competition_entry_remove.html:13
-#: app/templates/pages/teacher/competition_questions.html:38
+#: app/templates/pages/teacher/competition_questions.html:40
 #: app/templates/pages/teacher/competition_teams.html:43
 #: app/templates/pages/teacher/student_form.html:28
 #: app/templates/pages/teacher/student_remove.html:10
@@ -2368,7 +2373,7 @@ msgstr "Відповіді змагань «%(name)s»"
 #: app/templates/pages/teacher/competition_answers.html:28
 #: app/templates/pages/teacher/competition_form.html:22
 #: app/templates/pages/teacher/competition_grades.html:29
-#: app/templates/pages/teacher/competition_questions.html:23
+#: app/templates/pages/teacher/competition_questions.html:25
 #: app/templates/pages/teacher/competition_teams.html:25
 #: app/templates/pages/teacher/competitions.html:56
 #: app/templates/pages/teacher/competitions.html:60
@@ -2377,10 +2382,10 @@ msgstr "Початок"
 
 #: app/templates/pages/teacher/competition_answers.html:28
 #: app/templates/pages/teacher/competition_grades.html:29
-#: app/templates/pages/teacher/competition_questions.html:23
+#: app/templates/pages/teacher/competition_questions.html:25
 #: app/templates/pages/teacher/competition_teams.html:25
 #: app/templates/pages/teacher/competitions.html:32
-#: app/templates/pages/teacher/questions.html:24
+#: app/templates/pages/teacher/questions.html:26
 msgid "Subject"
 msgstr "Предмет"
 
@@ -2390,12 +2395,12 @@ msgstr "Немає команд із ваших закладів освіти"
 
 #: app/templates/pages/teacher/competition_answers.html:34
 #: app/templates/pages/teacher/competition_grades.html:38
-#: app/templates/pages/teacher/competition_questions.html:28
-#: app/templates/pages/teacher/competition_questions_add.html:22
+#: app/templates/pages/teacher/competition_questions.html:30
+#: app/templates/pages/teacher/competition_questions_add.html:24
 #: app/templates/pages/teacher/competition_teams.html:31
 #: app/templates/pages/teacher/competition_teams_add.html:35
 #: app/templates/pages/teacher/competitions.html:55
-#: app/templates/pages/teacher/questions.html:36
+#: app/templates/pages/teacher/questions.html:38
 msgid "Pages, top"
 msgstr "Сторінки, вгорі"
 
@@ -2442,12 +2447,12 @@ msgstr "Переглянути відповіді"
 
 #: app/templates/pages/teacher/competition_answers.html:57
 #: app/templates/pages/teacher/competition_grades.html:59
-#: app/templates/pages/teacher/competition_questions.html:45
-#: app/templates/pages/teacher/competition_questions_add.html:40
+#: app/templates/pages/teacher/competition_questions.html:47
+#: app/templates/pages/teacher/competition_questions_add.html:42
 #: app/templates/pages/teacher/competition_teams.html:51
 #: app/templates/pages/teacher/competition_teams_add.html:52
 #: app/templates/pages/teacher/competitions.html:78
-#: app/templates/pages/teacher/questions.html:53
+#: app/templates/pages/teacher/questions.html:55
 msgid "Pages, bottom"
 msgstr "Сторінки, внизу"
 
@@ -2522,7 +2527,7 @@ msgid "Add competition"
 msgstr "Додати змагання"
 
 #: app/templates/pages/teacher/competition_form.html:16
-#: app/templates/pages/teacher/question_form.html:17
+#: app/templates/pages/teacher/question_form.html:18
 #, python-format
 msgid "Subject: %(subject)s"
 msgstr "Предмет: %(subject)s"
@@ -2607,59 +2612,59 @@ msgstr "Перш ніж публікувати результати, потрі�
 msgid "Grade the remaining teams"
 msgstr "Оцінити решту команд"
 
-#: app/templates/pages/teacher/competition_questions.html:16
-#: app/templates/pages/teacher/competition_questions.html:20
+#: app/templates/pages/teacher/competition_questions.html:18
+#: app/templates/pages/teacher/competition_questions.html:22
 #, python-format
 msgid "Questions of “%(name)s”"
 msgstr "Питання змагань «%(name)s»"
 
-#: app/templates/pages/teacher/competition_questions.html:20
-#: app/templates/pages/teacher/question_form.html:9
-#: app/templates/pages/teacher/questions.html:19
+#: app/templates/pages/teacher/competition_questions.html:22
+#: app/templates/pages/teacher/question_form.html:10
+#: app/templates/pages/teacher/questions.html:21
 msgid "Add question"
 msgstr "Додати питання"
 
-#: app/templates/pages/teacher/competition_questions.html:26
+#: app/templates/pages/teacher/competition_questions.html:28
 msgid "No questions in this competition yet"
 msgstr "У цих змаганнях ще немає питань"
 
-#: app/templates/pages/teacher/competition_questions.html:26
+#: app/templates/pages/teacher/competition_questions.html:28
 msgid "Add questions with Add question."
 msgstr "Додайте питання кнопкою «Додати питання»."
 
-#: app/templates/pages/teacher/competition_questions.html:28
-#: app/templates/pages/teacher/competition_questions.html:45
-#: app/templates/pages/teacher/competition_questions_add.html:22
-#: app/templates/pages/teacher/competition_questions_add.html:40
+#: app/templates/pages/teacher/competition_questions.html:30
+#: app/templates/pages/teacher/competition_questions.html:47
+#: app/templates/pages/teacher/competition_questions_add.html:24
+#: app/templates/pages/teacher/competition_questions_add.html:42
 #: app/templates/pages/teacher/competitions.html:65
-#: app/templates/pages/teacher/questions.html:12
-#: app/templates/pages/teacher/questions.html:19
+#: app/templates/pages/teacher/questions.html:14
 #: app/templates/pages/teacher/questions.html:21
-#: app/templates/pages/teacher/questions.html:36
-#: app/templates/pages/teacher/questions.html:53
+#: app/templates/pages/teacher/questions.html:23
+#: app/templates/pages/teacher/questions.html:38
+#: app/templates/pages/teacher/questions.html:55
 msgid "Questions"
 msgstr "Питання"
 
-#: app/templates/pages/teacher/competition_questions.html:37
+#: app/templates/pages/teacher/competition_questions.html:39
 msgid "Deleted from the question bank"
 msgstr "Видалено з банку питань"
 
-#: app/templates/pages/teacher/competition_questions_add.html:13
-#: app/templates/pages/teacher/competition_questions_add.html:17
+#: app/templates/pages/teacher/competition_questions_add.html:15
+#: app/templates/pages/teacher/competition_questions_add.html:19
 #, python-format
 msgid "Add questions to “%(name)s”"
 msgstr "Додати питання до змагань «%(name)s»"
 
-#: app/templates/pages/teacher/competition_questions_add.html:20
+#: app/templates/pages/teacher/competition_questions_add.html:22
 msgid "No questions in this subject yet"
 msgstr "З цього предмета ще немає питань"
 
-#: app/templates/pages/teacher/competition_questions_add.html:31
+#: app/templates/pages/teacher/competition_questions_add.html:33
 #: app/templates/pages/teacher/competition_teams_add.html:44
 msgid "Already in this competition"
 msgstr "Уже в цих змаганнях"
 
-#: app/templates/pages/teacher/competition_questions_add.html:33
+#: app/templates/pages/teacher/competition_questions_add.html:35
 #: app/templates/pages/teacher/competition_teams_add.html:46
 #: app/templates/pages/teacher/team_add_students.html:36
 msgid "Add"
@@ -2720,12 +2725,12 @@ msgid "Competitions"
 msgstr "Змагання"
 
 #: app/templates/pages/teacher/competitions.html:32
-#: app/templates/pages/teacher/questions.html:24
+#: app/templates/pages/teacher/questions.html:26
 msgid "Choose a subject"
 msgstr "Виберіть предмет"
 
 #: app/templates/pages/teacher/competitions.html:45
-#: app/templates/pages/teacher/questions.html:30
+#: app/templates/pages/teacher/questions.html:32
 msgid "Ask an administrator to add a subject."
 msgstr "Попросіть адміністратора додати предмет."
 
@@ -2734,7 +2739,7 @@ msgid "Choose a subject in the list above to see its competitions."
 msgstr "Виберіть предмет у списку вище, щоб побачити його змагання."
 
 #: app/templates/pages/teacher/competitions.html:47
-#: app/templates/pages/teacher/questions.html:32
+#: app/templates/pages/teacher/questions.html:34
 msgid "Select a subject"
 msgstr "Виберіть предмет"
 
@@ -2755,7 +2760,7 @@ msgid "Choose another status, or All."
 msgstr "Виберіть інший стан або «Усі»."
 
 #: app/templates/pages/teacher/competitions.html:64
-#: app/templates/pages/teacher/questions.html:45
+#: app/templates/pages/teacher/questions.html:47
 #: app/templates/pages/teacher/students.html:49
 #: app/templates/pages/teacher/students.html:68
 msgid "Edit"
@@ -2791,33 +2796,45 @@ msgstr ""
 "Питання буде приховано з цього списку, і його більше не можна буде додати"
 " до нових змагань. Його не буде стерто, але й відновити його не можна."
 
-#: app/templates/pages/teacher/question_form.html:9
+#: app/templates/pages/teacher/question_form.html:10
 #, python-format
 msgid "Edit question %(number)d"
 msgstr "Редагувати питання %(number)d"
 
-#: app/templates/pages/teacher/question_form.html:16
+#: app/templates/pages/teacher/question_form.html:17
 msgid "The question was saved."
 msgstr "Питання збережено."
 
 #: app/templates/pages/teacher/question_form.html:29
+msgid "Additional question"
+msgstr "Додаткове питання"
+
+#: app/templates/pages/teacher/question_form.html:29
+msgid ""
+"Additional questions and their answers are not given to participants "
+"before a competition."
+msgstr ""
+"Додаткові питання та відповіді на них не надаються учасникам до початку "
+"змагання."
+
 #: app/templates/pages/teacher/question_form.html:31
+#: app/templates/pages/teacher/question_form.html:33
 msgid "Save question"
 msgstr "Зберегти питання"
 
-#: app/templates/pages/teacher/question_form.html:31
+#: app/templates/pages/teacher/question_form.html:33
 msgid "Save and add one more question"
 msgstr "Зберегти й додати ще одне питання"
 
-#: app/templates/pages/teacher/questions.html:32
+#: app/templates/pages/teacher/questions.html:34
 msgid "Choose a subject in the list above to see its questions."
 msgstr "Виберіть предмет у списку вище, щоб побачити його питання."
 
-#: app/templates/pages/teacher/questions.html:34
+#: app/templates/pages/teacher/questions.html:36
 msgid "No questions yet"
 msgstr "Питань ще немає"
 
-#: app/templates/pages/teacher/questions.html:34
+#: app/templates/pages/teacher/questions.html:36
 msgid "Add the first question with Add question."
 msgstr "Додайте перше питання кнопкою «Додати питання»."
 

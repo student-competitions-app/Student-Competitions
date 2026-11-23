@@ -1121,6 +1121,7 @@
       "action": "/teacher/questions/{id}/edit",
       "buttons": [],
       "fields": [
+        "additional",
         "page",
         "reference_answer",
         "text"
@@ -1139,6 +1140,7 @@
       "action": "/teacher/questions/{id}/edit",
       "buttons": [],
       "fields": [
+        "additional",
         "page",
         "reference_answer",
         "text"
@@ -1166,6 +1168,7 @@
         ]
       ],
       "fields": [
+        "additional",
         "page",
         "reference_answer",
         "subject",
@@ -1195,6 +1198,7 @@
         ]
       ],
       "fields": [
+        "additional",
         "page",
         "reference_answer",
         "subject",
@@ -1224,6 +1228,7 @@
         ]
       ],
       "fields": [
+        "additional",
         "page",
         "reference_answer",
         "subject",

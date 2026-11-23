@@ -12,11 +12,14 @@ PostgreSQL enforces and SQLite does not.
 - **Shown only in the teacher area**: the reference answer never reaches a student.
 - **Not personal data**: who added or changed a question is not stored, so data erasure leaves
   questions alone.
+- **The additional mark** (milestone 12.9, specs/012.9-additional-questions/data-model.md §1):
+  `is_additional`, seen only by teachers with **Can manage competitions**; every other teacher's
+  bank is read without these questions, and a competition's copy never takes the mark.
 """
 
 from datetime import datetime
 
-from sqlalchemy import Column, String
+from sqlalchemy import Boolean, Column, String, false
 from sqlmodel import Field, SQLModel
 
 from app.core.db import UTCDateTime, utc_now
@@ -42,3 +45,10 @@ class Question(SQLModel, table=True):
     """Set at creation and reset by an edit that changes something; a deletion leaves it alone."""
     deleted_at: datetime | None = Field(default=None, sa_type=UTCDateTime, nullable=True)
     """`NULL` while listed; set once by a deletion and never cleared (FR-004)."""
+    is_additional: bool = Field(
+        default=False, sa_column=Column(Boolean, nullable=False, server_default=false())
+    )
+    """The mark **additional question** (milestone 12.9): seen only by teachers with **Can manage
+    competitions** until a competition that holds it starts; for every other teacher the bank is
+    read without these questions. Changed only through the edit form; a deleted question or one of
+    a deactivated subject keeps it. A competition's copy never takes it."""

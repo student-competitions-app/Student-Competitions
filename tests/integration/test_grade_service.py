@@ -452,7 +452,9 @@ def test_the_grading_sheet(scene: Scene) -> None:
     answer(scene, scene.comets, scene.copies[0], "Sodium chloride\nNaCl", grade=7)
     answer(scene, scene.comets, scene.copies[2], "Gas")
     with Session(scene.engine) as session:
-        update_question(session, scene.olena, scene.question_ids[0], "Changed?", "Changed.")
+        update_question(
+            session, scene.olena, scene.question_ids[0], "Changed?", "Changed.", is_additional=False
+        )
         delete_question(session, scene.olena, scene.question_ids[1])
     found = sheet(scene)
     assert (found.team_id, found.team_name, found.institution_name, found.is_deleted) == (

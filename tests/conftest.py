@@ -686,8 +686,10 @@ def make_question(
     reference_answer: str = "Answer.",
     *,
     deleted: bool = False,
+    additional: bool = False,
 ) -> int:
-    """A question of the subject, inserted directly (deleted when `deleted`); returns its id.
+    """A question of the subject, inserted directly (deleted when `deleted`, marked additional
+    when `additional`, milestone 12.9); returns its id.
 
     **Test-only**, but harmless: a question carries no personal data, and seeding it skips only
     the setting check that `test_teacher_questions.py` and `test_question_service.py` cover.
@@ -701,6 +703,7 @@ def make_question(
             created_at=now,
             updated_at=now,
             deleted_at=now if deleted else None,
+            is_additional=additional,
         )
         db_session.add(question)
         db_session.commit()

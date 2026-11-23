@@ -88,6 +88,8 @@ SECTIONS = {
         "Finished",
         "Published",
         "Cancelled",
+        "Marks",
+        "Additional",
     ],
     "empty-states": ["No subjects yet", "Select a region"],
     "notices": ["Invitation sent to", "no longer valid", "temporarily unavailable"],
@@ -215,6 +217,23 @@ def test_the_loading_section_shows_both_components_in_their_loading_state(
 def gallery_section(body: str, section_id: str) -> html.Element:
     (found,) = [s for s in sections(body) if s.attrs["id"] == section_id]
     return found
+
+
+def test_the_additional_badge_and_the_text_card_badge(admin_client: TestClient) -> None:
+    """Milestone 12.9 contracts/components.md §1–§2: the mark in the badges section, and a text
+    card whose heading holds it."""
+    body = admin_client.get(GALLERY).text
+    marks = [
+        e
+        for e in gallery_section(body, "badges").iter()
+        if "badge-info" in e.classes() and e.text() == "Additional"
+    ]
+    assert len(marks) == 1
+    (card,) = [e for e in html.parse(body).iter() if e.attrs.get("id") == "gallery-question-58"]
+    (heading,) = card.find_all("h3")
+    assert heading.text() == "Question 58 Additional"
+    (badge,) = [e for e in heading.iter() if "badge" in e.classes()]
+    assert badge.classes() == ["badge", "badge-info"]
 
 
 def logo_urls(element: html.Element) -> list[str]:

@@ -1,13 +1,15 @@
 {% extends "layouts/teacher.html" %}
 {#- The Questions tab (specs/011-question-bank/contracts/http-routes.md §GET /teacher/questions):
     the subject list, then exactly one of the empty states or the selected subject's questions
-    between two page navigations. -#}
+    between two page navigations. An additional question shows the badge beside its number
+    (milestone 12.9); only a teacher with Can manage competitions is ever given one. -#}
 {% from "components/frame.html" import page_heading %}
 {% from "components/selectors.html" import chained_lists %}
 {% from "components/feedback.html" import empty_state %}
 {% from "components/pagination.html" import page_navigation %}
 {% from "components/card.html" import text_card, text_box %}
 {% from "components/button.html" import link_button %}
+{% from "components/badge.html" import additional_badge %}
 
 {% block title %}{{ _("Questions") }} — {{ app_name }}{% endblock %}
 
@@ -37,7 +39,7 @@
 <ol class="text-card-list">
   {% for q in listing.questions %}
   <li>
-    {% call text_card(_("Question %(number)d", number=q.id), id="question-" ~ q.id) %}
+    {% call text_card(_("Question %(number)d", number=q.id), id="question-" ~ q.id, badge=additional_badge() if q.is_additional else none) %}
     {{ text_box(_("Question"), q.text) }}
     {{ text_box(_("Reference answer"), q.reference_answer) }}
     {% if can_manage %}

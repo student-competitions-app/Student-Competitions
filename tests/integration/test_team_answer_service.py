@@ -494,7 +494,9 @@ def test_the_sheet_lists_every_copy_in_order(engine: Engine, scene: Scene) -> No
         second = session.get(CompetitionQuestion, scene.copies[1])
         assert first is not None and second is not None
         bank_manager = manager(scene)
-        update_question(session, bank_manager, first.question_id, "Edited?", "Edited.")
+        update_question(
+            session, bank_manager, first.question_id, "Edited?", "Edited.", is_additional=False
+        )
         delete_question(session, bank_manager, second.question_id)
     found = sheet(scene)
     assert (found.team_id, found.team_name, found.institution_name) == (

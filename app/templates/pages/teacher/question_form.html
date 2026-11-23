@@ -1,9 +1,10 @@
 {% extends "layouts/teacher.html" %}
 {#- The add form, or with `question_id` the edit form (specs/011-question-bank/contracts/
     http-routes.md). The subject is named as text, never offered as a control: a question keeps
-    its subject for ever. -#}
+    its subject for ever. The checkbox **Additional question** (milestone 12.9 contracts/
+    components.md §4) shows the stored mark on the edit form and is cleared on the add form. -#}
 {% from "components/frame.html" import back_link, page_heading %}
-{% from "components/form.html" import error_summary, textarea_field, form_actions %}
+{% from "components/form.html" import error_summary, textarea_field, checkbox_field, form_actions %}
 {% from "components/feedback.html" import notice %}
 
 {% set heading = _("Edit question %(number)d", number=question_id) if question_id else _("Add question") %}
@@ -25,6 +26,7 @@
 {% endif %}
   {{ textarea_field("text", _("Question"), value=values.text, error=errors.text, hint=_("Up to 2,000 characters."), attrs={"required": True, "maxlength": "2000"}) }}
   {{ textarea_field("reference_answer", _("Reference answer"), value=values.reference_answer, error=errors.reference_answer, hint=_("Up to 2,000 characters."), attrs={"required": True, "maxlength": "2000"}) }}
+  {{ checkbox_field("additional", _("Additional question"), checked=values.additional, value="1", hint=_("Additional questions and their answers are not given to participants before a competition.")) }}
   {% if question_id %}
   {{ form_actions(_("Save question"), cancel_href=back) }}
   {% else %}

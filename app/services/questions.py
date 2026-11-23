@@ -58,6 +58,9 @@ class QuestionView:
     subject_id: int
     text: str
     reference_answer: str
+    is_additional: bool
+    """The mark **additional question** (milestone 12.9). Every reader of a view either has **Can
+    manage competitions** or was given only questions that are not additional."""
 
 
 @dataclass(frozen=True)
@@ -83,6 +86,7 @@ def _view(question: Question) -> QuestionView:
         subject_id=question.subject_id,
         text=question.text,
         reference_answer=question.reference_answer,
+        is_additional=question.is_additional,
     )
 
 
@@ -117,16 +121,24 @@ def get_active_subject(session: Session, subject_id: int, *, lock: bool = False)
     return subject
 
 
-def question_page(session: Session, subject_id: int, page: int) -> QuestionPage:
+def question_page(
+    session: Session, subject_id: int, page: int, *, include_additional: bool
+) -> QuestionPage:
     """One page of the subject's listed questions, newest first, the page clamped to 1..last.
-    The caller has already checked that the subject is active."""
-    total = session.exec(
-        select(func.count()).select_from(Question).where(*_listed(subject_id))
-    ).one()
+    The caller has already checked that the subject is active.
+
+    `include_additional` has no default, so every caller decides (milestone 12.9 research R3).
+    Without it the additional questions are left out of the count, the paging and the rows, so a
+    teacher without **Can manage competitions** never gets one, not even hidden (FR-014;
+    constitution IV)."""
+    conditions = _listed(subject_id)
+    if not include_additional:
+        conditions += (col(Question.is_additional).is_(False),)
+    total = session.exec(select(func.count()).select_from(Question).where(*conditions)).one()
     paging = Paging.build(page, total)
     statement = (
         select(Question)
-        .where(*_listed(subject_id))
+        .where(*conditions)
         .order_by(col(Question.id).desc())
         .limit(paging.size)
         .offset(paging.offset)
@@ -154,9 +166,16 @@ def get_question(
 
 
 def create_question(
-    session: Session, teacher_id: int, subject_id: int, text: str, reference_answer: str
+    session: Session,
+    teacher_id: int,
+    subject_id: int,
+    text: str,
+    reference_answer: str,
+    *,
+    is_additional: bool = False,
 ) -> QuestionView:
-    """Add a question to an active subject, as a teacher with the setting. `ManageRequired` or
+    """Add a question to an active subject, as a teacher with the setting; it is additional only
+    when `is_additional` says so (milestone 12.9 FR-001). `ManageRequired` or
     `SubjectUnavailable` otherwise, and nothing is stored."""
     _require_manage(session, teacher_id)
     get_active_subject(session, subject_id, lock=True)
@@ -168,6 +187,7 @@ def create_question(
         created_at=now,
         updated_at=now,
         deleted_at=None,
+        is_additional=is_additional,
     )
     session.add(question)
     session.commit()
@@ -177,19 +197,29 @@ def create_question(
 
 
 def update_question(
-    session: Session, teacher_id: int, question_id: int, text: str, reference_answer: str
+    session: Session,
+    teacher_id: int,
+    question_id: int,
+    text: str,
+    reference_answer: str,
+    *,
+    is_additional: bool,
 ) -> QuestionView:
-    """Replace both fields of a listed question, as a teacher with the setting. The subject and
-    the number never change; `updated_at` changes only if a value did. `ManageRequired` or
-    `QuestionNotFound` otherwise, and nothing changes."""
+    """Replace both fields and the mark of a listed question, as a teacher with the setting. The
+    mark is required, so an edit never clears it by leaving it out (milestone 12.9 research R5).
+    The subject and the number never change; `updated_at` changes only if a value did, the mark
+    included. `ManageRequired` or `QuestionNotFound` otherwise, and nothing changes: a deleted
+    question, or one of a deactivated subject, keeps its mark (milestone 12.9 FR-005)."""
     _require_manage(session, teacher_id)
     get_question(session, question_id, lock=True)
     question = session.get(Question, question_id)
     assert question is not None
-    changed = (question.text, question.reference_answer) != (text, reference_answer)
+    before = (question.text, question.reference_answer, question.is_additional)
+    changed = before != (text, reference_answer, is_additional)
     if changed:
         question.text = text
         question.reference_answer = reference_answer
+        question.is_additional = is_additional
         question.updated_at = utc_now()
         session.add(question)
     session.commit()

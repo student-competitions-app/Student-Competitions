@@ -36,6 +36,7 @@ from tests.conftest import (
     invite,
     make_class,
     make_institution,
+    make_question,
     make_teacher,
     token_from,
 )
@@ -612,6 +613,23 @@ def test_the_question_pages_have_at_most_one_primary_action(
         body = browser.get(f"/teacher/questions/{path}").text
         assert html.h1(body)
         assert primary_actions(body) == ["Save question"]
+
+
+def test_the_additional_mark_is_a_badge_in_the_card_heading(
+    client: TestClient, client_as: ClientAs, outbox: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Milestone 12.9: a mark of a record is a badge, never coloured text, and it sits in the
+    card's heading, so the page keeps one `h1` and one primary action."""
+    w = world(client, client_as, outbox, monkeypatch)
+    browser, subject, _ = contract.a_question_manager(w)
+    marked = make_question(app.state.engine, subject, "Hard?", "Deep.", additional=True)
+    body = browser.get(f"/teacher/questions?subject={subject}").text
+    assert html.h1(body)
+    assert primary_actions(body) == ["Add question"]
+    assert html.badges(body) == ["Additional"]
+    (card,) = [e for e in html.parse(body).iter() if e.attrs.get("id") == f"question-{marked}"]
+    (heading,) = card.find_all("h3")
+    assert [e.text() for e in heading.iter() if "badge" in e.classes()] == ["Additional"]
 
 
 @pytest.mark.parametrize(

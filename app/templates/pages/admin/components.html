@@ -10,7 +10,7 @@
 {% from "components/card.html" import card, text_card, text_box %}
 {% from "components/table.html" import data_table, cell, actions_cell, row_note %}
 {% from "components/group.html" import region_group %}
-{% from "components/badge.html" import badge, status_badge, access_badge, competition_status_badge %}
+{% from "components/badge.html" import badge, status_badge, access_badge, competition_status_badge, additional_badge %}
 {% from "components/feedback.html" import notice, empty_state %}
 {% from "components/form.html" import error_summary, field, textarea_field, select_field, checkbox_field, form_actions, date_time_fields %}
 {% from "components/confirmation.html" import confirmation, refusal %}
@@ -155,7 +155,7 @@
       {% endcall %}
     </li>
     <li>
-      {% call text_card("Question 58", id="gallery-question-58") %}
+      {% call text_card("Question 58", id="gallery-question-58", badge=additional_badge()) %}
       {{ text_box("Question", long_word_text) }}
       {{ text_box("Reference answer", "Long words wrap inside the box.") }}
       {% endcall %}
@@ -325,6 +325,10 @@
   <h3>Competition statuses</h3>
   <div class="button-row">
     {% for status in competition_statuses %}{{ competition_status_badge(status) }} {% endfor %}
+  </div>
+  <h3>Marks</h3>
+  <div class="button-row">
+    {{ additional_badge() }}
   </div>
 </section>
 

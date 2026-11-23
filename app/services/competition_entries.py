@@ -131,6 +131,10 @@ class CompetitionQuestionView:
     reference_answer: str
     """The copy."""
     deleted_from_bank: bool
+    is_additional: bool | None
+    """The bank's current mark **additional question** (milestone 12.9 research R6), read only for
+    a teacher with **Can manage competitions**; `None` when it was not read. The copy holds no
+    mark."""
 
 
 @dataclass(frozen=True)
@@ -284,18 +288,28 @@ def _is_linked(session: Session, competition_id: int, team_id: int) -> bool:
 # ---------------------------------------------------------------------------------------------
 
 
-def question_page(session: Session, competition_id: int, p: int) -> CompetitionQuestionPage:
+def question_page(
+    session: Session, competition_id: int, p: int, *, with_bank_mark: bool
+) -> CompetitionQuestionPage:
     """One page of the competition's questions in the order of adding, the page clamped to
     1..last: each the copy's text and reference answer, never the bank's, with the bank's
-    deletion as a mark (R11)."""
+    deletion as a mark (R11).
+
+    `with_bank_mark` has no default, so every caller decides (milestone 12.9 research R6). With it,
+    the bank's current additional mark is read through the same join; without it, the column is
+    never read and `is_additional` is `None`, so a teacher without **Can manage competitions** never
+    gets the mark (FR-026; constitution IV)."""
     total = session.exec(
         select(func.count())
         .select_from(CompetitionQuestion)
         .where(CompetitionQuestion.competition_id == competition_id)
     ).one()
     paging = Paging.build(p, total)
+    columns = (CompetitionQuestion, Question.deleted_at) + (
+        (Question.is_additional,) if with_bank_mark else ()
+    )
     statement = (
-        select(CompetitionQuestion, Question.deleted_at)
+        select(*columns)
         .join(Question, col(Question.id) == col(CompetitionQuestion.question_id))
         .where(CompetitionQuestion.competition_id == competition_id)
         .order_by(col(CompetitionQuestion.id))
@@ -304,12 +318,13 @@ def question_page(session: Session, competition_id: int, p: int) -> CompetitionQ
     )
     views = [
         CompetitionQuestionView(
-            question_id=copy.question_id,
-            text=copy.text,
-            reference_answer=copy.reference_answer,
-            deleted_from_bank=deleted_at is not None,
+            question_id=row[0].question_id,
+            text=row[0].text,
+            reference_answer=row[0].reference_answer,
+            deleted_from_bank=row[1] is not None,
+            is_additional=row[2] if with_bank_mark else None,
         )
-        for copy, deleted_at in session.exec(statement)
+        for row in session.exec(statement)
     ]
     return CompetitionQuestionPage(views, paging)
 
@@ -349,6 +364,7 @@ def get_competition_question(
         text=copy.text,
         reference_answer=copy.reference_answer,
         deleted_from_bank=question.deleted_at is not None,
+        is_additional=None,
     )
 
 

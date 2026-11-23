@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 import pytest
 from jinja2 import TemplateRuntimeError
 
+from app.core.i18n import Language, use_language
 from app.core.templates import templates
 from tests import html
 
@@ -202,6 +203,44 @@ def test_competition_status_badge_takes_the_enum() -> None:
 def test_competition_status_badge_refuses_an_unknown_status() -> None:
     with pytest.raises(TemplateRuntimeError, match="unknown status unknown"):
         render(BADGE + '{{ competition_status_badge("unknown") }}')
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9: the additional badge and the text card's badge (contracts/components.md §1–§2)
+# ---------------------------------------------------------------------------------------------
+
+ADDITIONAL = '{% from "components/badge.html" import additional_badge %}'
+TEXT_CARD = '{% from "components/card.html" import text_card %}'
+
+
+def test_the_additional_badge() -> None:
+    assert render(ADDITIONAL + "{{ additional_badge() }}") == (
+        '<span class="badge badge-info">Additional</span>'
+    )
+
+
+def test_the_additional_badge_in_ukrainian() -> None:
+    """The context `question` gives the word that agrees with «питання»."""
+    with use_language(Language.UK):
+        out = render(ADDITIONAL + "{{ additional_badge() }}")
+    assert out == '<span class="badge badge-info">Додаткове</span>'
+
+
+def test_a_text_card_without_a_badge_is_unchanged() -> None:
+    out = render(TEXT_CARD + '{% call text_card("Question 57", id="q") %}<p>Body</p>{% endcall %}')
+    assert out == (
+        '<article class="text-card" id="q">\n  <h3>Question 57</h3>\n  <p>Body</p>\n</article>'
+    )
+
+
+def test_a_text_card_holds_its_badge_inside_the_heading() -> None:
+    out = render(
+        ADDITIONAL
+        + TEXT_CARD
+        + "{% call text_card(heading, badge=additional_badge()) %}<p>Body</p>{% endcall %}",
+        heading="Question <57>",
+    )
+    assert '<h3>Question &lt;57&gt; <span class="badge badge-info">Additional</span></h3>' in out
 
 
 # ---------------------------------------------------------------------------------------------

@@ -37,7 +37,7 @@ from sqlalchemy import Engine
 from sqlmodel import Session, select
 
 from app.main import app
-from app.models import AccessLevel, Competition, Role, TeamAnswer
+from app.models import AccessLevel, Competition, Question, Role, TeamAnswer
 from app.schemas.teachers import MAX_ID
 from app.services.subjects import set_subject_active
 from app.services.teachers import get_teacher, update_teacher
@@ -1113,3 +1113,28 @@ def test_a_finished_competition_is_still_graded(scene: Scene) -> None:
     assert fields(scene.olena.get(sheet_url(scene)).text)
     assert post_grades(scene, scene.olena, {scene.copies[3]: "8"}).status_code == 303
     assert stored(scene)[scene.copies[3]] == ("Answer of Comets", 8)
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9: the sheets never show the additional mark (FR-026)
+# ---------------------------------------------------------------------------------------------
+
+
+def mark_every_question_additional(engine: Engine) -> None:
+    with Session(engine) as session:
+        for question in session.exec(select(Question)):
+            question.is_additional = True
+            session.add(question)
+        session.commit()
+
+
+def no_additional_mark(body: str) -> None:
+    assert "Additional" not in body
+    assert not [b for b in html.badges(body) if b == "Additional"]
+
+
+def test_the_grades_pages_never_show_the_additional_mark(scene: Scene) -> None:
+    """FR-026: the Grades page and the grading sheet, seen by a teacher with the setting."""
+    mark_every_question_additional(scene.engine)
+    no_additional_mark(scene.olena.get(grades_url(scene)).text)
+    no_additional_mark(scene.olena.get(sheet_url(scene)).text)

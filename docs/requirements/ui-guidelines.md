@@ -320,9 +320,11 @@ the whole card is the link, as on the student's home page. Use it for entries th
 to frame one block (a consent record). Do not use it for a list of records: that is a data table.
 _Gallery_: [cards](/admin/components#cards).
 
-**`text_card(heading, id=None)`** with **`text_box(label, text)`** holds long entered texts, such
-as a question with its reference answer (milestone 11). The card is one surface with a heading
-("Question 57"); its body, through `{% call %}`, is one or more boxes, each a quieter tint with a
+**`text_card(heading, id=None, badge=None)`** with **`text_box(label, text)`** holds long entered
+texts, such as a question with its reference answer (milestone 11). The card is one surface with a
+heading ("Question 57"); with `badge` (milestone 12.9), a rendered badge such as `additional_badge()`,
+the badge follows the heading's text inside the heading, on the same line where it fits and wrapping
+below it on a narrow screen, so it is read with the heading ("Question 57 Additional"); its body, through `{% call %}`, is one or more boxes, each a quieter tint with a
 small label, stacked at full width on every screen, then any `row-actions`. The texts keep their
 line breaks, and a long word wraps inside its box. With `id` the card is the target of a `#` link
 (`#question-57`), which lands below the pinned frame. Several text cards go in
@@ -435,8 +437,12 @@ _Gallery_: [actions menu](/admin/components#actions-menu).
 gives **Read** or **Write**; **`competition_status_badge(status)`** (milestone 12.1) gives
 **Upcoming** (`info`), **In progress** (`success`), **Finished** (`neutral`), **Published**
 (`accent`, milestone 12.8: a finished competition whose results are published) or **Cancelled**
-(`muted`), in the order of the status filter, and refuses any other value. **`badge(text, kind)`** is for a new status with its own
-word; an empty text is refused. Use a badge for every status, never coloured text or "(deactivated)".
+(`muted`), in the order of the status filter, and refuses any other value. **`additional_badge()`**
+(milestone 12.9) gives **Additional** (`info`), the mark of an additional question, which only teachers
+allowed to manage competitions see: it is the mark of a record, not a status, and goes in the heading
+of the question's text card (see Cards). **`badge(text, kind)`** is for a new status, or a new mark of
+a record, with its own word; an empty text is refused. Use a badge for every status and every such
+mark, never coloured text or "(deactivated)".
 _Gallery_: [badges](/admin/components#badges).
 
 ### Feedback (`components/feedback.html`)
@@ -714,7 +720,7 @@ gallery. There is no icon font or icon library. _Gallery_: [identity](/admin/com
 - **Row notes** are a short plain phrase, with no full stop: "In this team", "Already in this
   competition", "Deleted from the question bank", "(deleted)". A row note may also mark a record
   the row can no longer act on, such as a deleted team in a finished competition; a *status*
-  (Active, Upcoming…) still takes a badge.
+  (Active, Upcoming…) still takes a badge, and so does the **Additional** mark of a question.
 - **Page navigation** says where you are as "<Noun> 31–40 of 200" (an en dash, no spaces), and
   moves with **Previous** and **Next**.
 - **Placeholders** only say that a field is empty: "Not answered". A placeholder never replaces the

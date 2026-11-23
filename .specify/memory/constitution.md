@@ -1,25 +1,22 @@
 <!--
 Sync Impact Report
-- Version change: 2.4.0 → 2.5.0 (MINOR: materially expanded guidance on publishing results,
-  a new stack category, Results files)
+- Version change: 2.5.0 → 2.6.0 (MINOR: materially expanded guidance on access and data scoping,
+  additional questions)
 - Modified principles:
-  - IV. Role-Based Access & Data Scoping: publishing results is a right of teachers allowed to
-    manage competitions; grading ends when results are published, and grades never change after;
-    published final scores are open information for every teacher (answers and per-question
-    grades stay scoped); deactivated-subject rule follows
-  - VI. Trustworthy LLM Evaluation: no hand adjustment and no evaluation after publishing
-  - VII. Data Integrity & Migrations: a fifth derived status, Published (a finished competition
-    whose results are published; every finished rule applies, grades frozen); published results
-    are stored PDF snapshots, the official confirmation, never remade, served as stored
-- Added sections: none; a "Results files" row in Technology Stack and a "PDF library and font"
-  row in Open stack decisions (milestone 12.8)
+  - IV. Role-Based Access & Data Scoping: a new rule, additional questions are kept back: before a
+    competition that holds one starts, only teachers allowed to manage competitions see it or learn
+    that it exists; in the question bank it stays kept back for good, and its mark is shown only to
+    them; the competition-rights rule points to it; the milestone 12.9 gap (every teacher reads a
+    competition's questions until milestone 12.10) is recorded as the one accepted exception;
+    rationale extended
+- Added sections: none
 - Removed sections: none
-- Corrected: milestone numbers follow docs/requirements/milestones.md (LLM evaluation 13,
-  Playwright and the React stretch goal 15)
 - Templates: plan/spec/tasks templates read the constitution at runtime; no change needed
-- Related docs: product-requirements.md, technical-requirements.md and milestones.md (12.8, 13,
-  14) updated in the same change
-- Follow-up TODOs: none
+- Related docs: product-requirements.md (Additional questions), milestones.md (12.9, Not yet
+  scheduled) and ui-guidelines.md (additional badge, text card badge) updated in the same change
+- Follow-up TODOs: milestone 12.10 restricts a competition's questions to teachers allowed to
+  manage competitions; the competition-rights rule below ("every teacher can read all
+  competitions") must be amended with it
 -->
 # Student Competitions Constitution
 
@@ -92,12 +89,23 @@ The application has three roles — student, teacher, administrator — with rig
 - Access MUST be deny-by-default: a route without an explicit role requirement is a defect.
 - Teachers MUST only see and manage students of the educational institutions they are linked
   to; only administrators can link teachers to institutions and edit the institution list.
-- Competition rights MUST follow the product rules: every teacher can read all competitions;
+- Competition rights MUST follow the product rules: every teacher can read all competitions,
+  except the additional questions kept back (below);
   only teachers whom an administrator allowed to manage competitions can create, edit, stop,
   cancel, grade or publish the results of one, and each of them can manage every competition,
   whoever created it (there are no per-competition rights); only upcoming competitions are
   editable; any competition that is not finished can be cancelled, and a cancelled competition
   never changes again.
+- Additional questions MUST be kept back: a question of the bank marked as additional MUST be
+  seen only by teachers allowed to manage competitions until a competition that holds it starts.
+  It MUST NOT be shown to any other teacher, administrator or student, nor let them learn that it
+  exists, on any page or in any response, whatever the request names: it is left out of what the
+  server reads for them, never only hidden in a template. In the question bank it stays kept back
+  for good, since it can be added to later competitions. Once a competition that holds it starts, its
+  copy is one of that competition's questions, read as the competition's rules allow; the mark
+  itself is shown only to teachers allowed to manage competitions. The one accepted exception is
+  the milestone 12.9 gap: until milestone 12.10, every teacher reads a competition's questions in
+  every status (milestone 12.2), as no real users are involved before every milestone is delivered.
 - Grading MUST follow the product rules: only a teacher allowed to manage competitions grades
   answers, only once the competition is finished and until its results are published, and the
   answers of every team in it, whatever its educational institution. Grading MUST add or change
@@ -135,7 +143,9 @@ The application has three roles — student, teacher, administrator — with rig
 **Rationale**: The system holds personal data of students and competition results; a single
 missing check leaks data or allows score tampering. Final scores are not personal data and are
 public by nature once announced, while answers and per-question grades are the institution's own
-working material. Results that could still change after being announced would invite complaints
+working material. Additional questions test knowledge beyond what participants can study in
+advance, so they lose their value once anyone who could pass them on sees them before the
+competition. Results that could still change after being announced would invite complaints
 from participants, so publishing freezes them for good.
 
 ### V. Secure Authentication & Secrets
@@ -340,4 +350,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 2.5.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-21
+**Version**: 2.6.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-23

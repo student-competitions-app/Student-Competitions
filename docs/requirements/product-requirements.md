@@ -33,7 +33,7 @@ A web application for running online competitions among students, testing their 
    - educational institution
    - the class within the educational institution; the student's year of study is the year of their class
 2. **Managing teams.** Put students of one educational institution together into named teams (see [Team](#team)). A teacher with Write access to the institution creates, renames and deletes its teams and adds and removes their members.
-3. **Managing the question bank.** Edit the global list of questions used in competitions. Questions can be reused across different competitions. Each question belongs to one subject, selected from the list of subjects. For each question, the teacher adds the correct answer as text. Only teachers allowed to manage competitions change the question bank; every other teacher can read it.
+3. **Managing the question bank.** Edit the global list of questions used in competitions. Questions can be reused across different competitions. Each question belongs to one subject, selected from the list of subjects. For each question, the teacher adds the correct answer as text. Only teachers allowed to manage competitions change the question bank and see its additional questions (see [Additional questions](#additional-questions)); every other teacher reads its other questions.
 4. **Running a competition.** The teacher selects:
    - the subject of the competition; only questions of that subject can be added to it
    - the name and the start date and time of the competition; a competition has no duration and runs until a teacher stops it
@@ -47,7 +47,7 @@ A web application for running online competitions among students, testing their 
 
 #### Teacher access rights to competitions
 
-- **Read** — every teacher has read access to all competitions and to the published results of every competition.
+- **Read** — every teacher has read access to all competitions and to the published results of every competition. The one exception is the additional questions: before a competition starts, its additional questions are seen only by teachers allowed to manage competitions (see [Additional questions](#additional-questions)).
 - **Manage** — a teacher whom an administrator allowed to manage competitions creates, edits, stops, cancels, grades and publishes the results of any competition, whoever created it. There are no access rights per competition.
 
 #### Teacher access to students
@@ -58,13 +58,13 @@ A web application for running online competitions among students, testing their 
 - The students of an educational institution are divided into classes (for example "KN-21"). Each class has a year of study, shared by all its students. A student belongs to exactly one educational institution and exactly one class in it. A teacher with Write access keeps the list of classes of that institution.
 - A teacher sees a student's data only for their own institutions, never anything about an institution the student belonged to before.
 - Only an administrator can link a teacher to an educational institution and set the access level.
-- Only a teacher whom an administrator allowed to manage competitions can create and manage competitions, publish their results and change the question bank.
+- Only a teacher whom an administrator allowed to manage competitions can create and manage competitions, publish their results, change the question bank and see its additional questions.
 
 ### Administrator
 
 - Adds and deletes teachers in the application.
 - Links a teacher to one or more educational institutions, selecting them from the list of institutions, with Read or Write access to each.
-- Decides whether a teacher can manage competitions: create, edit, stop, cancel and grade any competition, publish its results, and change the question bank.
+- Decides whether a teacher can manage competitions: create, edit, stop, cancel and grade any competition, publish its results, change the question bank and see its additional questions.
 - Is the only role that can edit the list of educational institutions.
 - Is the only role that can edit the list of subjects.
 
@@ -115,6 +115,12 @@ Deleting a team is the one exception to "only an upcoming competition can be edi
 ### Question
 
 A question in a competition is usually 1–3 lines of text and expects a text answer. Every question belongs to one subject. A competition holds a copy of each of its questions, taken when the question is added, so editing or deleting the question in the bank afterwards does not change the competition. A deleted question is only hidden: it stays stored, but it is no longer shown in the question bank and can no longer be added to new competitions. Competitions that hold it keep their copy.
+
+### Additional questions
+
+A question of the bank can be marked as an **additional question**. The other questions of the bank are the ones participants can study in advance; an additional question tests deeper knowledge of the subject, beyond them. An additional question is seen only by teachers allowed to manage competitions before a competition that holds it starts: they mark the questions, see them in the question bank and choose them for competitions. Nobody else (another teacher, an administrator or a student) sees an additional question, or learns that it exists, before such a competition starts. In the question bank it stays kept back for good, also after such a competition, since it can be added to later competitions. Once a competition starts, the copy it holds is one of its questions, given to the teams to answer and seen as the rules for a competition's questions allow; that it is additional is still shown only to teachers allowed to manage competitions. Marking a question changes nothing in the competitions that already hold it. A question that can no longer be edited (a deleted question, or a question of a deactivated subject) keeps its mark.
+
+Later (not yet scheduled), participants get the question bank of a subject before a competition, with the reference answers and without the additional questions, so students can learn the subject.
 
 ### Team
 

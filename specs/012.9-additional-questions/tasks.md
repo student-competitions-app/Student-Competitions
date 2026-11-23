@@ -529,7 +529,7 @@ walk-through.
     Any change goes through the catalogue workflow (T004 / T018), and the spec's Assumptions are
     updated to match;
   - fix what it finds.
-- [ ] T039 On delivery (after the PR's merge), in `docs/requirements/milestones.md` (FR-034):
+- [X] T039 On delivery (after the PR's merge), in `docs/requirements/milestones.md` (FR-034):
   - move 12.9 to **Delivered** with the spec link and a one-paragraph summary in the style of
     12.8's, saying who sees the additional questions;
   - in the milestone 11 summary, replace "where every teacher browses the shared question bank by

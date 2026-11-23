@@ -1,22 +1,25 @@
 <!--
 Sync Impact Report
-- Version change: 2.5.0 → 2.6.0 (MINOR: materially expanded guidance on access and data scoping,
-  additional questions)
+- Version change: 2.6.0 → 2.7.0 (MINOR: materially expanded guidance on access and data scoping
+  and on the PDF stack row, for milestone 12.10)
 - Modified principles:
-  - IV. Role-Based Access & Data Scoping: a new rule, additional questions are kept back: before a
-    competition that holds one starts, only teachers allowed to manage competitions see it or learn
-    that it exists; in the question bank it stays kept back for good, and its mark is shown only to
-    them; the competition-rights rule points to it; the milestone 12.9 gap (every teacher reads a
-    competition's questions until milestone 12.10) is recorded as the one accepted exception;
-    rationale extended
+  - IV. Role-Based Access & Data Scoping: the competition-rights rule now excepts a competition's
+    questions; a new rule, a competition's questions are kept back until it starts (only teachers
+    allowed to manage competitions see them before), then every teacher gets their texts without
+    the reference answers as a PDF file for the teams; a new rule, a subject's study materials are
+    open to every teacher and never hold additional or deleted questions or bank numbers; the
+    milestone 12.9 gap exception is removed; rationale extended
+- Modified sections:
+  - Technology Stack: the "Results files" row becomes "PDF files": results files stay made once
+    and stored; a competition's questions file and a subject's study materials are made at
+    download, not stored, and the study materials may be kept in the application's memory but are
+    never served stale
 - Added sections: none
 - Removed sections: none
 - Templates: plan/spec/tasks templates read the constitution at runtime; no change needed
-- Related docs: product-requirements.md (Additional questions), milestones.md (12.9, Not yet
-  scheduled) and ui-guidelines.md (additional badge, text card badge) updated in the same change
-- Follow-up TODOs: milestone 12.10 restricts a competition's questions to teachers allowed to
-  manage competitions; the competition-rights rule below ("every teacher can read all
-  competitions") must be amended with it
+- Related docs: technical-requirements.md (PDF files row) and milestones.md (12.10) updated in
+  the same change; product-requirements.md already states the 12.10 rules
+- Follow-up TODOs: none
 -->
 # Student Competitions Constitution
 
@@ -90,7 +93,8 @@ The application has three roles — student, teacher, administrator — with rig
 - Teachers MUST only see and manage students of the educational institutions they are linked
   to; only administrators can link teachers to institutions and edit the institution list.
 - Competition rights MUST follow the product rules: every teacher can read all competitions,
-  except the additional questions kept back (below);
+  except a competition's questions before it starts and the additional questions, both kept back
+  (below);
   only teachers whom an administrator allowed to manage competitions can create, edit, stop,
   cancel, grade or publish the results of one, and each of them can manage every competition,
   whoever created it (there are no per-competition rights); only upcoming competitions are
@@ -103,9 +107,18 @@ The application has three roles — student, teacher, administrator — with rig
   server reads for them, never only hidden in a template. In the question bank it stays kept back
   for good, since it can be added to later competitions. Once a competition that holds it starts, its
   copy is one of that competition's questions, read as the competition's rules allow; the mark
-  itself is shown only to teachers allowed to manage competitions. The one accepted exception is
-  the milestone 12.9 gap: until milestone 12.10, every teacher reads a competition's questions in
-  every status (milestone 12.2), as no real users are involved before every milestone is delivered.
+  itself is shown only to teachers allowed to manage competitions.
+- A competition's questions MUST be kept back until it starts: before then they MUST be seen only
+  by teachers allowed to manage competitions, who choose them. No other teacher, administrator or
+  student sees them, or learns which questions the competition holds, on any page or in any
+  response; this is enforced server-side, never only hidden in a template. Once it starts, every
+  teacher can download its question texts, without the reference answers, the bank numbers or the
+  additional mark, as a PDF file to give to the teams.
+- The study materials of a subject are open to every teacher: the questions of its bank with their
+  reference answers, as a PDF file to give to the students before competitions. They MUST leave out
+  the additional questions and the deleted questions whoever downloads them, a teacher allowed to
+  manage competitions included, and MUST NOT show bank numbers, so the questions left out cannot
+  be noticed.
 - Grading MUST follow the product rules: only a teacher allowed to manage competitions grades
   answers, only once the competition is finished and until its results are published, and the
   answers of every team in it, whatever its educational institution. Grading MUST add or change
@@ -145,7 +158,9 @@ missing check leaks data or allows score tampering. Final scores are not persona
 public by nature once announced, while answers and per-question grades are the institution's own
 working material. Additional questions test knowledge beyond what participants can study in
 advance, so they lose their value once anyone who could pass them on sees them before the
-competition. Results that could still change after being announced would invite complaints
+competition. For the same reason a competition's own questions reach the teams only once it
+starts, while the rest of the bank is given out as study materials: students learn the whole bank
+and answer a small part of it. Results that could still change after being announced would invite complaints
 from participants, so publishing freezes them for good.
 
 ### V. Secure Authentication & Secrets
@@ -256,7 +271,7 @@ column shows when each component enters the codebase.
 | Authentication | Email one-time code (OTP) + server-side sessions in a signed cookie | No passwords, no third-party identity provider (Principle V). | 4 |
 | Authorization | Roles: student / teacher / administrator; administrator list from deploy-time configuration | Enforced server-side, deny-by-default (Principle IV). | 5 |
 | Localisation | gettext catalogues managed with Babel, through Jinja2's `jinja2.ext.i18n` | Ukrainian is the default language of the interface, the consent texts and every other user-facing communication; English is the alternative, chosen per browser. Every user-facing message goes through the catalogues; what people enter is never translated. Babel is the only localisation dependency. | 12.5 |
-| Results files | PDF made on the server by one Python library | Made once, at publishing, and stored in the database (Principle VII); fonts embedded so Cyrillic renders everywhere; no external service. The library is a runtime dependency justified in milestone 12.8's `plan.md`. | 12.8 |
+| PDF files | PDF made on the server by one Python library | Fonts embedded so Cyrillic renders everywhere; no external service. Results files are made once, at publishing, and stored in the database (Principle VII). A competition's questions file and a subject's study materials are made at download and not stored; the study materials MAY be kept in the application's memory, which is no new infrastructure, but MUST be made again whenever anything they show has changed, never served stale. The library is a runtime dependency justified in milestone 12.8's `plan.md`. | 12.8 (questions file and study materials 12.10) |
 | Answer evaluation | LLM API (Claude or OpenAI) with structured output | Behind one provider-agnostic service; provider chosen by configuration (Principle VI). | 13 |
 | End-to-end tests | Playwright | Added "later", as part of polish and hardening; lives in `tests/e2e/`. | 15 |
 | Development process | GitHub Spec Kit | Every feature goes through the Spec Kit flow (see Development Workflow). | all |
@@ -350,4 +365,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 2.6.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-23
+**Version**: 2.7.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-23

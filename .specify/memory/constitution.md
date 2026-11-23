@@ -1,5 +1,16 @@
 <!--
 Sync Impact Report
+- Version change: 2.7.0 → 2.7.1 (PATCH: wording clarification found by /speckit-analyze of
+  milestone 12.10)
+- Modified principles:
+  - IV. Role-Based Access & Data Scoping: "that file is the only way other teachers see them"
+    contradicted the answer sheets of milestones 12.3 and 12.4, which show a started competition's
+    question texts (never the reference answers) to the teachers of the teams' institutions. The
+    sentence now names both ways. No rule changes and no code is affected.
+- Templates: no change needed
+- Follow-up TODOs: none
+
+Previous amendment
 - Version change: 2.6.0 → 2.7.0 (MINOR: materially expanded guidance on access and data scoping
   and on the PDF stack row, for milestone 12.10)
 - Modified principles:
@@ -114,7 +125,8 @@ The application has three roles — student, teacher, administrator — with rig
   which questions the competition holds, on any page or in any response; this is enforced
   server-side, never only hidden in a template. Once it starts, every teacher can download its
   question texts, without the reference answers, the bank numbers or the additional mark, as a
-  PDF file to give to the teams; that file is the only way other teachers see them.
+  PDF file to give to the teams. Besides that file, other teachers see the texts, never the
+  reference answers, only on the answer sheets of the teams of their own institutions.
 - The study materials of a subject are open to every teacher: the questions of its bank with their
   reference answers, as a PDF file to give to the students before competitions. They MUST leave out
   the additional questions and the deleted questions whoever downloads them, a teacher allowed to
@@ -366,4 +378,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 2.7.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-23
+**Version**: 2.7.1 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-23

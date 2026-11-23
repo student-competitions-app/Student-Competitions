@@ -40,9 +40,9 @@
   documented assumptions; the ones the product owner may want to confirm in `/speckit-clarify` are:
   - the Ukrainian texts and file-name words (Assumptions);
   - the **Answers** pages keep showing question texts, without reference answers, to the teachers of
-    a team's institution once the competition starts. The constitution v2.7.0 (Principle IV) says the
-    questions file "is the only way other teachers see them"; the spec reads that as "the only way to
-    get the whole list", since milestones 12.3 and 12.4 show the texts on the answer sheets;
+    a team's institution once the competition starts. Resolved after `/speckit-analyze`: the
+    constitution v2.7.1 (Principle IV) now names these answer sheets, besides the questions file, as
+    where other teachers see a started competition's question texts;
   - line breaks are kept in both files;
   - the date of the download uses the results file's date format.
 - The milestone's "_Test:_" line is covered point by point: User Stories 1–6 and FR-051; the manual

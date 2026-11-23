@@ -10,7 +10,7 @@
 questions only after it starts, and study materials (teacher)"), as refined on 2026-11-23, with
 `product-requirements.md` (the "Teacher responsibilities", "Teacher access rights to competitions"
 and "Additional questions" sections), `technical-requirements.md` (the "PDF files" row), the
-constitution v2.7.0 (Principles II, III, IV and VII and the "PDF files" row of the technology stack),
+constitution v2.7.1 (Principles II, III, IV and VII and the "PDF files" row of the technology stack),
 `docs/requirements/ui-guidelines.md` (the actions menu and its download entry), and the milestone 5,
 8, 10, 10.1, 11, 12.1, 12.2, 12.3, 12.4, 12.5, 12.7, 12.8 and 12.9 specifications as reference.
 
@@ -606,7 +606,7 @@ teachers nothing on its own.
 
 #### Documents
 
-- **FR-050**: The product requirements, the technical requirements and the constitution v2.7.0 already
+- **FR-050**: The product requirements, the technical requirements and the constitution v2.7.1 already
   state the rules of this milestone; the implementation MUST NOT contradict them. The UI guidelines
   MUST give the new actions menu order and its example, and, if FR-024 adds one, the link's pattern.
   When the milestone is delivered, its summary in `milestones.md` MUST say who sees a competition's
@@ -699,9 +699,10 @@ teachers nothing on its own.
   publishing (e.g. "23 November 2026"); the start, as a date and time with the Kyiv time label of the
   results file. The exact formats are part of the design approval.
 - **The Answers pages stay as they are** (milestones 12.3 and 12.4): once a competition starts, they
-  show the teachers of a team's institution the question texts, never the reference answers, which the
-  rule "texts without reference answers after the start" allows. The **Grades** page and the grading
-  sheets stay with the teachers with the setting.
+  show the teachers of a team's institution the question texts, never the reference answers. The
+  constitution v2.7.1 (Principle IV) names these answer sheets as the one other place, besides the
+  questions file, where other teachers see a started competition's questions. The **Grades** page and
+  the grading sheets stay with the teachers with the setting.
 - **The Questions page of a teacher with the setting is unchanged**, bank numbers included: the
   numbering by place is for the file the teams get.
 - **The memory holds at most one file per active subject and language**: with tens of subjects and two
@@ -714,10 +715,11 @@ teachers nothing on its own.
 
 ## Dependencies
 
-- **Constitution v2.7.0** (amended on 2026-11-23): Principle II (component library first), Principle
-  III (allowed and denied access tested on every route), Principle IV (a competition's questions kept
-  back from everyone but the teachers allowed to manage competitions, their texts given out after the
-  start; the study materials open to every teacher, never with additional or deleted questions or bank
+- **Constitution v2.7.1** (amended on 2026-11-23; v2.7.1 clarifies the Principle IV wording on the
+  answer sheets): Principle II (component library first), Principle III (allowed and denied access
+  tested on every route), Principle IV (a competition's questions kept back from everyone but the
+  teachers allowed to manage competitions, their texts given out after the start in the questions
+  file and, for the teachers of the teams' institutions, on the answer sheets; the study materials open to every teacher, never with additional or deleted questions or bank
   numbers) and Principle VII (the status derived on the server and checked on every read of
   questions), and the "PDF files" row of the technology stack (made at download, not stored; the study
   materials may be kept in memory but never served stale).

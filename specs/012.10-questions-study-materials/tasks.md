@@ -151,7 +151,7 @@ its output (research R2, R3, R7; contracts/services.md §1, §4, §5).
 - [ ] T010 Create `app/services/pdf_layout.py` and refactor `app/services/results_pdf.py` onto it per contracts/services.md §1 and research R3:
   - **Move into `pdf_layout`**: `STATIC`, `FONT_REGULAR`, `FONT_BOLD`, `LOGO`, `FAMILY`, `PRODUCER`, `PDF_LANGUAGE`, `MARGIN`, `LOGO_HEIGHT`, `INK`, `MUTED`, `RULE`, `HEADING_FILL`, every `*_SIZE`, `*_LEADING`, `REGION_GAP`, `CELL_PADDING`.
   - **`PdfDocument(FPDF)`**: the old `_ResultsDocument`, renamed.
-  - **`open_document(title, language, created_at) -> PdfDocument`**: margins, auto page break, the two fonts, `alias_nb_pages`, `set_title`, `set_lang`, `set_creation_date`, `set_producer`, `add_page`.
+  - **`open_document(title, language, created_at, running_title=None) -> PdfDocument`**: margins, auto page break, the two fonts, `alias_nb_pages`, `set_title(title)`, `set_lang`, `set_creation_date`, `set_producer`, `add_page`. The document's running title is `running_title if running_title is not None else title`; the results file passes none, so its output is unchanged.
   - **`draw_header(document, title, subject, meta)`**: the logo, the title, the subject, then the muted meta lines, with exactly today's sizes, leadings and `ln()` gaps; the text colour is back to `INK` at the end.
   - **What stays in `results_pdf.py`**: `render_results_pdf` calls these inside `use_language`, and keeps the regions, the table and `_column_widths`.
   - **Docstrings**: `pdf_layout` says it holds the design shared by the results file, the questions file and the study materials (milestones 12.8 and 12.10).
@@ -190,6 +190,7 @@ responses.
   - both docstrings name milestone 12.10;
   - `test_the_manage_pages_are_found` and `test_every_declared_page_admits_exactly_its_roles` pass.
 - [ ] T015 [US1] Update the existing tests that assume every teacher reads the questions, in `tests/integration/test_teacher_competition_entries.py` (depends on T012):
+  - the line numbers below are hints from the 12.9 state of the file; find each place by the test or section name, and by searching for `scene.mykola` together with `"questions"`;
   - the section "User story 3: every teacher reads a competition's questions" (around lines 500–590) and the reads at about lines 1309, 1690 and 1701 switch from `scene.mykola` to `scene.olena` where they check content;
   - `test_a_teacher_without_the_setting_reads_the_same_list` becomes `test_a_teacher_without_the_setting_is_refused_the_questions`: `denied(...)` for mykola, and the response text holds no question text;
   - `test_every_teacher_reads_both_lists`: `/questions` leaves `READ_ROUTES`, so it keeps `/teams` only;
@@ -208,8 +209,10 @@ responses.
   - **US1-6**: `set_setting` takes the setting away from Olena → the next `GET …/questions` is denied; give it to mykola → 200.
   - **US1-7**: administrators and students are denied (already swept by `test_routes.py`; assert one direct case each).
 - [ ] T017 [US1] Update the menu tests in `tests/integration/test_teacher_competitions.py` (depends on T013):
-  - in the per-status menu table (about lines 2064–2075), **Questions** stays only in the manager's rows: the teacher without the setting now has Upcoming `["Teams"]` and Cancelled `["Teams"]`. The Running, Finished and Published rows lose "Questions". Those rows gain "Download questions" only in T027.
-  - Update the other menu assertions the same way: about line 106 (`("Questions", …)` only when the setting is held), about lines 1828–1831, `tests/integration/test_teacher_grades.py:1007` (a manager: unchanged) and `tests/integration/test_teacher_results.py:329`.
+  - **Scope**: this task removes **Questions** from the menus of teachers without the setting and nothing else. **Download questions** is added to the same assertions in T027, so between T017 and T027 the tables describe the interim menu (no **Download questions** anywhere) and the suite is green.
+  - in the per-status menu table (about lines 2064–2075, a hint; find it by the "Upcoming"/"Running" keys), **Questions** stays only in the manager's rows. The teacher without the setting now has Upcoming `["Teams"]`, Running `["Teams", "Answers"]`, Finished `["Teams", "Answers"]`, Published `["Teams", "Answers", "Download results"]` and Cancelled `["Teams"]`.
+  - Update the other menu assertions the same way: about line 106 (`("Questions", …)` only when the setting is held) and about lines 1828–1831.
+  - `tests/integration/test_teacher_grades.py:1007` is a manager's menu, so it keeps **Questions** and is not touched here; T027 adds **Download questions** to it. `tests/integration/test_teacher_results.py:329`: drop "Questions" only if that menu belongs to a teacher without the setting; otherwise leave it for T027.
 
 **Checkpoint**: the 12.9 gap is closed. Only managers reach a competition's questions, and the
 suite is green.
@@ -325,6 +328,7 @@ and a missing competition.
   - **US3-6**: renaming the subject changes the file's header and not the file name.
   - **US2-9**: an administrator and a student get 403 with `MISSING`, before any id is read.
   - **No write**: `snapshot(engine)` is unchanged by a download.
+  - **No log** (FR-043): under `caplog.at_level(logging.DEBUG, logger="uvicorn.error")`, a successful download and a 404 download add no record from `uvicorn.error` (the application's logger), so no name can be logged.
 
 **Checkpoint**: every teacher hands the teams their questions once a competition starts.
 
@@ -351,7 +355,7 @@ compare it with the bank.
     - `downloaded_on = competitions.utc_now().astimezone(KYIV).date()`, read through the module so tests move it;
     - the caller has checked that the subject is active.
 - [ ] T031 [US5] Add `render_study_materials_pdf(materials, language) -> bytes` to `app/services/question_files_pdf.py` per contracts/files.md §2, §3 and research R4 (depends on T019, T030):
-  - **Header**: `title = _("Study materials")`; `running = _("Study materials: %(subject)s", subject=materials.subject_name)`. `open_document` gets the running title and `created_at = datetime.combine(materials.downloaded_on, time(), KYIV)`. The meta line is `_("Downloaded: %(date)s", date=format_local_date(created_at, None))`. Extend `open_document`/`PdfDocument` with an optional `running_title` distinct from `title` if T010 did not.
+  - **Header**: `title = _("Study materials")`; `running = _("Study materials: %(subject)s", subject=materials.subject_name)`. `created_at = datetime.combine(materials.downloaded_on, time(), KYIV)`. Call `open_document(title, language, created_at, running_title=running)` (the parameter T010 adds), then `draw_header(document, title, materials.subject_name, [_("Downloaded: %(date)s", date=format_local_date(created_at, None))])`.
   - **No questions**: `_("This subject has no questions yet.")`.
   - **Otherwise**, `_numbered_entries` with an answer per entry. Below the text, at the text's indent, draw the bold label `_("Answer:")` and the answer in regular type, using `write()` with the left margin set to the indent while it is written and restored after. Line breaks are kept.
   - **Keeping it whole**: the entry's height counts the question and its answer together (FR-040).
@@ -392,8 +396,8 @@ deactivated subject, and repeat at 360 px and without JavaScript.
 
 - [ ] T036 [US4] Add `download_study_materials` to `app/routers/teacher_question_files.py` per contracts/http-routes.md §3 (depends on T024, T031, T032):
   - `@router.get("/teacher/competitions/study-materials", response_class=Response)`, `@allow_roles(Role.TEACHER)`, `subject: str | None = Query(None)`;
-  - `subject_id = parse_id(subject)`; if it is `None`, answer 404 with the not-found page;
-  - otherwise `questions.get_active_subject(session, subject_id)`, and on `SubjectUnavailable` answer 404 with `not_found(request, teacher_questions.SUBJECT_NOT_FOUND)` ("This subject does not exist or is deactivated.", shown on the Competitions tab's page);
+  - `subject_id = parse_id(subject)` (from `teacher_competitions`); `questions.get_active_subject(session, subject_id)` when it is not `None`;
+  - a `None` id and `SubjectUnavailable` both answer the same 404: `not_found(request, teacher_questions.SUBJECT_NOT_FOUND)`, that is "Subject not found" / "This subject does not exist or is deactivated.", rendered by `teacher_competitions.not_found` on the Competitions tab's `competition_not_found.html`;
   - then `materials = study_materials(session, found)`, `language = request.state.language`, and `pdf_download(render_study_materials_pdf(materials, language), study_materials_file_name(materials, language))`. US6 replaces the render call with the cache;
   - never reads the setting; logs nothing;
   - extend the module docstring.
@@ -402,10 +406,10 @@ deactivated subject, and repeat at 360 px and without JavaScript.
   - set `aside` to the download `link_button(_("Download study materials"), "/teacher/competitions/study-materials?subject=" ~ selected.id, kind="secondary", outline=True, small=True, download=True)` when `selected and selected.is_active`, else `none`;
   - pass `aside=aside` to the `chained_lists` call when a subject is selected; the call without a subject is unchanged;
   - extract and translate "Download study materials" → «Завантажити навчальні матеріали».
-- [ ] T038 [US4] Check that the study-materials route is covered by `tests/integration/test_routes.py` (depends on T036):
-  - it has no `{` in its path, so confirm which sweep picks it up (`test_every_declared_page_admits_exactly_its_roles` and `test_every_declared_page_speaks_the_chosen_language`);
-  - if a sweep cannot give it a valid id, add it to the set that expects 404 for the cast teacher, with a docstring naming milestone 12.10 FR-021;
-  - the sweeps pass.
+- [ ] T038 [US4] Add `"/teacher/competitions/study-materials"` to `ENTRY_READ_PATHS` in `tests/integration/test_routes.py` (depends on T036, T028):
+  - it is required: `test_the_manage_pages_are_found` asserts that every declared path under `/teacher/competitions/`, minus `ENTRY_READ_PATHS`, equals `MANAGE_PATHS`, so the new path must be in one of the two sets;
+  - extend the set's docstring: "and a subject's study materials (milestone 12.10 FR-021), which every teacher may download; without `subject=` it answers 404, not 403";
+  - `test_the_manage_pages_are_found`, `test_every_declared_page_admits_exactly_its_roles` and `test_every_declared_page_speaks_the_chosen_language` pass (the cast teacher gets the 404 HTML page, which carries `<html lang>` and the title).
 - [ ] T039 [US4] Add the study-materials route and tab cases to `tests/integration/test_teacher_question_files.py` (depends on T036, T037):
   - **US4-1**: with an active subject chosen, `div.selectors-aside a[role=button][download]` reads "Download study materials" and points to `?subject=<id>`. This holds for Olena, Taras and the unlinked teacher, and for a subject with no competitions.
   - **US4-2**: no link before a subject is chosen, and none on a database with no subjects.
@@ -415,6 +419,8 @@ deactivated subject, and repeat at 360 px and without JavaScript.
   - **US4-7**: an administrator and a student get 403.
   - **US5-3**: Olena's file equals Taras's byte for byte, and neither holds an additional question's text.
   - **No write**: a download changes nothing stored.
+  - **No log** (FR-043): as in T029, a successful and a 404 download add no `uvicorn.error` record.
+  - **No script needed** (FR-022): the link is a plain `<a href … download>` with no `hx-*` or `onclick` attribute and no `<noscript>` alternative, so it works the same with JavaScript off. The behaviour with JavaScript off in a browser is checked by hand in T054.
 
 **Checkpoint**: every teacher hands students the bank to learn.
 
@@ -453,7 +459,7 @@ the bank shows now, made once for simultaneous downloads, emptied at every start
   - equal materials give the same bytes after one render;
   - different materials render again, and the new file replaces the old (asking with the old materials renders a third time);
   - each language is kept on its own;
-  - two threads asking for the same key at once, with the fake waiting on a `threading.Barrier`/`Event`, render once and both get the bytes (US6-8);
+  - two threads asking for the same key at once, with the fake waiting on a `threading.Event` that the test sets once the second thread is queued (a two-party barrier would deadlock, since the second thread waits on the key's lock), render once and both get the bytes (US6-8);
   - two keys render independently.
 - [ ] T044 [US6] Add the kept-file cases to `tests/integration/test_teacher_question_files.py`, counting renders through `monkeypatch` on `app.services.question_files_pdf.render_study_materials_pdf` (depends on T042):
   - **US6-1**: a second download renders nothing and gives equal bytes.
@@ -469,6 +475,13 @@ the bank shows now, made once for simultaneous downloads, emptied at every start
   - **US6-6**: the counting fake commits an `UPDATE` to a reference answer while it renders the first file. The next download renders again and shows the updated answer.
   - **US6-7**: deactivating the subject after a file was kept gives 404.
   - **US6-9**: a second `TestClient(app)` (a fresh start) renders again.
+  - **US6-8 through the route** (FR-036, SC-007):
+    1. Make the counting fake wait on a `threading.Event` before it returns. Don't use a two-party barrier: the second request waits on the key's lock and never enters the renderer, so a barrier would deadlock.
+    2. Start two downloads of the same subject and language in two threads, using the same `TestClient`.
+    3. Wait until the fake has been entered once, then wait briefly so the second request is queued on the lock, then set the event.
+    4. Expect one render, two 200 responses and equal bodies.
+
+    The unit case in T043 stays; this one proves the route reaches the cache with a shared key.
 - [ ] T045 [US6] Measure and record (depends on T044):
   - with a 150-question subject, time a kept download through the test client (assert under 1 s, SC-005) and a questions download of 10 questions (assert under 1 s, SC-008), in `tests/integration/test_teacher_question_files.py`;
   - time with `time.perf_counter()` and a plain `assert elapsed < 1, f"… took {elapsed:.2f} s"`, as the 500-team publish test does in `tests/integration/test_results_service.py` (about line 790); no extra markers.
@@ -519,7 +532,7 @@ FR-049). **The milestone is not delivered before T050.**
     - the study materials are made from the bank without additional or deleted questions and without numbers, kept in memory per subject and language, given only while nothing changed, emptied at every start, and named "<subject> <date> study materials.pdf";
     - the link sits beside the subject list.
   - **The templates and tests trees** (about lines 471 and 481): mention the new modules.
-- [ ] T052 [P] Check that `docs/requirements/product-requirements.md`, `technical-requirements.md` and `.specify/memory/constitution.md` (v2.7.0) agree with what was built (FR-050). Change nothing unless they contradict it; if they do, raise it rather than editing the constitution here.
+- [ ] T052 [P] Check that `docs/requirements/product-requirements.md`, `technical-requirements.md` and `.specify/memory/constitution.md` (v2.7.1) agree with what was built (FR-050). Change nothing unless they contradict it; if they do, raise it rather than editing the constitution here.
 - [ ] T053 Run the whole suite on both engines: `TEST_POSTGRES_URL=… uv run pytest`, plus `uv run ruff check` and `uv run ruff format --check`. All green.
 - [ ] T054 Walk through `specs/012.10-questions-study-materials/quickstart.md` §3 by hand, including JavaScript off and 360 px, and fix anything that differs.
 - [ ] T055 On delivery (after T050), update `docs/requirements/milestones.md`:

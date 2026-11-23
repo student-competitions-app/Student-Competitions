@@ -1,7 +1,7 @@
 # Research: A Competition's Questions Only After It Starts, and Study Materials (Milestone 12.10)
 
 Each decision below was taken against the code on `main` after milestone 12.9 and the
-constitution v2.7.0. The spec had no `[NEEDS CLARIFICATION]` markers. The open points listed in
+constitution v2.7.1. The spec had no `[NEEDS CLARIFICATION]` markers. The open points listed in
 its checklist (the Ukrainian texts, the Answers pages, line breaks, date formats) take the spec's
 documented assumptions, and the design rounds can change them (R11).
 
@@ -82,7 +82,7 @@ headers are the same. Every id comes from a parsed number or a row that was look
 
 - the constants: fonts, sizes, colours, margins, the logo path;
 - the A4 document class with its running title and its "Page n of N" footer;
-- `open_document(title, language, created_at)`;
+- `open_document(title, language, created_at, running_title=None)` (`None` means the title);
 - `draw_header(document, title, subject, meta_lines)`.
 
 `results_pdf.render_results_pdf` calls these functions. The new renderers sit in

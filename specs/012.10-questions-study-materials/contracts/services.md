@@ -18,9 +18,12 @@ clock.
   `MUTED`, `RULE`, `HEADING_FILL`), the sizes and leadings, `PRODUCER`, `PDF_LANGUAGE`.
 - **`class PdfDocument(FPDF)`**: A4, a running title on every page after the first, and "Page n
   of N" in the footer. This is the 12.8 `_ResultsDocument` renamed.
-- **`open_document(title: str, language: Language, created_at: datetime) -> PdfDocument`**: sets
-  the margins, the auto page break, the fonts, `alias_nb_pages`, the metadata, and adds the first
-  page. It is called inside `use_language(language)`.
+- **`open_document(title: str, language: Language, created_at: datetime, running_title: str | None
+  = None) -> PdfDocument`**: sets the margins, the auto page break, the fonts, `alias_nb_pages`, the
+  metadata (`/Title` is `title`), and adds the first page. The running title is `running_title`,
+  or `title` when it is `None`: the results and questions files repeat their title, while the study
+  materials run "Study materials: <subject>" under the title "Study materials". It is called inside
+  `use_language(language)`.
 - **`draw_header(document, title: str, subject: str, meta: Sequence[str]) -> None`**: draws the
   logo, the title, the subject and the muted meta lines, exactly as 12.8 does.
 

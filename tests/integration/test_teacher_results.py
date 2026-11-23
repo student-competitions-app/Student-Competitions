@@ -329,6 +329,7 @@ def test_after_publishing_the_menu_changes_and_a_reload_sends_nothing(scene: Sce
         "Questions",
         "Teams",
         "Answers",
+        "Download questions",  # milestone 12.10 FR-006
         "Grades",
         "Download results",
     ]

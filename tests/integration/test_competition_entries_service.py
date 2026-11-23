@@ -30,7 +30,7 @@ from sqlalchemy import select as sa_select
 from sqlmodel import Session, select
 
 from app.core.config import AuthSettings
-from app.models import AccessLevel, CompetitionQuestion, Institution, Question
+from app.models import AccessLevel, CompetitionQuestion, Institution, Question, Subject
 from app.services import competition_entries as entries
 from app.services.competition_entries import (
     AddableTeam,
@@ -47,8 +47,10 @@ from app.services.competitions import (
     CompetitionStatus,
     ManageRequired,
     cancel_competition,
+    get_competition,
 )
 from app.services.institutions import set_institution_active
+from app.services.question_files import questions_sheet
 from app.services.questions import delete_question, update_question
 from app.services.questions import question_page as bank_page
 from app.services.regions import set_region_active
@@ -1112,3 +1114,38 @@ def test_the_mark_changes_nothing_stored_in_a_competition(engine: Engine, scene:
                 session, scene.manager, question, "Hard?", "Answer.", is_additional=value
             )
         assert competition_rows(engine) == before
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.10: what a competition's questions file is made from
+# ---------------------------------------------------------------------------------------------
+
+
+def test_the_questions_sheet_holds_every_copy_in_order(
+    engine: Engine, scene: Scene, clock: Callable[[timedelta], datetime]
+) -> None:
+    """Milestone 12.10 US3-2, US3-4, US3-6, FR-014, FR-016, FR-018: the copies of an ordinary, an
+    additional and a later deleted question, in the competition's order; a later bank edit
+    changes nothing in them; a renamed subject shows."""
+    ordinary = make_question(engine, scene.chemistry, "Ordinary?", "A.")
+    additional = make_question(engine, scene.chemistry, "Additional?", "B.", additional=True)
+    deleted = make_question(engine, scene.chemistry, "Deleted later?", "C.")
+    for question in (ordinary, additional, deleted):
+        add_competition_question(engine, scene.competition, question)
+    with Session(engine) as session:
+        update_question(session, scene.manager, ordinary, "Edited?", "Z.", is_additional=False)
+        delete_question(session, scene.manager, deleted)
+        subject = session.get(Subject, scene.chemistry)
+        assert subject is not None
+        subject.name = "Chemistry and Biology"
+        session.add(subject)
+        session.commit()
+    with Session(engine) as session:
+        competition = get_competition(session, scene.competition, scene.chemistry)
+        subject = session.get(Subject, scene.chemistry)
+        assert subject is not None
+        sheet = questions_sheet(session, competition, subject)
+    assert sheet.texts == ("Ordinary?", "Additional?", "Deleted later?")
+    assert sheet.competition_name == "Spring round"
+    assert sheet.subject_name == "Chemistry and Biology"
+    assert sheet.starts_at == START

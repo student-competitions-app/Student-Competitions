@@ -2137,6 +2137,18 @@ fieldset > legend {
   margin: var(--sc-space-1) 0 0;
 }
 
+/* The chained lists' aside (milestone 12.10 contracts/components.md §1): one more grid cell after
+   the lists, its link level with the bottom of the selects on a wide screen, and under the lists,
+   left-aligned, on a phone. */
+.selectors-aside {
+  align-self: end;
+  min-width: 0;
+}
+
+.selectors-aside [role="button"] {
+  margin-bottom: 0;
+}
+
 /* Page navigation (components/pagination.html, milestone 11 contracts/components.md §1): the range
    on its own line, then Previous, the pages and Next in a row that wraps on a phone. Every entry
    keeps the touch target; the current page is bold with the area tabs' primary underline. */

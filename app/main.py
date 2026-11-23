@@ -84,6 +84,7 @@ from app.routers import (
     teacher_competition_entries,
     teacher_competitions,
     teacher_grades,
+    teacher_question_files,
     teacher_questions,
     teacher_results,
     teacher_students,
@@ -94,6 +95,7 @@ from app.routers import (
 from app.services.database_status import record_boot
 from app.services.email import build_email_sender
 from app.services.login import purge_expired
+from app.services.question_files import StudyMaterialsCache
 from app.services.users import ReconcileResult, reconcile_users
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -130,7 +132,8 @@ def reconcile_users_with_retry(engine: Engine, admin_emails: Sequence[str]) -> R
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Validate the settings, connect, refuse to start unless at head, reconcile the
-    administrators with `ADMIN_EMAILS`, clean up expired sign-in data, and count this start.
+    administrators with `ADMIN_EMAILS`, clean up expired sign-in data, count this start, and start
+    with an empty study materials cache (milestone 12.10).
 
     Any failure propagates: uvicorn exits non-zero before binding the port, so a start that was
     refused is never counted. The log lines name the engine, the revision, the boot number and
@@ -160,6 +163,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.engine = engine
         app.state.settings = settings
         app.state.email_sender = build_email_sender(settings)
+        # Empty at every start, so the first download after a restart, a deployment or a wake
+        # from sleep makes the study materials with this release's labels (milestone 12.10).
+        app.state.study_materials = StudyMaterialsCache()
         install_access_log_redactor()
         logger.info(
             "Database: %s at schema revision %s, boot #%d", engine.dialect.name, revision, boots
@@ -203,6 +209,7 @@ app.include_router(teacher_competition_entries.router)
 app.include_router(teacher_team_answers.router)
 app.include_router(teacher_grades.router)
 app.include_router(teacher_results.router)
+app.include_router(teacher_question_files.router)
 app.include_router(admin.router)
 app.include_router(admin_teachers.router)
 app.include_router(admin_institutions.router)

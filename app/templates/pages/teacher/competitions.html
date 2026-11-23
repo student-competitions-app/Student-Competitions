@@ -1,15 +1,18 @@
 {% extends "layouts/teacher.html" %}
 {#- The Competitions tab (specs/012.1-teacher-competitions/contracts/http-routes.md §1): the subject
     list, then exactly one of the empty states or the chosen subject's status list and
-    competitions, between two page navigations. Every row has a menu, in this order (milestone 12.8
-    FR-004): Edit, Questions, Teams, Answers, Grades, Publish results, Download results, Finish
-    competition, Cancel competition. Questions and Teams are for every teacher; Answers for every
-    teacher on an In progress, Finished or Published competition; Download results (Published, a
-    link marked as a download) for every teacher; Grades (Finished, Published), Publish results
-    (Finished, not destructive) and Finish competition (In progress, not destructive) with the
-    setting (`can_manage`), so a finished competition of a deactivated subject still offers them;
-    Add competition, Edit and Cancel competition only with the setting and an active subject
-    (`can_add`). -#}
+    competitions, between two page navigations. Once an active subject is chosen, the lists carry
+    the aside **Download study materials** for every teacher, a link marked as a download
+    (milestone 12.10 FR-020–FR-024). Every row has a menu, in this order (milestone 12.10 FR-010):
+    Edit, Questions, Teams, Answers, Download questions, Grades, Publish results, Download results,
+    Finish competition, Cancel competition. Questions only with the setting (milestone 12.10
+    FR-001); Teams for every teacher; Answers and Download questions (a link marked as a download)
+    for every teacher on an In progress, Finished or Published competition; Download results
+    (Published, a link marked as a download) for every teacher; Grades (Finished, Published),
+    Publish results (Finished, not destructive) and Finish competition (In progress, not
+    destructive) with the setting (`can_manage`), so a finished competition of a deactivated
+    subject still offers them; Add competition, Edit and Cancel competition only with the setting
+    and an active subject (`can_add`). -#}
 {% from "components/frame.html" import page_heading %}
 {% from "components/selectors.html" import chained_lists %}
 {% from "components/feedback.html" import empty_state, notice %}
@@ -17,6 +20,7 @@
 {% from "components/table.html" import data_table, cell, actions_cell %}
 {% from "components/badge.html" import competition_status_badge %}
 {% from "components/menu.html" import actions_menu, menu_link %}
+{% from "components/button.html" import link_button %}
 {% from "components/time.html" import local_time with context %}
 
 {% block title %}{{ _("Competitions") }} — {{ app_name }}{% endblock %}
@@ -36,7 +40,8 @@
 {% set status_level = {"id": "status", "name": "status", "label": _("Status"), "placeholder": none,
    "options": status_options, "selected": status.value if status else "", "disabled": false,
    "carry": [("subject", selected.id)]} %}
-{{ chained_lists([subject_level, status_level], "/teacher/competitions") }}
+{% set aside = link_button(_("Download study materials"), "/teacher/competitions/study-materials?subject=" ~ selected.id, kind="secondary", outline=True, small=True, download=True) if selected.is_active else none %}
+{{ chained_lists([subject_level, status_level], "/teacher/competitions", aside=aside) }}
 {% else %}
 {{ chained_lists([subject_level], "/teacher/competitions") }}
 {% endif %}
@@ -62,9 +67,10 @@
   {% call actions_cell() %}
   {%- call actions_menu(c.name) -%}
   {%- if can_add and c.status == "upcoming" %}{{ menu_link(_("Edit"), "/teacher/competitions/" ~ c.id ~ "/edit?" ~ return_query) }}{% endif -%}
-  {{ menu_link(_("Questions"), "/teacher/competitions/" ~ c.id ~ "/questions?" ~ return_query) }}
+  {%- if can_manage %}{{ menu_link(_("Questions"), "/teacher/competitions/" ~ c.id ~ "/questions?" ~ return_query) }}{% endif -%}
   {{- menu_link(_("Teams"), "/teacher/competitions/" ~ c.id ~ "/teams?" ~ return_query) -}}
   {%- if c.status in ("in_progress", "finished", "published") %}{{ menu_link(_("Answers"), "/teacher/competitions/" ~ c.id ~ "/answers?" ~ return_query) }}{% endif -%}
+  {%- if c.status in ("in_progress", "finished", "published") %}{{ menu_link(_("Download questions"), "/teacher/competitions/" ~ c.id ~ "/questions-file?subject=" ~ selected.id, download=True) }}{% endif -%}
   {%- if can_manage and c.status in ("finished", "published") %}{{ menu_link(_("Grades"), "/teacher/competitions/" ~ c.id ~ "/grades?" ~ return_query) }}{% endif -%}
   {%- if can_manage and c.status == "finished" %}{{ menu_link(_("Publish results"), "/teacher/competitions/" ~ c.id ~ "/publish?" ~ return_query) }}{% endif -%}
   {%- if c.status == "published" %}{{ menu_link(_("Download results"), "/teacher/competitions/" ~ c.id ~ "/results?subject=" ~ selected.id, download=True) }}{% endif -%}

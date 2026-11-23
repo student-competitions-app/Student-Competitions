@@ -37,7 +37,14 @@ SECTIONS = {
     "language": ["Language switch", "Українська", "English", "Closed", "Open"],
     "section-heading": ["KN-21 · year 2", "Add student", "Deactivated", "Activate", "Rockets"],
     "loading": ["Loading bar", "Busy button", "Send invitation"],
-    "buttons": ["Primary button", "Secondary link", "Destructive form", "Destructive outline"],
+    "buttons": [
+        "Primary button",
+        "Secondary link",
+        "Destructive form",
+        "Destructive outline",
+        "Download link",
+        "Download file",
+    ],
     "cards": [
         "Card with a link",
         "Card without a link",
@@ -150,6 +157,8 @@ SECTIONS = {
         "+ Add class",
         "Show",
         "Astronomy",
+        "With an aside link",
+        "Download study materials",
     ],
     "filter-links": ["Filter links", "All teams", "Ungraded only"],
     "pagination": [
@@ -234,6 +243,27 @@ def test_the_additional_badge_and_the_text_card_badge(admin_client: TestClient) 
     assert heading.text() == "Question 58 Additional"
     (badge,) = [e for e in heading.iter() if "badge" in e.classes()]
     assert badge.classes() == ["badge", "badge-info"]
+
+
+def test_the_aside_and_the_download_link_button(admin_client: TestClient) -> None:
+    """Milestone 12.10 contracts/components.md §1–§2: the chained lists with an aside download
+    link, the last cell of their grid, and a download link button among the buttons."""
+    body = admin_client.get(GALLERY).text
+    selectors = gallery_section(body, "selectors")
+    (aside,) = [e for e in selectors.iter() if "selectors-aside" in e.classes()]
+    assert aside.parent is not None and "selectors-chained" in aside.parent.classes()
+    assert [c for c in aside.parent.children if isinstance(c, html.Element)][-1] is aside
+    (link,) = aside.find_all("a")
+    assert link.attrs.get("role") == "button"
+    assert "download" in link.attrs
+    assert link.text() == "Download study materials"
+    assert link.classes() == ["secondary", "outline", "small"]
+    downloads = [
+        e
+        for e in gallery_section(body, "buttons").find_all("a")
+        if "download" in e.attrs and e.attrs.get("role") == "button"
+    ]
+    assert [e.text() for e in downloads] == ["Download file"]
 
 
 def logo_urls(element: html.Element) -> list[str]:

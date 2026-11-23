@@ -11,7 +11,11 @@
     `<noscript>` that sends its form (milestone 11 research R11); it has no `name`. A level is a mapping with `id`, `name`, `label`, `placeholder`,
     `options` (`(value, text)` pairs), `selected`, `disabled`, `carry` (hidden `(name, value)`
     pairs), `extra_options` and `groups` (`(label, options)` pairs, each an `<optgroup>`,
-    milestone 12.1). -#}
+    milestone 12.1).
+
+    `aside` (milestone 12.10 contracts/components.md §1): optional ready markup, usually a download
+    `link_button`, rendered as one more grid cell after the levels: beside the lists on a wide
+    screen, below them on a phone. It is about the chosen value and never a primary action. -#}
 
 {% from "components/badge.html" import status_badge %}
 {% from "components/button.html" import button %}
@@ -41,7 +45,7 @@
 </div>
 {%- endmacro %}
 
-{% macro chained_lists(levels, action) -%}
+{% macro chained_lists(levels, action, aside=None) -%}
 <div class="selectors selectors-chained">
   {%- for level in levels %}
   <form method="get" action="{{ action }}">
@@ -52,5 +56,8 @@
     <noscript>{{ button(_("Show"), kind="secondary", small=True) }}</noscript>
   </form>
   {%- endfor %}
+  {%- if aside %}
+  <div class="selectors-aside">{{ aside }}</div>
+  {%- endif %}
 </div>
 {%- endmacro %}

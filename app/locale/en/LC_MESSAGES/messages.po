@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  student-competitions\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-23 15:44+0200\n"
+"POT-Creation-Date: 2026-11-23 20:02+0200\n"
 "PO-Revision-Date: 2026-11-15 17:00+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -112,32 +112,32 @@ msgstr "%(moment)s (Kyiv time)"
 msgid "%(day)d %(month)s %(year)d"
 msgstr "%(day)d %(month)s %(year)d"
 
-#: app/main.py:240
+#: app/main.py:247
 #, python-format
 msgid "Your current role, %(role)s, cannot open this page."
 msgstr "Your current role, %(role)s, cannot open this page."
 
-#: app/main.py:241
+#: app/main.py:248
 msgid "Access denied"
 msgstr "Access denied"
 
-#: app/main.py:251
+#: app/main.py:258
 msgid "This request was refused because it did not come from this site."
 msgstr "This request was refused because it did not come from this site."
 
-#: app/main.py:252
+#: app/main.py:259
 msgid "Request refused"
 msgstr "Request refused"
 
-#: app/main.py:287
+#: app/main.py:294
 msgid "Page not found"
 msgstr "Page not found"
 
-#: app/main.py:288
+#: app/main.py:295
 msgid "This address does not accept that request"
 msgstr "This address does not accept that request"
 
-#: app/main.py:290
+#: app/main.py:297
 msgid "Something went wrong"
 msgstr "Something went wrong"
 
@@ -185,7 +185,7 @@ msgid "This region does not exist. It may have been deleted."
 msgstr "This region does not exist. It may have been deleted."
 
 #: app/routers/admin_institutions.py:91
-#: app/routers/teacher_competition_entries.py:106
+#: app/routers/teacher_competition_entries.py:108
 msgid "Region not found"
 msgstr "Region not found"
 
@@ -376,99 +376,99 @@ msgctxt "tab"
 msgid "Competitions"
 msgstr "Competitions"
 
-#: app/routers/teacher_competition_entries.py:107
+#: app/routers/teacher_competition_entries.py:109
 msgid "This region does not exist, or it is deactivated."
 msgstr "This region does not exist, or it is deactivated."
 
-#: app/routers/teacher_competition_entries.py:110
+#: app/routers/teacher_competition_entries.py:112
 #: app/routers/teacher_questions.py:64 app/routers/teacher_team_answers.py:95
 msgid "Question not found"
 msgstr "Question not found"
 
-#: app/routers/teacher_competition_entries.py:111
+#: app/routers/teacher_competition_entries.py:113
 msgid "This question does not exist, or it cannot be added to this competition."
 msgstr "This question does not exist, or it cannot be added to this competition."
 
-#: app/routers/teacher_competition_entries.py:114
+#: app/routers/teacher_competition_entries.py:116
 #: app/routers/teacher_team_answers.py:92
 msgid "Team not found"
 msgstr "Team not found"
 
-#: app/routers/teacher_competition_entries.py:115
+#: app/routers/teacher_competition_entries.py:117
 msgid "This team does not exist, or it cannot be added to this competition."
 msgstr "This team does not exist, or it cannot be added to this competition."
 
-#: app/routers/teacher_competition_entries.py:126
+#: app/routers/teacher_competition_entries.py:128
 #, python-format
 msgid "“%(name)s” has already started and its questions can no longer be changed."
 msgstr "“%(name)s” has already started and its questions can no longer be changed."
 
-#: app/routers/teacher_competition_entries.py:131
+#: app/routers/teacher_competition_entries.py:133
 #, python-format
 msgid "“%(name)s” has been cancelled and its questions can no longer be changed."
 msgstr "“%(name)s” has been cancelled and its questions can no longer be changed."
 
-#: app/routers/teacher_competition_entries.py:134
+#: app/routers/teacher_competition_entries.py:136
 #, python-format
 msgid "“%(name)s” has finished and its questions can no longer be changed."
 msgstr "“%(name)s” has finished and its questions can no longer be changed."
 
-#: app/routers/teacher_competition_entries.py:137
+#: app/routers/teacher_competition_entries.py:139
 #, python-format
 msgid "“%(name)s” has already started and its teams can no longer be changed."
 msgstr "“%(name)s” has already started and its teams can no longer be changed."
 
-#: app/routers/teacher_competition_entries.py:140
+#: app/routers/teacher_competition_entries.py:142
 #, python-format
 msgid "“%(name)s” has been cancelled and its teams can no longer be changed."
 msgstr "“%(name)s” has been cancelled and its teams can no longer be changed."
 
-#: app/routers/teacher_competition_entries.py:141
+#: app/routers/teacher_competition_entries.py:143
 #, python-format
 msgid "“%(name)s” has finished and its teams can no longer be changed."
 msgstr "“%(name)s” has finished and its teams can no longer be changed."
 
-#: app/routers/teacher_competition_entries.py:153
+#: app/routers/teacher_competition_entries.py:155
 #, python-format
 msgid "Question %(number)d was added to “%(name)s”"
 msgstr "Question %(number)d was added to “%(name)s”"
 
-#: app/routers/teacher_competition_entries.py:155
+#: app/routers/teacher_competition_entries.py:157
 #, python-format
 msgid "Question %(number)d is already in “%(name)s”"
 msgstr "Question %(number)d is already in “%(name)s”"
 
-#: app/routers/teacher_competition_entries.py:157
+#: app/routers/teacher_competition_entries.py:159
 #, python-format
 msgid "Question %(number)d was removed from “%(name)s”"
 msgstr "Question %(number)d was removed from “%(name)s”"
 
-#: app/routers/teacher_competition_entries.py:158
+#: app/routers/teacher_competition_entries.py:160
 #, python-format
 msgid "Question %(number)d is not in “%(name)s”"
 msgstr "Question %(number)d is not in “%(name)s”"
 
-#: app/routers/teacher_competition_entries.py:164
+#: app/routers/teacher_competition_entries.py:166
 #, python-format
 msgid "Team “%(team)s” was added to “%(name)s”"
 msgstr "Team “%(team)s” was added to “%(name)s”"
 
-#: app/routers/teacher_competition_entries.py:166
+#: app/routers/teacher_competition_entries.py:168
 #, python-format
 msgid "Team “%(team)s” is already in “%(name)s”"
 msgstr "Team “%(team)s” is already in “%(name)s”"
 
-#: app/routers/teacher_competition_entries.py:168
+#: app/routers/teacher_competition_entries.py:170
 #, python-format
 msgid "Team “%(team)s” was removed from “%(name)s”"
 msgstr "Team “%(team)s” was removed from “%(name)s”"
 
-#: app/routers/teacher_competition_entries.py:169
+#: app/routers/teacher_competition_entries.py:171
 #, python-format
 msgid "Team “%(team)s” is not in “%(name)s”"
 msgstr "Team “%(team)s” is not in “%(name)s”"
 
-#: app/routers/teacher_competition_entries.py:172
+#: app/routers/teacher_competition_entries.py:174
 #: app/templates/pages/teacher/competition_questions_add.html:18
 #: app/templates/pages/teacher/question_delete.html:9
 #: app/templates/pages/teacher/question_form.html:14
@@ -476,44 +476,44 @@ msgstr "Team “%(team)s” is not in “%(name)s”"
 msgid "Back to the questions"
 msgstr "Back to the questions"
 
-#: app/routers/teacher_competition_entries.py:172
+#: app/routers/teacher_competition_entries.py:174
 #: app/templates/pages/teacher/competition_teams_add.html:19
 msgid "Back to the teams"
 msgstr "Back to the teams"
 
-#: app/routers/teacher_competition_entries.py:405
+#: app/routers/teacher_competition_entries.py:407
 #, python-format
 msgid "Change the questions of “%(name)s”?"
 msgstr "Change the questions of “%(name)s”?"
 
-#: app/routers/teacher_competition_entries.py:407
+#: app/routers/teacher_competition_entries.py:409
 #, python-format
 msgid "Change the teams of “%(name)s”?"
 msgstr "Change the teams of “%(name)s”?"
 
-#: app/routers/teacher_competition_entries.py:412
+#: app/routers/teacher_competition_entries.py:414
 msgid "Back to the competition"
 msgstr "Back to the competition"
 
-#: app/routers/teacher_competition_entries.py:637
+#: app/routers/teacher_competition_entries.py:639
 msgid "The question was deleted from the question bank and cannot be added again."
 msgstr "The question was deleted from the question bank and cannot be added again."
 
-#: app/routers/teacher_competition_entries.py:639
+#: app/routers/teacher_competition_entries.py:641
 msgid "The question stays in the question bank and can be added again."
 msgstr "The question stays in the question bank and can be added again."
 
-#: app/routers/teacher_competition_entries.py:649
+#: app/routers/teacher_competition_entries.py:651
 #, python-format
 msgid "Remove question %(number)d from “%(name)s”?"
 msgstr "Remove question %(number)d from “%(name)s”?"
 
-#: app/routers/teacher_competition_entries.py:957
+#: app/routers/teacher_competition_entries.py:959
 #, python-format
 msgid "Remove team “%(team)s” of %(institution)s, %(region)s from “%(name)s”?"
 msgstr "Remove team “%(team)s” of %(institution)s, %(region)s from “%(name)s”?"
 
-#: app/routers/teacher_competition_entries.py:963
+#: app/routers/teacher_competition_entries.py:965
 msgid "The team and its members are not changed, and the team can be added again."
 msgstr "The team and its members are not changed, and the team can be added again."
 
@@ -1128,46 +1128,89 @@ msgstr "Delete your %(app)s data"
 msgid "An educational institution named “%(name)s” already exists in this region."
 msgstr "An educational institution named “%(name)s” already exists in this region."
 
+#: app/services/pdf_layout.py:84
+#, python-format
+msgid "Page %(page)d of %(total)s"
+msgstr "Page %(page)d of %(total)s"
+
+#: app/services/question_files.py:120
+#, python-format
+msgid "%(name)s %(date)s questions"
+msgstr "%(name)s %(date)s questions"
+
+#: app/services/question_files.py:132
+#, python-format
+msgid "%(subject)s %(date)s study materials"
+msgstr "%(subject)s %(date)s study materials"
+
+#: app/services/question_files_pdf.py:57
+#: app/templates/pages/teacher/competition_questions.html:18
+#: app/templates/pages/teacher/competition_questions.html:22
+#, python-format
+msgid "Questions of “%(name)s”"
+msgstr "Questions of “%(name)s”"
+
+#: app/services/question_files_pdf.py:61 app/services/results_pdf.py:71
+#, python-format
+msgid "Started: %(moment)s"
+msgstr "Started: %(moment)s"
+
+#: app/services/question_files_pdf.py:65
+msgid "This competition has no questions."
+msgstr "This competition has no questions."
+
+#: app/services/question_files_pdf.py:76
+msgid "Study materials"
+msgstr "Study materials"
+
+#: app/services/question_files_pdf.py:77
+#, python-format
+msgid "Study materials: %(subject)s"
+msgstr "Study materials: %(subject)s"
+
+#: app/services/question_files_pdf.py:85
+#, python-format
+msgid "Downloaded: %(date)s"
+msgstr "Downloaded: %(date)s"
+
+#: app/services/question_files_pdf.py:89
+msgid "This subject has no questions yet."
+msgstr "This subject has no questions yet."
+
+#: app/services/question_files_pdf.py:91
+msgid "Answer:"
+msgstr "Answer:"
+
 #: app/services/regions.py:46
 #, python-format
 msgid "A region named “%(name)s” already exists."
 msgstr "A region named “%(name)s” already exists."
 
-#: app/services/results_pdf.py:99
-#, python-format
-msgid "Page %(page)d of %(total)s"
-msgstr "Page %(page)d of %(total)s"
-
-#: app/services/results_pdf.py:112
+#: app/services/results_pdf.py:69
 #, python-format
 msgid "Results of “%(name)s”"
 msgstr "Results of “%(name)s”"
 
-#: app/services/results_pdf.py:144
-#, python-format
-msgid "Started: %(moment)s"
-msgstr "Started: %(moment)s"
-
-#: app/services/results_pdf.py:145
+#: app/services/results_pdf.py:72
 #, python-format
 msgid "Finished: %(moment)s"
 msgstr "Finished: %(moment)s"
 
-#: app/services/results_pdf.py:146
+#: app/services/results_pdf.py:73
 #, python-format
 msgid "Published: %(date)s"
 msgstr "Published: %(date)s"
 
-#: app/services/results_pdf.py:147
+#: app/services/results_pdf.py:74
 #, python-format
 msgid "Maximum score: %(score)d"
 msgstr "Maximum score: %(score)d"
 
-#: app/services/results_pdf.py:159
+#: app/services/results_pdf.py:83
 msgid "No teams took part in this competition."
 msgstr "No teams took part in this competition."
 
-#: app/services/results_pdf.py:161
+#: app/services/results_pdf.py:85
 #: app/templates/pages/admin/_institution_picker.html:14
 #: app/templates/pages/admin/_institution_picker.html:17
 #: app/templates/pages/profile.html:22
@@ -1191,7 +1234,7 @@ msgstr "No teams took part in this competition."
 msgid "Educational institution"
 msgstr "Educational institution"
 
-#: app/services/results_pdf.py:161
+#: app/services/results_pdf.py:85
 #: app/templates/pages/teacher/competition_answers.html:38
 #: app/templates/pages/teacher/competition_answers.html:41
 #: app/templates/pages/teacher/competition_grades.html:41
@@ -1204,7 +1247,7 @@ msgstr "Educational institution"
 msgid "Team"
 msgstr "Team"
 
-#: app/services/results_pdf.py:161
+#: app/services/results_pdf.py:85
 #: app/templates/pages/teacher/competition_answers.html:38
 #: app/templates/pages/teacher/competition_answers.html:47
 #: app/templates/pages/teacher/competition_grades.html:41
@@ -1455,7 +1498,7 @@ msgstr "Actions for “%(item)s”"
 #: app/templates/pages/teacher/competition_grades.html:41
 #: app/templates/pages/teacher/competition_teams.html:30
 #: app/templates/pages/teacher/competition_teams_add.html:36
-#: app/templates/pages/teacher/competitions.html:56
+#: app/templates/pages/teacher/competitions.html:61
 #: app/templates/pages/teacher/students.html:61
 #: app/templates/pages/teacher/team_add_students.html:28
 #: app/templates/pages/teacher/teams.html:55
@@ -1477,7 +1520,7 @@ msgstr "Previous"
 msgid "Next"
 msgstr "Next"
 
-#: app/templates/components/selectors.html:52
+#: app/templates/components/selectors.html:56
 #: app/templates/pages/teacher/competition_grades.html:34
 msgid "Show"
 msgstr "Show"
@@ -1629,8 +1672,8 @@ msgstr ""
 #: app/templates/pages/admin/teachers.html:17
 #: app/templates/pages/teacher/class_form.html:17
 #: app/templates/pages/teacher/competition_form.html:21
-#: app/templates/pages/teacher/competitions.html:56
-#: app/templates/pages/teacher/competitions.html:59
+#: app/templates/pages/teacher/competitions.html:61
+#: app/templates/pages/teacher/competitions.html:64
 #: app/templates/pages/teacher/students.html:61
 #: app/templates/pages/teacher/students.html:64
 #: app/templates/pages/teacher/team_add_students.html:28
@@ -1698,9 +1741,9 @@ msgstr "Create educational institution"
 #: app/templates/pages/teacher/competition_grades.html:29
 #: app/templates/pages/teacher/competition_questions.html:25
 #: app/templates/pages/teacher/competition_teams.html:25
-#: app/templates/pages/teacher/competitions.html:36
-#: app/templates/pages/teacher/competitions.html:56
+#: app/templates/pages/teacher/competitions.html:40
 #: app/templates/pages/teacher/competitions.html:61
+#: app/templates/pages/teacher/competitions.html:66
 msgid "Status"
 msgstr "Status"
 
@@ -1806,7 +1849,7 @@ msgid "Create the first subject with Create subject."
 msgstr "Create the first subject with Create subject."
 
 #: app/templates/pages/admin/subjects.html:32
-#: app/templates/pages/teacher/competitions.html:45
+#: app/templates/pages/teacher/competitions.html:50
 #: app/templates/pages/teacher/questions.html:32
 msgid "No subjects yet"
 msgstr "No subjects yet"
@@ -2194,7 +2237,7 @@ msgstr "Year of study"
 #: app/templates/pages/teacher/competition_teams.html:51
 #: app/templates/pages/teacher/competition_teams_add.html:35
 #: app/templates/pages/teacher/competition_teams_add.html:52
-#: app/templates/pages/teacher/competitions.html:66
+#: app/templates/pages/teacher/competitions.html:71
 #: app/templates/pages/teacher/teams.html:8
 #: app/templates/pages/teacher/teams.html:13
 msgid "Teams"
@@ -2353,8 +2396,8 @@ msgstr "Answers of “%(name)s”"
 #: app/templates/pages/teacher/competition_grades.html:29
 #: app/templates/pages/teacher/competition_questions.html:25
 #: app/templates/pages/teacher/competition_teams.html:25
-#: app/templates/pages/teacher/competitions.html:56
-#: app/templates/pages/teacher/competitions.html:60
+#: app/templates/pages/teacher/competitions.html:61
+#: app/templates/pages/teacher/competitions.html:65
 msgid "Start"
 msgstr "Start"
 
@@ -2362,7 +2405,7 @@ msgstr "Start"
 #: app/templates/pages/teacher/competition_grades.html:29
 #: app/templates/pages/teacher/competition_questions.html:25
 #: app/templates/pages/teacher/competition_teams.html:25
-#: app/templates/pages/teacher/competitions.html:32
+#: app/templates/pages/teacher/competitions.html:36
 #: app/templates/pages/teacher/questions.html:26
 msgid "Subject"
 msgstr "Subject"
@@ -2377,7 +2420,7 @@ msgstr "No teams from your educational institutions"
 #: app/templates/pages/teacher/competition_questions_add.html:24
 #: app/templates/pages/teacher/competition_teams.html:31
 #: app/templates/pages/teacher/competition_teams_add.html:35
-#: app/templates/pages/teacher/competitions.html:55
+#: app/templates/pages/teacher/competitions.html:60
 #: app/templates/pages/teacher/questions.html:38
 msgid "Pages, top"
 msgstr "Pages, top"
@@ -2429,7 +2472,7 @@ msgstr "View answers"
 #: app/templates/pages/teacher/competition_questions_add.html:42
 #: app/templates/pages/teacher/competition_teams.html:51
 #: app/templates/pages/teacher/competition_teams_add.html:52
-#: app/templates/pages/teacher/competitions.html:78
+#: app/templates/pages/teacher/competitions.html:84
 #: app/templates/pages/teacher/questions.html:55
 msgid "Pages, bottom"
 msgstr "Pages, bottom"
@@ -2457,7 +2500,7 @@ msgid "Keep competition"
 msgstr "Keep competition"
 
 #: app/templates/pages/teacher/competition_cancel.html:14
-#: app/templates/pages/teacher/competitions.html:72
+#: app/templates/pages/teacher/competitions.html:78
 msgid "Cancel competition"
 msgstr "Cancel competition"
 
@@ -2486,7 +2529,7 @@ msgid "Keep in progress"
 msgstr "Keep in progress"
 
 #: app/templates/pages/teacher/competition_finish.html:15
-#: app/templates/pages/teacher/competitions.html:71
+#: app/templates/pages/teacher/competitions.html:77
 msgid "Finish competition"
 msgstr "Finish competition"
 
@@ -2496,7 +2539,7 @@ msgid "Edit competition “%(name)s”"
 msgstr "Edit competition “%(name)s”"
 
 #: app/templates/pages/teacher/competition_form.html:9
-#: app/templates/pages/teacher/competitions.html:28
+#: app/templates/pages/teacher/competitions.html:32
 msgid "Add competition"
 msgstr "Add competition"
 
@@ -2571,7 +2614,7 @@ msgstr "Keep unpublished"
 
 #: app/templates/pages/teacher/competition_publish.html:24
 #: app/templates/pages/teacher/competition_publish.html:28
-#: app/templates/pages/teacher/competitions.html:69
+#: app/templates/pages/teacher/competitions.html:75
 msgid "Publish results"
 msgstr "Publish results"
 
@@ -2582,12 +2625,6 @@ msgstr "Every team must be graded before the results can be published."
 #: app/templates/pages/teacher/competition_publish.html:28
 msgid "Grade the remaining teams"
 msgstr "Grade the remaining teams"
-
-#: app/templates/pages/teacher/competition_questions.html:18
-#: app/templates/pages/teacher/competition_questions.html:22
-#, python-format
-msgid "Questions of “%(name)s”"
-msgstr "Questions of “%(name)s”"
 
 #: app/templates/pages/teacher/competition_questions.html:22
 #: app/templates/pages/teacher/question_form.html:10
@@ -2607,7 +2644,7 @@ msgstr "Add questions with Add question."
 #: app/templates/pages/teacher/competition_questions.html:47
 #: app/templates/pages/teacher/competition_questions_add.html:24
 #: app/templates/pages/teacher/competition_questions_add.html:42
-#: app/templates/pages/teacher/competitions.html:65
+#: app/templates/pages/teacher/competitions.html:70
 #: app/templates/pages/teacher/questions.html:14
 #: app/templates/pages/teacher/questions.html:21
 #: app/templates/pages/teacher/questions.html:23
@@ -2687,65 +2724,73 @@ msgstr "No teams in this region yet"
 msgid "Choose another region."
 msgstr "Choose another region."
 
-#: app/templates/pages/teacher/competitions.html:22
-#: app/templates/pages/teacher/competitions.html:28
-#: app/templates/pages/teacher/competitions.html:30
-#: app/templates/pages/teacher/competitions.html:55
-#: app/templates/pages/teacher/competitions.html:78
+#: app/templates/pages/teacher/competitions.html:26
+#: app/templates/pages/teacher/competitions.html:32
+#: app/templates/pages/teacher/competitions.html:34
+#: app/templates/pages/teacher/competitions.html:60
+#: app/templates/pages/teacher/competitions.html:84
 msgid "Competitions"
 msgstr "Competitions"
 
-#: app/templates/pages/teacher/competitions.html:32
+#: app/templates/pages/teacher/competitions.html:36
 #: app/templates/pages/teacher/questions.html:26
 msgid "Choose a subject"
 msgstr "Choose a subject"
 
-#: app/templates/pages/teacher/competitions.html:45
+#: app/templates/pages/teacher/competitions.html:43
+msgid "Download study materials"
+msgstr "Download study materials"
+
+#: app/templates/pages/teacher/competitions.html:50
 #: app/templates/pages/teacher/questions.html:32
 msgid "Ask an administrator to add a subject."
 msgstr "Ask an administrator to add a subject."
 
-#: app/templates/pages/teacher/competitions.html:47
+#: app/templates/pages/teacher/competitions.html:52
 msgid "Choose a subject in the list above to see its competitions."
 msgstr "Choose a subject in the list above to see its competitions."
 
-#: app/templates/pages/teacher/competitions.html:47
+#: app/templates/pages/teacher/competitions.html:52
 #: app/templates/pages/teacher/questions.html:34
 msgid "Select a subject"
 msgstr "Select a subject"
 
-#: app/templates/pages/teacher/competitions.html:51
+#: app/templates/pages/teacher/competitions.html:56
 msgid "No competitions yet"
 msgstr "No competitions yet"
 
-#: app/templates/pages/teacher/competitions.html:51
+#: app/templates/pages/teacher/competitions.html:56
 msgid "Add the first competition with Add competition."
 msgstr "Add the first competition with Add competition."
 
-#: app/templates/pages/teacher/competitions.html:53
+#: app/templates/pages/teacher/competitions.html:58
 msgid "No competitions with this status"
 msgstr "No competitions with this status"
 
-#: app/templates/pages/teacher/competitions.html:53
+#: app/templates/pages/teacher/competitions.html:58
 msgid "Choose another status, or All."
 msgstr "Choose another status, or All."
 
-#: app/templates/pages/teacher/competitions.html:64
+#: app/templates/pages/teacher/competitions.html:69
 #: app/templates/pages/teacher/questions.html:47
 #: app/templates/pages/teacher/students.html:49
 #: app/templates/pages/teacher/students.html:68
 msgid "Edit"
 msgstr "Edit"
 
-#: app/templates/pages/teacher/competitions.html:67
+#: app/templates/pages/teacher/competitions.html:72
 msgid "Answers"
 msgstr "Answers"
 
-#: app/templates/pages/teacher/competitions.html:68
+#: app/templates/pages/teacher/competitions.html:73
+msgid "Download questions"
+msgstr "Download questions"
+
+#: app/templates/pages/teacher/competitions.html:74
 msgid "Grades"
 msgstr "Grades"
 
-#: app/templates/pages/teacher/competitions.html:70
+#: app/templates/pages/teacher/competitions.html:76
 msgid "Download results"
 msgstr "Download results"
 

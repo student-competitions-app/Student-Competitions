@@ -542,7 +542,7 @@ def test_the_copies_survive_a_bank_edit_and_a_deletion(scene: Scene) -> None:
         add_question(scene.olena, scene, question)
     user_id = olena_id(scene.engine)
     with Session(scene.engine) as session:
-        update_question(session, user_id, edited, "New text", "New answer")
+        update_question(session, user_id, edited, "New text", "New answer", is_additional=False)
         delete_question(session, user_id, deleted)
     body = get(scene.mykola, page_of(scene, "questions"))
     assert [(c.heading, c.boxes, c.notes) for c in cards(body)] == [
@@ -1072,7 +1072,9 @@ def test_removed_questions_are_offered_again_unless_deleted(scene: Scene) -> Non
         add_question(scene.olena, scene, question)
     with Session(scene.engine) as session:
         delete_question(session, olena_id(scene.engine), deleted)
-        update_question(session, olena_id(scene.engine), kept, "Current", "Current answer")
+        update_question(
+            session, olena_id(scene.engine), kept, "Current", "Current answer", is_additional=False
+        )
     for question in (kept, deleted):
         assert remove(scene.olena, scene, "questions", question).status_code == 303
     offered = card_ids(get(scene.olena, page_of(scene, "questions/add")))
@@ -1395,19 +1397,40 @@ def test_other_roles_are_refused(
     assert snapshot(scene.engine) == before
 
 
+READ_ONLY = "read-only@example.org"
+
+
+def read_only_teacher(scene: Scene, client_as: ClientAs) -> TestClient:
+    """A teacher with Read access and no setting (milestone 12.9 FR-021)."""
+    make_teacher(
+        scene.engine,
+        app.state.settings,
+        email=READ_ONLY,
+        institutions={scene.academy: AccessLevel.READ},
+        first="Petro",
+        last="Read",
+    )
+    return client_as(READ_ONLY)
+
+
 @pytest.mark.parametrize(("method", "path"), MANAGE_ROUTES)
-@pytest.mark.parametrize("target", ["listed", "missing", "unknown-subject", "hidden"])
+@pytest.mark.parametrize("target", ["listed", "additional", "missing", "unknown-subject", "hidden"])
+@pytest.mark.parametrize("teacher", ["mykola", "read_only"])
 def test_a_teacher_without_the_setting_is_refused_before_any_id_is_read(
-    scene: Scene, method: str, path: str, target: str
+    scene: Scene, client_as: ClientAs, method: str, path: str, target: str, teacher: str
 ) -> None:
-    """US9-2, FR-045 step 2, SC-003."""
+    """US9-2, FR-045 step 2, SC-003. Milestone 12.9 US3-2, FR-020: an additional question too,
+    for a teacher with Write and one with Read access."""
+    browser = scene.mykola if teacher == "mykola" else read_only_teacher(scene, client_as)
     question = make_question(scene.engine, scene.chemistry)
+    additional = make_question(scene.engine, scene.chemistry, "Hard?", additional=True)
     biology = make_subject(scene.engine, "Biology")
     hidden = make_competition(scene.engine, biology, starts_at=START)
     with Session(scene.engine) as session:
         set_subject_active(session, biology, False)
     competition, subject, entry = {
         "listed": (scene.competition, scene.chemistry, question),
+        "additional": (scene.competition, scene.chemistry, additional),
         "missing": (MISSING, scene.chemistry, MISSING),
         "unknown-subject": (scene.competition, "abc", "abc"),
         "hidden": (hidden, biology, question),
@@ -1416,7 +1439,32 @@ def test_a_teacher_without_the_setting_is_refused_before_any_id_is_read(
         path, competition, entry if str(entry).isdigit() else MISSING, f"subject={subject}"
     )
     before = snapshot(scene.engine)
-    denied(send(scene.mykola, method, url, sweep_form(subject, entry, "abc")))
+    denied(send(browser, method, url, sweep_form(subject, entry, "abc")))
+    assert snapshot(scene.engine) == before
+
+
+ADD_QUESTION_ROUTES = [("GET", f"{PREFIX}questions/add"), ("POST", f"{PREFIX}questions")]
+
+
+@pytest.mark.parametrize(("method", "path"), ADD_QUESTION_ROUTES)
+@pytest.mark.parametrize("teacher", ["mykola", "read_only"])
+def test_add_questions_refuses_the_same_way_for_an_additional_question(
+    scene: Scene, client_as: ClientAs, method: str, path: str, teacher: str
+) -> None:
+    """Milestone 12.9 US3-2, FR-020: the response for an additional question equals the one for
+    an ordinary question, so a crafted form does not show whether it exists."""
+    browser = scene.mykola if teacher == "mykola" else read_only_teacher(scene, client_as)
+    ordinary = make_question(scene.engine, scene.chemistry)
+    additional = make_question(scene.engine, scene.chemistry, "Hard?", additional=True)
+    before = snapshot(scene.engine)
+    responses = []
+    for entry in (ordinary, additional):
+        url = concrete(path, scene.competition, entry, f"subject={scene.chemistry}")
+        response = send(browser, method, url, sweep_form(scene.chemistry, entry, "abc"))
+        denied(response)
+        # The language switch keeps the address that was asked for, not what the server found.
+        responses.append(response.text.replace(f'value="{url}"', 'value="{address}"'))
+    assert responses[0] == responses[1]
     assert snapshot(scene.engine) == before
 
 
@@ -1752,3 +1800,161 @@ def test_a_published_competition_shows_both_lists_read_only(scene: Scene) -> Non
     with Session(scene.engine) as session:
         set_subject_active(session, scene.chemistry, True)
     assert snapshot(scene.engine) == before
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9, user story 4: the mix of additional and other questions
+# (specs/012.9-additional-questions/spec.md US4, contracts/http-routes.md)
+# ---------------------------------------------------------------------------------------------
+
+
+def additional_badges(body: str) -> list[str]:
+    """The ids of the cards whose heading holds the badge "Additional"."""
+    found = []
+    for article in html.parse(body).find_all("article"):
+        (heading,) = article.find_all("h3")
+        badges = [e for e in heading.iter() if "badge" in e.classes()]
+        if [(b.classes(), b.text()) for b in badges] == [(["badge", "badge-info"], "Additional")]:
+            found.append(article.attrs["id"])
+        else:
+            assert badges == [], article.attrs.get("id")
+    return found
+
+
+def test_add_questions_shows_the_additional_ones_with_the_badge(scene: Scene) -> None:
+    """US4-1, US4-2, FR-024: listed with the badge, added like any other question."""
+    plain = make_question(scene.engine, scene.chemistry, "Plain?")
+    hard = make_question(scene.engine, scene.chemistry, "Hard?", additional=True)
+    body = get(scene.olena, page_of(scene, "questions/add"))
+    assert card_ids(body) == [hard, plain]
+    assert additional_badges(body) == [f"question-{hard}"]
+    assert {c.id: c.actions for c in cards(body)}[f"question-{hard}"] == ["Add"]
+    body = follow(scene.olena, add_question(scene.olena, scene, hard))
+    assert notices(body) == [("success", f"Question {hard} was added to “Spring round”")]
+    by_id = {c.id: c for c in cards(body)}
+    assert by_id[f"question-{hard}"].notes == ["Already in this competition"]
+    assert additional_badges(body) == [f"question-{hard}"]
+
+
+def competitions_in_every_status(scene: Scene) -> dict[str, tuple[int, int]]:
+    """A competition of each status, and a finished one of a deactivated subject, each holding an
+    additional question first and an ordinary one second: `{status: (competition, subject)}`."""
+    biology = make_subject(scene.engine, "Biology")
+    found = {
+        "upcoming": (scene.competition, scene.chemistry),
+        "in_progress": (
+            make_competition(scene.engine, scene.chemistry, "Running", starts_at=at(1, 8)),
+            scene.chemistry,
+        ),
+        "finished": (
+            make_competition(
+                scene.engine, scene.chemistry, "Done", starts_at=at(1, 7), stopped=True
+            ),
+            scene.chemistry,
+        ),
+        "published": (
+            make_competition(
+                scene.engine,
+                scene.chemistry,
+                "Out",
+                starts_at=at(1, 6),
+                stopped=True,
+                published=True,
+            ),
+            scene.chemistry,
+        ),
+        "cancelled": (
+            make_competition(
+                scene.engine, scene.chemistry, "Off", starts_at=at(14), cancelled=True
+            ),
+            scene.chemistry,
+        ),
+        "finished-deactivated-subject": (
+            make_competition(scene.engine, biology, "Old", starts_at=at(1, 5), stopped=True),
+            biology,
+        ),
+    }
+    for competition, subject in found.values():
+        add_competition_question(
+            scene.engine, competition, make_question(scene.engine, subject, additional=True)
+        )
+        add_competition_question(scene.engine, competition, make_question(scene.engine, subject))
+    with Session(scene.engine) as session:
+        set_subject_active(session, biology, False)
+    return found
+
+
+def test_the_badge_on_a_competitions_questions_only_with_the_setting(scene: Scene) -> None:
+    """US4-3, US4-4, FR-025, FR-026, SC-007: in every status, Olena sees the badge on the
+    additional question; Mykola sees the same questions, and the badge is not in his response."""
+    for status, (competition, subject) in competitions_in_every_status(scene).items():
+        url = f"{TAB}/{competition}/questions?subject={subject}"
+        olena, mykola = get(scene.olena, url), get(scene.mykola, url)
+        additional, ordinary = card_ids(olena)
+        assert additional_badges(olena) == [f"question-{additional}"], status
+        assert card_ids(mykola) == [additional, ordinary], status
+        assert additional_badges(mykola) == [], status
+        assert "Additional" not in mykola, status
+
+
+def test_the_badge_and_the_deleted_note_together(scene: Scene) -> None:
+    """US4-5."""
+    hard = make_question(scene.engine, scene.chemistry, "Hard?", additional=True)
+    add_competition_question(scene.engine, scene.competition, hard)
+    with Session(scene.engine) as session:
+        delete_question(session, olena_id(scene.engine), hard)
+    (card,) = cards(get(scene.olena, page_of(scene, "questions")))
+    assert card.heading == f"Question {hard} Additional"
+    assert card.notes == ["Deleted from the question bank"]
+
+
+def test_the_badge_follows_the_bank_and_the_copy_stays(scene: Scene) -> None:
+    """US4-6, FR-023: the mark cleared through the edit form; the badge goes, the copy stays."""
+    hard = make_question(scene.engine, scene.chemistry, "Hard?", "Deep.", additional=True)
+    add_competition_question(scene.engine, scene.competition, hard)
+    url = page_of(scene, "questions")
+    assert additional_badges(get(scene.olena, url)) == [f"question-{hard}"]
+    response = scene.olena.post(
+        f"/teacher/questions/{hard}/edit",
+        data={"page": "1", "text": "Harder?", "reference_answer": "Deeper."},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    (card,) = cards(get(scene.olena, url))
+    assert additional_badges(get(scene.olena, url)) == []
+    assert card.boxes == ["Hard?", "Deep."]
+
+
+def test_the_remove_confirmation_shows_no_badge(scene: Scene) -> None:
+    """US4-7: the confirmation names the question; the mark is not shown."""
+    hard = make_question(scene.engine, scene.chemistry, "Hard?", additional=True)
+    add_competition_question(scene.engine, scene.competition, hard)
+    body = get(scene.olena, page_of(scene, f"questions/{hard}/remove"))
+    assert "Additional" not in body
+
+
+def set_setting(engine: Engine, email: str, value: bool) -> None:
+    with Session(engine) as session:
+        user = get_user_by_email(session, email)
+        assert user is not None and user.id is not None
+        view = get_teacher(session, user.id)
+        update_teacher(
+            session,
+            user.id,
+            view.first_name,
+            view.last_name,
+            {link.institution_id: link.access_level for link in view.links},
+            can_manage_competitions=value,
+        )
+
+
+def test_the_badge_follows_the_setting(scene: Scene) -> None:
+    """Milestone 12.9 US5, FR-017: given, the next load shows the badge; taken away, it is gone."""
+    hard = make_question(scene.engine, scene.chemistry, "Hard?", additional=True)
+    add_competition_question(scene.engine, scene.competition, hard)
+    url = page_of(scene, "questions")
+    assert additional_badges(get(scene.mykola, url)) == []
+    set_setting(scene.engine, MYKOLA, True)
+    assert additional_badges(get(scene.mykola, url)) == [f"question-{hard}"]
+    set_setting(scene.engine, MYKOLA, False)
+    assert additional_badges(get(scene.mykola, url)) == []

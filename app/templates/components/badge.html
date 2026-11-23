@@ -26,6 +26,14 @@
 {%- if level == "write" %}{{ badge(pgettext("access level", "Write"), "info") }}{% else %}{{ badge(pgettext("access level", "Read"), "neutral") }}{% endif -%}
 {%- endmacro %}
 
+{#- The mark of an additional question (milestone 12.9 contracts/components.md §1): a mark of a
+    record, not a status. The context `question` lets the Ukrainian word agree with «питання»
+    («Додаткове»). Pages show it only to teachers with **Can manage competitions**; the macro does
+    not decide that. -#}
+{% macro additional_badge() -%}
+{{ badge(pgettext("question", "Additional"), "info") }}
+{%- endmacro %}
+
 {#- A competition's status (milestone 12.1 contracts/components.md §3; milestone 12.8
     contracts/components.md §1): one word and a kind each, five statuses in the order of the status
     filter. **Published** (a finished competition whose results are published) uses `accent`, so it

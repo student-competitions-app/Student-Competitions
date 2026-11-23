@@ -58,6 +58,7 @@ from tests.conftest import (
     ADMIN_EMAIL,
     add_competition_question,
     add_competition_team,
+    grade_answer,
     make_class,
     make_competition,
     make_institution,
@@ -66,6 +67,8 @@ from tests.conftest import (
     make_subject,
     make_teacher,
     make_team,
+    save_team_answer,
+    store_results_files,
 )
 from tests.integration.test_team_service import enrolled
 
@@ -183,7 +186,12 @@ def copies(engine: Engine, competition_id: int) -> list[tuple[int, str, str]]:
 
 def listed_questions(engine: Engine, competition_id: int, p: int = 1) -> list[int]:
     with Session(engine) as session:
-        return [q.question_id for q in entries.question_page(session, competition_id, p).questions]
+        return [
+            q.question_id
+            for q in entries.question_page(
+                session, competition_id, p, with_bank_mark=False
+            ).questions
+        ]
 
 
 def linked(engine: Engine, competition_id: int) -> set[int]:
@@ -251,9 +259,9 @@ def test_adding_copies_the_question_as_the_bank_holds_it(scene: Scene) -> None:
         (question, "Why is the sky blue?", "Rayleigh.")
     ]
     with Session(scene.engine) as session:
-        listing = entries.question_page(session, scene.competition, 1)
+        listing = entries.question_page(session, scene.competition, 1, with_bank_mark=False)
     assert listing.questions == [
-        CompetitionQuestionView(question, "Why is the sky blue?", "Rayleigh.", False)
+        CompetitionQuestionView(question, "Why is the sky blue?", "Rayleigh.", False, None)
     ]
 
 
@@ -305,9 +313,12 @@ def test_25_questions_are_paged_ten_by_ten(scene: Scene) -> None:
         )
     with Session(scene.engine) as session:
         sizes = [
-            len(entries.question_page(session, scene.competition, p).questions) for p in (1, 2, 3)
+            len(
+                entries.question_page(session, scene.competition, p, with_bank_mark=False).questions
+            )
+            for p in (1, 2, 3)
         ]
-        last = entries.question_page(session, scene.competition, 99)
+        last = entries.question_page(session, scene.competition, 99, with_bank_mark=False)
     assert sizes == [10, 10, 5]
     assert (last.paging.number, len(last.questions)) == (3, 5)
 
@@ -323,9 +334,13 @@ def test_a_bank_edit_leaves_the_copy(scene: Scene) -> None:
     call(scene.engine, entries.add_question, scene.manager, scene.competition, scene.chemistry,
          question)  # fmt: skip
     with Session(scene.engine) as session:
-        update_question(session, scene.manager, question, "New text", "New answer")
+        update_question(
+            session, scene.manager, question, "New text", "New answer", is_additional=False
+        )
     with Session(scene.engine) as session:
-        (view,) = entries.question_page(session, scene.competition, 1).questions
+        (view,) = entries.question_page(
+            session, scene.competition, 1, with_bank_mark=False
+        ).questions
     assert (view.text, view.reference_answer, view.deleted_from_bank) == (
         "Old text",
         "Old answer",
@@ -340,8 +355,10 @@ def test_a_bank_deletion_leaves_the_copy_marked(scene: Scene) -> None:
     with Session(scene.engine) as session:
         delete_question(session, scene.manager, question)
     with Session(scene.engine) as session:
-        (view,) = entries.question_page(session, scene.competition, 1).questions
-    assert view == CompetitionQuestionView(question, "Kept", "Kept answer", True)
+        (view,) = entries.question_page(
+            session, scene.competition, 1, with_bank_mark=False
+        ).questions
+    assert view == CompetitionQuestionView(question, "Kept", "Kept answer", True, None)
 
 
 def test_23_copies_in_the_order_of_adding(scene: Scene) -> None:
@@ -350,7 +367,7 @@ def test_23_copies_in_the_order_of_adding(scene: Scene) -> None:
     for question in reversed(ids):
         add_competition_question(scene.engine, scene.competition, question)
     with Session(scene.engine) as session:
-        listing = entries.question_page(session, scene.competition, 2)
+        listing = entries.question_page(session, scene.competition, 2, with_bank_mark=False)
     paging = listing.paging
     assert (paging.first_item, paging.last_item, paging.total) == (11, 20, 23)
     assert [q.question_id for q in listing.questions] == list(reversed(ids))[10:20]
@@ -605,7 +622,9 @@ def test_a_question_deleted_from_the_bank_is_removed_and_no_longer_offered(scene
          scene.chemistry, question)  # fmt: skip
     with Session(scene.engine) as session:
         assert question not in entries.question_ids(session, scene.competition)
-        assert question not in [q.id for q in bank_page(session, scene.chemistry, 1).questions]
+        assert question not in [
+            q.id for q in bank_page(session, scene.chemistry, 1, include_additional=True).questions
+        ]
     with pytest.raises(EntryNotFound):
         call(scene.engine, entries.add_question, scene.manager, scene.competition,
              scene.chemistry, question)  # fmt: skip
@@ -620,7 +639,7 @@ def test_a_removed_question_added_again_has_the_banks_current_text(scene: Scene)
     args = (scene.manager, scene.competition, scene.chemistry, first)
     call(scene.engine, entries.remove_question, *args)
     with Session(scene.engine) as session:
-        update_question(session, scene.manager, first, "New", "New answer")
+        update_question(session, scene.manager, first, "New", "New answer", is_additional=False)
     call(scene.engine, entries.add_question, *args)
     assert [c[:2] for c in copies(scene.engine, scene.competition)] == [
         (second, "Question?"),
@@ -692,7 +711,7 @@ def test_an_entry_is_looked_up_for_the_confirmation(scene: Scene) -> None:
     with Session(scene.engine) as session:
         assert entries.get_competition_question(
             session, scene.competition, question
-        ) == CompetitionQuestionView(question, "Text", "Answer", True)
+        ) == CompetitionQuestionView(question, "Text", "Answer", True, None)
         assert entries.get_competition_team(session, scene.competition, comets) == (
             TeamRow(comets, "Comets", "School No. 5", 0, False),
             "Kyiv",
@@ -918,7 +937,9 @@ def test_an_addition_racing_a_bank_deletion(scene: Scene, database_url: str) -> 
         with Session(scene.engine) as session:
             views = {
                 v.question_id: v
-                for v in entries.question_page(session, scene.competition, 1).questions
+                for v in entries.question_page(
+                    session, scene.competition, 1, with_bank_mark=False
+                ).questions
             }
         if added == "ok":
             assert views[question].deleted_from_bank
@@ -937,7 +958,9 @@ def test_an_addition_racing_a_bank_edit_copies_one_version(scene: Scene, databas
             lambda s, q=question: entries.add_question(
                 s, scene.manager, scene.competition, scene.chemistry, q
             ),
-            lambda s, q=question: update_question(s, scene.manager, q, "New", "New answer"),
+            lambda s, q=question: update_question(
+                s, scene.manager, q, "New", "New answer", is_additional=False
+            ),
         )
         assert (added, edited) == ("ok", "ok"), attempt
         (copy,) = [c for c in copies(scene.engine, scene.competition) if c[0] == question]
@@ -989,3 +1012,103 @@ def test_no_ops_and_refusals_log_nothing(scene: Scene, caplog: pytest.LogCapture
         with pytest.raises(ManageRequired):
             call(scene.engine, entries.add_team, scene.reader, *args, kyiv, team)
     assert [r for r in caplog.records if r.getMessage().startswith("Competition")] == []
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9: the bank's additional mark on a competition's questions
+# (specs/012.9-additional-questions/contracts/services.md, research R6)
+# ---------------------------------------------------------------------------------------------
+
+
+def set_mark(engine: Engine, question_id: int, value: bool) -> None:
+    with Session(engine) as session:
+        question = session.get(Question, question_id)
+        assert question is not None
+        question.is_additional = value
+        session.add(question)
+        session.commit()
+
+
+def marks(engine: Engine, competition: int, with_bank_mark: bool) -> list[tuple[Any, ...]]:
+    with Session(engine) as session:
+        page = entries.question_page(session, competition, 1, with_bank_mark=with_bank_mark)
+    return [(q.question_id, q.is_additional, q.deleted_from_bank) for q in page.questions]
+
+
+def test_the_bank_mark_is_read_only_when_asked(engine: Engine, scene: Scene) -> None:
+    """FR-025: the bank's current mark, beside "Deleted from the question bank"; `None` when the
+    caller did not ask, so the mark was never read."""
+    hard = make_question(engine, scene.chemistry, "Hard?", additional=True)
+    plain = make_question(engine, scene.chemistry, "Plain?")
+    gone = make_question(engine, scene.chemistry, "Gone?", additional=True)
+    for question in (hard, plain, gone):
+        add_competition_question(engine, scene.competition, question)
+    with Session(engine) as session:
+        delete_question(session, scene.manager, gone)
+    assert marks(engine, scene.competition, True) == [
+        (hard, True, False),
+        (plain, False, False),
+        (gone, True, True),
+    ]
+    assert marks(engine, scene.competition, False) == [
+        (hard, None, False),
+        (plain, None, False),
+        (gone, None, True),
+    ]
+    set_mark(engine, hard, False)
+    assert marks(engine, scene.competition, True)[0] == (hard, False, False)
+    with Session(engine) as session:
+        view = entries.get_competition_question(session, scene.competition, hard)
+    assert view.is_additional is None
+
+
+COMPETITION_TABLES = ("competition_questions", "team_answers", "competition_results_files")
+
+
+def competition_rows(engine: Engine) -> dict[str, list[tuple[Any, ...]]]:
+    metadata = MetaData()
+    metadata.reflect(bind=engine, only=COMPETITION_TABLES)
+    with engine.connect() as connection:
+        return {
+            name: sorted(tuple(row) for row in connection.execute(sa_select(metadata.tables[name])))
+            for name in COMPETITION_TABLES
+        }
+
+
+def test_the_mark_changes_nothing_stored_in_a_competition(engine: Engine, scene: Scene) -> None:
+    """FR-022, FR-023, SC-005: in every status, the copies, the answers, the grades and the
+    results files stay as they are while the bank's mark is set and cleared."""
+    team = make_team(engine, scene.academy, "Lions")
+    competitions = {
+        "upcoming": scene.competition,
+        "in_progress": make_competition(
+            engine, scene.chemistry, "Running", starts_at=NOW - timedelta(hours=1)
+        ),
+        "finished": make_competition(
+            engine, scene.chemistry, "Done", starts_at=NOW - timedelta(days=1), stopped=True
+        ),
+        "published": make_competition(
+            engine,
+            scene.chemistry,
+            "Out",
+            starts_at=NOW - timedelta(days=2),
+            stopped=True,
+            published=True,
+        ),
+    }
+    question = make_question(engine, scene.chemistry, "Hard?", "Answer.")
+    for status, competition in competitions.items():
+        copy = add_competition_question(engine, competition, question)
+        add_competition_team(engine, competition, team)
+        if status != "upcoming":
+            save_team_answer(engine, competition, team, copy, "Because.")
+        if status in ("finished", "published"):
+            grade_answer(engine, competition, team, copy, 7)
+    store_results_files(engine, competitions["published"])
+    before = competition_rows(engine)
+    for value in (True, False, True):
+        with Session(engine) as session:
+            update_question(
+                session, scene.manager, question, "Hard?", "Answer.", is_additional=value
+            )
+        assert competition_rows(engine) == before

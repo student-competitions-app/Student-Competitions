@@ -48,6 +48,9 @@ Deliberate changes since (each is a contract change, recorded here):
   confirmation and the read-only grading sheet have no form of their own. The new **Publish
   results** and **Download results** menu entries of `teacher-competitions` are links, so that
   case is unchanged.
+- **Milestone 12.9**: the question form's cases (`teacher-question-new*`, `teacher-question-edit*`)
+  gain the checkbox `additional`, regenerated once with `UPDATE_FORM_CONTRACT=1` for those cases
+  only.
 """
 
 import json

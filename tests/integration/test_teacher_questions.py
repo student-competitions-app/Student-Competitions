@@ -34,6 +34,7 @@ from tests.conftest import (
     ADMIN_EMAIL,
     ADMIN_STUDENT_EMAIL,
     STUDENT_EMAIL,
+    TEACHER_EMAIL,
     ClientAs,
     make_institution,
     make_question,
@@ -491,6 +492,7 @@ def test_the_add_form(scene: Scene) -> None:
         ("page", "hidden", "1"),
         ("text", "textarea", ""),
         ("reference_answer", "textarea", ""),
+        ("additional", "checkbox", "1"),
     ]
     assert [(b.text, b.name, b.value) for b in form.buttons] == [
         ("Save question", "then", "list"),
@@ -651,7 +653,7 @@ def test_the_edit_form(scene: Scene) -> None:
     assert textarea(body, "reference_answer") == "A\n\nB"
     (form,) = [f for f in html.forms(body, "main") if f.method == "post"]
     assert form.action == f"{TAB}/{question}/edit"
-    assert [i.name for i in form.inputs] == ["page", "text", "reference_answer"]
+    assert [i.name for i in form.inputs] == ["page", "text", "reference_answer", "additional"]
     assert [(b.text, b.name) for b in form.buttons] == [("Save question", None)]
     assert (
         html.links(body, "main")[0].href
@@ -879,21 +881,27 @@ def test_other_roles_are_refused(
 
 
 @pytest.mark.parametrize(("method", "path"), MANAGE_ROUTES)
-@pytest.mark.parametrize("target", ["listed", "missing", "deleted", "deactivated-subject"])
+@pytest.mark.parametrize(
+    "target", ["listed", "additional", "missing", "deleted", "deactivated-subject"]
+)
+@pytest.mark.parametrize("teacher", ["reader", "read_only"])
 def test_a_teacher_without_the_setting_is_refused_before_anything_is_looked_up(
-    scene: Scene, method: str, path: str, target: str
+    scene: Scene, kept_back: "KeptBack", method: str, path: str, target: str, teacher: str
 ) -> None:
-    """US5-2, FR-037: 403 whether the id exists or not; nothing changes."""
+    """US5-2, FR-037: 403 whether the id exists or not; nothing changes. Milestone 12.9 US3-1,
+    FR-020: an additional question too, for a teacher with Write and one with Read access."""
     question, subject = {
         "listed": (scene.maths_ids[0], scene.maths),
+        "additional": (kept_back.literature_additional[0], kept_back.literature),
         "missing": (MISSING, MISSING),
         "deleted": (scene.deleted, scene.geography),
         "deactivated-subject": (scene.chemistry_question, scene.chemistry),
     }[target]
+    browser = scene.reader if teacher == "reader" else kept_back.read_only
     url = concrete(path, question, subject)
     data = form_for(subject) if method == "POST" else None
     before = snapshot(scene.engine)
-    denied(scene.reader.request(method, url, data=data, follow_redirects=False))
+    denied(browser.request(method, url, data=data, follow_redirects=False))
     assert snapshot(scene.engine) == before
 
 
@@ -1062,3 +1070,385 @@ def test_question_ids_are_the_stored_order(scene: Scene) -> None:
             select(Question.id).where(Question.subject_id == scene.maths).order_by(col(Question.id))
         ).all()
     assert list(ids) == scene.maths_ids
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9, user story 1: marking a question as additional
+# (specs/012.9-additional-questions/spec.md US1, contracts/http-routes.md)
+# ---------------------------------------------------------------------------------------------
+
+HINT = "Additional questions and their answers are not given to participants before a competition."
+
+
+def checked(body: str) -> bool:
+    return "checked" in html.control(body, "additional")
+
+
+def newest(engine: Engine) -> Question:
+    with Session(engine) as session:
+        question = session.scalars(select(Question).order_by(col(Question.id).desc())).first()
+        assert question is not None
+        return question
+
+
+def additional_badges(element: html.Element) -> list[list[str]]:
+    """The classes of every badge reading "Additional" inside `element`."""
+    return [
+        e.classes() for e in element.iter() if "badge" in e.classes() and e.text() == "Additional"
+    ]
+
+
+def test_the_checkbox_on_the_add_form(scene: Scene) -> None:
+    """US1-1, FR-006, FR-007: unchecked, labelled, with its hint, after the reference answer (the
+    order of the inputs is checked in `test_the_add_form`)."""
+    body = scene.manager.get(f"{TAB}/new?subject={scene.physics}&page=1").text
+    attrs = html.control(body, "additional")
+    assert (attrs["type"], attrs["value"], "checked" in attrs) == ("checkbox", "1", False)
+    (hint,) = [e for e in html.parse(body).iter() if e.attrs.get("id") == attrs["aria-describedby"]]
+    assert hint.text() == HINT
+    (label,) = [e for e in html.parse(body).iter() if e.attrs.get("for") == "additional"]
+    assert label.text() == "Additional question"
+
+
+@pytest.mark.parametrize("then", ["list", "another"])
+@pytest.mark.parametrize(
+    ("sent", "expected"), [("1", True), ("on", True), ("", False), (None, False)]
+)
+def test_adding_stores_the_mark(scene: Scene, then: str, sent: str | None, expected: bool) -> None:
+    """US1-2, US1-3, FR-009: a non-empty value marks the question; an empty or absent one does
+    not (research R5)."""
+    data = {"subject": str(scene.physics), "page": "1", "text": "Hard?", "reference_answer": "A."}
+    data["then"] = then
+    if sent is not None:
+        data["additional"] = sent
+    response = scene.manager.post(TAB, data=data, follow_redirects=False)
+    assert response.status_code == 303
+    question = newest(scene.engine)
+    assert (question.text, question.is_additional) == ("Hard?", expected)
+
+
+def test_save_and_add_one_more_clears_the_box(scene: Scene) -> None:
+    """US1-4, FR-010."""
+    data = {"subject": str(scene.physics), "page": "1", "text": "Hard?", "reference_answer": "A."}
+    response = scene.manager.post(
+        TAB, data={**data, "then": "another", "additional": "1"}, follow_redirects=False
+    )
+    assert newest(scene.engine).is_additional
+    body = scene.manager.get(response.headers["location"]).text
+    assert html.notices(body) == [("status", "The question was saved.")]
+    assert not checked(body)
+
+
+@pytest.mark.parametrize("additional", [True, False])
+def test_the_edit_form_shows_the_stored_mark(scene: Scene, additional: bool) -> None:
+    """US1-5, FR-008."""
+    question = make_question(scene.engine, scene.maths, additional=additional)
+    assert checked(scene.manager.get(f"{TAB}/{question}/edit?page=1").text) is additional
+
+
+def test_an_edit_sets_and_clears_the_mark(scene: Scene) -> None:
+    """US1-6, FR-009: checking the box marks the question; sending it unchecked clears it."""
+    question = make_question(scene.engine, scene.maths, "Q?", "A.")
+    assert edit(scene.manager, question, "Q?", "A.", additional="1").status_code == 303
+    assert stored(scene.engine, question).is_additional
+    assert edit(scene.manager, question, "Q?", "A.").status_code == 303
+    assert not stored(scene.engine, question).is_additional
+
+
+@pytest.mark.parametrize("form", ["add", "edit"])
+@pytest.mark.parametrize("sent", [True, False])
+def test_an_invalid_form_keeps_the_box_as_sent(scene: Scene, form: str, sent: bool) -> None:
+    """US1-7, FR-011: the box shows what was sent, not what is stored, and nothing changes."""
+    extra = {"additional": "1"} if sent else {}
+    if form == "add":
+        before = snapshot(scene.engine)
+        data = {"subject": str(scene.maths), "page": "1", "text": "", "reference_answer": "A."}
+        response = scene.manager.post(TAB, data={**data, **extra}, follow_redirects=False)
+    else:
+        question = make_question(scene.engine, scene.maths, additional=not sent)
+        before = snapshot(scene.engine)
+        response = edit(scene.manager, question, "", "A.", **extra)
+    assert response.status_code == 400
+    assert checked(response.text) is sent
+    assert snapshot(scene.engine) == before
+
+
+def test_the_badge_beside_the_number(scene: Scene) -> None:
+    """US1-8, FR-013: "Question N" followed by the badge; an ordinary question has none."""
+    marked = make_question(scene.engine, scene.physics, "Hard?", "A.", additional=True)
+    body = scene.manager.get(f"{TAB}?subject={scene.physics}").text
+    headings = {card.id: card.heading for card in cards(body)}
+    assert headings[f"question-{marked}"] == f"Question {marked} Additional"
+    for question in scene.physics_ids:
+        assert headings[f"question-{question}"] == f"Question {question}"
+    for article in html.parse(body).find_all("article"):
+        (heading,) = article.find_all("h3")
+        expected = [["badge", "badge-info"]] if article.attrs["id"] == f"question-{marked}" else []
+        assert additional_badges(heading) == expected
+
+
+def test_no_badge_on_the_edit_form_or_the_delete_confirmation(scene: Scene) -> None:
+    """FR-015: the checkbox shows the mark on the edit form; the delete confirmation names the
+    question by its number only."""
+    question = make_question(scene.engine, scene.maths, additional=True)
+    body = scene.manager.get(f"{TAB}/{question}/edit?page=1").text
+    assert checked(body)
+    assert html.h1(body) == f"Edit question {question}"
+    assert additional_badges(html.parse(body)) == []
+    body = scene.manager.get(f"{TAB}/{question}/delete?page=1").text
+    assert html.h1(body) == f"Delete question {question}?"
+    assert additional_badges(html.parse(body)) == []
+
+
+@pytest.mark.parametrize("target", ["deleted", "deactivated-subject"])
+def test_a_question_that_cannot_be_edited_keeps_its_mark(scene: Scene, target: str) -> None:
+    """US1-10, FR-005: "Question not found", and the stored mark stays."""
+    if target == "deleted":
+        question = make_question(scene.engine, scene.geography, additional=True, deleted=True)
+    else:
+        question = make_question(scene.engine, scene.chemistry, additional=True)
+    not_found(scene.manager.get(f"{TAB}/{question}/edit?page=1"), QUESTION_NOT_FOUND)
+    not_found(edit(scene.manager, question, "Q?", "A."), QUESTION_NOT_FOUND)
+    assert stored(scene.engine, question).is_additional
+
+
+def test_the_mark_in_ukrainian(scene: Scene) -> None:
+    """FR-032."""
+    question = make_question(scene.engine, scene.physics, additional=True)
+    scene.manager.cookies.set("sc_lang", "uk")
+    body = scene.manager.get(f"{TAB}/{question}/edit?page=1").text
+    (label,) = [e for e in html.parse(body).iter() if e.attrs.get("for") == "additional"]
+    assert label.text() == "Додаткове питання"
+    assert (
+        "Додаткові питання та відповіді на них не надаються учасникам до початку змагання." in body
+    )
+    body = scene.manager.get(f"{TAB}?subject={scene.physics}").text
+    assert "Додаткове" in html.badges(body)
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9, user story 2: every other teacher does not get the additional questions
+# ---------------------------------------------------------------------------------------------
+
+READ_ONLY = "read-only@example.org"
+
+
+@dataclass(frozen=True)
+class KeptBack:
+    """This milestone's own data, beside `Scene`, so the older tests keep their counts."""
+
+    literature: int
+    literature_ids: list[int]
+    """The 12 ordinary questions, in creation order."""
+    literature_additional: list[int]
+    """The 3 listed additional questions, newer than every ordinary one."""
+    literature_deleted: int
+    """An additional question, deleted."""
+    astronomy: int
+    """Only additional questions."""
+    astronomy_ids: list[int]
+    read_only: TestClient
+    """A teacher with Read access and no setting."""
+    unlinked: TestClient
+    """The cast teacher: no linked institution and no setting."""
+
+
+@pytest.fixture
+def kept_back(scene: Scene, client_as: ClientAs) -> KeptBack:
+    engine, settings = app.state.engine, app.state.settings
+    academy = make_institution(engine, "Lviv Academy", "Lviv")
+    make_teacher(engine, settings, email=READ_ONLY, institutions={academy: AccessLevel.READ})
+    literature = make_subject(engine, "Literature")
+    literature_ids = bulk_questions(engine, literature, 12, prefix="L")
+    additional = [
+        make_question(engine, literature, f"Secret {i}?", f"Hidden {i}.", additional=True)
+        for i in range(3)
+    ]
+    deleted = make_question(engine, literature, "Gone?", "Gone.", additional=True, deleted=True)
+    astronomy = make_subject(engine, "Astronomy")
+    astronomy_ids = [
+        make_question(engine, astronomy, f"Star {i}?", f"Far {i}.", additional=True)
+        for i in range(2)
+    ]
+    return KeptBack(
+        literature=literature,
+        literature_ids=literature_ids,
+        literature_additional=additional,
+        literature_deleted=deleted,
+        astronomy=astronomy,
+        astronomy_ids=astronomy_ids,
+        read_only=client_as(READ_ONLY),
+        unlinked=client_as(TEACHER_EMAIL),
+    )
+
+
+def assert_nothing_additional(body: str, kept_back: KeptBack) -> None:
+    """No part of an additional question in the response, not even hidden (FR-014, SC-001)."""
+    for question in (*kept_back.literature_additional, *kept_back.astronomy_ids):
+        assert f"question-{question}" not in body
+        assert f"Question {question}" not in body
+    for marker in ("Secret", "Hidden", "Star", "Far ", "Additional"):
+        assert marker not in body, marker
+
+
+@pytest.mark.parametrize("who", ["reader", "read_only", "unlinked"])
+def test_without_the_setting_only_the_other_questions_are_listed(
+    scene: Scene, kept_back: KeptBack, who: str
+) -> None:
+    """US2-1, US2-2, US2-5, FR-014: Write, Read and no link alike; the count and the pages
+    count only the other questions."""
+    browser = scene.reader if who == "reader" else getattr(kept_back, who)
+    newest_first = kept_back.literature_ids[::-1]
+    for page, expected, range_text in (
+        (1, newest_first[:10], "Questions 1–10 of 12"),
+        (2, newest_first[10:], "Questions 11–12 of 12"),
+    ):
+        body = browser.get(f"{TAB}?subject={kept_back.literature}&page={page}").text
+        assert card_ids(body) == expected
+        found = html.pagination(body, "Pages, top")
+        assert found is not None
+        assert found[0] == range_text
+        assert [e.text for e in found[1] if e.text.isdigit()] == ["1", "2"]
+        assert_nothing_additional(body, kept_back)
+
+
+def test_a_subject_of_additional_questions_only_shows_no_questions_yet(
+    scene: Scene, kept_back: KeptBack
+) -> None:
+    """US2-3."""
+    body = scene.reader.get(f"{TAB}?subject={kept_back.astronomy}").text
+    assert empty_state(body) == ("No questions yet", None)
+    assert html.pagination(body, "Pages, top") is None
+    assert_nothing_additional(body, kept_back)
+
+
+def test_a_page_past_the_end_opens_the_last_of_the_other_questions(
+    scene: Scene, kept_back: KeptBack
+) -> None:
+    """US2-4."""
+    body = scene.reader.get(f"{TAB}?subject={kept_back.literature}&page=99").text
+    assert card_ids(body) == kept_back.literature_ids[::-1][10:]
+
+
+def test_with_the_setting_every_question_is_listed(scene: Scene, kept_back: KeptBack) -> None:
+    """US2-6: 15 listed questions, the three additional ones first, with the badge."""
+    body = scene.manager.get(f"{TAB}?subject={kept_back.literature}").text
+    found = html.pagination(body, "Pages, top")
+    assert found is not None and found[0] == "Questions 1–10 of 15"
+    shown = cards(body)
+    assert [int(c.id.removeprefix("question-")) for c in shown[:3]] == (
+        kept_back.literature_additional[::-1]
+    )
+    assert [c.heading.endswith(" Additional") for c in shown] == [True] * 3 + [False] * 7
+    assert f"question-{kept_back.literature_deleted}" not in body
+    body = scene.manager.get(f"{TAB}?subject={kept_back.astronomy}").text
+    assert sorted(card_ids(body)) == kept_back.astronomy_ids
+
+
+def test_opening_the_list_without_the_setting_changes_nothing(
+    scene: Scene, kept_back: KeptBack
+) -> None:
+    before = snapshot(scene.engine)
+    scene.reader.get(f"{TAB}?subject={kept_back.literature}")
+    assert snapshot(scene.engine) == before
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9, user story 3: a crafted request shows nothing about additional questions
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("method", "path"), MANAGE_ROUTES)
+@pytest.mark.parametrize("teacher", ["reader", "read_only"])
+def test_the_refusal_is_the_same_for_every_question(
+    scene: Scene, kept_back: KeptBack, method: str, path: str, teacher: str
+) -> None:
+    """US3-1, FR-020, SC-002: an additional, an ordinary, a missing and a deleted question get the
+    same response, so a typed-in address does not show whether an additional question exists."""
+    browser = scene.reader if teacher == "reader" else kept_back.read_only
+    responses = []
+    for question, subject in (
+        (scene.maths_ids[0], scene.maths),
+        (kept_back.literature_additional[0], kept_back.literature),
+        (MISSING, MISSING),
+        (kept_back.literature_deleted, kept_back.literature),
+    ):
+        url = concrete(path, question, subject)
+        data = form_for(subject) if method == "POST" else None
+        response = browser.request(method, url, data=data, follow_redirects=False)
+        # The language switch keeps the address that was asked for; that is what the teacher
+        # typed, not what the server found, so it is set aside.
+        body = response.text.replace(f'value="{url}"', 'value="{address}"')
+        responses.append((response.status_code, body))
+    assert {status for status, _ in responses} == {403}
+    assert len({body for _, body in responses}) == 1
+
+
+@pytest.mark.parametrize("teacher", ["reader", "read_only"])
+def test_a_teacher_without_the_setting_cannot_mark_a_question(
+    scene: Scene, kept_back: KeptBack, teacher: str
+) -> None:
+    """US3-3, FR-012: an add form with the box checked is refused, and nothing is stored."""
+    browser = scene.reader if teacher == "reader" else kept_back.read_only
+    before = snapshot(scene.engine)
+    data = {**form_for(scene.maths), "additional": "1"}
+    denied(browser.post(TAB, data=data, follow_redirects=False))
+    edit_data = {"page": "1", "text": "Q?", "reference_answer": "A.", "additional": "1"}
+    url = f"{TAB}/{scene.maths_ids[0]}/edit"
+    denied(browser.post(url, data=edit_data, follow_redirects=False))
+    assert snapshot(scene.engine) == before
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9, user story 5: changing the setting changes what a teacher sees
+# ---------------------------------------------------------------------------------------------
+
+
+def set_setting(engine: Engine, email: str, value: bool) -> None:
+    """Give or take **Can manage competitions**, as an administrator's edit does."""
+    with Session(engine) as session:
+        user = get_user_by_email(session, email)
+        assert user is not None and user.id is not None
+        view = get_teacher(session, user.id)
+        update_teacher(
+            session,
+            user.id,
+            view.first_name,
+            view.last_name,
+            {link.institution_id: link.access_level for link in view.links},
+            can_manage_competitions=value,
+        )
+
+
+def range_text(body: str) -> str:
+    found = html.pagination(body, "Pages, top")
+    assert found is not None
+    return found[0]
+
+
+def test_giving_the_setting_shows_the_additional_questions(
+    scene: Scene, kept_back: KeptBack
+) -> None:
+    """US5-1, FR-017, SC-006: on the very next page."""
+    url = f"{TAB}?subject={kept_back.literature}"
+    assert range_text(scene.reader.get(url).text) == "Questions 1–10 of 12"
+    set_setting(scene.engine, READER, True)
+    body = scene.reader.get(url).text
+    assert range_text(body) == "Questions 1–10 of 15"
+    marked = [c.id for c in cards(body) if c.heading.endswith(" Additional")]
+    assert marked == [f"question-{q}" for q in kept_back.literature_additional[::-1]]
+
+
+def test_taking_the_setting_away_hides_them_again(scene: Scene, kept_back: KeptBack) -> None:
+    """US5-2, FR-017: the next list counts only the other questions, and an edit form opened
+    before is refused when sent, changing nothing."""
+    question = kept_back.literature_additional[0]
+    url = f"{TAB}?subject={kept_back.literature}"
+    assert range_text(scene.manager.get(url).text) == "Questions 1–10 of 15"
+    assert scene.manager.get(f"{TAB}/{question}/edit?page=1").status_code == 200
+    set_setting(scene.engine, MANAGER, False)
+    assert range_text(scene.manager.get(url).text) == "Questions 1–10 of 12"
+    before = snapshot(scene.engine)
+    denied(edit(scene.manager, question, "Secret 0?", "Hidden 0."))
+    assert snapshot(scene.engine) == before
+    assert stored(scene.engine, question).is_additional

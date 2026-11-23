@@ -113,33 +113,33 @@ docstring style, naming, comment density and error handling:
 gallery, checked against `docs/requirements/ui-guidelines.md` (already updated in `3a4e5bb`)
 (research R7, contracts/components.md §1, §2). Nothing here touches the database. Delivers **US6**.
 
-- [ ] T001 [P] Add `additional_badge()` to `app/templates/components/badge.html` per contracts/components.md §1:
+- [X] T001 [P] Add `additional_badge()` to `app/templates/components/badge.html` per contracts/components.md §1:
   - after `access_badge`: `{% macro additional_badge() -%}{{ badge(pgettext("question", "Additional"), "info") }}{%- endmacro %}`;
   - a comment above it, in the style of the file: "The mark of an additional question (milestone
     12.9 contracts/components.md §1): a mark of a record, not a status. The context `question` lets
     the Ukrainian word agree with «питання» («Додаткове»). Pages show it only to teachers with
     **Can manage competitions**; the macro does not decide that."
   - No CSS: `.badge-info` exists.
-- [ ] T002 [P] Add the optional `badge` to `text_card` in `app/templates/components/card.html` per contracts/components.md §2:
+- [X] T002 [P] Add the optional `badge` to `text_card` in `app/templates/components/card.html` per contracts/components.md §2:
   - the signature becomes `text_card(heading, id=None, badge=None)`;
   - the heading becomes `<h3>{{ heading }}{% if badge %} {{ badge }}{% endif %}</h3>`;
   - without `badge` the output must stay byte-for-byte as before;
   - extend the macro's comment: the badge is a rendered badge (markup), placed after the heading's
     text inside the `h3`, so it is read with the heading and wraps below it as one unit on a narrow
     screen.
-- [ ] T003 Add the gallery entries in `app/templates/pages/admin/components.html` (depends on T001, T002):
+- [X] T003 Add the gallery entries in `app/templates/pages/admin/components.html` (depends on T001, T002):
   - import `additional_badge` with the other badges;
   - in `#badges`, after the "Competition statuses" row, add `<h3>Marks</h3>` and a `button-row`
     holding `{{ additional_badge() }}`;
   - in `#cards` → "Text cards", give the "Question 58" card `badge=additional_badge()`, keeping its
     long-word sample;
   - add nothing to `app/routers/admin_components.py` unless a sample value is needed.
-- [ ] T004 Extract and translate the badge's message (depends on T001):
+- [X] T004 Extract and translate the badge's message (depends on T001):
   - `scripts/translations.sh update`;
   - in `app/locale/uk/LC_MESSAGES/messages.po`, `msgctxt "question"` / `msgid "Additional"` →
     «Додаткове»;
   - `scripts/translations.sh compile`; `tests/unit/test_catalogues.py` passes.
-- [ ] T005 [P] Extend `tests/unit/test_templates.py` (depends on T001, T002, T004):
+- [X] T005 [P] Extend `tests/unit/test_templates.py` (depends on T001, T002, T004):
   - `additional_badge()` renders exactly one `<span class="badge badge-info">Additional</span>`, and
     «Додаткове» under the Ukrainian language (use the file's existing language switching for
     `status_badge`);
@@ -147,12 +147,12 @@ gallery, checked against `docs/requirements/ui-guidelines.md` (already updated i
     57</h3>`);
   - `text_card("Question 57", badge=additional_badge())` puts the badge inside the `h3`, after the
     text and one space, and escapes the heading text but not the badge markup.
-- [ ] T006 [P] Extend `tests/integration/test_component_gallery.py` (depends on T003):
+- [X] T006 [P] Extend `tests/integration/test_component_gallery.py` (depends on T003):
   - `SECTIONS["badges"]` gains "Marks" and "Additional";
   - a new test, `test_the_additional_badge_and_the_text_card_badge`: in `#badges`, one
     `span.badge.badge-info` reads "Additional"; in `#cards`, the `h3` of `#gallery-question-58`
     reads "Question 58" followed by that badge.
-- [ ] T007 Check `docs/requirements/ui-guidelines.md` §Badges and §Cards against T001–T003 (depends on T003). The signature `text_card(heading, id=None, badge=None)`, the `info` kind and the wording "Question 57 Additional" must match what was built; fix the guidelines if they differ. Then open `/admin/components` at 360 px and at desktop width, in light and dark. If the badge crowds the heading's text, add only `.text-card h3 .badge { margin-inline-start: var(--sc-space-1); }` to the Components section of `app/static/css/app.css`, and run `tests/unit/test_stylesheet.py` and `tests/unit/test_frame_stylesheet.py`.
+- [X] T007 Check `docs/requirements/ui-guidelines.md` §Badges and §Cards against T001–T003 (depends on T003). The signature `text_card(heading, id=None, badge=None)`, the `info` kind and the wording "Question 57 Additional" must match what was built; fix the guidelines if they differ. Then open `/admin/components` at 360 px and at desktop width, in light and dark. If the badge crowds the heading's text, add only `.text-card h3 .badge { margin-inline-start: var(--sc-space-1); }` to the Components section of `app/static/css/app.css`, and run `tests/unit/test_stylesheet.py` and `tests/unit/test_frame_stylesheet.py`.
 
 **Checkpoint**: the gallery shows the badge and the text card with it; the guidelines match; the
 whole existing suite is green.
@@ -164,7 +164,7 @@ whole existing suite is green.
 **Purpose**: the column, its migration and tests, the seeder, and the mark in `QuestionView`
 (research R1, R2; data-model.md §1, §2, §4). Every story needs them.
 
-- [ ] T008 Add the column to `app/models/question.py` per data-model.md §1:
+- [X] T008 Add the column to `app/models/question.py` per data-model.md §1:
   - `is_additional: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, server_default=false()))`,
     importing `Boolean` and `false` from `sqlalchemy`;
   - **constraint, verbatim**: "`is_additional` | boolean | not null | default `false` (server
@@ -174,7 +174,7 @@ whole existing suite is green.
     is read without these questions. Changed only through the edit form; a deleted question or one
     of a deactivated subject keeps it. A competition's copy never takes it.";
   - extend the module docstring's bullet list with one bullet on the mark.
-- [ ] T009 Create the migration `migrations/versions/2026_11_<dd>_<rev>_additional_questions.py` (`down_revision = "c730fd883079"`) per data-model.md §4 and research R2 (depends on T008):
+- [X] T009 Create the migration `migrations/versions/2026_11_<dd>_<rev>_additional_questions.py` (`down_revision = "c730fd883079"`) per data-model.md §4 and research R2 (depends on T008):
   - generate the revision id with `uv run alembic revision -m "additional questions"`, then rename
     the file to the dated pattern;
   - **upgrade**: `with op.batch_alter_table("questions", recreate="auto", table_kwargs={"sqlite_autoincrement": True}) as batch:`
@@ -185,7 +185,7 @@ whole existing suite is green.
     ones included, becomes not additional, FR-002, so no data step), and why `table_kwargs` (keeps
     SQLite `AUTOINCREMENT` when the downgrade copies the table). It is a frozen snapshot: plain
     SQLAlchemy types, nothing imported from `app`.
-- [ ] T010 [P] Extend `tests/integration/test_migrations.py` (depends on T009):
+- [X] T010 [P] Extend `tests/integration/test_migrations.py` (depends on T009):
   - in `test_the_questions_table_at_head`: `columns["is_additional"]["nullable"] is False`;
   - a new test: upgrade to `c730fd883079`, insert one listed and one deleted question with plain SQL
     (as the file's milestone 11 tests do), upgrade to head, and assert both have
@@ -194,8 +194,8 @@ whole existing suite is green.
     for `questions` still holds `AUTOINCREMENT` (skip on PostgreSQL, as
     `test_sqlite_never_reuses_a_question_id` does);
   - the stairway, single-head and drift tests pass unchanged.
-- [ ] T011 [P] Add the parameter to the seeder `make_question` in `tests/conftest.py` (depends on T008): the signature `make_question(engine, subject_id, text="Question?", reference_answer="Answer.", *, deleted=False, additional=False)` sets `is_additional=additional`; the docstring names it.
-- [ ] T012 Add the mark to `QuestionView` in `app/services/questions.py` per contracts/services.md (depends on T008):
+- [X] T011 [P] Add the parameter to the seeder `make_question` in `tests/conftest.py` (depends on T008): the signature `make_question(engine, subject_id, text="Question?", reference_answer="Answer.", *, deleted=False, additional=False)` sets `is_additional=additional`; the docstring names it.
+- [X] T012 Add the mark to `QuestionView` in `app/services/questions.py` per contracts/services.md (depends on T008):
   - the field `is_additional: bool` with a docstring;
   - `_view` fills it;
   - nothing else changes yet. Existing tests stay green: `QuestionView` is built only by `_view`.
@@ -214,7 +214,7 @@ existing suite is green.
 edit one to set and to clear the mark, send an invalid form with the checkbox checked, and check
 what is stored and how the list shows each question.
 
-- [ ] T013 [P] [US1] Add the service tests to `tests/integration/test_question_service.py` (depends on T011, T012):
+- [X] T013 [P] [US1] Add the service tests to `tests/integration/test_question_service.py` (depends on T011, T012):
   - `create_question` without `is_additional` stores false; with `is_additional=True` stores true,
     and the view says so;
   - `update_question(..., is_additional=True)` marks, `False` clears;
@@ -224,7 +224,7 @@ what is stored and how the list shows each question.
   - `update_question` on a deleted question, or on one of a deactivated subject, raises
     `QuestionNotFound`, and the stored mark (seeded `additional=True`) is unchanged (FR-005);
   - `delete_question` keeps the mark.
-- [ ] T014 [US1] Change `create_question` and `update_question` in `app/services/questions.py` per contracts/services.md and research R5 (depends on T013):
+- [X] T014 [US1] Change `create_question` and `update_question` in `app/services/questions.py` per contracts/services.md and research R5 (depends on T013):
   - `create_question(..., *, is_additional: bool = False)` stores it;
   - `update_question(..., *, is_additional: bool)` takes it as a **required keyword-only argument,
     no default**;
@@ -237,11 +237,13 @@ what is stored and how the list shows each question.
     - `tests/integration/test_grade_service.py:455`;
     - `tests/integration/test_team_answer_service.py:497`;
     - `tests/integration/test_teacher_competition_entries.py:545` and `:1075`;
+    - `tests/integration/test_competition_entries_service.py` (three calls, found during
+      implementation);
     - `app/routers/teacher_questions.py`: in `update_question_action`, `_, subject = found` becomes
       `question, subject = found`, and the call passes `is_additional=question.is_additional`. This
       keeps the stored mark, so the suite stays green until T015 replaces it with the checkbox's
       value. `create_question_action` needs no change yet, since the argument has a default.
-- [ ] T015 [US1] Read the checkbox in `app/routers/teacher_questions.py` per contracts/http-routes.md §The question bank (depends on T014):
+- [X] T015 [US1] Read the checkbox in `app/routers/teacher_questions.py` per contracts/http-routes.md §The question bank (depends on T014):
   - **Parameters**: `create_question_action` and `update_question_action` gain
     `additional: str | None = Form(None)`, and `marked = bool(additional)`.
   - **On a 400**: `values = {"text": …, "reference_answer": …, "additional": marked}`.
@@ -253,22 +255,22 @@ what is stored and how the list shows each question.
   - **Docstring**: the module's "Every teacher reads the bank…" paragraph becomes "Every teacher
     reads the questions that are not additional; only a teacher with Can manage competitions sees
     the additional ones (milestone 12.9) and changes the bank."
-- [ ] T016 [US1] Add the checkbox to `app/templates/pages/teacher/question_form.html` per contracts/components.md §4 (depends on T015):
+- [X] T016 [US1] Add the checkbox to `app/templates/pages/teacher/question_form.html` per contracts/components.md §4 (depends on T015):
   - import `checkbox_field`;
   - after the `reference_answer` field and before `form_actions`, add
     `{{ checkbox_field("additional", _("Additional question"), checked=values.additional, value="1", hint=_("Additional questions and their answers are not given to participants before a competition.")) }}`.
-- [ ] T017 [US1] Show the badge on the list in `app/templates/pages/teacher/questions.html` (depends on T002, T001, T012):
+- [X] T017 [US1] Show the badge on the list in `app/templates/pages/teacher/questions.html` (depends on T002, T001, T012):
   - import `additional_badge`;
   - the card becomes `text_card(_("Question %(number)d", number=q.id), id="question-" ~ q.id, badge=additional_badge() if q.is_additional else none)`.
-- [ ] T018 [US1] Extract and translate the form's messages (depends on T016):
+- [X] T018 [US1] Extract and translate the form's messages (depends on T016):
   - `scripts/translations.sh update`;
   - in `app/locale/uk/LC_MESSAGES/messages.po`:
     - "Additional question" → «Додаткове питання»;
     - "Additional questions and their answers are not given to participants before a competition."
-      → «Додаткові питання та відповіді на них не надаються учасникам до змагання.»;
+      → «Додаткові питання та відповіді на них не надаються учасникам до початку змагання.»;
   - `scripts/translations.sh compile`; `tests/unit/test_catalogues.py` and
     `tests/unit/test_template_text.py` pass.
-- [ ] T019 [US1] Add the route tests to `tests/integration/test_teacher_questions.py` (depends on T016–T018):
+- [X] T019 [US1] Add the route tests to `tests/integration/test_teacher_questions.py` (depends on T016–T018):
   - **The add form** (US1-1): the checkbox `additional` with value `1`, unchecked, labelled
     "Additional question", after the reference answer, with the hint linked by `aria-describedby`.
   - **Saving on add** (US1-2, US1-3): `additional=1` with `then=list` and with `then=another` stores
@@ -290,7 +292,7 @@ what is stored and how the list shows each question.
     `span.badge`; the page holds no badge reading "Additional". The delete confirmation of the same
     question reads "Delete question <id>?" and holds no badge.
   - **Ukrainian**: «Додаткове питання», the hint, and «Додаткове» on the badge.
-- [ ] T020 [US1] Update the form contract in `tests/integration/test_form_contract.py` and `tests/integration/form_contract.json` (depends on T016):
+- [X] T020 [US1] Update the form contract in `tests/integration/test_form_contract.py` and `tests/integration/form_contract.json` (depends on T016):
   - regenerate with `UPDATE_FORM_CONTRACT=1` for the cases `teacher-question-new`,
     `teacher-question-new-invalid`, `teacher-question-new-saved`, `teacher-question-edit` and
     `teacher-question-edit-invalid` **only**. Each gains the field `additional`; check the diff
@@ -313,7 +315,7 @@ without the additional questions.
 page of a subject that mixes additional and other questions, and of a subject with only additional
 questions, and check the responses, the counts and the page navigation.
 
-- [ ] T021 [P] [US2] Add the listing tests to `tests/integration/test_question_service.py` (depends on T011, T012):
+- [X] T021 [P] [US2] Add the listing tests to `tests/integration/test_question_service.py` (depends on T011, T012):
   - **Mixed subject**: 23 listed questions, 3 of them additional (one of them the newest), one
     additional question deleted.
     - `question_page(..., 1, include_additional=False)`: `paging.total == 20`, 10 rows, none
@@ -322,7 +324,7 @@ questions, and check the responses, the counts and the page navigation.
     - Page 9 clamps to page 2.
     - `include_additional=True`: `total == 23`, with the additional rows' `is_additional` true.
   - **All-additional subject**: `include_additional=False` gives `total == 0` and no rows.
-- [ ] T022 [US2] Add `include_additional` to `question_page` in `app/services/questions.py` per contracts/services.md and research R3 (depends on T021):
+- [X] T022 [US2] Add `include_additional` to `question_page` in `app/services/questions.py` per contracts/services.md and research R3 (depends on T021):
   - the signature becomes `question_page(session, subject_id, page, *, include_additional: bool)`:
     keyword-only, **no default**;
   - when false, `col(Question.is_additional).is_(False)` is added to the `where` of both the count
@@ -335,7 +337,7 @@ questions, and check the responses, the counts and the page navigation.
     - `app/routers/teacher_competition_entries.py`: `add_questions_page` passes
       `include_additional=True`, with a comment saying the setting was checked first;
     - `tests/integration/test_question_service.py` (every existing call, `include_additional=True`).
-- [ ] T023 [US2] Add the route tests to `tests/integration/test_teacher_questions.py` (depends on T022, T019):
+- [X] T023 [US2] Add the route tests to `tests/integration/test_teacher_questions.py` (depends on T022, T019):
   - **Setup**: leave `Scene` and Mathematics unchanged. About ten existing tests read Mathematics
     as `scene.reader` and assert exact counts and ids. Add a fixture `kept_back(scene)` beside
     `scene`, used only by this milestone's tests, which returns a small frozen dataclass `KeptBack`
@@ -347,8 +349,9 @@ questions, and check the responses, the counts and the page navigation.
     - `astronomy`: a new subject "Astronomy" with 2 additional questions only;
     - `read_only`: a client for a new teacher `READ_ONLY` (`make_teacher` with
       `{institution: AccessLevel.READ}`, no setting);
-    - `unlinked`: a client for a new teacher `UNLINKED` (`make_teacher` with `institutions={}`, no
-      setting).
+    - `unlinked`: a client for the cast teacher `TEACHER_EMAIL`, who has no link and no setting.
+      An invitation needs at least one institution, so `make_teacher` cannot make this teacher;
+      changed during implementation.
     Existing tests do not use the fixture, so their subject lists and counts stay as they are.
   - **The list** (US2-1, US2-2): as `scene.reader` (Write, no setting), Literature shows the 12
     ordinary questions only:
@@ -377,7 +380,7 @@ the setting the same way for an additional question (research R4: no code change
 bank and every request of **Add questions** for an additional, ordinary, deleted and missing
 question, and compare the responses.
 
-- [ ] T024 [P] [US3] Extend the denial tests in `tests/integration/test_teacher_questions.py` (depends on T011, T023):
+- [X] T024 [P] [US3] Extend the denial tests in `tests/integration/test_teacher_questions.py` (depends on T011, T023):
   - `test_a_teacher_without_the_setting_is_refused_before_anything_is_looked_up` gains the target
     `"additional"`: one of `kept_back.literature_additional`, with `kept_back.literature` as its
     subject. The test takes the `kept_back` fixture;
@@ -389,7 +392,7 @@ question, and compare the responses.
     identical body;
   - **US3-3**: `POST /teacher/questions` with `additional=1`, by each of the two teachers, answers
     403 and stores nothing (`snapshot` unchanged).
-- [ ] T025 [P] [US3] Extend `test_a_teacher_without_the_setting_is_refused_before_any_id_is_read` in `tests/integration/test_teacher_competition_entries.py` (depends on T011):
+- [X] T025 [P] [US3] Extend `test_a_teacher_without_the_setting_is_refused_before_any_id_is_read` in `tests/integration/test_teacher_competition_entries.py` (depends on T011):
   - the target `"additional"` (a Chemistry question seeded `additional=True` inside the test, as
     the test already seeds its `question`) for the **Add questions** page and its add;
   - the test runs for `scene.mykola` (**Write**) and for a new teacher with **Read** access only and
@@ -397,7 +400,7 @@ question, and compare the responses.
     AccessLevel.READ})` (FR-021);
   - for each teacher, the response for `"additional"` equals the response for `"listed"`, and
     nothing changes.
-- [ ] T026 [US3] If T024 or T025 fails, fix the order of checks in the route it names in `app/routers/teacher_questions.py` or `app/routers/teacher_competition_entries.py`, so the setting is checked before any id is read (contracts/http-routes.md §Order of checks), and record the fix in research.md R4. Otherwise mark this task done with no change.
+- [X] T026 [US3] If T024 or T025 fails, fix the order of checks in the route it names in `app/routers/teacher_questions.py` or `app/routers/teacher_competition_entries.py`, so the setting is checked before any id is read (contracts/http-routes.md §Order of checks), and record the fix in research.md R4. Otherwise mark this task done with no change.
 
 **Checkpoint**: MVP complete. The mark exists, is shown only to teachers with the setting, and is
 kept back in the bank and on every crafted request.
@@ -413,7 +416,7 @@ live from the bank); nothing stored in a competition follows the mark.
 **Upcoming** competition, then view its **Questions** page with and without the setting in every
 status, change a mark in the bank, and compare the page and the stored copies.
 
-- [ ] T027 [P] [US4] Add the service tests to `tests/integration/test_competition_entries_service.py` (depends on T011):
+- [X] T027 [P] [US4] Add the service tests to `tests/integration/test_competition_entries_service.py` (depends on T011):
   - **The mark per question**: a competition with three copied questions (one additional, one
     ordinary, one additional and then deleted from the bank).
     - `question_page(..., with_bank_mark=True)` gives `is_additional` True / False / True, and
@@ -426,7 +429,7 @@ status, change a mark in the bank, and compare the page and the stored copies.
     clear the mark of its questions in the bank. The rows of `competition_questions`,
     `team_answers` and `competition_results_files` for it are identical before and after.
   - **The remove confirmation**: `get_competition_question` gives `is_additional is None`.
-- [ ] T028 [US4] Add `with_bank_mark` to `app/services/competition_entries.py` per contracts/services.md and research R6 (depends on T027, T012):
+- [X] T028 [US4] Add `with_bank_mark` to `app/services/competition_entries.py` per contracts/services.md and research R6 (depends on T027, T012):
   - `CompetitionQuestionView` gains `is_additional: bool | None`, with a docstring ("the bank's
     current mark, read only for a teacher with the setting; `None` when not read");
   - `question_page(session, competition_id, p, *, with_bank_mark: bool)`: keyword-only, **no
@@ -439,13 +442,13 @@ status, change a mark in the bank, and compare the page and the stored copies.
       `manage` in `can_change`;
     - `tests/integration/test_competition_entries_service.py` (every existing call,
       `with_bank_mark=False` unless the test reads the mark).
-- [ ] T029 [US4] Show the badge in `app/templates/pages/teacher/competition_questions.html` and `app/templates/pages/teacher/competition_questions_add.html` (depends on T028, T022, T001, T002):
+- [X] T029 [US4] Show the badge in `app/templates/pages/teacher/competition_questions.html` and `app/templates/pages/teacher/competition_questions_add.html` (depends on T028, T022, T001, T002):
   - import `additional_badge` in both;
   - `competition_questions.html`: the card gets `badge=additional_badge() if q.is_additional else none`.
     `None` and `False` show nothing; "Deleted from the question bank" stays as it is;
   - `competition_questions_add.html`: the card gets `badge=additional_badge() if q.is_additional else none`;
   - update each template's top comment with one line on the badge (milestone 12.9).
-- [ ] T030 [US4] Add the route tests to `tests/integration/test_teacher_competition_entries.py` (depends on T029):
+- [X] T030 [US4] Add the route tests to `tests/integration/test_teacher_competition_entries.py` (depends on T029):
   - **Add questions** (US4-1, US4-2): as `scene.olena` on the **Upcoming** competition, the page
     lists the additional questions with the badge, each with **Add**. Adding one copies it, with
     the notice "Question <id> was added to “…”". Afterwards it shows "Already in this competition"
@@ -462,7 +465,7 @@ status, change a mark in the bank, and compare the page and the stored copies.
     badge on the next load; the copy's text is unchanged.
   - **Nowhere else** (US4-7): the remove confirmation of an additional question's copy shows no
     badge.
-- [ ] T031 [P] [US4] Add the "never shown" tests (US4-7, FR-026) to `tests/integration/test_teacher_team_answers.py` and `tests/integration/test_teacher_grades.py` for a Finished competition holding an additional question, with one team's answers saved and graded and the teacher linked to the team's institution:
+- [X] T031 [P] [US4] Add the "never shown" tests (US4-7, FR-026) to `tests/integration/test_teacher_team_answers.py` and `tests/integration/test_teacher_grades.py` for a Finished competition holding an additional question, with one team's answers saved and graded and the teacher linked to the team's institution:
   - in `tests/integration/test_teacher_team_answers.py`: the read-only answer sheet;
   - in `tests/integration/test_teacher_grades.py`: the **Grades** page and the grading sheet, as a
     teacher with the setting;
@@ -480,7 +483,7 @@ with the mark.
 **Independent Test**: give a teacher the setting and take it away between two requests, and check
 the **Questions** tab and a competition's **Questions** page after each change.
 
-- [ ] T032 [P] [US5] Add the setting tests to `tests/integration/test_teacher_questions.py` (depends on T023):
+- [X] T032 [P] [US5] Add the setting tests to `tests/integration/test_teacher_questions.py` (depends on T023):
   - add a helper `give_setting(engine, email)` beside `remove_setting`, using `update_teacher(...,
     can_manage_competitions=True)` in the same way, and generalise `remove_setting` to take the email
     if needed;
@@ -488,7 +491,7 @@ the **Questions** tab and a competition's **Questions** page after each change.
     after `give_setting(READER)` the next request counts 15 and shows the badges;
   - **Taken away** (US5-2): `scene.manager` opens an edit form; after `remove_setting(MANAGER)` the
     next Literature list counts 12, and sending the edit form answers 403 and changes nothing.
-- [ ] T033 [P] [US5] Add the setting test to `tests/integration/test_teacher_competition_entries.py` (depends on T030): with a competition holding an additional question, Mykola's **Questions** page has no badge; after giving Mykola the setting, the next load shows it; after taking it away, it is gone again.
+- [X] T033 [P] [US5] Add the setting test to `tests/integration/test_teacher_competition_entries.py` (depends on T030): with a competition holding an additional question, Mykola's **Questions** page has no badge; after giving Mykola the setting, the next load shows it; after taking it away, it is gone again.
 
 **Checkpoint**: every story works on its own and together.
 
@@ -499,8 +502,8 @@ the **Questions** tab and a competition's **Questions** page after each change.
 **Purpose**: the cross-cutting checks, the documents, the whole suite on both engines, and the
 walk-through.
 
-- [ ] T034 [P] Run `tests/integration/test_routes.py`, `tests/integration/test_page_patterns.py`, `tests/integration/test_cross_site.py` and `tests/unit/test_ukrainian_wording.py` (depends on T029). No route was added, so they need no new entry. If `test_page_patterns.py` sweeps the question pages, add a case for the list with an additional question as a teacher with the setting, so the badge inside the `h3` passes the heading checks.
-- [ ] T035 [P] Update `README.md` per research R10 (depends on T029). In the **Questions** paragraph:
+- [X] T034 [P] Run `tests/integration/test_routes.py`, `tests/integration/test_page_patterns.py`, `tests/integration/test_cross_site.py` and `tests/unit/test_ukrainian_wording.py` (depends on T029). No route was added, so they need no new entry. If `test_page_patterns.py` sweeps the question pages, add a case for the list with an additional question as a teacher with the setting, so the badge inside the `h3` passes the heading checks.
+- [X] T035 [P] Update `README.md` per research R10 (depends on T029). In the **Questions** paragraph:
   - replace "is the shared question bank, one subject at a time. Every teacher can read it; it is not
     limited to their institutions." with: the question bank, one subject at a time, not limited to
     institutions; every teacher reads its questions that are not additional;
@@ -509,18 +512,18 @@ walk-through.
     other teachers get the bank without them, counted and paged without them;
   - in the **Competitions** paragraph, one line: every teacher still reads a competition's
     **Questions** page until milestone 12.10.
-- [ ] T036 [P] Finish `docs/requirements/ui-guidelines.md` against the pages as built (depends on T029, T007): the text card example shows the badge as `questions.html` renders it.
-- [ ] T037 Run ruff and the whole `tests/` suite on both engines (depends on everything above):
+- [X] T036 [P] Finish `docs/requirements/ui-guidelines.md` against the pages as built (depends on T029, T007): the text card example shows the badge as `questions.html` renders it.
+- [X] T037 Run ruff and the whole `tests/` suite on both engines (depends on everything above):
   - `uv run ruff check && uv run ruff format --check`;
   - `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest`;
   - fix any failure.
-- [ ] T038 Walk through [quickstart.md](./quickstart.md) §2–§4 by hand:
+- [X] T038 Walk through [quickstart.md](./quickstart.md) §2–§4 by hand:
   - the migration up, down and up on a copy of a 12.8 database;
   - the full flow as Olena, Petro and Taras, including Ukrainian;
   - 360 px and both themes, with screenshots from the ad hoc headless Playwright recipe;
   - the product owner confirms the three Ukrainian texts (spec Assumptions):
     - «Додаткове питання»;
-    - the hint «Додаткові питання та відповіді на них не надаються учасникам до змагання.»;
+    - the hint «Додаткові питання та відповіді на них не надаються учасникам до початку змагання.»;
     - «Додаткове».
 
     Any change goes through the catalogue workflow (T004 / T018), and the spec's Assumptions are

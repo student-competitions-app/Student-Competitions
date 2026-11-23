@@ -29,7 +29,7 @@ from sqlalchemy import Engine
 from sqlmodel import Session, select
 
 from app.main import app
-from app.models import AccessLevel, Competition, Role, Team, TeamAnswer
+from app.models import AccessLevel, Competition, Question, Role, Team, TeamAnswer
 from app.schemas.teachers import MAX_ID
 from app.services.competitions import cancel_competition, finish_competition
 from app.services.institutions import set_institution_active
@@ -1354,3 +1354,29 @@ def test_a_published_competition_of_a_deactivated_subject_stays_readable(
     assert actions(body) == {"Comets": "View answers", "Lions": "View answers"}
     sheet = get(scene.taras, sheet_url(scene, competition=published.competition))
     assert "Score: 17" in html.text(sheet, "main")
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9: the sheets never show the additional mark (FR-026)
+# ---------------------------------------------------------------------------------------------
+
+
+def mark_every_question_additional(engine: Engine) -> None:
+    with Session(engine) as session:
+        for question in session.exec(select(Question)):
+            question.is_additional = True
+            session.add(question)
+        session.commit()
+
+
+def no_additional_mark(body: str) -> None:
+    assert "Additional" not in body
+    assert not [b for b in html.badges(body) if b == "Additional"]
+
+
+def test_the_answer_sheets_never_show_the_additional_mark(scene: Scene) -> None:
+    """FR-026: the Answers page, the sheet a Write teacher edits, the one a Read teacher reads."""
+    mark_every_question_additional(scene.engine)
+    no_additional_mark(scene.taras.get(sheet_url(scene)).text)
+    no_additional_mark(scene.iryna.get(sheet_url(scene, scene.lions)).text)
+    no_additional_mark(scene.taras.get(answers_url(scene)).text)

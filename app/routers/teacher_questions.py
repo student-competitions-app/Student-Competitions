@@ -6,9 +6,15 @@ calls `app.services.questions`, maps its outcomes to a status and a page, and on
 redirects with a 303 (Post/Redirect/Get), so a reload never repeats a change. An invalid form is
 shown again with every error and every value as typed.
 
-**Every teacher reads the bank; only a teacher with Can manage competitions changes it.** The
-list page shows **Add question**, **Edit** and **Delete** only with the setting. Every other
-route is a *manage* route.
+**Every teacher reads the questions that are not additional; only a teacher with Can manage
+competitions sees the additional ones (milestone 12.9) and changes the bank.** The list page shows
+**Add question**, **Edit** and **Delete** only with the setting. Every other route is a *manage*
+route.
+
+**The additional mark** (specs/012.9-additional-questions/research.md R3, R5): the list is read
+with `include_additional` set to the teacher's setting, so a teacher without it never gets an
+additional question, not even hidden. The form's checkbox `additional` is read as a plain string;
+any non-empty value marks the question, an empty or absent one clears the mark.
 
 **Order of checks** (http-routes.md §Order of checks): the role (`@allow_roles`); then, on a
 manage route, the setting, first thing in the handler, before any id is looked up or any value
@@ -152,10 +158,13 @@ def questions_page(
     selected = _active_subject(session, subject)
     if selected is None and len(subjects) == 1:
         selected = subjects[0]
+    can_manage = _can_manage(request, session)
     listing = None
     if selected is not None:
         assert selected.id is not None
-        listing = question_page(session, selected.id, parse_page(page))
+        listing = question_page(
+            session, selected.id, parse_page(page), include_additional=can_manage
+        )
     return render_teacher(
         request,
         "pages/teacher/questions.html",
@@ -164,7 +173,7 @@ def questions_page(
             "subjects": [(s.id, s.name) for s in subjects],
             "selected": selected,
             "listing": listing,
-            "can_manage": _can_manage(request, session),
+            "can_manage": can_manage,
             "page_href": f"{TAB_PATH}?subject={selected.id}&page=" if selected else None,
         },
     )
@@ -222,7 +231,7 @@ def new_question_page(
     selected = _active_subject(session, subject)
     if selected is None:
         return _not_found(request, SUBJECT_NOT_FOUND)
-    values = {"text": "", "reference_answer": ""}
+    values = {"text": "", "reference_answer": "", "additional": False}
     return _form(request, selected, parse_page(page), values, saved=saved == "1")
 
 
@@ -236,6 +245,7 @@ def create_question_action(
     text: str = Form(""),
     reference_answer: str = Form(""),
     then: str = Form(""),
+    additional: str | None = Form(None),
 ) -> Response:
     """**Save question** (`then=list`, or anything but `another`) returns to the top of the first
     page, where the new question is first (FR-027); **Save and add one more question**
@@ -246,12 +256,20 @@ def create_question_action(
         return _not_found(request, SUBJECT_NOT_FOUND)
     assert selected.id is not None
     return_page = parse_page(page)
+    marked = bool(additional)
     errors, clean_text, clean_answer = question_field_errors(text, reference_answer)
     if errors:
-        values = {"text": text, "reference_answer": reference_answer}
+        values = {"text": text, "reference_answer": reference_answer, "additional": marked}
         return _form(request, selected, return_page, values, errors=errors, status_code=400)
     try:
-        create_question(session, _teacher(request), selected.id, clean_text, clean_answer)
+        create_question(
+            session,
+            _teacher(request),
+            selected.id,
+            clean_text,
+            clean_answer,
+            is_additional=marked,
+        )
     except ManageRequired:
         raise AccessDenied(Role.TEACHER) from None
     except SubjectUnavailable:
@@ -277,7 +295,11 @@ def edit_question_page(
     if found is None:
         return _not_found(request, QUESTION_NOT_FOUND)
     question, subject = found
-    values = {"text": question.text, "reference_answer": question.reference_answer}
+    values = {
+        "text": question.text,
+        "reference_answer": question.reference_answer,
+        "additional": question.is_additional,
+    }
     return _form(request, subject, parse_page(page), values, question_id=question.id)
 
 
@@ -290,6 +312,7 @@ def update_question_action(
     page: str = Form(""),
     text: str = Form(""),
     reference_answer: str = Form(""),
+    additional: str | None = Form(None),
 ) -> Response:
     """Saves both fields and returns to the page the teacher came from, at the question
     (FR-032). Only `page`, `text` and `reference_answer` are read: a `subject` field, or any
@@ -301,9 +324,10 @@ def update_question_action(
     _, subject = found
     assert subject.id is not None
     return_page = parse_page(page)
+    marked = bool(additional)
     errors, clean_text, clean_answer = question_field_errors(text, reference_answer)
     if errors:
-        values = {"text": text, "reference_answer": reference_answer}
+        values = {"text": text, "reference_answer": reference_answer, "additional": marked}
         return _form(
             request,
             subject,
@@ -314,7 +338,14 @@ def update_question_action(
             status_code=400,
         )
     try:
-        update_question(session, _teacher(request), question_id, clean_text, clean_answer)
+        update_question(
+            session,
+            _teacher(request),
+            question_id,
+            clean_text,
+            clean_answer,
+            is_additional=marked,
+        )
     except ManageRequired:
         raise AccessDenied(Role.TEACHER) from None
     except QuestionNotFound:

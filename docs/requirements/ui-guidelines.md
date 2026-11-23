@@ -324,8 +324,10 @@ _Gallery_: [cards](/admin/components#cards).
 texts, such as a question with its reference answer (milestone 11). The card is one surface with a
 heading ("Question 57"); with `badge` (milestone 12.9), a rendered badge such as `additional_badge()`,
 the badge follows the heading's text inside the heading, on the same line where it fits and wrapping
-below it on a narrow screen, so it is read with the heading ("Question 57 Additional"); its body, through `{% call %}`, is one or more boxes, each a quieter tint with a
-small label, stacked at full width on every screen, then any `row-actions`. The texts keep their
+below it on a narrow screen, so it is read with the heading ("Question 57 Additional"). A page passes
+`badge=additional_badge() if q.is_additional else none`, and only a teacher with **Can manage
+competitions** is ever given a question that is additional. Its body, through `{% call %}`, is one or
+more boxes, each a quieter tint with a small label, stacked at full width on every screen, then any `row-actions`. The texts keep their
 line breaks, and a long word wraps inside its box. With `id` the card is the target of a `#` link
 (`#question-57`), which lands below the pinned frame. Several text cards go in
 `<ol class="text-card-list">`. Use it, not a data table or a details list, when the values are

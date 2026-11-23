@@ -459,9 +459,12 @@ def competition_questions_page(
     if isinstance(found, HTMLResponse):
         return found
     context, competition = found
-    listing = question_page(session, competition.id, parse_page(p))
+    manage = can_manage(request, session)
+    # The bank's additional mark is read only for a teacher with the setting (milestone 12.9
+    # FR-025, FR-026); for everyone else it never reaches the page.
+    listing = question_page(session, competition.id, parse_page(p), with_bank_mark=manage)
     current = listing.paging.number
-    can_change = competition.status is CompetitionStatus.UPCOMING and can_manage(request, session)
+    can_change = competition.status is CompetitionStatus.UPCOMING and manage
     remove_hrefs = (
         {
             q.question_id: remove_path("questions", competition.id, q.question_id, context, current)
@@ -514,7 +517,11 @@ def add_questions_page(
             request, "questions", competition, competition.status, context, back_page
         )
     assert context.subject.id is not None
-    listing = question_bank.question_page(session, context.subject.id, parse_page(p))
+    # The setting was checked first (`require_manage`), so the additional questions are listed,
+    # each with its badge (milestone 12.9 FR-024).
+    listing = question_bank.question_page(
+        session, context.subject.id, parse_page(p), include_additional=True
+    )
     return render_competition_page(
         request,
         "pages/teacher/competition_questions_add.html",

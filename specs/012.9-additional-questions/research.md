@@ -147,7 +147,7 @@ milestone 12.8 (`main` at `3a4e5bb`).
   | msgid (context) | English | Ukrainian |
   |---|---|---|
   | "Additional question" | Additional question | Додаткове питання |
-  | "Additional questions and their answers are not given to participants before a competition." | (same) | Додаткові питання та відповіді на них не надаються учасникам до змагання. |
+  | "Additional questions and their answers are not given to participants before a competition." | (same) | Додаткові питання та відповіді на них не надаються учасникам до початку змагання. |
   | "Additional" (`question`) | Additional | Додаткове |
 
 - **Rationale**: the glossary terms «учасники» and «змагання» (ui-guidelines §Glossary). The

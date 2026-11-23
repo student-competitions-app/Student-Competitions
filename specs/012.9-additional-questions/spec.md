@@ -490,7 +490,8 @@ in both themes, at 360 px and at desktop width, and compare them with the guidel
   spot. Every badge kind is already used by some competition status, so any choice repeats a colour
   seen elsewhere; the word is what tells them apart.
 - **The Ukrainian hint** reads «Додаткові питання та відповіді на них не надаються учасникам до
-  змагання.», using the glossary terms; it is confirmed in review with the other new texts.
+  початку змагання.», using the glossary terms; the product owner confirmed it on 2026-11-23, with
+  «Додаткове питання» and «Додаткове».
 - **The invitation explanation of the setting stays as it is** ("You will not be able to manage
   competitions or change the question bank."): not managing the bank covers its additional questions.
 - **There is no filter "Additional only"**, on the **Questions** tab or on the **Add questions** page,

@@ -39,7 +39,7 @@
 - No [NEEDS CLARIFICATION] markers: milestone 12.9 was refined on 2026-11-23 and its decisions are
   recorded under Clarifications. Gaps were filled with documented assumptions; the ones the product
   owner may want to confirm in `/speckit-clarify` are:
-  - the Ukrainian hint «Додаткові питання та відповіді на них не надаються учасникам до змагання.»;
+  - the Ukrainian hint «Додаткові питання та відповіді на них не надаються учасникам до початку змагання.»;
   - the delete confirmation and the edit form show no badge (FR-015);
   - no filter or count of additional questions anywhere;
   - any non-empty value sent for the checkbox marks the question; an empty value, or no value,

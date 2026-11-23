@@ -1651,9 +1651,8 @@ results_files_t = sa.table(
 )
 
 
-def test_the_head_is_the_published_results_revision() -> None:
+def test_the_published_results_revision_follows_the_localisation_revision() -> None:
     """Milestone 12.8 follows milestone 12.5's revision."""
-    assert head_revision() == PUBLISHED_RESULTS_REVISION
     script = ScriptDirectory.from_config(alembic_config())
     assert script.get_revision(PUBLISHED_RESULTS_REVISION).down_revision == LOCALISATION_REVISION
 
@@ -1747,3 +1746,81 @@ def test_the_downgrade_drops_the_files_and_keeps_the_competitions(
     assert checks == {"ck_competitions_one_end"}
     with migration_engine.connect() as connection:
         assert connection.execute(text("SELECT count(*) FROM competitions")).scalar_one() == 1
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.9: the additional mark (specs/012.9-additional-questions/data-model.md §4)
+# ---------------------------------------------------------------------------------------------
+
+ADDITIONAL_QUESTIONS_REVISION = "ab0a6304cc28"
+
+
+def test_the_head_is_the_additional_questions_revision() -> None:
+    """Milestone 12.9 follows milestone 12.8's revision."""
+    assert head_revision() == ADDITIONAL_QUESTIONS_REVISION
+    script = ScriptDirectory.from_config(alembic_config())
+    assert script.get_revision(ADDITIONAL_QUESTIONS_REVISION).down_revision == (
+        PUBLISHED_RESULTS_REVISION
+    )
+
+
+def test_the_additional_mark_at_head(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    columns = {c["name"]: c for c in inspect(migration_engine).get_columns("questions")}
+    assert columns["is_additional"]["nullable"] is False
+
+
+def test_no_question_is_additional_after_the_upgrade(
+    monkeypatch: pytest.MonkeyPatch, empty_database_url: str, migration_engine: Engine
+) -> None:
+    """FR-002, SC-004: every stored question, deleted ones included, becomes not additional."""
+    run_alembic(monkeypatch, empty_database_url, "upgrade", PUBLISHED_RESULTS_REVISION)
+    with migration_engine.begin() as connection:
+        subject = add_subject(connection, "Chemistry")
+        now = utc_now()
+        for deleted_at in (None, now):
+            connection.execute(
+                text(
+                    "INSERT INTO questions (subject_id, text, reference_answer, created_at, "
+                    "updated_at, deleted_at) VALUES (:s, 'Q?', 'A.', :now, :now, :deleted)"
+                ),
+                {"s": subject, "now": now, "deleted": deleted_at},
+            )
+
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+
+    with migration_engine.connect() as connection:
+        marks = connection.execute(text("SELECT is_additional FROM questions")).scalars().all()
+        additional = connection.execute(
+            text("SELECT count(*) FROM questions WHERE is_additional")
+        ).scalar_one()
+    assert [bool(mark) for mark in marks] == [False, False]
+    assert additional == 0
+
+
+def test_the_downgrade_keeps_sqlite_autoincrement(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    empty_database_url: str,
+    migration_engine: Engine,
+) -> None:
+    """Research R2: dropping the column copies the table on SQLite; the copy keeps
+    `AUTOINCREMENT`, so a question number is never handed out twice."""
+    if request.node.callspec.params["empty_database_url"] != "sqlite":
+        pytest.skip("AUTOINCREMENT is SQLite's; PostgreSQL's sequence is checked above")
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    run_alembic(monkeypatch, empty_database_url, "downgrade", PUBLISHED_RESULTS_REVISION)
+    with migration_engine.connect() as connection:
+        sql = connection.execute(
+            text("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'questions'")
+        ).scalar_one()
+    assert "AUTOINCREMENT" in sql
+    assert "is_additional" not in sql
+    run_alembic(monkeypatch, empty_database_url, "upgrade", "head")
+    with migration_engine.connect() as connection:
+        sql = connection.execute(
+            text("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'questions'")
+        ).scalar_one()
+    assert "AUTOINCREMENT" in sql

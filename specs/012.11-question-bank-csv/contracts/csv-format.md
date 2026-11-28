@@ -52,6 +52,8 @@ question,answer,additional
   breaks does not add rows. Skipped empty rows are counted, and a final line break adds no row.
 - **Order of the errors**: the whole-file error first, then the row errors in row order and,
   within a row, in column order. A row that fails 6b gives that error only.
+- **An unclosed quote in row 1** is check 5, the header error, not check 7: without a header
+  nothing else can be read.
 - **Shown**: at most 20 errors in all, then "And N more error(s).".
 - **Reading rules**:
   - accepted line endings are `\r\n`, `\n` and `\r`;

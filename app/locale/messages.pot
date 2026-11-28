@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: student-competitions VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-23 20:02+0200\n"
+"POT-Creation-Date: 2026-11-28 12:11+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -213,11 +213,11 @@ msgstr ""
 msgid "Rename educational institution"
 msgstr ""
 
-#: app/routers/admin_subjects.py:88 app/routers/admin_subjects.py:99
+#: app/routers/admin_subjects.py:109 app/routers/admin_subjects.py:120
 msgid "New subject"
 msgstr ""
 
-#: app/routers/admin_subjects.py:110 app/routers/admin_subjects.py:124
+#: app/routers/admin_subjects.py:131 app/routers/admin_subjects.py:145
 msgid "Rename subject"
 msgstr ""
 
@@ -1103,6 +1103,63 @@ msgstr ""
 msgid "Page %(page)d of %(total)s"
 msgstr ""
 
+#: app/services/question_bank_files.py:87
+#, python-format
+msgid "%(subject)s %(date)s question bank"
+msgstr ""
+
+#: app/services/question_bank_files.py:91
+#: app/templates/pages/teacher/competition_answers.html:28
+#: app/templates/pages/teacher/competition_grades.html:29
+#: app/templates/pages/teacher/competition_questions.html:25
+#: app/templates/pages/teacher/competition_teams.html:25
+#: app/templates/pages/teacher/competitions.html:36
+#: app/templates/pages/teacher/questions.html:26
+msgid "Subject"
+msgstr ""
+
+#: app/services/question_csv.py:206
+msgid "The first row must be the header: question, answer, additional."
+msgstr ""
+
+#: app/services/question_csv.py:210
+#, python-format
+msgid "Row %(row)d: %(message)s"
+msgstr ""
+
+#: app/services/question_csv.py:223
+msgid "Choose a CSV file."
+msgstr ""
+
+#: app/services/question_csv.py:225
+msgid "The file can be at most 2 MB."
+msgstr ""
+
+#: app/services/question_csv.py:229
+msgid "Save the file as CSV UTF-8."
+msgstr ""
+
+#: app/services/question_csv.py:255
+msgid "The row must have 3 fields."
+msgstr ""
+
+#: app/services/question_csv.py:266
+msgid "Additional must be 0, 1 or empty."
+msgstr ""
+
+#: app/services/question_csv.py:274
+#, python-format
+msgid "A quote opened in row %(row)d is never closed."
+msgstr ""
+
+#: app/services/question_csv.py:280
+msgid "The file holds no questions."
+msgstr ""
+
+#: app/services/question_csv.py:282
+msgid "The file can hold at most 1,000 questions."
+msgstr ""
+
 #: app/services/question_files.py:120
 #, python-format
 msgid "%(name)s %(date)s questions"
@@ -1367,16 +1424,24 @@ msgctxt "question"
 msgid "Additional"
 msgstr ""
 
-#: app/templates/components/confirmation.html:44
-#: app/templates/components/form.html:133
+#: app/templates/components/confirmation.html:51
+#: app/templates/components/confirmation.html:70
+#: app/templates/components/form.html:154
 msgid "Cancel"
 msgstr ""
 
-#: app/templates/components/form.html:30
+#: app/templates/components/form.html:35
 msgid "There is a problem"
 msgstr ""
 
-#: app/templates/components/form.html:110
+#: app/templates/components/form.html:51
+#, python-format
+msgid "And %(num)d more error."
+msgid_plural "And %(num)d more errors."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/templates/components/form.html:131
 #, python-format
 msgid "Time zone: %(zone)s"
 msgstr ""
@@ -1463,7 +1528,7 @@ msgstr ""
 
 #: app/templates/components/menu.html:23
 #: app/templates/pages/admin/institutions.html:37
-#: app/templates/pages/admin/subjects.html:13
+#: app/templates/pages/admin/subjects.html:18
 #: app/templates/pages/teacher/competition_answers.html:38
 #: app/templates/pages/teacher/competition_grades.html:41
 #: app/templates/pages/teacher/competition_teams.html:30
@@ -1553,8 +1618,9 @@ msgstr ""
 #: app/templates/pages/admin/institutions.html:22
 #: app/templates/pages/admin/institutions.html:46
 #: app/templates/pages/admin/region_deactivate.html:10
+#: app/templates/pages/admin/subject_deactivate.html:10
 #: app/templates/pages/admin/subject_delete.html:13
-#: app/templates/pages/admin/subjects.html:22
+#: app/templates/pages/admin/subjects.html:30
 #: app/templates/pages/teacher/class_deactivate.html:9
 #: app/templates/pages/teacher/class_delete.html:15
 #: app/templates/pages/teacher/students.html:51
@@ -1595,7 +1661,7 @@ msgstr ""
 #: app/templates/pages/admin/institutions.html:50
 #: app/templates/pages/admin/region_delete.html:14
 #: app/templates/pages/admin/subject_delete.html:16
-#: app/templates/pages/admin/subjects.html:26
+#: app/templates/pages/admin/subjects.html:31
 #: app/templates/pages/teacher/class_delete.html:19
 #: app/templates/pages/teacher/question_delete.html:10
 #: app/templates/pages/teacher/questions.html:48
@@ -1632,8 +1698,8 @@ msgstr ""
 #: app/templates/pages/admin/institutions.html:41
 #: app/templates/pages/admin/region_form.html:16
 #: app/templates/pages/admin/subject_form.html:12
-#: app/templates/pages/admin/subjects.html:13
-#: app/templates/pages/admin/subjects.html:17
+#: app/templates/pages/admin/subjects.html:18
+#: app/templates/pages/admin/subjects.html:22
 #: app/templates/pages/admin/teachers.html:14
 #: app/templates/pages/admin/teachers.html:17
 #: app/templates/pages/teacher/class_form.html:17
@@ -1678,14 +1744,15 @@ msgstr ""
 
 #: app/templates/pages/admin/institutions.html:20
 #: app/templates/pages/admin/institutions.html:44
-#: app/templates/pages/admin/subjects.html:20
+#: app/templates/pages/admin/subjects.html:27
 #: app/templates/pages/teacher/teams.html:49
 msgid "Rename"
 msgstr ""
 
 #: app/templates/pages/admin/institutions.html:24
 #: app/templates/pages/admin/institutions.html:48
-#: app/templates/pages/admin/subjects.html:24
+#: app/templates/pages/admin/subject_activate.html:11
+#: app/templates/pages/admin/subjects.html:30
 #: app/templates/pages/teacher/students.html:53
 msgid "Activate"
 msgstr ""
@@ -1701,8 +1768,8 @@ msgstr ""
 
 #: app/templates/pages/admin/institutions.html:37
 #: app/templates/pages/admin/institutions.html:42
-#: app/templates/pages/admin/subjects.html:13
 #: app/templates/pages/admin/subjects.html:18
+#: app/templates/pages/admin/subjects.html:23
 #: app/templates/pages/teacher/competition_answers.html:28
 #: app/templates/pages/teacher/competition_grades.html:29
 #: app/templates/pages/teacher/competition_questions.html:25
@@ -1768,6 +1835,38 @@ msgstr ""
 msgid "Deleting a region cannot be undone."
 msgstr ""
 
+#: app/templates/pages/admin/subject_activate.html:8
+#, python-format
+msgid "Activate “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/admin/subject_activate.html:11
+#, python-format
+msgid "Activate “%(name)s”?"
+msgstr ""
+
+#: app/templates/pages/admin/subject_activate.html:11
+msgid ""
+"Its questions and its competitions that are not finished are shown to "
+"teachers again."
+msgstr ""
+
+#: app/templates/pages/admin/subject_deactivate.html:7
+#, python-format
+msgid "Deactivate “%(name)s”"
+msgstr ""
+
+#: app/templates/pages/admin/subject_deactivate.html:10
+#, python-format
+msgid "Deactivate “%(name)s”?"
+msgstr ""
+
+#: app/templates/pages/admin/subject_deactivate.html:10
+msgid ""
+"Its questions and every one of its competitions that is not finished are "
+"hidden from teachers until it is activated again."
+msgstr ""
+
 #: app/templates/pages/admin/subject_delete.html:6
 #, python-format
 msgid "Delete “%(name)s”"
@@ -1795,24 +1894,84 @@ msgstr ""
 msgid "Deleting a subject cannot be undone."
 msgstr ""
 
+#: app/templates/pages/admin/subject_import.html:10
+#: app/templates/pages/admin/subject_import.html:13
+#, python-format
+msgid "Import questions: %(subject)s"
+msgstr ""
+
+#: app/templates/pages/admin/subject_import.html:13
+msgid "Replace questions"
+msgstr ""
+
+#: app/templates/pages/admin/subject_import.html:15
+#, python-format
+msgid "%(subject)s has %(num)d question now."
+msgid_plural "%(subject)s has %(num)d questions now."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/templates/pages/admin/subject_import.html:17
+#, python-format
+msgid "%(subject)s has no questions yet."
+msgstr ""
+
+#: app/templates/pages/admin/subject_import.html:19
+msgid ""
+"Importing deletes all of them and replaces them with the questions of the"
+" file. This cannot be undone. Export the current questions first to keep "
+"them."
+msgstr ""
+
+#: app/templates/pages/admin/subject_import.html:20
+msgid "CSV file"
+msgstr ""
+
+#: app/templates/pages/admin/subject_import.html:20
+msgid "A CSV file in the format described in the README, at most 2 MB"
+msgstr ""
+
 #: app/templates/pages/admin/subject_not_found.html:9
 msgid "This subject does not exist. It may have been deleted."
 msgstr ""
 
-#: app/templates/pages/admin/subjects.html:8
-#: app/templates/pages/admin/subjects.html:11
+#: app/templates/pages/admin/subjects.html:13
+#: app/templates/pages/admin/subjects.html:16
 msgid "Subjects"
 msgstr ""
 
-#: app/templates/pages/admin/subjects.html:11
+#: app/templates/pages/admin/subjects.html:16
 msgid "Create subject"
 msgstr ""
 
-#: app/templates/pages/admin/subjects.html:32
+#: app/templates/pages/admin/subjects.html:18
+#: app/templates/pages/admin/subjects.html:24
+#: app/templates/pages/teacher/competition_questions.html:30
+#: app/templates/pages/teacher/competition_questions.html:47
+#: app/templates/pages/teacher/competition_questions_add.html:24
+#: app/templates/pages/teacher/competition_questions_add.html:42
+#: app/templates/pages/teacher/competitions.html:70
+#: app/templates/pages/teacher/questions.html:14
+#: app/templates/pages/teacher/questions.html:21
+#: app/templates/pages/teacher/questions.html:23
+#: app/templates/pages/teacher/questions.html:38
+#: app/templates/pages/teacher/questions.html:55
+msgid "Questions"
+msgstr ""
+
+#: app/templates/pages/admin/subjects.html:28
+msgid "Export questions"
+msgstr ""
+
+#: app/templates/pages/admin/subjects.html:29
+msgid "Import questions"
+msgstr ""
+
+#: app/templates/pages/admin/subjects.html:38
 msgid "Create the first subject with Create subject."
 msgstr ""
 
-#: app/templates/pages/admin/subjects.html:32
+#: app/templates/pages/admin/subjects.html:38
 #: app/templates/pages/teacher/competitions.html:50
 #: app/templates/pages/teacher/questions.html:32
 msgid "No subjects yet"
@@ -2340,15 +2499,6 @@ msgstr ""
 msgid "Start"
 msgstr ""
 
-#: app/templates/pages/teacher/competition_answers.html:28
-#: app/templates/pages/teacher/competition_grades.html:29
-#: app/templates/pages/teacher/competition_questions.html:25
-#: app/templates/pages/teacher/competition_teams.html:25
-#: app/templates/pages/teacher/competitions.html:36
-#: app/templates/pages/teacher/questions.html:26
-msgid "Subject"
-msgstr ""
-
 #: app/templates/pages/teacher/competition_answers.html:32
 msgid "No teams from your educational institutions"
 msgstr ""
@@ -2569,19 +2719,6 @@ msgstr ""
 
 #: app/templates/pages/teacher/competition_questions.html:28
 msgid "Add questions with Add question."
-msgstr ""
-
-#: app/templates/pages/teacher/competition_questions.html:30
-#: app/templates/pages/teacher/competition_questions.html:47
-#: app/templates/pages/teacher/competition_questions_add.html:24
-#: app/templates/pages/teacher/competition_questions_add.html:42
-#: app/templates/pages/teacher/competitions.html:70
-#: app/templates/pages/teacher/questions.html:14
-#: app/templates/pages/teacher/questions.html:21
-#: app/templates/pages/teacher/questions.html:23
-#: app/templates/pages/teacher/questions.html:38
-#: app/templates/pages/teacher/questions.html:55
-msgid "Questions"
 msgstr ""
 
 #: app/templates/pages/teacher/competition_questions.html:39

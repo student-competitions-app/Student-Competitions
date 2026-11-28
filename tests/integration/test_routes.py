@@ -79,7 +79,8 @@ def test_the_write_routes_are_exact() -> None:
     question bank's add, edit and delete, the teacher's team actions (milestone 11.1), the
     competitions' add, edit and cancel (milestone 12.1), a competition's questions and teams
     (milestone 12.2), a team's answers (milestone 12.3), finishing and grading (milestone 12.4),
-    and publishing the results (milestone 12.8; the download is a read)."""
+    publishing the results (milestone 12.8; the download is a read), and importing a subject's
+    questions (milestone 12.11; the export is a read)."""
     writes = {(method, path) for method, path in endpoints() if method not in READ_ONLY_METHODS}
     assert writes == {
         ("POST", "/login"),
@@ -91,6 +92,7 @@ def test_the_write_routes_are_exact() -> None:
         ("POST", "/admin/subjects/{subject_id:int}/deactivate"),
         ("POST", "/admin/subjects/{subject_id:int}/activate"),
         ("POST", "/admin/subjects/{subject_id:int}/delete"),
+        ("POST", "/admin/subjects/{subject_id:int}/questions/import"),
         ("POST", "/admin/institutions/regions"),
         ("POST", "/admin/institutions/regions/{region_id:int}/rename"),
         ("POST", "/admin/institutions/regions/{region_id:int}/deactivate"),

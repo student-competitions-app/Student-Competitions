@@ -69,7 +69,8 @@ of about 60 lines gives both, and tests can pin it exactly.
 
 ## R3. Reading and checking a file
 
-**Decision**: `question_csv.check_question_file(data: bytes | None) -> QuestionFileCheck` runs
+**Decision**: `question_csv.check_question_file(data: bytes | None, *, too_large: bool = False) ->
+QuestionFileCheck` (`too_large` comes from the upload, R7) runs
 these steps in order ([contracts/csv-format.md](./contracts/csv-format.md) §3):
 
 1. **No file** (`None`, R7): "Choose a CSV file." Stop.
@@ -131,14 +132,14 @@ are rejected by the milestone: it asks for one clear message.
 **Rationale**: FR-013 to FR-021. The same response shape as the existing downloads, so the
 browser saves the file at once and the loading script skips `a[download]`.
 
-**Known risk (not changed, for the product owner)**: Excel with a Ukrainian regional setting uses
+**Known risk, accepted** (the product owner decided on 2026-11-28 to keep commas; spec FR-019): Excel with a Ukrainian regional setting uses
 `;` as its list separator. Opening the comma-separated export by **double-click** may then put
 each whole row into column A. Opening it through **Data → From Text/CSV** splits it correctly, and
 LibreOffice asks for the separator. The milestone fixes commas for the export, and the README
 section says how to open the file. A `sep=,` first line would fix the double-click, but it breaks
 the header row, and Excel then ignores the byte-order mark (Cyrillic breaks). It is therefore not
-used. The product owner checks this on a real Excel during the screenshot step and may change the
-milestone.
+used. The product owner still opens an export in a real Excel during the screenshot step (T050),
+to confirm that **From Text/CSV** works and that a file saved back imports.
 
 ## R5. Replacing the questions in one transaction
 
@@ -150,18 +151,20 @@ milestone.
 3. A single `UPDATE questions SET deleted_at = :now WHERE subject_id = :id AND deleted_at IS
    NULL`. Its row count is `deleted`. Only `deleted_at` changes, exactly as a teacher's deletion
    does (milestone 11 FR-004).
-4. One `INSERT` of every row in file order, through `session.execute(insert(Question), [...])`.
-   SQLAlchemy sends it as a multi-row `VALUES` (insertmanyvalues), one statement per 1,000 rows.
+4. One batched insert of every row in file order, through `session.execute(insert(Question),
+   [...])`. With no `RETURNING`, SQLAlchemy hands the rows to the driver's `executemany`: psycopg
+   sends them in pipeline mode, in order, in one round trip per batch, and SQLite runs them in
+   order.
    Each row has `created_at = updated_at = now`, `deleted_at = NULL` and its `is_additional`.
 5. Commit, then one log line: `Questions imported: subject=%d deleted=%d added=%d`.
 
-Ids, and so the order: on SQLite, `AUTOINCREMENT` gives ids in insert order. On PostgreSQL,
-`nextval` is evaluated per row while the `VALUES` list is scanned in order. A test inserts 1,000
+Ids, and so the order: on SQLite, `AUTOINCREMENT` gives ids in insert order. On PostgreSQL, the
+rows are inserted one after another in the order sent, so `nextval` follows them. A test inserts 1,000
 rows on both engines and checks that the ids follow the file. New ids are always above every
 existing id, so the numbers of deleted questions are never reused (FR-042).
 
-**Rationale**: FR-041 to FR-047. Two statements, whatever the file's size, keep the transaction
-short (R11). Competitions are never touched: their copies (milestone 12.2) are independent rows,
+**Rationale**: FR-041 to FR-047. One `UPDATE` and one batched insert, with no round trip per row,
+keep the transaction short (R11). Competitions are never touched: their copies (milestone 12.2) are independent rows,
 and a deleted source shows "Deleted from the question bank" as today. The study materials cache
 (12.10 R6) compares what it reads, so it shows the new bank at the next download with no code
 change. `count_subject_uses` already counts deleted questions, so the subject stays undeletable.
@@ -317,7 +320,8 @@ only, as in earlier milestones.
 - **The worst file**: 1,000 questions, each with a 900-character text and answer, close to 2 MB.
 - **Parse and check**: the regular-expression scanner (R2) and `clean_question_field` on 2,000
   fields; expected well under 1 s.
-- **Replace**: two statements on PostgreSQL. On Neon with about 20 ms round trips, under 1 s.
+- **Replace**: one `UPDATE` and one pipelined batched insert on PostgreSQL. On Neon with about
+  20 ms round trips, under 1 s.
 - **Export of 1,000 questions**: one query and `csv.writer`; expected about 100 ms.
 
 The timings of the import (parse plus replace) and the export are measured once on both engines
@@ -365,7 +369,10 @@ and recorded in the task's notes, against SC-009 (10 s and 2 s).
     - a held bank lock makes a teacher's `create_question`, `update_question`,
       `delete_question` and a second import time out, while `question_page` reads at once;
     - a teacher's held question `FOR UPDATE` makes the import wait;
-    - an import into a subject being deleted gets `SubjectNotFound`.
+    - an import into a subject (with no questions) being deleted gets `SubjectNotFound`;
+  - on SQLite, with `PRAGMA busy_timeout = 300` in the second session: an open write transaction
+    on `questions` (the import's first write) makes a teacher's `create_question` fail with
+    "database is locked", while `question_page` reads at once (FR-050).
 - **`tests/integration/test_admin_question_files.py`** (new): through the routes:
   - access for every role and the 404;
   - the menu and its order, and the column;

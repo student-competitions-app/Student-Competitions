@@ -1452,3 +1452,16 @@ def test_taking_the_setting_away_hides_them_again(scene: Scene, kept_back: KeptB
     denied(edit(scene.manager, question, "Secret 0?", "Hidden 0."))
     assert snapshot(scene.engine) == before
     assert stored(scene.engine, question).is_additional
+
+
+def test_the_tab_offers_neither_question_bank_file(scene: Scene) -> None:
+    """Milestone 12.11 FR-012: teachers keep the tab as it is; the CSV files are administrators'
+    only, whatever the setting."""
+    for browser in (scene.manager, scene.reader):
+        body = browser.get(f"{TAB}?subject={scene.maths}").text
+        hrefs = [link.href for link in html.links(body)]
+        assert not [
+            href for href in hrefs if "questions/export" in href or "questions/import" in href
+        ]
+        assert 'type="file"' not in body
+        assert "Export questions" not in body and "Import questions" not in body

@@ -60,7 +60,7 @@ def lock_question_bank(session) -> None
 
 def replace_questions(session, subject_id: int, rows: Sequence[QuestionRow]) -> Replaced
     # research R5: subject FOR SHARE (SubjectNotFound after rollback), lock, soft-delete UPDATE,
-    # one INSERT in file order, commit, one log line. `rows` is 1..MAX_QUESTIONS long (asserted).
+    # one batched insert in file order, commit, one log line. `rows` is 1..MAX_QUESTIONS long (asserted).
 ```
 
 - **Authorization**: none here, as in `subjects.py`. The router is `@allow_roles(Role.ADMIN)`,

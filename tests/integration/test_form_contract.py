@@ -51,6 +51,11 @@ Deliberate changes since (each is a contract change, recorded here):
 - **Milestone 12.9**: the question form's cases (`teacher-question-new*`, `teacher-question-edit*`)
   gain the checkbox `additional`, regenerated once with `UPDATE_FORM_CONTRACT=1` for those cases
   only.
+- **Milestone 12.11**: the Subjects tab's row actions moved into the actions menu, whose entries
+  are links, so `admin-subjects` lost its deactivate and activate forms (regenerated once).
+  `admin-subject-deactivate`, `admin-subject-activate`, `admin-subject-import` and
+  `admin-subject-import-errors` are new, generated once with `UPDATE_FORM_CONTRACT=1` for those
+  cases only. The import form is `multipart/form-data` with one field, `file`.
 """
 
 import json
@@ -399,6 +404,34 @@ def _(w: World) -> Response:
     physics, _ = subjects(w)
     w.monkeypatch.setattr(app.services.subjects, "count_subject_uses", lambda *_: 1)
     return w.admin.post(f"/admin/subjects/{physics}/delete")
+
+
+@case("admin-subject-deactivate")
+def _(w: World) -> Response:
+    physics, _ = subjects(w)
+    return w.admin.get(f"/admin/subjects/{physics}/deactivate")
+
+
+@case("admin-subject-activate")
+def _(w: World) -> Response:
+    _, biology = subjects(w)
+    return w.admin.get(f"/admin/subjects/{biology}/activate")
+
+
+@case("admin-subject-import")
+def _(w: World) -> Response:
+    physics, _ = subjects(w)
+    return w.admin.get(f"/admin/subjects/{physics}/questions/import")
+
+
+@case("admin-subject-import-errors")
+def _(w: World) -> Response:
+    physics, _ = subjects(w)
+    bad = b"question,answer,additional\nx,,0\n"
+    return w.admin.post(
+        f"/admin/subjects/{physics}/questions/import",
+        files={"file": ("bank.csv", bad, "text/csv")},
+    )
 
 
 @case("admin-institutions-region-selected")

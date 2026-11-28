@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  student-competitions\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-23 20:02+0200\n"
+"POT-Creation-Date: 2026-11-28 12:11+0200\n"
 "PO-Revision-Date: 2026-11-15 17:00+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: uk\n"
@@ -217,11 +217,11 @@ msgstr "Новий заклад освіти в регіоні «%(region)s»"
 msgid "Rename educational institution"
 msgstr "Перейменувати заклад освіти"
 
-#: app/routers/admin_subjects.py:88 app/routers/admin_subjects.py:99
+#: app/routers/admin_subjects.py:109 app/routers/admin_subjects.py:120
 msgid "New subject"
 msgstr "Новий предмет"
 
-#: app/routers/admin_subjects.py:110 app/routers/admin_subjects.py:124
+#: app/routers/admin_subjects.py:131 app/routers/admin_subjects.py:145
 msgid "Rename subject"
 msgstr "Перейменувати предмет"
 
@@ -1147,6 +1147,63 @@ msgstr "Заклад освіти «%(name)s» уже є в цьому регі�
 msgid "Page %(page)d of %(total)s"
 msgstr "Сторінка %(page)d з %(total)s"
 
+#: app/services/question_bank_files.py:87
+#, python-format
+msgid "%(subject)s %(date)s question bank"
+msgstr "%(subject)s %(date)s банк питань"
+
+#: app/services/question_bank_files.py:91
+#: app/templates/pages/teacher/competition_answers.html:28
+#: app/templates/pages/teacher/competition_grades.html:29
+#: app/templates/pages/teacher/competition_questions.html:25
+#: app/templates/pages/teacher/competition_teams.html:25
+#: app/templates/pages/teacher/competitions.html:36
+#: app/templates/pages/teacher/questions.html:26
+msgid "Subject"
+msgstr "Предмет"
+
+#: app/services/question_csv.py:206
+msgid "The first row must be the header: question, answer, additional."
+msgstr "Перший рядок має бути заголовком: question, answer, additional."
+
+#: app/services/question_csv.py:210
+#, python-format
+msgid "Row %(row)d: %(message)s"
+msgstr "Рядок %(row)d: %(message)s"
+
+#: app/services/question_csv.py:223
+msgid "Choose a CSV file."
+msgstr "Виберіть файл CSV."
+
+#: app/services/question_csv.py:225
+msgid "The file can be at most 2 MB."
+msgstr "Файл може бути не більше 2 МБ."
+
+#: app/services/question_csv.py:229
+msgid "Save the file as CSV UTF-8."
+msgstr "Збережіть файл у форматі CSV UTF-8."
+
+#: app/services/question_csv.py:255
+msgid "The row must have 3 fields."
+msgstr "Рядок має містити 3 поля."
+
+#: app/services/question_csv.py:266
+msgid "Additional must be 0, 1 or empty."
+msgstr "Значення additional має бути 0, 1 або порожнім."
+
+#: app/services/question_csv.py:274
+#, python-format
+msgid "A quote opened in row %(row)d is never closed."
+msgstr "Лапки, відкриті в рядку %(row)d, не закрито."
+
+#: app/services/question_csv.py:280
+msgid "The file holds no questions."
+msgstr "У файлі немає питань."
+
+#: app/services/question_csv.py:282
+msgid "The file can hold at most 1,000 questions."
+msgstr "У файлі може бути не більше 1 000 питань."
+
 #: app/services/question_files.py:120
 #, python-format
 msgid "%(name)s %(date)s questions"
@@ -1411,16 +1468,25 @@ msgctxt "question"
 msgid "Additional"
 msgstr "Додаткове"
 
-#: app/templates/components/confirmation.html:44
-#: app/templates/components/form.html:133
+#: app/templates/components/confirmation.html:51
+#: app/templates/components/confirmation.html:70
+#: app/templates/components/form.html:154
 msgid "Cancel"
 msgstr "Скасувати"
 
-#: app/templates/components/form.html:30
+#: app/templates/components/form.html:35
 msgid "There is a problem"
 msgstr "Виникла проблема"
 
-#: app/templates/components/form.html:110
+#: app/templates/components/form.html:51
+#, python-format
+msgid "And %(num)d more error."
+msgid_plural "And %(num)d more errors."
+msgstr[0] "І ще %(num)d помилка."
+msgstr[1] "І ще %(num)d помилки."
+msgstr[2] "І ще %(num)d помилок."
+
+#: app/templates/components/form.html:131
 #, python-format
 msgid "Time zone: %(zone)s"
 msgstr "Часовий пояс: %(zone)s"
@@ -1508,7 +1574,7 @@ msgstr "Дії для «%(item)s»"
 
 #: app/templates/components/menu.html:23
 #: app/templates/pages/admin/institutions.html:37
-#: app/templates/pages/admin/subjects.html:13
+#: app/templates/pages/admin/subjects.html:18
 #: app/templates/pages/teacher/competition_answers.html:38
 #: app/templates/pages/teacher/competition_grades.html:41
 #: app/templates/pages/teacher/competition_teams.html:30
@@ -1600,8 +1666,9 @@ msgstr "Деактивувати заклад освіти «%(name)s»?"
 #: app/templates/pages/admin/institutions.html:22
 #: app/templates/pages/admin/institutions.html:46
 #: app/templates/pages/admin/region_deactivate.html:10
+#: app/templates/pages/admin/subject_deactivate.html:10
 #: app/templates/pages/admin/subject_delete.html:13
-#: app/templates/pages/admin/subjects.html:22
+#: app/templates/pages/admin/subjects.html:30
 #: app/templates/pages/teacher/class_deactivate.html:9
 #: app/templates/pages/teacher/class_delete.html:15
 #: app/templates/pages/teacher/students.html:51
@@ -1646,7 +1713,7 @@ msgstr ""
 #: app/templates/pages/admin/institutions.html:50
 #: app/templates/pages/admin/region_delete.html:14
 #: app/templates/pages/admin/subject_delete.html:16
-#: app/templates/pages/admin/subjects.html:26
+#: app/templates/pages/admin/subjects.html:31
 #: app/templates/pages/teacher/class_delete.html:19
 #: app/templates/pages/teacher/question_delete.html:10
 #: app/templates/pages/teacher/questions.html:48
@@ -1684,8 +1751,8 @@ msgstr "Цей регіон деактивовано. До нього не мо�
 #: app/templates/pages/admin/institutions.html:41
 #: app/templates/pages/admin/region_form.html:16
 #: app/templates/pages/admin/subject_form.html:12
-#: app/templates/pages/admin/subjects.html:13
-#: app/templates/pages/admin/subjects.html:17
+#: app/templates/pages/admin/subjects.html:18
+#: app/templates/pages/admin/subjects.html:22
 #: app/templates/pages/admin/teachers.html:14
 #: app/templates/pages/admin/teachers.html:17
 #: app/templates/pages/teacher/class_form.html:17
@@ -1730,14 +1797,15 @@ msgstr "Створіть перший регіон кнопкою «Створи
 
 #: app/templates/pages/admin/institutions.html:20
 #: app/templates/pages/admin/institutions.html:44
-#: app/templates/pages/admin/subjects.html:20
+#: app/templates/pages/admin/subjects.html:27
 #: app/templates/pages/teacher/teams.html:49
 msgid "Rename"
 msgstr "Перейменувати"
 
 #: app/templates/pages/admin/institutions.html:24
 #: app/templates/pages/admin/institutions.html:48
-#: app/templates/pages/admin/subjects.html:24
+#: app/templates/pages/admin/subject_activate.html:11
+#: app/templates/pages/admin/subjects.html:30
 #: app/templates/pages/teacher/students.html:53
 msgid "Activate"
 msgstr "Активувати"
@@ -1753,8 +1821,8 @@ msgstr "Створити заклад освіти"
 
 #: app/templates/pages/admin/institutions.html:37
 #: app/templates/pages/admin/institutions.html:42
-#: app/templates/pages/admin/subjects.html:13
 #: app/templates/pages/admin/subjects.html:18
+#: app/templates/pages/admin/subjects.html:23
 #: app/templates/pages/teacher/competition_answers.html:28
 #: app/templates/pages/teacher/competition_grades.html:29
 #: app/templates/pages/teacher/competition_questions.html:25
@@ -1822,6 +1890,40 @@ msgstr ""
 msgid "Deleting a region cannot be undone."
 msgstr "Видалення регіону не можна скасувати."
 
+#: app/templates/pages/admin/subject_activate.html:8
+#, python-format
+msgid "Activate “%(name)s”"
+msgstr "Активувати предмет «%(name)s»"
+
+#: app/templates/pages/admin/subject_activate.html:11
+#, python-format
+msgid "Activate “%(name)s”?"
+msgstr "Активувати предмет «%(name)s»?"
+
+#: app/templates/pages/admin/subject_activate.html:11
+msgid ""
+"Its questions and its competitions that are not finished are shown to "
+"teachers again."
+msgstr "Його питання та незавершені змагання знову буде видно педагогам."
+
+#: app/templates/pages/admin/subject_deactivate.html:7
+#, python-format
+msgid "Deactivate “%(name)s”"
+msgstr "Деактивувати предмет «%(name)s»"
+
+#: app/templates/pages/admin/subject_deactivate.html:10
+#, python-format
+msgid "Deactivate “%(name)s”?"
+msgstr "Деактивувати предмет «%(name)s»?"
+
+#: app/templates/pages/admin/subject_deactivate.html:10
+msgid ""
+"Its questions and every one of its competitions that is not finished are "
+"hidden from teachers until it is activated again."
+msgstr ""
+"Його питання та всі його незавершені змагання буде приховано від "
+"педагогів, доки його не активують знову."
+
 #: app/templates/pages/admin/subject_delete.html:6
 #, python-format
 msgid "Delete “%(name)s”"
@@ -1851,24 +1953,87 @@ msgstr ""
 msgid "Deleting a subject cannot be undone."
 msgstr "Видалення предмета не можна скасувати."
 
+#: app/templates/pages/admin/subject_import.html:10
+#: app/templates/pages/admin/subject_import.html:13
+#, python-format
+msgid "Import questions: %(subject)s"
+msgstr "Імпорт питань: %(subject)s"
+
+#: app/templates/pages/admin/subject_import.html:13
+msgid "Replace questions"
+msgstr "Замінити питання"
+
+#: app/templates/pages/admin/subject_import.html:15
+#, python-format
+msgid "%(subject)s has %(num)d question now."
+msgid_plural "%(subject)s has %(num)d questions now."
+msgstr[0] "Зараз у предметі «%(subject)s» %(num)d питання."
+msgstr[1] "Зараз у предметі «%(subject)s» %(num)d питання."
+msgstr[2] "Зараз у предметі «%(subject)s» %(num)d питань."
+
+#: app/templates/pages/admin/subject_import.html:17
+#, python-format
+msgid "%(subject)s has no questions yet."
+msgstr "У предметі «%(subject)s» ще немає питань."
+
+#: app/templates/pages/admin/subject_import.html:19
+msgid ""
+"Importing deletes all of them and replaces them with the questions of the"
+" file. This cannot be undone. Export the current questions first to keep "
+"them."
+msgstr ""
+"Імпорт видалить їх усі й замінить питаннями з файлу. Цю дію не можна "
+"скасувати. Щоб зберегти поточні питання, спершу експортуйте їх."
+
+#: app/templates/pages/admin/subject_import.html:20
+msgid "CSV file"
+msgstr "Файл CSV"
+
+#: app/templates/pages/admin/subject_import.html:20
+msgid "A CSV file in the format described in the README, at most 2 MB"
+msgstr "Файл CSV у форматі, описаному в README, не більше 2 МБ"
+
 #: app/templates/pages/admin/subject_not_found.html:9
 msgid "This subject does not exist. It may have been deleted."
 msgstr "Такого предмета не існує. Можливо, його видалено."
 
-#: app/templates/pages/admin/subjects.html:8
-#: app/templates/pages/admin/subjects.html:11
+#: app/templates/pages/admin/subjects.html:13
+#: app/templates/pages/admin/subjects.html:16
 msgid "Subjects"
 msgstr "Предмети"
 
-#: app/templates/pages/admin/subjects.html:11
+#: app/templates/pages/admin/subjects.html:16
 msgid "Create subject"
 msgstr "Створити предмет"
 
-#: app/templates/pages/admin/subjects.html:32
+#: app/templates/pages/admin/subjects.html:18
+#: app/templates/pages/admin/subjects.html:24
+#: app/templates/pages/teacher/competition_questions.html:30
+#: app/templates/pages/teacher/competition_questions.html:47
+#: app/templates/pages/teacher/competition_questions_add.html:24
+#: app/templates/pages/teacher/competition_questions_add.html:42
+#: app/templates/pages/teacher/competitions.html:70
+#: app/templates/pages/teacher/questions.html:14
+#: app/templates/pages/teacher/questions.html:21
+#: app/templates/pages/teacher/questions.html:23
+#: app/templates/pages/teacher/questions.html:38
+#: app/templates/pages/teacher/questions.html:55
+msgid "Questions"
+msgstr "Питання"
+
+#: app/templates/pages/admin/subjects.html:28
+msgid "Export questions"
+msgstr "Експортувати питання"
+
+#: app/templates/pages/admin/subjects.html:29
+msgid "Import questions"
+msgstr "Імпортувати питання"
+
+#: app/templates/pages/admin/subjects.html:38
 msgid "Create the first subject with Create subject."
 msgstr "Створіть перший предмет кнопкою «Створити предмет»."
 
-#: app/templates/pages/admin/subjects.html:32
+#: app/templates/pages/admin/subjects.html:38
 #: app/templates/pages/teacher/competitions.html:50
 #: app/templates/pages/teacher/questions.html:32
 msgid "No subjects yet"
@@ -2423,15 +2588,6 @@ msgstr "Відповіді змагань «%(name)s»"
 msgid "Start"
 msgstr "Початок"
 
-#: app/templates/pages/teacher/competition_answers.html:28
-#: app/templates/pages/teacher/competition_grades.html:29
-#: app/templates/pages/teacher/competition_questions.html:25
-#: app/templates/pages/teacher/competition_teams.html:25
-#: app/templates/pages/teacher/competitions.html:36
-#: app/templates/pages/teacher/questions.html:26
-msgid "Subject"
-msgstr "Предмет"
-
 #: app/templates/pages/teacher/competition_answers.html:32
 msgid "No teams from your educational institutions"
 msgstr "Немає команд із ваших закладів освіти"
@@ -2668,19 +2824,6 @@ msgstr "У цих змаганнях ще немає питань"
 #: app/templates/pages/teacher/competition_questions.html:28
 msgid "Add questions with Add question."
 msgstr "Додайте питання кнопкою «Додати питання»."
-
-#: app/templates/pages/teacher/competition_questions.html:30
-#: app/templates/pages/teacher/competition_questions.html:47
-#: app/templates/pages/teacher/competition_questions_add.html:24
-#: app/templates/pages/teacher/competition_questions_add.html:42
-#: app/templates/pages/teacher/competitions.html:70
-#: app/templates/pages/teacher/questions.html:14
-#: app/templates/pages/teacher/questions.html:21
-#: app/templates/pages/teacher/questions.html:23
-#: app/templates/pages/teacher/questions.html:38
-#: app/templates/pages/teacher/questions.html:55
-msgid "Questions"
-msgstr "Питання"
 
 #: app/templates/pages/teacher/competition_questions.html:39
 msgid "Deleted from the question bank"

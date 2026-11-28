@@ -193,6 +193,34 @@
       "method": "post"
     }
   ],
+  "admin-subject-activate": [
+    {
+      "action": "/admin/subjects/{id}/activate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-subject-deactivate": [
+    {
+      "action": "/admin/subjects/{id}/deactivate",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
   "admin-subject-delete": [
     {
       "action": "/admin/subjects/{id}/delete",
@@ -212,6 +240,38 @@
       "action": "/admin/subjects/{id}/deactivate",
       "buttons": [],
       "fields": [],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-subject-import": [
+    {
+      "action": "/admin/subjects/{id}/questions/import",
+      "buttons": [],
+      "fields": [
+        "file"
+      ],
+      "method": "post"
+    },
+    {
+      "action": "/logout",
+      "buttons": [],
+      "fields": [],
+      "method": "post"
+    }
+  ],
+  "admin-subject-import-errors": [
+    {
+      "action": "/admin/subjects/{id}/questions/import",
+      "buttons": [],
+      "fields": [
+        "file"
+      ],
       "method": "post"
     },
     {
@@ -270,18 +330,6 @@
     }
   ],
   "admin-subjects": [
-    {
-      "action": "/admin/subjects/{id}/activate",
-      "buttons": [],
-      "fields": [],
-      "method": "post"
-    },
-    {
-      "action": "/admin/subjects/{id}/deactivate",
-      "buttons": [],
-      "fields": [],
-      "method": "post"
-    },
     {
       "action": "/logout",
       "buttons": [],

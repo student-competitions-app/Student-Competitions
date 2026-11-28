@@ -60,7 +60,7 @@ UNSAFE = [
     "/login/code",
     "/logout",
     "/theme",
-    "/admin/subjects/7/deactivate",
+    "/admin/institutions/regions/7/activate",
     "",
 ]
 

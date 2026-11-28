@@ -1916,6 +1916,27 @@ textarea {
   font-weight: var(--sc-weight-bold);
 }
 
+/* How many errors were left out of the list (milestone 12.11): after the at most 20 listed. */
+.error-summary-more {
+  margin: var(--sc-space-1) 0 0;
+  color: var(--sc-text);
+}
+
+/* A file field (`file_field`, milestone 12.11): the browser's own control in Pico's look, as wide
+   as a single-line field and never wider than the screen, so a long file name never scrolls the
+   page sideways at 360 px. */
+input[type="file"] {
+  width: 100%;
+  max-width: min(100%, var(--sc-form-width));
+}
+
+/* The control has no box, so Pico's invalid icon and the padding kept for it would float beside
+   the button; the field's message above it already says what is wrong. */
+input[type="file"][aria-invalid] {
+  padding-inline: 0 !important;
+  background-image: none;
+}
+
 .field-hint,
 .field-error {
   display: block;

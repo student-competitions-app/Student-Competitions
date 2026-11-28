@@ -31,7 +31,7 @@ replaces it, from the **Subjects** tab. There is no schema change.
     (R7), checks the whole file, and either shows every error (at most 20, then "And N more
     errors.") or replaces the questions;
   - `question_bank_files.replace_questions` runs in one transaction: the subject `FOR SHARE`,
-    then the bank lock, then one soft-delete `UPDATE`, then one multi-row `INSERT` in file order,
+    then the bank lock, then one soft-delete `UPDATE`, then one batched insert in file order,
     then one log line.
 - **The bank lock** (R6): on PostgreSQL, `LOCK TABLE questions IN EXCLUSIVE MODE`, so every bank
   write waits and plain reads do not. On SQLite, the database's write lock already does this.

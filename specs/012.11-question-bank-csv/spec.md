@@ -512,7 +512,10 @@ in both languages and both themes.
   and `0` for every other.
 - **FR-019**: The export MUST be UTF-8 with a byte-order mark, separated by commas, with fields quoted
   where needed and quotes inside a field doubled (RFC 4180), so a spreadsheet opens it with Cyrillic
-  text intact and line breaks inside a cell.
+  text intact and line breaks inside a cell. The separator stays a comma whatever the regional
+  setting (decided by the product owner on 2026-11-28): Excel with a Ukrainian regional setting, whose
+  list separator is `;`, opens the file through **Data → From Text/CSV**, which the README section
+  says (FR-056); a double-click may not split the columns there.
 - **FR-020**: A text that starts with `=`, `+`, `-` or `@` MUST be exported as it is, without a
   prefix, so the file imports back unchanged.
 - **FR-021**: The file MUST NOT hold the bank number of a question, or anything about competitions.
@@ -624,7 +627,23 @@ in both languages and both themes.
 
 - **FR-056**: The README MUST get a section "Question bank CSV files", written for an AI assistant that
   has no access to the application, its code or its database, which stands on its own and states every
-  rule of the import exactly, as listed in User Story 6, scenarios 1 and 2.
+  rule of the import exactly:
+  - **the format**: the header row and the column order; UTF-8, with the byte-order mark
+    recommended; commas as the separator; how to quote a field (quoting every field is safe), double
+    a quote inside it and keep a line break inside it (RFC 4180); the `.csv` extension; `additional`
+    as `0` or `1`;
+  - **the limits**: 1 to 2,000 characters for the text and for the answer, counted in Unicode
+    characters after trimming, with no null character; 1 to 1,000 questions and at most 2 MB a file;
+  - **what the import does**: it replaces every question of the subject, so a file holds the whole
+    bank, and to add questions the administrator exports the bank and gives the assistant the
+    exported file to extend; the rows become the bank in their order, oldest first, which the study
+    materials follow;
+  - **the content**: texts are shown exactly as written and never translated, so they are plain
+    text in the language of the competition, without Markdown and without a number of their own,
+    and never start with `=`; the reference answer is what a team's answer is graded against, so it
+    is complete enough to grade by; the additional questions are kept back from participants until
+    a competition that holds them starts;
+  - **opening the file in a spreadsheet**, including Excel's **Data → From Text/CSV** (FR-019).
 - **FR-057**: The section MUST end with a complete example file of a few Ukrainian questions, one of
   them additional, with a comma, a quote and a line break inside a field, and a short checklist the
   assistant goes through before handing the file over.

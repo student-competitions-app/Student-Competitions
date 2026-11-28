@@ -424,7 +424,10 @@ has more actions than fit a phone card (the **Competitions** tab, milestone 12.1
   12.2–12.4, 12.8 and 12.10). **Questions** is only for teachers with **Can manage competitions**
   (milestone 12.10); **Download questions** is for every teacher once a competition has started.
   **Finish competition** and **Publish results** are not destructive: they cannot be undone, but
-  each is the normal next step of the work.
+  each is the normal next step of the work. On the administrator's **Subjects** tab (milestone
+  12.11): **Rename**, **Export questions** (a download), **Import questions** (destructive),
+  **Deactivate** (destructive) or **Activate**, **Delete** (destructive). **Deactivate** and
+  **Activate** open their confirmation pages, like every entry that changes something.
 - **A download** (milestone 12.8) is an entry like any other, a link marked as a download
   (`download=True`, the HTML `download` attribute). It is offered this way, never through a page in
   between: the browser saves the file at once and the person stays where they were. It starts no
@@ -521,6 +524,17 @@ Every form page passes `values` (what was entered, by field id), `errors` (field
   secondary save right after it, for "save and continue with another": **Save question** then
   **Save and add one more question**. There is at most one secondary save; the primary one comes
   first, so Enter submits it, and it leads back to the list.
+- **`file_field(id, label, error, hint, accept)`** (milestone 12.11) is the browser's own file
+  control with its label, hint and error, as wide as a single-line field. It is never refilled: a
+  browser cannot set a file field's value, so after an error the person chooses the file again,
+  and the page says nothing more about it. Its form is `multipart/form-data`. _Gallery_: [file
+  field](/admin/components#file-field).
+- **Row errors** (milestone 12.11): `error_summary(errors, row_errors=[…], more=n)` also lists
+  errors about the rows of an uploaded file. An error about a field (no file chosen, the file is
+  too large) is a field error, linked to the field; an error about a row names its row as a
+  spreadsheet shows it, "Row 7: Enter the reference answer.", and is not linked, since no field
+  holds it. At most 20 errors are listed in all, in row order and, within a row, in column order;
+  `more` is how many were left out, said after the list: "And 5 more errors.".
 
 A message about one field's value (an invalid address, a duplicate name, a wrong code) is a field
 error. A limit, an outage or a message about the whole submission is the form error.
@@ -607,6 +621,14 @@ _Gallery_: [grading sheet](/admin/components#grading-sheet).
   results can be published."); `alternative` is the link to the work left (**Grade the remaining
   teams**), shown before the link back. Only a primary confirmation can be blocked: a destructive
   action is never waiting for work.
+- **With a form** (milestone 12.11): a confirmation whose action needs input, such as a file,
+  holds the input inside its own form. `form_content=True` puts the `{% call %}` block (the
+  explanation and the fields) and the buttons in one `<form method="post">`, between the
+  consequence and the buttons; `sends_file=True` makes it `multipart/form-data`; `summary` is the
+  page's `error_summary(...)`, placed right under the question as on every form page. The button
+  still repeats the verb (**Replace questions**), and **Cancel** still leads back. A blocked
+  confirmation has no form. Used by **Import questions** on the **Subjects** tab. _Gallery_:
+  [confirmation with a form](/admin/components#confirmation-with-form).
 - **`refusal(question, reason, back_href, back_text)`**: when the action cannot be done, with the
   reason ("is in use") and the alternative, through `{% call %}` (**Deactivate**).
 
@@ -801,6 +823,9 @@ Approved by the product owner on 2026-11-15. Every Ukrainian text uses these ter
 | Profile | Профіль |
 | Withdraw consent / Delete my data | Відкликати згоду / Видалити мої дані |
 | Kyiv time | за київським часом |
+| Export questions / Import questions / Replace questions (milestone 12.11) | Експортувати питання / Імпортувати питання / Замінити питання |
+| CSV file | файл CSV |
+| Row N: … (an error in a row of a file) | Рядок N: … |
 
 The tab "Students" is «Учасники» on purpose: it lists every participant a teacher manages and is
 short; the role itself is «Студент».

@@ -13,11 +13,13 @@ from urllib.parse import quote
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
+from starlette.requests import Request
 
 from app.main import app
 from app.models import (
     AccessLevel,
     ConsentRecord,
+    Question,
     Role,
     TeacherInstitution,
     TeacherProfile,
@@ -39,6 +41,8 @@ from tests.conftest import (
     invite,
     invite_and_accept,
     make_institution,
+    make_question,
+    make_teacher,
 )
 from tests.integration.test_login_flow import code_from, request_code, sign_in, submit_code
 
@@ -244,6 +248,10 @@ ADMIN_PAGES = [
     "/admin/subjects/new",
     "/admin/subjects/{id}/rename",
     "/admin/subjects/{id}/delete",
+    "/admin/subjects/{id}/deactivate",
+    "/admin/subjects/{id}/activate",
+    "/admin/subjects/{id}/questions/export",
+    "/admin/subjects/{id}/questions/import",
 ]
 
 ADMIN_ACTIONS = [
@@ -252,6 +260,7 @@ ADMIN_ACTIONS = [
     ("/admin/subjects/{id}/deactivate", {}),
     ("/admin/subjects/{id}/activate", {}),
     ("/admin/subjects/{id}/delete", {}),
+    ("/admin/subjects/{id}/questions/import", {}),
 ]
 
 OTHER_ROLES = [TEACHER, STUDENT]
@@ -665,3 +674,91 @@ def test_link_pages_act_only_on_the_person_in_the_link(
         for email in (ADMIN_EMAIL, TEACHER_EMAIL):
             other = session.exec(select(User).where(User.email == email)).one()
             assert other.first_name is None
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.11: only administrators get a subject's question bank file (User Story 8)
+# ---------------------------------------------------------------------------------------------
+#
+# See specs/012.11-question-bank-csv/spec.md User Story 8, FR-007 and FR-008. The file holds the
+# additional questions, kept back from everyone but the teachers allowed to manage competitions
+# (constitution IV), and only administrators may have it: not even those teachers.
+
+BANK_TEXT = "Which treaty ended the war?"
+BANK_FILE = b"question,answer,additional\nReplaced?,Replaced.,0\n"
+
+
+def bank_rows(session: Session) -> list[tuple[object, ...]]:
+    session.expire_all()
+    return [
+        (q.id, q.text, q.deleted_at) for q in session.exec(select(Question).order_by(Question.id))
+    ]
+
+
+@pytest.mark.parametrize("who", ["manager", "teacher", "student"])
+@pytest.mark.parametrize("subject", ["existing", "missing"])
+def test_only_administrators_get_the_question_bank_file(
+    client_as: ClientAs, session: Session, who: str, subject: str
+) -> None:
+    """US8-1: "access denied" from the export, the import page and the import, for any subject or
+    a missing one; no question in any response; nothing changes."""
+    existing = create_subject(session, "History")
+    assert existing.id is not None
+    make_question(app.state.engine, existing.id, BANK_TEXT, "Versailles.", additional=True)
+    if who == "manager":
+        institution = make_institution(app.state.engine, "Kyiv Lyceum", "Kyiv")
+        make_teacher(
+            app.state.engine,
+            app.state.settings,
+            email="manager@example.org",
+            institutions={institution: AccessLevel.WRITE},
+            can_manage=True,
+        )
+        browser, label = client_as("manager@example.org"), "Teacher"
+    elif who == "teacher":
+        browser, label = client_as(TEACHER_EMAIL), "Teacher"
+    else:
+        browser, label = client_as(STUDENT_EMAIL), "Student"
+    sid = existing.id if subject == "existing" else 999_999
+    before = bank_rows(session)
+    for response in (
+        browser.get(f"/admin/subjects/{sid}/questions/export", follow_redirects=False),
+        browser.get(f"/admin/subjects/{sid}/questions/import", follow_redirects=False),
+        browser.post(
+            f"/admin/subjects/{sid}/questions/import",
+            files={"file": ("bank.csv", BANK_FILE, "text/csv")},
+            follow_redirects=False,
+        ),
+    ):
+        assert response.status_code == 403
+        assert f"Your current role, {label}, cannot open this page." in response.text
+        assert BANK_TEXT not in response.text
+        assert "Versailles" not in response.text
+    assert bank_rows(session) == before
+
+
+def test_the_upload_is_never_read_before_the_role_check(
+    client_as: ClientAs, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Research R7: the file is read by a dependency that runs after `resolve_access`, so a
+    refused user's upload is never read."""
+    subject = create_subject(session, "History")
+    reads: list[str] = []
+    real_form = Request.form
+
+    def counting_form(self: Request, *args: object, **kwargs: object) -> object:
+        reads.append(self.url.path)
+        return real_form(self, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(Request, "form", counting_form)
+    path = f"/admin/subjects/{subject.id}/questions/import"
+    response = client_as(TEACHER_EMAIL).post(
+        path, files={"file": ("bank.csv", BANK_FILE, "text/csv")}, follow_redirects=False
+    )
+    assert response.status_code == 403
+    assert reads == []
+    response = client_as(ADMIN_EMAIL).post(
+        path, files={"file": ("bank.csv", BANK_FILE, "text/csv")}, follow_redirects=False
+    )
+    assert response.status_code == 303
+    assert reads == [path]

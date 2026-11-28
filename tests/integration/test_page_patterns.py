@@ -534,14 +534,20 @@ def test_links_to_forms_and_confirmations_look_like_buttons(
     monkeypatch: pytest.MonkeyPatch,
     admin_client: TestClient,
 ) -> None:
+    """A link to a form or a confirmation outside a menu is a button; inside a row's actions menu
+    it is a menu entry (milestone 12.11 FR-002: the Subjects tab's row actions moved into the
+    menu, as on the Competitions tab)."""
     physics, _ = contract.subjects(world(client, client_as, outbox, monkeypatch))
     links = {a.href: a for a in html.content_links(admin_client.get("/admin/subjects").text)}
+    assert links["/admin/subjects/new"].attrs.get("role") == "button"
     for href in (
-        "/admin/subjects/new",
         f"/admin/subjects/{physics}/rename",
+        f"/admin/subjects/{physics}/questions/import",
+        f"/admin/subjects/{physics}/deactivate",
         f"/admin/subjects/{physics}/delete",
     ):
-        assert links[href].attrs.get("role") == "button", href
+        assert "role" not in links[href].attrs, href
+        assert "actions-menu-link" in links[href].attrs.get("class", "").split(), href
 
 
 # ---------------------------------------------------------------------------------------------

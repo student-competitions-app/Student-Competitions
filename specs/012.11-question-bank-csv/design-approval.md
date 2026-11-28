@@ -2,7 +2,7 @@
 
 The product owner's check of the look of the file field and the **Import questions** page
 (spec FR-062, User Story 9 scenario 5; tasks T046, T047), and of an export opened in Excel
-(task T050, research R4). The milestone is not delivered before this approval.
+(task T050, research R4). The milestone was not to be delivered before this approval.
 
 ## Screenshots (T046)
 
@@ -48,4 +48,4 @@ on it, and run a Playwright script with the `sc_session`, `sc_lang` and `sc_them
 | Round | Date | What | Decision |
 |---|---|---|---|
 | 1 | 2026-11-28 | The screenshots above (T047) | **Approved** by the product owner, as shown; no changes asked |
-| — | — | An export opened in Excel with a Ukrainian regional setting, by double-click and through **Data → From Text/CSV**, saved back as CSV and imported (T050) | **Pending**: the product owner |
+| 2 | 2026-11-28 | An export opened in Excel (T050) | **Confirmed** by the product owner: the exported CSV file was imported into Excel successfully. The separator stays a comma (spec FR-019); the accepted risk in research R4 stands for a double-click open under a Ukrainian regional setting |

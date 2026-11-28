@@ -647,14 +647,14 @@ compare its limits with the constants.
   Targets: 10 s and 2 s; expected under 1 s.
 
   **Measured on 2026-11-28** (1,000 questions, about 520 Cyrillic characters each in the text and the answer, a 1.88 MB file; local SQLite file and the local PostgreSQL 17 container): `check_question_file` 0.011 s; `replace_questions` 0.011 s on SQLite, 0.041 s on PostgreSQL; the export (`export_rows` and `write_question_csv`) 0.012 s and 0.016 s; the export reproduced the imported file byte for byte.
-- [ ] T050 [P] **Manual, product owner**: open an exported file in Excel with a Ukrainian regional setting, by double-click and through **Data → From Text/CSV**, and save it back as CSV and import it. Record the result in `specs/012.11-question-bank-csv/design-approval.md` (research R4, the accepted risk). Commas stay, as decided on 2026-11-28 (spec FR-019); this check confirms that **From Text/CSV** works and that the README's instructions match what Excel shows.
+- [X] T050 [P] **Manual, product owner**: open an exported file in Excel with a Ukrainian regional setting, by double-click and through **Data → From Text/CSV**, and save it back as CSV and import it. Record the result in `specs/012.11-question-bank-csv/design-approval.md` (research R4, the accepted risk). Commas stay, as decided on 2026-11-28 (spec FR-019); this check confirms that **From Text/CSV** works and that the README's instructions match what Excel shows.
 - [X] T051 [P] Update `README.md` beyond the new section:
   - the administrator part of **Roles and access** mentions exporting and importing a subject's questions on the **Subjects** tab;
   - the repository layout tree mentions `app/services/question_csv.py`, `app/services/question_bank_files.py` and `app/routers/uploads.py`.
 - [X] T052 [P] Check that `docs/requirements/product-requirements.md` and `.specify/memory/constitution.md` (v2.8.0) agree with what was built (FR-060). Change nothing unless they contradict it; if they do, raise it rather than editing the constitution here.
 - [X] T053 Run the whole suite on both engines: `TEST_POSTGRES_URL=postgresql://postgres@localhost:5432/postgres uv run pytest`, then `uv run ruff check` and `uv run ruff format --check`. All must be green, with no PostgreSQL case skipped.
-- [ ] T054 Walk through `specs/012.11-question-bank-csv/quickstart.md` §3 by hand, including with JavaScript off and at 360 px, and fix anything that differs.
-- [ ] T055 On delivery (after T047), update `docs/requirements/milestones.md`:
+- [X] T054 Walk through `specs/012.11-question-bank-csv/quickstart.md` §3 by hand, including with JavaScript off and at 360 px, and fix anything that differs.
+- [X] T055 On delivery (after T047), update `docs/requirements/milestones.md`:
   - move 12.11 to **Delivered** as a short product summary with a link to `specs/012.11-question-bank-csv/spec.md`, with no _Test:_ line;
   - update the group paragraph of 12 if it still speaks of 12.11 as upcoming.
 

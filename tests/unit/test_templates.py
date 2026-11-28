@@ -683,3 +683,175 @@ def test_the_grading_sheets_need_a_question() -> None:
 def test_filter_links_need_exactly_one_current_link(links: list[tuple[str, str, bool]]) -> None:
     with pytest.raises(TemplateRuntimeError, match="filter_links: exactly one link"):
         render(FILTER + '{{ filter_links(links, "Show") }}', links=links)
+
+
+# ---------------------------------------------------------------------------------------------
+# Milestone 12.11 components (specs/012.11-question-bank-csv contracts/components.md §1–§3)
+# ---------------------------------------------------------------------------------------------
+
+UPLOAD = (
+    '{% from "components/confirmation.html" import confirmation %}'
+    '{% from "components/form.html" import error_summary, file_field %}'
+)
+
+# The markup of milestones 10 to 12.8, recorded before milestone 12.11 changed the two macros: an
+# existing call must render it byte for byte.
+DESTRUCTIVE_BEFORE = (
+    '<section class="confirmation">\n  <h1>Delete “Physics”?</h1>\n'
+    "  <p>This cannot be undone.</p>\n"
+    '  <div class="form-actions">\n'
+    '    <form method="post" action="/x" class="inline-form">'
+    '<button type="submit" class="destructive">Delete</button>\n</form>\n'
+    '    <a href="/back">Cancel</a>\n  </div>\n</section>'
+)
+BLOCKED_BEFORE = (
+    '<section class="confirmation">\n  <h1>Q?</h1>\n  <p>C.</p>\n'
+    '  <div class="notice notice-info" role="status">\n  <p>Not yet.</p>\n</div>\n'
+    '  <div class="form-actions">\n    <a href="/g">Grade</a>\n'
+    '    <a href="/back">Cancel</a>\n  </div>\n</section>'
+)
+CALLED_BEFORE = (
+    '<section class="confirmation">\n  <h1>Q?</h1>\n  <p>Extra</p>\n'
+    '  <div class="form-actions">\n'
+    '    <form method="post" action="/a" class="inline-form">'
+    '<button type="submit" class="destructive">Deactivate</button>\n</form>\n'
+    '    <a href="/back">Cancel</a>\n  </div>\n</section>'
+)
+SUMMARY_BEFORE = (
+    '\n<div class="error-summary" role="alert" aria-labelledby="error-summary-title"'
+    ' tabindex="-1">\n  <h2 id="error-summary-title">There is a problem</h2>\n  <ul>\n'
+    '    <li><a href="#name">Enter a name.</a></li>\n    <li>Try again later.</li>\n'
+    "  </ul>\n</div>"
+)
+
+
+def test_existing_confirmations_and_summaries_are_unchanged() -> None:
+    assert (
+        render(
+            CONFIRMATION
+            + '{{ confirmation("Delete “Physics”?", "This cannot be undone.", "/x", "Delete",'
+            ' "/back") }}'
+        )
+        == DESTRUCTIVE_BEFORE
+    )
+    assert (
+        render(
+            CONFIRMATION + '{{ confirmation("Q?", "C.", "/a", "Publish results", "/back",'
+            ' kind="primary", blocked="Not yet.", alternative=("Grade", "/g")) }}'
+        )
+        == BLOCKED_BEFORE
+    )
+    assert (
+        render(
+            CONFIRMATION + '{% call confirmation("Q?", none, "/a", "Deactivate", "/back") %}'
+            "<p>Extra</p>{% endcall %}"
+        )
+        == CALLED_BEFORE
+    )
+    assert (
+        render(
+            UPLOAD + '{{ error_summary({"name": "Enter a name."}, form_error="Try again later.") }}'
+        )
+        == SUMMARY_BEFORE
+    )
+
+
+def upload_confirmation(**arguments: str) -> html.Element:
+    extra = "".join(f", {name}={value}" for name, value in arguments.items())
+    out = render(
+        UPLOAD
+        + '{% call confirmation("Import questions: History", "C.", "/i", "Replace questions",'
+        f' "/back", hidden={{"k": "v"}}, form_content=True{extra}) %}}'
+        '{{ file_field("file", "CSV file", hint="H") }}{% endcall %}'
+    )
+    return html.parse(out)
+
+
+def test_a_confirmation_with_a_form() -> None:
+    page = upload_confirmation()
+    [form] = page.find_all("form")
+    assert form.attrs["method"] == "post" and form.attrs["action"] == "/i"
+    assert "enctype" not in form.attrs
+    tags = [element.tag for element in form.iter()]
+    assert tags.index("input") < tags.index("button")
+    [button] = form.find_all("button")
+    assert button.attrs["type"] == "submit" and button.classes() == ["destructive"]
+    assert button.text() == "Replace questions"
+    hidden = [i for i in form.find_all("input") if i.attrs.get("type") == "hidden"]
+    assert [(i.attrs["name"], i.attrs["value"]) for i in hidden] == [("k", "v")]
+    assert [a.attrs["href"] for a in form.find_all("a")] == ["/back"]
+    [paragraph] = [p for p in page.find_all("p")]
+    assert paragraph.text() == "C." and paragraph.parent is not form
+
+
+def test_a_confirmation_that_sends_a_file() -> None:
+    [form] = upload_confirmation(sends_file="True").find_all("form")
+    assert form.attrs["enctype"] == "multipart/form-data"
+
+
+@pytest.mark.parametrize(
+    ("call", "message"),
+    [
+        (
+            '{{ confirmation("Q?", "C.", "/a", "Go", "/b", sends_file=True) }}',
+            "confirmation: sends_file needs form_content",
+        ),
+        (
+            '{{ confirmation("Q?", "C.", "/a", "Go", "/b", kind="primary", blocked="Not yet.",'
+            " form_content=True) }}",
+            "confirmation: a blocked confirmation has no form",
+        ),
+    ],
+)
+def test_a_confirmation_with_a_form_is_refused_where_it_cannot_be(call: str, message: str) -> None:
+    with pytest.raises(TemplateRuntimeError, match=message):
+        render(CONFIRMATION + call)
+
+
+def test_the_summary_sits_under_the_question() -> None:
+    out = render(
+        UPLOAD + '{{ confirmation("Q?", "The consequence.", "/a", "Go", "/b", form_content=True,'
+        ' summary=error_summary({"file": "Too big."})) }}'
+    )
+    assert out.index("<h1>") < out.index("error-summary") < out.index("The consequence.")
+
+
+def test_the_file_field() -> None:
+    out = render(
+        UPLOAD + '{{ file_field("file", "CSV file", hint="H", error="E", accept=".csv,text/csv") }}'
+    )
+    assert out == (
+        '<label for="file">CSV file</label>\n'
+        '<small id="file-hint" class="field-hint">H</small>'
+        '<small id="file-error" class="field-error">E</small>\n'
+        '<input type="file" id="file" name="file" accept=".csv,text/csv"'
+        ' aria-describedby="file-hint file-error" aria-invalid="true">'
+    )
+    plain = render(UPLOAD + '{{ file_field("file", "CSV file") }}')
+    assert plain.endswith('<input type="file" id="file" name="file">')
+    assert "value" not in out + plain
+
+
+def test_row_errors_are_listed_without_links() -> None:
+    page = html.parse(
+        render(
+            UPLOAD + '{{ error_summary({"file": "Too big."}, row_errors=["Row 3: A.", "Row 9: B."],'
+            " more=more) }}",
+            more=5,
+        )
+    )
+    items = page.find_all("li")
+    assert [item.text() for item in items] == ["Too big.", "Row 3: A.", "Row 9: B."]
+    assert [len(item.find_all("a")) for item in items] == [1, 0, 0]
+    [more] = [p for p in page.find_all("p") if "error-summary-more" in p.classes()]
+    assert more.text() == "And 5 more errors."
+
+
+@pytest.mark.parametrize(("more", "line"), [(1, "And 1 more error."), (0, None)])
+def test_the_more_line(more: int, line: str | None) -> None:
+    out = render(UPLOAD + '{{ error_summary({}, row_errors=["Row 3: A."], more=more) }}', more=more)
+    assert "Row 3: A." in out
+    if line is None:
+        assert "error-summary-more" not in out
+    else:
+        assert f'<p class="error-summary-more">{line}</p>' in out

@@ -1,0 +1,11 @@
+{% extends "layouts/admin.html" %}
+{% from "components/confirmation.html" import confirmation %}
+
+{#- Deactivating a subject asks first (milestone 12.11 contracts/http-routes.md §2): the actions
+    menu holds links only. Confirming a subject that is already deactivated changes nothing. -#}
+
+{% block title %}{{ _("Deactivate “%(name)s”", name=subject.name) }} — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+{{ confirmation(_("Deactivate “%(name)s”?", name=subject.name), _("Its questions and every one of its competitions that is not finished are hidden from teachers until it is activated again."), "/admin/subjects/" ~ subject.id ~ "/deactivate", _("Deactivate"), "/admin/subjects") }}
+{% endblock %}

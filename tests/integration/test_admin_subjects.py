@@ -10,6 +10,7 @@ from datetime import timedelta
 import pytest
 from fastapi.testclient import TestClient
 from httpx2 import Response
+from sqlalchemy import Engine
 from sqlmodel import Session
 
 import app.services.subjects
@@ -218,20 +219,73 @@ def assert_back_to_the_list(response: Response) -> None:
     assert response.headers["location"] == "/admin/subjects"
 
 
+def menu(body: str, name: str) -> list[tuple[str, str, bool, bool]]:
+    """`(text, href, destructive, download)` of every entry of the subject's actions menu, in
+    order (milestone 12.11 FR-002)."""
+    for element in dom.parse(body).iter():
+        if element.tag != "details" or "actions-menu" not in element.classes():
+            continue
+        (summary,) = element.find_all("summary")
+        if summary.attrs.get("aria-label") != f"Actions for “{name}”":
+            continue
+        return [
+            (
+                a.text(),
+                a.attrs["href"],
+                "actions-menu-link-destructive" in a.classes(),
+                "download" in a.attrs,
+            )
+            for a in element.find_all("a")
+        ]
+    raise AssertionError(f"no actions menu for {name}")
+
+
 def test_each_row_offers_its_actions(admin_client: TestClient, session: Session) -> None:
+    """Milestone 12.11 FR-002, FR-003: every action in the row's menu, in a fixed order, each a
+    link; no form on the page."""
     create(admin_client, "Physics")
     create(admin_client, "Biology")
     physics, biology = subject_id(session, "Physics"), subject_id(session, "Biology")
     set_subject_active(session, biology, False)
     body = admin_client.get("/admin/subjects").text
-    for sid in (physics, biology):
-        assert (f"/admin/subjects/{sid}/rename", "Rename") in dom.link_pairs(body, "main")
-        assert (f"/admin/subjects/{sid}/delete", "Delete") in dom.link_pairs(body, "main")
-    assert ("post", f"/admin/subjects/{physics}/deactivate") in dom.form_targets(body, "main")
-    assert ("post", f"/admin/subjects/{biology}/activate") in dom.form_targets(body, "main")
-    assert f"/admin/subjects/{physics}/activate" not in body
-    assert f"/admin/subjects/{biology}/deactivate" not in body
+    path = f"/admin/subjects/{physics}"
+    assert menu(body, "Physics") == [
+        ("Rename", f"{path}/rename", False, False),
+        ("Export questions", f"{path}/questions/export", False, True),
+        ("Import questions", f"{path}/questions/import", True, False),
+        ("Deactivate", f"{path}/deactivate", True, False),
+        ("Delete", f"{path}/delete", True, False),
+    ]
+    path = f"/admin/subjects/{biology}"
+    assert menu(body, "Biology") == [
+        ("Rename", f"{path}/rename", False, False),
+        ("Export questions", f"{path}/questions/export", False, True),
+        ("Import questions", f"{path}/questions/import", True, False),
+        ("Activate", f"{path}/activate", False, False),
+        ("Delete", f"{path}/delete", True, False),
+    ]
+    assert dom.form_targets(body, "main") == []
     assert "Deactivated" in dom.badges(body)
+
+
+def test_the_questions_column(admin_client: TestClient, session: Session, engine: Engine) -> None:
+    """Milestone 12.11 FR-001: listed questions, the additional ones included and the deleted ones
+    left out; 0 for none; for an active and a deactivated subject."""
+    create(admin_client, "Physics")
+    create(admin_client, "Biology")
+    create(admin_client, "Chemistry")
+    physics, biology = subject_id(session, "Physics"), subject_id(session, "Biology")
+    make_question(engine, physics, "One?")
+    make_question(engine, physics, "Two?", additional=True)
+    make_question(engine, physics, "Gone?", deleted=True)
+    make_question(engine, biology, "Three?")
+    set_subject_active(session, biology, False)
+    rows = dom.table_rows(admin_client.get("/admin/subjects").text)
+    assert [(row["Name"], row["Questions"]) for row in rows] == [
+        ("Biology", "1"),
+        ("Chemistry", "0"),
+        ("Physics", "2"),
+    ]
 
 
 def test_the_rename_form_is_filled_in(admin_client: TestClient, session: Session) -> None:
@@ -316,19 +370,68 @@ def test_an_invalid_rename_is_refused(admin_client: TestClient, session: Session
 
 
 def test_deactivate_and_activate(admin_client: TestClient, session: Session) -> None:
-    """US2-5, US2-6."""
+    """US2-5, US2-6; milestone 12.11 FR-004: each through its confirmation page."""
     create(admin_client, "Physics")
     sid = subject_id(session, "Physics")
+    page = admin_client.get(f"/admin/subjects/{sid}/deactivate")
+    assert page.status_code == 200
+    body = page.text
+    assert dom.h1(body) == "Deactivate “Physics”?"
+    assert (
+        "Its questions and every one of its competitions that is not finished are hidden from"
+        " teachers until it is activated again."
+    ) in dom.text(body, "main")
+    assert buttons(body) == [(f"/admin/subjects/{sid}/deactivate", "Deactivate")]
+    assert ("/admin/subjects", "Cancel") in dom.link_pairs(body, "main")
+    assert current_tabs(body) == ["/admin/subjects"]
+    assert stored(session) == [("Physics", True)]
     assert_back_to_the_list(post(admin_client, f"/admin/subjects/{sid}/deactivate"))
     assert stored(session) == [("Physics", False)]
     body = admin_client.get("/admin/subjects").text
     assert table_names(body) == ["Physics"]
     assert "Deactivated" in dom.badges(body)
-    assert (f"/admin/subjects/{sid}/activate", "Activate") in buttons(body)
+    page = admin_client.get(f"/admin/subjects/{sid}/activate")
+    assert page.status_code == 200
+    body = page.text
+    assert dom.h1(body) == "Activate “Physics”?"
+    assert (
+        "Its questions and its competitions that are not finished are shown to teachers again."
+    ) in dom.text(body, "main")
+    assert buttons(body) == [(f"/admin/subjects/{sid}/activate", "Activate")]
+    assert ("/admin/subjects", "Cancel") in dom.link_pairs(body, "main")
     assert_back_to_the_list(post(admin_client, f"/admin/subjects/{sid}/activate"))
     assert stored(session) == [("Physics", True)]
-    body = admin_client.get("/admin/subjects").text
-    assert (f"/admin/subjects/{sid}/deactivate", "Deactivate") in buttons(body)
+
+
+def test_the_confirmation_buttons_are_destructive_and_primary(
+    admin_client: TestClient, session: Session
+) -> None:
+    """Milestone 12.11 FR-004: Deactivate hides, so destructive; Activate is primary."""
+    create(admin_client, "Physics")
+    sid = subject_id(session, "Physics")
+    for action, kind in (("deactivate", "destructive"), ("activate", None)):
+        main = dom.parse(admin_client.get(f"/admin/subjects/{sid}/{action}").text)
+        (button,) = [b for b in main.iter() if b.tag == "button" and b.text() == action.title()]
+        assert button.classes() == ([kind] if kind else [])
+
+
+def test_the_confirmation_pages_whatever_the_status(
+    admin_client: TestClient, session: Session
+) -> None:
+    """Milestone 12.11 FR-005: a page for a status the subject already has is still shown, and
+    confirming it changes nothing and is no error; opening a page changes nothing."""
+    create(admin_client, "Physics")
+    sid = subject_id(session, "Physics")
+    before = snapshot(session)
+    assert admin_client.get(f"/admin/subjects/{sid}/activate").status_code == 200
+    assert_back_to_the_list(post(admin_client, f"/admin/subjects/{sid}/activate"))
+    assert snapshot(session) == before
+    post(admin_client, f"/admin/subjects/{sid}/deactivate")
+    before = snapshot(session)
+    assert admin_client.get(f"/admin/subjects/{sid}/deactivate").status_code == 200
+    assert snapshot(session) == before
+    assert_back_to_the_list(post(admin_client, f"/admin/subjects/{sid}/deactivate"))
+    assert snapshot(session) == before
 
 
 def test_repeating_a_status_change_changes_nothing(
@@ -494,8 +597,13 @@ def test_deactivating_and_activating_hides_and_shows_the_questions(
 NOT_FOUND_REQUESTS = [
     ("GET", f"/admin/subjects/{MISSING}/rename"),
     ("POST", f"/admin/subjects/{MISSING}/rename"),
+    ("GET", f"/admin/subjects/{MISSING}/deactivate"),
     ("POST", f"/admin/subjects/{MISSING}/deactivate"),
+    ("GET", f"/admin/subjects/{MISSING}/activate"),
     ("POST", f"/admin/subjects/{MISSING}/activate"),
+    ("GET", f"/admin/subjects/{MISSING}/questions/export"),
+    ("GET", f"/admin/subjects/{MISSING}/questions/import"),
+    ("POST", f"/admin/subjects/{MISSING}/questions/import"),
     ("GET", f"/admin/subjects/{MISSING}/delete"),
     ("POST", f"/admin/subjects/{MISSING}/delete"),
 ]

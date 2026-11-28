@@ -2,28 +2,34 @@
 {% from "components/frame.html" import page_heading %}
 {% from "components/table.html" import data_table, cell, actions_cell %}
 {% from "components/badge.html" import status_badge %}
-{% from "components/button.html" import link_button, post_button %}
+{% from "components/menu.html" import actions_menu, menu_link %}
 {% from "components/feedback.html" import empty_state %}
+
+{#- The Subjects tab (milestone 6; milestone 12.11 contracts/components.md §4): each subject's
+    number of questions, the additional ones included and the deleted ones left out, and its
+    actions in one menu, in a fixed order. Every entry is a link: Export questions downloads the
+    file, and every other one opens a page. -#}
 
 {% block title %}{{ _("Subjects") }} — {{ app_name }}{% endblock %}
 
 {% block admin_content %}
 {{ page_heading(_("Subjects"), (_("Create subject"), "/admin/subjects/new")) }}
 {% if subjects %}
-{% call data_table([_("Name"), _("Status"), _("Actions")]) %}
+{% call data_table([_("Name"), _("Status"), _("Questions"), _("Actions")]) %}
 {% for s in subjects %}
 {% set path = "/admin/subjects/" ~ s.id %}
 <tr>
   {{ cell(_("Name"), s.name) }}
   {% call cell(_("Status")) %}{{ status_badge(s.is_active, "subject") }}{% endcall %}
+  {{ cell(_("Questions"), counts.get(s.id, 0)) }}
   {% call actions_cell() %}
-  {{- link_button(_("Rename"), path ~ "/rename", kind="secondary", outline=True, small=True) -}}
-  {%- if s.is_active -%}
-  {{- post_button(path ~ "/deactivate", _("Deactivate"), kind="destructive", outline=True, small=True) -}}
-  {%- else -%}
-  {{- post_button(path ~ "/activate", _("Activate"), kind="secondary", outline=True, small=True) -}}
-  {%- endif -%}
-  {{- link_button(_("Delete"), path ~ "/delete", kind="destructive", outline=True, small=True) -}}
+  {%- call actions_menu(s.name) -%}
+  {{ menu_link(_("Rename"), path ~ "/rename") }}
+  {{ menu_link(_("Export questions"), path ~ "/questions/export", download=True) }}
+  {{ menu_link(_("Import questions"), path ~ "/questions/import", destructive=True) }}
+  {% if s.is_active %}{{ menu_link(_("Deactivate"), path ~ "/deactivate", destructive=True) }}{% else %}{{ menu_link(_("Activate"), path ~ "/activate") }}{% endif %}
+  {{ menu_link(_("Delete"), path ~ "/delete", destructive=True) }}
+  {%- endcall -%}
   {% endcall %}
 </tr>
 {% endfor %}

@@ -1,0 +1,12 @@
+{% extends "layouts/admin.html" %}
+{% from "components/confirmation.html" import confirmation %}
+
+{#- Activating a subject asks first (milestone 12.11 contracts/http-routes.md §2): the actions menu
+    holds links only. A primary confirmation: activating hides nothing. Confirming a subject that
+    is already active changes nothing. -#}
+
+{% block title %}{{ _("Activate “%(name)s”", name=subject.name) }} — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+{{ confirmation(_("Activate “%(name)s”?", name=subject.name), _("Its questions and its competitions that are not finished are shown to teachers again."), "/admin/subjects/" ~ subject.id ~ "/activate", _("Activate"), "/admin/subjects", kind="primary") }}
+{% endblock %}

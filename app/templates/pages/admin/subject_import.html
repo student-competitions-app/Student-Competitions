@@ -1,0 +1,22 @@
+{% extends "layouts/admin.html" %}
+{% from "components/confirmation.html" import confirmation %}
+{% from "components/form.html" import error_summary, file_field %}
+
+{#- Importing a subject's questions (milestone 12.11 contracts/http-routes.md §4): a destructive
+    confirmation with the file field inside its form. After a refused file the page shows every
+    error found (at most 20, then how many more), and the field is empty again: a browser never
+    refills a file field. -#}
+
+{% block title %}{{ _("Import questions: %(subject)s", subject=subject.name) }} — {{ app_name }}{% endblock %}
+
+{% block admin_content %}
+{% call confirmation(_("Import questions: %(subject)s", subject=subject.name), none, "/admin/subjects/" ~ subject.id ~ "/questions/import", _("Replace questions"), "/admin/subjects", form_content=True, sends_file=True, summary=error_summary(errors, row_errors=row_errors, more=more)) %}
+{% if count %}
+<p>{{ ngettext("%(subject)s has %(num)d question now.", "%(subject)s has %(num)d questions now.", count, subject=subject.name) }}</p>
+{% else %}
+<p>{{ _("%(subject)s has no questions yet.", subject=subject.name) }}</p>
+{% endif %}
+<p>{{ _("Importing deletes all of them and replaces them with the questions of the file. This cannot be undone. Export the current questions first to keep them.") }}</p>
+{{ file_field("file", _("CSV file"), error=errors.get("file"), hint=_("A CSV file in the format described in the README, at most 2 MB"), accept=".csv,text/csv") }}
+{% endcall %}
+{% endblock %}

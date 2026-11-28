@@ -12,7 +12,7 @@
 {% from "components/group.html" import region_group %}
 {% from "components/badge.html" import badge, status_badge, access_badge, competition_status_badge, additional_badge %}
 {% from "components/feedback.html" import notice, empty_state %}
-{% from "components/form.html" import error_summary, field, textarea_field, select_field, checkbox_field, form_actions, date_time_fields %}
+{% from "components/form.html" import error_summary, field, file_field, textarea_field, select_field, checkbox_field, form_actions, date_time_fields %}
 {% from "components/confirmation.html" import confirmation, refusal %}
 {% from "components/details.html" import details_list %}
 {% from "components/selectors.html" import list_detail, chained_lists %}
@@ -371,6 +371,17 @@
   {{ date_time_fields("gallery-start-empty", "Start", date_time_values, date_time_errors, "UTC", "Start date", "Start time") }}
   {{ date_time_fields("gallery-start-filled", "Start", date_time_values, date_time_errors, "Europe/Kyiv", "Start date", "Start time") }}
   {{ date_time_fields("gallery-start-errors", "Start", date_time_values, date_time_errors, "Europe/Kyiv", "Start date", "Start time") }}
+  <h3>Errors about the rows of a file</h3>
+  <p>An error about a row of a file names its row and is not linked to a field. At most 20 are listed; a line after the list says how many more there are.</p>
+  {{ error_summary({}, row_errors=["Row 4: Enter the reference answer.", "Row 9: Additional must be 0, 1 or empty."], more=1) }}
+</section>
+
+<section id="file-field" aria-labelledby="file-field-heading">
+  <h2 id="file-field-heading">File field</h2>
+  <p>The browser's own file control with a label, an optional hint and its error. It never shows a value: after an error the person chooses the file again.</p>
+  {{ file_field("gallery-file-plain", "CSV file", accept=".csv,text/csv") }}
+  {{ file_field("gallery-file-hint", "CSV file with a hint", hint="A CSV file in the format described in the README, at most 2 MB", accept=".csv,text/csv") }}
+  {{ file_field("gallery-file-error", "CSV file with an error", error="Choose a CSV file.", accept=".csv,text/csv") }}
 </section>
 
 <section id="answer-sheet" aria-labelledby="answer-sheet-heading">
@@ -421,6 +432,21 @@
   {% endcall %}
   {% call confirmation(publish_question, publish_consequence, "/admin/components", "Publish results", "/admin/components#confirmations", back_label="Keep unpublished", kind="primary", blocked="Every team must be graded before the results can be published.", alternative=("Grade the remaining teams", "/admin/components#confirmations")) %}
   <p>{{ competition_status_badge("finished") }} Graded 37 of 52 teams</p>
+  {% endcall %}
+</section>
+
+<section id="confirmation-with-form" aria-labelledby="confirmation-with-form-heading">
+  <h2 id="confirmation-with-form-heading">Confirmation with a form</h2>
+  <p>When the action needs input, such as a file, the input sits inside the confirmation's form, between the consequence and the buttons. The button still repeats the verb. Clean, then with errors:</p>
+  {% call confirmation("Import questions: History", none, "/admin/components", "Replace questions", "/admin/components#confirmation-with-form", form_content=True, sends_file=True) %}
+  <p>History has 124 questions now.</p>
+  <p>Importing deletes all of them and replaces them with the questions of the file. This cannot be undone. Export the current questions first to keep them.</p>
+  {{ file_field("gallery-import-file", "CSV file", hint="A CSV file in the format described in the README, at most 2 MB", accept=".csv,text/csv") }}
+  {% endcall %}
+  {% call confirmation("Import questions: History", none, "/admin/components", "Replace questions", "/admin/components#confirmation-with-form", form_content=True, sends_file=True, summary=error_summary({"gallery-import-file-2": "The file can be at most 2 MB."}, row_errors=["Row 7: Enter the reference answer.", "Row 12: Additional must be 0, 1 or empty.", "A quote opened in row 40 is never closed."], more=5)) %}
+  <p>History has 124 questions now.</p>
+  <p>Importing deletes all of them and replaces them with the questions of the file. This cannot be undone. Export the current questions first to keep them.</p>
+  {{ file_field("gallery-import-file-2", "CSV file", error="The file can be at most 2 MB.", hint="A CSV file in the format described in the README, at most 2 MB", accept=".csv,text/csv") }}
   {% endcall %}
 </section>
 

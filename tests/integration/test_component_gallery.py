@@ -117,6 +117,14 @@ SECTIONS = {
         "Enter a real start date.",
         "There is no 03:30 on 28 March 2027 in Europe/Kyiv because the clocks go forward.",
         "Answer to question 2",
+        "Row 4: Enter the reference answer.",
+        "And 1 more error.",
+    ],
+    "file-field": [
+        "File field",
+        "CSV file",
+        "A CSV file in the format described",
+        "Choose a CSV file.",
     ],
     "answer-sheet": [
         "Answer sheet",
@@ -148,6 +156,13 @@ SECTIONS = {
         "Keep competition",
         "Finish competition",
         "Keep in progress",
+    ],
+    "confirmation-with-form": [
+        "Import questions: History",
+        "History has 124 questions now.",
+        "Replace questions",
+        "A quote opened in row 40 is never closed.",
+        "And 5 more errors.",
     ],
     "details": ["Email", "Olena", "Teacher, Student"],
     "selectors": [
@@ -264,6 +279,30 @@ def test_the_aside_and_the_download_link_button(admin_client: TestClient) -> Non
         if "download" in e.attrs and e.attrs.get("role") == "button"
     ]
     assert [e.text() for e in downloads] == ["Download file"]
+
+
+def test_the_file_field_and_the_confirmation_with_a_form(admin_client: TestClient) -> None:
+    """Milestone 12.11 contracts/components.md §1–§3: a file field never holds a value, and the
+    import page's shape, a destructive confirmation whose form sends a file, clean and with a
+    summary of one file error and three unlinked row errors."""
+    body = admin_client.get(GALLERY).text
+    files = gallery_section(body, "file-field").find_all("input")
+    assert [e.attrs["type"] for e in files] == ["file"] * 3
+    assert not any("value" in e.attrs for e in files)
+    section = gallery_section(body, "confirmation-with-form")
+    forms = section.find_all("form")
+    assert len(forms) == 2
+    for form in forms:
+        assert form.attrs["method"] == "post"
+        assert form.attrs["enctype"] == "multipart/form-data"
+        assert [e.attrs["type"] for e in form.find_all("input")] == ["file"]
+        (button,) = form.find_all("button")
+        assert button.text() == "Replace questions"
+        assert button.classes() == ["destructive"]
+    (summary,) = [e for e in section.iter() if "error-summary" in e.classes()]
+    items = summary.find_all("li")
+    assert [len(item.find_all("a")) for item in items] == [1, 0, 0, 0]
+    assert items[1].text() == "Row 7: Enter the reference answer."
 
 
 def logo_urls(element: html.Element) -> list[str]:

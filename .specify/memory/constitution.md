@@ -1,5 +1,24 @@
 <!--
 Sync Impact Report
+- Version change: 2.7.1 → 2.8.0 (MINOR: materially expanded guidance on access and data scoping,
+  for milestone 12.11)
+- Modified principles:
+  - IV. Role-Based Access & Data Scoping: the additional-questions rule now names its one
+    exception; a new rule, administrators, and only they, export a subject's question bank to a
+    CSV file, additional questions included with their mark, and import a CSV file that replaces
+    it, soft-deleting the questions it replaces; this is the only way an administrator sees a
+    question or changes the bank, and the files never show which questions a competition holds;
+    rationale extended
+- Added sections: none
+- Removed sections: none
+- Templates: plan/spec/tasks templates read the constitution at runtime; no change needed
+- Related docs: product-requirements.md (Teacher responsibilities, access rights, Administrator,
+  Additional questions) and milestones.md (12.11) updated in the same change
+- Pull request: Governance asks for a dedicated pull request; the product owner decides whether it
+  is accepted on the milestone 12.11 branch instead, as for 2.7.1
+- Follow-up TODOs: none
+
+Previous amendment
 - Version change: 2.7.0 → 2.7.1 (PATCH: wording clarification found by /speckit-analyze of
   milestone 12.10)
 - Modified principles:
@@ -121,7 +140,18 @@ The application has three roles — student, teacher, administrator — with rig
   server reads for them, never only hidden in a template. In the question bank it stays kept back
   for good, since it can be added to later competitions. Once a competition that holds it starts, its
   copy is one of that competition's questions, read as the competition's rules allow; the mark
-  itself is shown only to teachers allowed to manage competitions.
+  itself is shown only to teachers allowed to manage competitions. The one exception is the
+  administrators' CSV files of a subject's question bank (below).
+- A subject's question bank MAY be exported and imported as CSV files by administrators, and only
+  by them, for an active or a deactivated subject. The export holds every question of the subject
+  that is not deleted, the additional questions included with their mark; the import replaces
+  those questions with the questions of the file, each taking the additional mark of its row.
+  The import MUST soft-delete the questions it replaces, never erase them, so the competitions
+  that hold them keep their copies (Principle VII). These files are the only way an administrator
+  sees a question or changes the question bank: on every page an administrator sees no question,
+  only how many questions a subject has, the additional ones included. The files say nothing
+  about competitions, so they never show which questions a competition holds. Teachers and
+  students MUST NOT get either file.
 - A competition's questions MUST be kept back: with their reference answers they MUST be seen
   only by teachers allowed to manage competitions, who choose them, in every status of the
   competition. Before it starts, no other teacher, administrator or student sees them, or learns
@@ -176,8 +206,12 @@ working material. Additional questions test knowledge beyond what participants c
 advance, so they lose their value once anyone who could pass them on sees them before the
 competition. For the same reason a competition's own questions reach the teams only once it
 starts, while the rest of the bank is given out as study materials: students learn the whole bank
-and answer a small part of it. Results that could still change after being announced would invite complaints
-from participants, so publishing freezes them for good.
+and answer a small part of it. Administrators prepare a subject's bank, a hundred questions or
+more, in a spreadsheet or with an AI assistant, so they are trusted with the whole of it through
+the CSV files; additional questions are usually added just before a competition and their mark is
+removed once they have been used, so a file holds few of them and only for a short time. Results
+that could still change after being announced would invite complaints from participants, so
+publishing freezes them for good.
 
 ### V. Secure Authentication & Secrets
 
@@ -381,4 +415,4 @@ The `app/` layout below MAY be refined by `/speckit-plan` but MUST NOT be bypass
 - Runtime development guidance lives in `README.md` and `docs/requirements/`; those documents
   MUST NOT contradict this constitution.
 
-**Version**: 2.7.1 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-23
+**Version**: 2.8.0 | **Ratified**: 2026-09-18 | **Last Amended**: 2026-11-28
